@@ -1,0 +1,104 @@
+TAP version 13
+# Subtest: W130/W147 signed present witness is checked and locked; absent is outside loaded
+ok 1 - W130/W147 signed present witness is checked and locked; absent is outside loaded
+  ---
+  duration_ms: 25.692917
+  type: 'test'
+  ...
+# Subtest: W137 recorded absent requires explicit selection and fromPresence
+ok 2 - W137 recorded absent requires explicit selection and fromPresence
+  ---
+  duration_ms: 5.600541
+  type: 'test'
+  ...
+# Subtest: W131 unconfirmed Retry resends byte-identical request
+ok 3 - W131 unconfirmed Retry resends byte-identical request
+  ---
+  duration_ms: 6.579458
+  type: 'test'
+  ...
+# Subtest: W132 stale reload keeps choice and next save uses new command
+ok 4 - W132 stale reload keeps choice and next save uses new command
+  ---
+  duration_ms: 6.432375
+  type: 'test'
+  ...
+# Subtest: W133 negative outcome shows causal message and is never saved
+ok 5 - W133 negative outcome shows causal message and is never saved
+  ---
+  duration_ms: 0.192375
+  type: 'test'
+  ...
+# Subtest: W134 encounter-closed read only
+ok 6 - W134 encounter-closed read only
+  ---
+  duration_ms: 2.086375
+  type: 'test'
+  ...
+# Subtest: W134 pre-rebuild-test-encounter read only
+ok 7 - W134 pre-rebuild-test-encounter read only
+  ---
+  duration_ms: 1.68825
+  type: 'test'
+  ...
+# Subtest: W138 Deferred disables selections without deselection and toggles preserve them
+ok 8 - W138 Deferred disables selections without deselection and toggles preserve them
+  ---
+  duration_ms: 3.513833
+  type: 'test'
+  ...
+# Subtest: W136 per-eye Remarks and measurements are in independent panel states
+ok 9 - W136 per-eye Remarks and measurements are in independent panel states
+  ---
+  duration_ms: 5.406083
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 0
+ok 10 - W145 unscoped count 0
+  ---
+  duration_ms: 1.843
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 2
+not ok 11 - W145 unscoped count 2
+  ---
+  duration_ms: 2.787792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:8332'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:47:123)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+ok 12 - W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+  ---
+  duration_ms: 4.923875
+  type: 'test'
+  ...
+# Subtest: W133 negative-only conflict never calls onSaved
+ok 13 - W133 negative-only conflict never calls onSaved
+  ---
+  duration_ms: 3.389417
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 12
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 307.056834

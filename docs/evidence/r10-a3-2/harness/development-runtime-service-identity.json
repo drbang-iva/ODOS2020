@@ -1,0 +1,20 @@
+{
+  "projectId": "8a29b496-b7f1-4250-abe2-5649fe505768",
+  "clientReference": "ClientApplication/578a34f7-4362-4a80-938a-2305d20abcf8",
+  "membershipReference": "ProjectMembership/0f87ed2f-fd42-422a-9ae1-d823384180b7",
+  "admin": true,
+  "separateFromSeeder": true,
+  "providerTallySeeded": true,
+  "callerPoliciesUnchanged": [
+    {
+      "role": "provider",
+      "reference": "AccessPolicy/a2fdc6bd-1b81-4123-8e06-520e03e6964e",
+      "versionId": "eca3cc34-48d4-4e74-9c32-d5cffcf78f86"
+    },
+    {
+      "role": "staff",
+      "reference": "AccessPolicy/ea72dc0b-de1e-4991-a6dc-73032c73f5e3",
+      "versionId": "87a9737c-4bc4-46e0-b7c3-89e0e36b21e2"
+    }
+  ]
+}

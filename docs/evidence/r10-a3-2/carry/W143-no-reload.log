@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved
+not ok 1 - W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved
+  ---
+  duration_ms: 28.596708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:20696'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        'GET',
+        'POST',
+    +   'POST'
+    -   'GET'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'GET'
+    1: 'POST'
+    2: 'GET'
+  actual:
+    0: 'GET'
+    1: 'POST'
+    2: 'POST'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:570:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W143 failed reload preserves the prior carry and never posts a replan
+not ok 2 - W143 failed reload preserves the prior carry and never posts a replan
+  ---
+  duration_ms: 5.22975
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:24264'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    1 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:626:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 228.591375

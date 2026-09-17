@@ -1,0 +1,57 @@
+ODOS 20/20
+Clinic
+Find a patient
+▦
+Schedule
+＋ New…
+Sections
+🔔
+RA
+Unable to open your practice home: Practice role service unavailable.
+×
+Sections
+
+Every working surface, one slide away.
+
+EVERY DAY
+▤
+Education review
+held steps and staff handouts
+▦
+Schedule
+day grid, all providers
+⌂
+Front desk
+schedule and floor
+⇄
+Work
+reason-grouped billing work
+◫
+Reports / A-R
+production and aging
+▤
+Statements
+patient statement runs
+◇
+Lab orders
+optical orders in flight
+CATALOG & OPERATIONS
+⌗
+Catalog & pricing
+frames catalog and pricing
+▥
+Inventory
+frames inventory
+⚭
+Integrations
+Frames Data
+PRACTICE
+≡
+Audit log
+every access and change
+◉
+Clinic
+Clinic home and patients
+Build 1706d7c · unknown
+Built just now
+CURRENT

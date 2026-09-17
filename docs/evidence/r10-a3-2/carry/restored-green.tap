@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: previous-exam helpers append unique encounters in server order and summarize exact recorded findings
+ok 1 - previous-exam helpers append unique encounters in server order and summarize exact recorded findings
+  ---
+  duration_ms: 0.589
+  type: 'test'
+  ...
+# Subtest: previous-exam client rejects malformed successful rows and does not surface unsafe error detail
+ok 2 - previous-exam client rejects malformed successful rows and does not surface unsafe error detail
+  ---
+  duration_ms: 7.465042
+  type: 'test'
+  ...
+# Subtest: previous-exam client enforces four-row pages, FHIR dates, and trimmed clinical labels
+ok 3 - previous-exam client enforces four-row pages, FHIR dates, and trimmed clinical labels
+  ---
+  duration_ms: 1.789959
+  type: 'test'
+  ...
+# Subtest: FHIR history dates preserve partial precision and validate leap seconds and boundary offsets
+ok 4 - FHIR history dates preserve partial precision and validate leap seconds and boundary offsets
+  ---
+  duration_ms: 8.660333
+  type: 'test'
+  ...
+# Subtest: previous exams loads four encounters automatically, keeps them through paging failure, and retries the same cursor
+ok 5 - previous exams loads four encounters automatically, keeps them through paging failure, and retries the same cursor
+  ---
+  duration_ms: 11.68875
+  type: 'test'
+  ...
+# Subtest: previous exams renders the exact plain empty state
+ok 6 - previous exams renders the exact plain empty state
+  ---
+  duration_ms: 2.072791
+  type: 'test'
+  ...
+# Subtest: visible paging sentinel starts one request per cursor and ignores repeated observer delivery
+ok 7 - visible paging sentinel starts one request per cursor and ignores repeated observer delivery
+  ---
+  duration_ms: 2.900459
+  type: 'test'
+  ...
+# Subtest: consumed observer cursors cannot replay or restore paging after a terminal next page
+ok 8 - consumed observer cursors cannot replay or restore paging after a terminal next page
+  ---
+  duration_ms: 6.521125
+  type: 'test'
+  ...
+# Subtest: encounter changes ignore stale previous-exam responses
+ok 9 - encounter changes ignore stale previous-exam responses
+  ---
+  duration_ms: 4.029084
+  type: 'test'
+  ...
+# Subtest: checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific
+ok 10 - checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific
+  ---
+  duration_ms: 4.383917
+  type: 'test'
+  ...
+# Subtest: a stale pull cannot release the same row lock owned by the next encounter generation
+ok 11 - a stale pull cannot release the same row lock owned by the next encounter generation
+  ---
+  duration_ms: 11.295125
+  type: 'test'
+  ...
+# Subtest: a deferred pull settling after true unmount schedules no state update warning
+ok 12 - a deferred pull settling after true unmount schedules no state update warning
+  ---
+  duration_ms: 3.476917
+  type: 'test'
+  ...
+# Subtest: finding rows distinguish unchanged carried presence, prior absence, and fresh assertions
+ok 13 - finding rows distinguish unchanged carried presence, prior absence, and fresh assertions
+  ---
+  duration_ms: 2.109541
+  type: 'test'
+  ...
+# Subtest: W142 partial carry shows steps and Finish carrying resends the identical command body
+ok 14 - W142 partial carry shows steps and Finish carrying resends the identical command body
+  ---
+  duration_ms: 4.967708
+  type: 'test'
+  ...
+# Subtest: W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved
+ok 15 - W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved
+  ---
+  duration_ms: 6.364
+  type: 'test'
+  ...
+# Subtest: W145 previous-exams unscoped records display their notice, including an empty page
+ok 16 - W145 previous-exams unscoped records display their notice, including an empty page
+  ---
+  duration_ms: 2.072667
+  type: 'test'
+  ...
+# Subtest: W142 a dropped pull response keeps its request for Finish carrying
+ok 17 - W142 a dropped pull response keeps its request for Finish carrying
+  ---
+  duration_ms: 4.172667
+  type: 'test'
+  ...
+# Subtest: W143 failed reload preserves the prior carry and never posts a replan
+ok 18 - W143 failed reload preserves the prior carry and never posts a replan
+  ---
+  duration_ms: 4.193625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+ok 19 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: false
+  ---
+  duration_ms: 2.041541
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+ok 20 - STAFF-DX-GATE carry-forward permits existing selection and refuses new pulls: undefined
+  ---
+  duration_ms: 1.963125
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 291.370209

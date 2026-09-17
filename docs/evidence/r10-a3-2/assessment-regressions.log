@@ -1,0 +1,256 @@
+TAP version 13
+# Subtest: Assessment ranking feed follows suggested-new
+ok 1 - Assessment ranking feed follows suggested-new
+  ---
+  duration_ms: 17.491459
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-new
+ok 2 - Assessment ranking feed follows doctor-new
+  ---
+  duration_ms: 2.574042
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows doctor-established
+ok 3 - Assessment ranking feed follows doctor-established
+  ---
+  duration_ms: 6.694083
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows suggested-established
+ok 4 - Assessment ranking feed follows suggested-established
+  ---
+  duration_ms: 1.813291
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows newness-read-failure
+ok 5 - Assessment ranking feed follows newness-read-failure
+  ---
+  duration_ms: 2.692
+  type: 'test'
+  ...
+# Subtest: Assessment ranking feed follows visit-status-read-failure
+ok 6 - Assessment ranking feed follows visit-status-read-failure
+  ---
+  duration_ms: 1.801583
+  type: 'test'
+  ...
+# Subtest: assessment protocol routing delegates diagnosis matching and charge acceptance to server offers
+ok 7 - assessment protocol routing delegates diagnosis matching and charge acceptance to server offers
+  ---
+  duration_ms: 0.530625
+  type: 'test'
+  ...
+# Subtest: creation rank rules retain the duplicate-principal guard and append secondaries
+ok 8 - creation rank rules retain the duplicate-principal guard and append secondaries
+  ---
+  duration_ms: 0.229667
+  type: 'test'
+  ...
+# Subtest: Make Principal computes one complete exact permutation without losing a diagnosis
+ok 9 - Make Principal computes one complete exact permutation without losing a diagnosis
+  ---
+  duration_ms: 0.394167
+  type: 'test'
+  ...
+# Subtest: Make Principal moves a non-adjacent diagnosis first and shifts earlier diagnoses down in order
+ok 10 - Make Principal moves a non-adjacent diagnosis first and shifts earlier diagnoses down in order
+  ---
+  duration_ms: 0.048208
+  type: 'test'
+  ...
+# Subtest: Make Principal normalizes a rank-gap encounter through the complete permutation
+ok 11 - Make Principal normalizes a rank-gap encounter through the complete permutation
+  ---
+  duration_ms: 0.048667
+  type: 'test'
+  ...
+# Subtest: Make Principal refuses a provisional target before the endpoint call
+ok 12 - Make Principal refuses a provisional target before the endpoint call
+  ---
+  duration_ms: 0.078209
+  type: 'test'
+  ...
+# Subtest: rank actions retain one-click Make Principal without legacy secondary move controls
+ok 13 - rank actions retain one-click Make Principal without legacy secondary move controls
+  ---
+  duration_ms: 1.358459
+  type: 'test'
+  ...
+# Subtest: problem status patch targets one diagnosis entry and preserves unrelated extensions
+ok 14 - problem status patch targets one diagnosis entry and preserves unrelated extensions
+  ---
+  duration_ms: 0.15025
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+ok 15 - STAFF-DX-GATE problem status delegates versioned writes and Provenance to the diagnosis endpoint
+  ---
+  duration_ms: 7.613875
+  type: 'test'
+  ...
+# Subtest: diagnosis laterality Provenance directly targets the Patient and affected Condition
+ok 16 - diagnosis laterality Provenance directly targets the Patient and affected Condition
+  ---
+  duration_ms: 1.5315
+  type: 'test'
+  ...
+# Subtest: diagnosis laterality PATCH atomically reconciles the existing catalog identifier suffix
+ok 17 - diagnosis laterality PATCH atomically reconciles the existing catalog identifier suffix
+  ---
+  duration_ms: 0.545375
+  type: 'test'
+  ...
+# Subtest: diagnosis stage PATCH atomically replaces the code and stable catalog key
+ok 18 - diagnosis stage PATCH atomically replaces the code and stable catalog key
+  ---
+  duration_ms: 0.841125
+  type: 'test'
+  ...
+# Subtest: bilateral eyelid laterality PATCH atomically replaces singular ICD coding with the catalog concept
+ok 19 - bilateral eyelid laterality PATCH atomically replaces singular ICD coding with the catalog concept
+  ---
+  duration_ms: 0.560708
+  type: 'test'
+  ...
+# Subtest: diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix
+ok 20 - diagnosis laterality PATCH atomically reconciles a legacy two-part catalog identifier suffix
+  ---
+  duration_ms: 0.409459
+  type: 'test'
+  ...
+# Subtest: problem status control renders a conspicuous required-empty state without unspecified
+ok 21 - problem status control renders a conspicuous required-empty state without unspecified
+  ---
+  duration_ms: 1.584292
+  type: 'test'
+  ...
+# Subtest: unavailable MDM axis renders the missing problem-status reason where a tier would appear
+ok 22 - unavailable MDM axis renders the missing problem-status reason where a tier would appear
+  ---
+  duration_ms: 0.177375
+  type: 'test'
+  ...
+# Subtest: one bilateral eyelid diagnosis contributes exactly one MDM problem
+ok 23 - one bilateral eyelid diagnosis contributes exactly one MDM problem
+  ---
+  duration_ms: 0.071833
+  type: 'test'
+  ...
+# Subtest: retracting a classified diagnosis atomically removes its High MDM contribution
+ok 24 - retracting a classified diagnosis atomically removes its High MDM contribution
+  ---
+  duration_ms: 0.596125
+  type: 'test'
+  ...
+# Subtest: retracting an unclassified diagnosis removes the permanent blocked MDM state
+ok 25 - retracting an unclassified diagnosis removes the permanent blocked MDM state
+  ---
+  duration_ms: 0.299416
+  type: 'test'
+  ...
+# Subtest: the free-form diagnosis rank input and state wiring are removed
+ok 26 - the free-form diagnosis rank input and state wiring are removed
+  ---
+  duration_ms: 0.28425
+  type: 'test'
+  ...
+# Subtest: both diagnosis surfaces retain Make Principal on the authoritative reorder write path
+ok 27 - both diagnosis surfaces retain Make Principal on the authoritative reorder write path
+  ---
+  duration_ms: 0.390792
+  type: 'test'
+  ...
+# Subtest: principal permutation fails closed for invalid or duplicate encounter ranks
+ok 28 - principal permutation fails closed for invalid or duplicate encounter ranks
+  ---
+  duration_ms: 0.100166
+  type: 'test'
+  ...
+# Subtest: rank action has no competing arbitrary-order buttons
+ok 29 - rank action has no competing arbitrary-order buttons
+  ---
+  duration_ms: 0.126083
+  type: 'test'
+  ...
+# Subtest: claim prefill keeps diagnosis order as the source of per-line pointer positions
+ok 30 - claim prefill keeps diagnosis order as the source of per-line pointer positions
+  ---
+  duration_ms: 0.397833
+  type: 'test'
+  ...
+# Subtest: staging shows authored titles and hides unavailable items
+ok 31 - staging shows authored titles and hides unavailable items
+  ---
+  duration_ms: 3.013917
+  type: 'test'
+  ...
+# Subtest: follow-up with missing interval and unit can be confirmed before editing
+ok 32 - follow-up with missing interval and unit can be confirmed before editing
+  ---
+  duration_ms: 2.883042
+  type: 'test'
+  ...
+# Subtest: Assessment shows each offer's added count once and keeps the nonselected count
+ok 33 - Assessment shows each offer's added count once and keeps the nonselected count
+  ---
+  duration_ms: 15.814083
+  type: 'test'
+  ...
+# Subtest: whole and item applications retain separate badges and undo targets
+ok 34 - whole and item applications retain separate badges and undo targets
+  ---
+  duration_ms: 6.302833
+  type: 'test'
+  ...
+# Subtest: followup recommendations can be explicitly confirmed or edited
+ok 35 - followup recommendations can be explicitly confirmed or edited
+  ---
+  duration_ms: 2.137417
+  type: 'test'
+  ...
+# Subtest: Assessment route loads persisted followup without matching offers and refreshes after confirmation
+ok 36 - Assessment route loads persisted followup without matching offers and refreshes after confirmation
+  ---
+  duration_ms: 13.821166
+  type: 'test'
+  ...
+# Subtest: Assessment route loads persisted followup without matching offers and refreshes after editing
+ok 37 - Assessment route loads persisted followup without matching offers and refreshes after editing
+  ---
+  duration_ms: 4.215916
+  type: 'test'
+  ...
+# Subtest: dirty followup requires saving the displayed change
+ok 38 - dirty followup requires saving the displayed change
+  ---
+  duration_ms: 0.387375
+  type: 'test'
+  ...
+# Subtest: Assessment preserves unmatched plan item undo alongside a current offer
+ok 39 - Assessment preserves unmatched plan item undo alongside a current offer
+  ---
+  duration_ms: 5.250084
+  type: 'test'
+  ...
+# Subtest: followup fields stay fixed while saving
+ok 40 - followup fields stay fixed while saving
+  ---
+  duration_ms: 0.525833
+  type: 'test'
+  ...
+# Subtest: followup clinician recommendation is labelled your change
+ok 41 - followup clinician recommendation is labelled your change
+  ---
+  duration_ms: 0.193375
+  type: 'test'
+  ...
+1..41
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 398.547584

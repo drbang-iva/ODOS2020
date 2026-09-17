@@ -1,0 +1,3214 @@
+{
+  "base": "a211b368",
+  "head": "HEAD",
+  "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
+  "files": [
+    {
+      "file": "mcp/tests/r10A3OcularDoor.test.ts",
+      "assertionCountBefore": 131,
+      "assertionCountAfter": 147,
+      "changedGroups": [
+        {
+          "test": "'W147 unchanged signed loaded witness permits Remarks without changing the fact'",
+          "mapping": "W147",
+          "before": [],
+          "after": [
+            {
+              "test": "'W147 unchanged signed loaded witness permits Remarks without changing the fact'",
+              "line": 182,
+              "text": "assert.equal(h.body.eyes.OD.panel.editable,true)"
+            },
+            {
+              "test": "'W147 unchanged signed loaded witness permits Remarks without changing the fact'",
+              "line": 184,
+              "text": "assert.deepEqual(live(f),before)"
+            },
+            {
+              "test": "'W147 unchanged signed loaded witness permits Remarks without changing the fact'",
+              "line": 184,
+              "text": "assert.equal(after.body.eyes.OD.panel.remarks,'Synthetic remark')"
+            }
+          ]
+        },
+        {
+          "test": "`W147 signed ${action} remains refused with zero writes`",
+          "mapping": "W147",
+          "before": [],
+          "after": [
+            {
+              "test": "`W147 signed ${action} remains refused with zero writes`",
+              "line": 190,
+              "text": "assert.equal(r.status,422)"
+            },
+            {
+              "test": "`W147 signed ${action} remains refused with zero writes`",
+              "line": 190,
+              "text": "assert.equal(r.body.reason,'signed-or-cancelled')"
+            },
+            {
+              "test": "`W147 signed ${action} remains refused with zero writes`",
+              "line": 190,
+              "text": "assert.equal(f.m.writes.length,0)"
+            },
+            {
+              "test": "`W147 signed ${action} remains refused with zero writes`",
+              "line": 190,
+              "text": "assert.deepEqual(live(f),before)"
+            }
+          ]
+        },
+        {
+          "test": "'W147 unchanged signed witness with a moved fresh version refuses stale baseline'",
+          "mapping": "W147",
+          "before": [],
+          "after": [
+            {
+              "test": "'W147 unchanged signed witness with a moved fresh version refuses stale baseline'",
+              "line": 195,
+              "text": "assert.equal(r.status,409)"
+            },
+            {
+              "test": "'W147 unchanged signed witness with a moved fresh version refuses stale baseline'",
+              "line": 195,
+              "text": "assert.equal(r.body.reason,'stale-baseline')"
+            },
+            {
+              "test": "'W147 unchanged signed witness with a moved fresh version refuses stale baseline'",
+              "line": 195,
+              "text": "assert.equal(f.m.writes.length,0)"
+            },
+            {
+              "test": "'W147 unchanged signed witness with a moved fresh version refuses stale baseline'",
+              "line": 195,
+              "text": "assert.deepEqual(live(f),before)"
+            }
+          ]
+        },
+        {
+          "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
+          "mapping": "W147",
+          "before": [],
+          "after": [
+            {
+              "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
+              "line": 201,
+              "text": "assert.equal(h.body.eyes.OD.facts.find((r:any)=>r.status==='live').readOnlyReason,'inactive-definition')"
+            },
+            {
+              "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
+              "line": 203,
+              "text": "assert.deepEqual(live(f),before)"
+            },
+            {
+              "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
+              "line": 205,
+              "text": "assert.equal(refused.status,409)"
+            },
+            {
+              "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
+              "line": 205,
+              "text": "assert.equal(refused.body.reason,'inactive-definition')"
+            },
+            {
+              "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
+              "line": 205,
+              "text": "assert.equal(f.m.writes.length,writes)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/customSections.test.tsx",
+      "assertionCountBefore": 473,
+      "assertionCountAfter": 494,
+      "changedGroups": [
+        {
+          "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+              "line": 1205,
+              "text": "assert.equal(posts[0]?.eyes.OD.state, \"abnormal\")"
+            },
+            {
+              "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+              "line": 1206,
+              "text": "assert.deepEqual(posts[0]?.eyes.OD.customFields, [{\n      code: \"CUSTOM_DEFERRED_FINDINGS\",\n      value: [\"synthetic-finding\"],\n    }])"
+            },
+            {
+              "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+              "line": 1213,
+              "text": "assert.equal(posts[1]?.eyes.OD.state, \"normal\")"
+            },
+            {
+              "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+              "line": 1214,
+              "text": "assert.deepEqual(posts[1]?.eyes.OD.customFields, [])"
+            },
+            {
+              "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+              "line": 1219,
+              "text": "assert.equal(posts[2]?.eyes.OD.state, \"abnormal\")"
+            },
+            {
+              "test": "\"ocular-health save derives abnormal from findings and normal after they are cleared\"",
+              "line": 1220,
+              "text": "assert.equal(posts[2]?.eyes.OD.other, \"Trace scar\")"
+            }
+          ],
+          "after": []
+        },
+        {
+          "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1318,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1320,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1321,
+              "text": "assert.equal(finding().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1324,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1325,
+              "text": "assert.match(JSON.stringify(renderer.toJSON()), /Clear the selected findings before deferring/)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1326,
+              "text": "assert.equal(attempts.length, 0)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1329,
+              "text": "assert.equal(attempts[0]?.status, 200, JSON.stringify(attempts[0]?.response))"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1330,
+              "text": "assert.equal(attempts[0]?.body.eyes.OD.state, \"abnormal\")"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1331,
+              "text": "assert.deepEqual(attempts[0]?.body.eyes.OD.customFields, [{\n      code: \"CUSTOM_DEFERRED_FINDINGS\",\n      value: [\"synthetic-finding\"],\n    }])"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1338,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1340,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1342,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
+              "line": 1343,
+              "text": "assert.match(JSON.stringify(renderer.toJSON()), /Clear Other text before deferring/)"
+            }
+          ],
+          "after": []
+        },
+        {
+          "test": "\"qualified finding definitions render qualifier controls for legacy presence-only history\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"qualified finding definitions render qualifier controls for legacy presence-only history\"",
+              "line": 1372,
+              "text": "assert.match(rendered, /Synthetic Finding/)"
+            },
+            {
+              "test": "\"qualified finding definitions render qualifier controls for legacy presence-only history\"",
+              "line": 1373,
+              "text": "assert.match(rendered, /Synthetic qualifier control/)"
+            },
+            {
+              "test": "\"qualified finding definitions render qualifier controls for legacy presence-only history\"",
+              "line": 1376,
+              "text": "assert.equal(finding?.props[\"aria-pressed\"], true)"
+            }
+          ],
+          "after": []
+        },
+        {
+          "test": "\"prior history never seeds current controls or changes the base POST body\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1416,
+              "text": "assert.equal(JSON.stringify(posts), \"[]\", \"an untouched empty encounter must emit the same zero POST bodies as the base head\")"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1423,
+              "text": "assert.deepEqual(grade.props.selected, [])"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1435,
+              "text": "assert.equal(posts[0], baseBody, \"an untouched OD prior must not add a byte to an unrelated OS save\")"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1398,
+              "text": "assert.equal(JSON.stringify(posts), \"[]\", \"an untouched empty encounter must emit the same zero POST bodies as the base head\")"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1405,
+              "text": "assert.deepEqual(grade.props.selected, [])"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1408,
+              "text": "assert.ok(request.commandId)"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1409,
+              "text": "assert.deepEqual(Object.keys(request.eyes), [\"OS\"], \"untouched OD prior does not enter the current request\")"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1410,
+              "text": "assert.deepEqual(request.eyes.OS.loaded, [])"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1411,
+              "text": "assert.deepEqual(request.eyes.OS.selected.map((claim:any) => ({code:claim.key.optionCode,qualifiers:claim.qualifiers})), [{code:\"synthetic-finding\",qualifiers:{}}])"
+            },
+            {
+              "test": "\"prior history never seeds current controls or changes the base POST body\"",
+              "line": 1412,
+              "text": "assert.equal(request.eyes.OS.panel.state.deferred, false)"
+            }
+          ]
+        },
+        {
+          "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1821,
+              "text": "assert.ok(odOther)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1825,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1827,
+              "text": "assert.deepEqual(postedBody, {\n      patientReference: \"Patient/p-qualified-forward\",\n      encounterReference: \"Encounter/e-qualified-forward\",\n      eyes: {\n        OD: {\n          state: \"abnormal\",\n          customFields: [{ code: \"CUSTOM_ABNORMAL_FINDINGS_01\", value: [\"synthetic-finding\"] }],\n          findingDetails: storedFindingDetails,\n          other: \"Unrelated note.\",\n        },\n      },\n    })"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1799,
+              "text": "assert.ok(odOther)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1803,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1806,
+              "text": "assert.ok(request.commandId)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1807,
+              "text": "assert.equal(request.patientReference, \"Patient/p-qualified-forward\")"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1808,
+              "text": "assert.equal(request.encounterReference, \"Encounter/e-qualified-forward\")"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1809,
+              "text": "assert.deepEqual(request.eyes.OD.selected, request.eyes.OD.loaded)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1810,
+              "text": "assert.deepEqual(canonicalQualifiers(request.eyes.OD), storedFindingDetails)"
+            },
+            {
+              "test": "\"ocular-health read-forward preserves stored finding details through an unrelated save\"",
+              "line": 1811,
+              "text": "assert.equal(request.eyes.OD.panel.state.other, \"Unrelated note.\")"
+            }
+          ]
+        },
+        {
+          "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2124,
+              "text": "assert.deepEqual(gradeControl().props.selected, [\"trace\"])"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2126,
+              "text": "assert.deepEqual(gradeControl().props.selected, [\"marked\"])"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2129,
+              "text": "assert.deepEqual(posts[0]!.eyes.OD.findingDetails, { \"synthetic-mgd\": { grade: \"marked\" } })"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2131,
+              "text": "assert.deepEqual(gradeControl().props.selected, [])"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2133,
+              "text": "assert.equal(\"findingDetails\" in posts[1]!.eyes.OD, false)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2098,
+              "text": "assert.deepEqual(gradeControl().props.selected, [\"trace\"])"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2100,
+              "text": "assert.deepEqual(gradeControl().props.selected, [\"marked\"])"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2103,
+              "text": "assert.deepEqual(canonicalQualifiers(posts[0]!.eyes.OD), { \"synthetic-mgd\": { grade: \"marked\" } })"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2105,
+              "text": "assert.deepEqual(gradeControl().props.selected, [])"
+            },
+            {
+              "test": "\"segmented finding grades replace the value and re-tapping clears the findingDetails entry\"",
+              "line": 2107,
+              "text": "assert.deepEqual(canonicalQualifiers(posts[1]!.eyes.OD), {})"
+            }
+          ]
+        },
+        {
+          "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2172,
+              "text": "assert.equal(numeric().props.value, \"3\")"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2174,
+              "text": "assert.equal(numeric().props.value, \"3\")"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2181,
+              "text": "assert.deepEqual(chips(\"MGD clock-hour arc direction\").props.selected, [false])"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2184,
+              "text": "assert.deepEqual(chips(\"MGD clock-hour arc direction\").props.selected, [false])"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2187,
+              "text": "assert.deepEqual(postedBody?.eyes.OD.findingDetails, {\n      \"synthetic-mgd\": {\n        grade: \"marked\",\n        type: \"seborrheic\",\n        score: 3,\n        arc: { from: 2, to: 5, clockwise: false },\n      },\n    })"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2146,
+              "text": "assert.equal(numeric().props.value, \"3\")"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2148,
+              "text": "assert.equal(numeric().props.value, \"3\")"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2155,
+              "text": "assert.deepEqual(chips(\"MGD clock-hour arc direction\").props.selected, [false])"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2158,
+              "text": "assert.deepEqual(chips(\"MGD clock-hour arc direction\").props.selected, [false])"
+            },
+            {
+              "test": "\"all four finding qualifier controls write the server-validated value shapes\"",
+              "line": 2161,
+              "text": "assert.deepEqual(canonicalQualifiers(postedBody?.eyes.OD), {\n      \"synthetic-mgd\": {\n        grade: \"marked\",\n        type: \"seborrheic\",\n        score: 3,\n        arc: { from: 2, to: 5, clockwise: false },\n      },\n    })"
+            }
+          ]
+        },
+        {
+          "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2240,
+              "text": "assert.equal(findInput(\"Decimal score\").props.value, \"1.5\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2242,
+              "text": "assert.equal(findInput(\"Decimal score\").props.value, \"1.5\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2245,
+              "text": "assert.equal(findInput(\"Integer score\").props.value, \"15\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2247,
+              "text": "assert.equal(findInput(\"Integer score\").props.value, \"15\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2250,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"9\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2252,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2253,
+              "text": "assert.match(renderer.root.findByProps({ role: \"alert\" }).children.join(\"\"), /Bounded score must be between 0 and 4 in increments of 1/)"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2255,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"  \")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2257,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2261,
+              "text": "assert.deepEqual(postedBody?.eyes.OD.findingDetails, {\n      \"synthetic-decimal\": { score: 1.5 },\n      \"synthetic-integer\": { score: 15 },\n    })"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2214,
+              "text": "assert.equal(findInput(\"Decimal score\").props.value, \"1.5\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2216,
+              "text": "assert.equal(findInput(\"Decimal score\").props.value, \"1.5\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2219,
+              "text": "assert.equal(findInput(\"Integer score\").props.value, \"15\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2221,
+              "text": "assert.equal(findInput(\"Integer score\").props.value, \"15\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2224,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"9\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2226,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2227,
+              "text": "assert.match(renderer.root.findByProps({ role: \"alert\" }).children.join(\"\"), /Bounded score must be between 0 and 4 in increments of 1/)"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2229,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"  \")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2231,
+              "text": "assert.equal(findInput(\"Bounded score\").props.value, \"\")"
+            },
+            {
+              "test": "\"numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values\"",
+              "line": 2235,
+              "text": "assert.deepEqual(canonicalQualifiers(postedBody?.eyes.OD), {\n      \"synthetic-decimal\": { score: 1.5 },\n      \"synthetic-integer\": { score: 15 },\n    })"
+            }
+          ]
+        },
+        {
+          "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2332,
+              "text": "assert.equal(zoneButton().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2333,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"data-finding-row\": \"synthetic-finding\" }).length, 1)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2338,
+              "text": "assert.equal(zoneButton().props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2339,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"data-finding-row\": \"synthetic-finding\" }).length, 0)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2340,
+              "text": "assert.equal(prompts.length, 2)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2341,
+              "text": "assert.ok(prompts.every((prompt) => prompt.includes(\"Synthetic Finding\")))"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2344,
+              "text": "assert.deepEqual(posts[0], {\n      patientReference: \"Patient/p-confirm-destroy\",\n      encounterReference: \"Encounter/e-confirm-destroy\",\n      eyes: { OD: { state: \"normal\", customFields: [] } },\n    })"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2306,
+              "text": "assert.equal(zoneButton().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2307,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"data-finding-row\": \"synthetic-finding\" }).length, 1)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2312,
+              "text": "assert.equal(zoneButton().props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2313,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"data-finding-row\": \"synthetic-finding\" }).length, 0)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2314,
+              "text": "assert.equal(prompts.length, 2)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2315,
+              "text": "assert.ok(prompts.every((prompt) => prompt.includes(\"Synthetic Finding\")))"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2318,
+              "text": "assert.ok(posts[0].commandId)"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2319,
+              "text": "assert.equal(posts[0].patientReference, \"Patient/p-confirm-destroy\")"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2320,
+              "text": "assert.equal(posts[0].encounterReference, \"Encounter/e-confirm-destroy\")"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2321,
+              "text": "assert.deepEqual(posts[0].eyes.OD.selected, [])"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2322,
+              "text": "assert.deepEqual(posts[0].eyes.OD.loaded.map((claim:any) => claim.key.optionCode), [\"synthetic-finding\"])"
+            },
+            {
+              "test": "\"described finding destruction is guarded from Zone A and the row remove path prunes the next POST\"",
+              "line": 2323,
+              "text": "assert.equal(posts[0].eyes.OD.negativeAct, undefined, \"removal never invents Normal\")"
+            }
+          ]
+        },
+        {
+          "test": "\"child details fold into the worksheet row and remain selection codes in the POST body\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"child details fold into the worksheet row and remain selection codes in the POST body\"",
+              "line": 2548,
+              "text": "assert.deepEqual(postedBody?.eyes.OD.customFields, [{\n      code: \"CUSTOM_ABNORMAL_FINDINGS_WORKSHEET\",\n      value: [\"synthetic-demodex\", \"synthetic-demodex::collarettes\"],\n    }])"
+            },
+            {
+              "test": "\"child details fold into the worksheet row and remain selection codes in the POST body\"",
+              "line": 2552,
+              "text": "assert.equal(\"findingDetails\" in postedBody!.eyes.OD, false)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"child details fold into the worksheet row and remain selection codes in the POST body\"",
+              "line": 2524,
+              "text": "assert.deepEqual(postedBody?.eyes.OD.selected.map((claim:any) => claim.key.optionCode), [\"synthetic-demodex\", \"synthetic-demodex::collarettes\"])"
+            },
+            {
+              "test": "\"child details fold into the worksheet row and remain selection codes in the POST body\"",
+              "line": 2525,
+              "text": "assert.deepEqual(canonicalQualifiers(postedBody!.eyes.OD), {})"
+            }
+          ]
+        },
+        {
+          "test": "\"a saved normal keeps its captured template snapshot after the live template changes\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"a saved normal keeps its captured template snapshot after the live template changes\"",
+              "line": 2605,
+              "text": "assert.ok(definition)"
+            },
+            {
+              "test": "\"a saved normal keeps its captured template snapshot after the live template changes\"",
+              "line": 2628,
+              "text": "assert.equal(templates[0], \"Saved normal snapshot.\")"
+            },
+            {
+              "test": "\"a saved normal keeps its captured template snapshot after the live template changes\"",
+              "line": 2629,
+              "text": "assert.equal(templates[1], \"Later edited live template.\")"
+            }
+          ],
+          "after": []
+        },
+        {
+          "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2894,
+              "text": "assert.deepEqual(diagnosisWrites, [], \"selecting the finding must not emit a diagnosis\")"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2895,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"data-testid\": \"structure-diagnosis-rail\" }).length, 0)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2898,
+              "text": "assert.ok(save)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2905,
+              "text": "assert.match(renderedText(rail), /Age-related nuclear cataract/)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2906,
+              "text": "assert.doesNotMatch(renderedText(rail), /Wrong stale diagnosis/)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2907,
+              "text": "assert.deepEqual(diagnosisWrites, [], \"saving the finding must not emit a diagnosis\")"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2914,
+              "text": "assert.deepEqual(diagnosisWrites[0], {\n      diagnosisKey: \"cataract_nuclear_sclerosis\",\n      action: \"possible\",\n      findingInstanceId: \"lens-current\",\n      source: \"mapping\",\n    })"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2925,
+              "text": "assert.equal(diagnosisWrites[1]?.action, \"discard\")"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2885,
+              "text": "assert.deepEqual(diagnosisWrites, [], \"selecting the finding must not emit a diagnosis\")"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2886,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"data-testid\": \"structure-diagnosis-rail\" }).length, 0)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2889,
+              "text": "assert.ok(save)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2896,
+              "text": "assert.match(renderedText(rail), /Age-related nuclear cataract/)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2897,
+              "text": "assert.doesNotMatch(renderedText(rail), /Wrong stale diagnosis/)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2898,
+              "text": "assert.deepEqual(diagnosisWrites, [], \"saving the finding must not emit a diagnosis\")"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2905,
+              "text": "assert.match(String(diagnosisWrites[0]?.commandId), /^[0-9a-f-]{36}$/)"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2906,
+              "text": "assert.deepEqual(diagnosisWrites[0], {\n      diagnosisKey: \"cataract_nuclear_sclerosis\", action: \"possible\", source: \"mapping\",\n      commandId: diagnosisWrites[0]!.commandId, supportingFacts: [{key,baseline:support.baseline}], laterality: \"OD\",\n    })"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2910,
+              "text": "assert.deepEqual(homes,[\"Condition/condition-cataract\"])"
+            },
+            {
+              "test": "\"saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract\"",
+              "line": 2916,
+              "text": "assert.equal(diagnosisWrites[1]?.action, \"discard\")"
+            }
+          ]
+        },
+        {
+          "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 3020,
+              "text": "assert.equal(saved.status, 200, JSON.stringify(saved.body))"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 3023,
+              "text": "assert.equal(savedReference, `Observation/${observations[0]?.id}`)"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 3099,
+              "text": "assert.match(renderedText(rail), /Age-related nuclear cataract/)"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 3100,
+              "text": "assert.equal(historyRequests.length, 1)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 2975,
+              "text": "assert.equal(before.status,200,JSON.stringify(before.body))"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 2981,
+              "text": "assert.equal(saved.status,200,JSON.stringify(saved.body))"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 2986,
+              "text": "assert.ok(memory.fhir)"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 3064,
+              "text": "assert.match(renderedText(rail), /Age-related nuclear cataract/)"
+            },
+            {
+              "test": "\"fresh ocular-health history restores scoped diagnosis suggestions without a save\"",
+              "line": 3065,
+              "text": "assert.equal(historyRequests.length, 1)"
+            }
+          ]
+        },
+        {
+          "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3186,
+              "text": "assert.match(rendered, new RegExp(definition.display))"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3187,
+              "text": "assert.match(rendered, /Posterior Segment/)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3188,
+              "text": "assert.match(rendered, /Fundus All Normal/)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3189,
+              "text": "assert.match(rendered, /Dot\\/Blot Hemorrhage/)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3190,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"aria-pressed\": true }).length, 1)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3191,
+              "text": "assert.equal(renderer.root.findAllByProps({ value: \"\" }).length, 12)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3151,
+              "text": "assert.match(rendered, new RegExp(definition.display))"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3152,
+              "text": "assert.match(rendered, /Posterior Segment/)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3153,
+              "text": "assert.match(rendered, /Fundus All Normal/)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3154,
+              "text": "assert.match(rendered, /Dot\\/Blot Hemorrhage/)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3155,
+              "text": "assert.equal(renderer.root.findAllByProps({ \"aria-pressed\": true }).length, 1)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3157,
+              "text": "assert.equal(otherFields.length, definitions.length * 2)"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3158,
+              "text": "assert.ok(otherFields.every(node => node.props.value === \"\"))"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3159,
+              "text": "assert.ok(renderer.root.findAllByType(OdosSelect).every(node => node.props.value === \"\"), \"unmeasured grades remain blank\")"
+            },
+            {
+              "test": "\"posterior seeded history renders honestly and zero-data eyes remain untouched\"",
+              "line": 3160,
+              "text": "assert.equal(renderer.root.findAllByType(\"textarea\").filter(node => node.props[\"aria-label\"]?.endsWith(\" Remarks\") && node.props.value === \"\").length, definitions.length * 2)"
+            }
+          ]
+        },
+        {
+          "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3216,
+              "text": "assert.ok(vitreous && fundus)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3245,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3247,
+              "text": "assert.equal(posts.length, 1)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3248,
+              "text": "assert.match(posts[0]!.url, /ocular-health%3Aposterior%3Avitreous$/)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3249,
+              "text": "assert.match(posts[0]!.body, /CUSTOM_VITREOUS_FINDINGS/)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3250,
+              "text": "assert.match(posts[0]!.body, /floaters/)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3252,
+              "text": "assert.equal(posts.length, 1)"
+            },
+            {
+              "test": "\"posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot\"",
+              "line": 3254,
+              "text": "assert.ok(templates.includes(\"Saved fundus normal snapshot.\"))"
+            }
+          ],
+          "after": []
+        },
+        {
+          "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3262,
+              "text": "assert.ok(vessels)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3285,
+              "text": "assert.equal(selects.length, 2)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3287,
+              "text": "assert.equal(ratio.value, \"2-3\")"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3290,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3292,
+              "text": "assert.equal(posts.length, 1)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3293,
+              "text": "assert.deepEqual(JSON.parse(posts[0]!).eyes.OD.customFields, [{ code: \"CUSTOM_GRADE_A_V_RATIO\", value: \"2-3\" }])"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3294,
+              "text": "assert.equal(JSON.parse(posts[0]!).eyes.OS, undefined)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3296,
+              "text": "assert.equal(posts.length, 1)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3233,
+              "text": "assert.ok(vessels)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3256,
+              "text": "assert.equal(selects.length, 2)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3258,
+              "text": "assert.equal(ratio.value, \"2-3\")"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3261,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3263,
+              "text": "assert.equal(posts.length, 1)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3264,
+              "text": "assert.deepEqual(JSON.parse(posts[0]!).eyes.OD.panel.state.values, { CUSTOM_GRADE_A_V_RATIO: \"2-3\" })"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3265,
+              "text": "assert.equal(JSON.parse(posts[0]!).eyes.OS, undefined)"
+            },
+            {
+              "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
+              "line": 3267,
+              "text": "assert.equal(posts.length, 1)"
+            }
+          ]
+        },
+        {
+          "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3330,
+              "text": "assert.equal(numbers.length, 2)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3331,
+              "text": "assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, null])"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3333,
+              "text": "assert.equal(selects.length, 2)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3334,
+              "text": "assert.deepEqual(selects.map((select) => select.props.value), [\"\", \"\"])"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3339,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3341,
+              "text": "assert.equal(posts.length, 2)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3342,
+              "text": "assert.deepEqual(posts[0]!.body.eyes.OD?.customFields, [{ code: \"CUSTOM_GRADE_TBUT\", value: 6 }])"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3343,
+              "text": "assert.deepEqual(posts[1]!.body.eyes.OS?.customFields, [{ code: \"CUSTOM_GRADE_VAN_HERICK\", value: \"grade-2\" }])"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3301,
+              "text": "assert.equal(numbers.length, 2)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3302,
+              "text": "assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, null])"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3304,
+              "text": "assert.equal(selects.length, 2)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3305,
+              "text": "assert.deepEqual(selects.map((select) => select.props.value), [\"\", \"\"])"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3310,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3312,
+              "text": "assert.equal(posts.length, 2)"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3313,
+              "text": "assert.deepEqual(posts[0]!.body.eyes.OD?.panel.state.values, { CUSTOM_GRADE_TBUT: 6 })"
+            },
+            {
+              "test": "\"remaining anterior structure grades render blank, persist typed values, and hydrate per eye\"",
+              "line": 3314,
+              "text": "assert.deepEqual(posts[1]!.body.eyes.OS?.panel.state.values, { CUSTOM_GRADE_VAN_HERICK: \"grade-2\" })"
+            }
+          ]
+        },
+        {
+          "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4492,
+              "text": "assert.equal(selects.length, 2)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4494,
+              "text": "assert.equal(select.props.value, \"\")"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4495,
+              "text": "assert.deepEqual(select.props.options[0], { value: \"\", label: \"Select\" })"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4496,
+              "text": "assert.equal(select.props.options.find((option: { label: string }) => option.label === \"2:3\").value, \"2-3\")"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4498,
+              "text": "assert.equal(posts.length, 0)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4508,
+              "text": "assert.equal(posts.length, scenario === \"Fundus All Normal\" ? 5 : 1)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4511,
+              "text": "assert.deepEqual(Object.keys(body.eyes), scenario === \"Fundus All Normal\" ? [\"OD\", \"OS\"] : [\"OD\"])"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4513,
+              "text": "assert.equal(body.eyes[eye].state, \"normal\")"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4514,
+              "text": "assert.ok(body.eyes[eye].negativeAct.id)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4515,
+              "text": "assert.deepEqual(body.eyes[eye].customFields, [])"
+            }
+          ],
+          "after": [
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4463,
+              "text": "assert.equal(selects.length, 2)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4465,
+              "text": "assert.equal(select.props.value, \"\")"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4466,
+              "text": "assert.deepEqual(select.props.options[0], { value: \"\", label: \"Select\" })"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4467,
+              "text": "assert.equal(select.props.options.find((option: { label: string }) => option.label === \"2:3\").value, \"2-3\")"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4469,
+              "text": "assert.equal(posts.length, 0)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4479,
+              "text": "assert.equal(posts.length, scenario === \"Fundus All Normal\" ? 5 : 1)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4482,
+              "text": "assert.deepEqual(Object.keys(body.eyes), scenario === \"Fundus All Normal\" ? [\"OD\", \"OS\"] : [\"OD\"])"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4484,
+              "text": "assert.equal(body.eyes[eye].panel.state.deferred, false)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4485,
+              "text": "assert.ok(body.eyes[eye].negativeAct.id)"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4486,
+              "text": "assert.deepEqual(body.eyes[eye].panel.state.values, {})"
+            },
+            {
+              "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
+              "line": 4487,
+              "text": "assert.deepEqual(body.eyes[eye].selected, [])"
+            }
+          ]
+        },
+        {
+          "test": "\"V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal\"",
+          "mapping": "V18 / V22",
+          "before": [],
+          "after": [
+            {
+              "test": "\"V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal\"",
+              "line": 1215,
+              "text": "assert.equal(posts[0]?.eyes.OD.panel.state.deferred, false)"
+            },
+            {
+              "test": "\"V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal\"",
+              "line": 1216,
+              "text": "assert.deepEqual(posts[0]?.eyes.OD.selected.map((claim:any) => claim.key.optionCode), [\"synthetic-finding\"])"
+            },
+            {
+              "test": "\"V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal\"",
+              "line": 1220,
+              "text": "assert.equal(posts[1]?.eyes.OD.negativeAct, undefined, \"clearing the final positive never invents a negative act\")"
+            },
+            {
+              "test": "\"V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal\"",
+              "line": 1221,
+              "text": "assert.deepEqual(posts[1]?.eyes.OD.selected, [])"
+            },
+            {
+              "test": "\"V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal\"",
+              "line": 1226,
+              "text": "assert.equal(posts[2]?.eyes.OD.panel.state.other, \"Trace scar\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+          "mapping": "W138",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1310,
+              "text": "assert.equal(attempts[0]?.status, 200, JSON.stringify(attempts[0]?.response))"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1311,
+              "text": "assert.deepEqual(attempts[0]?.body.eyes.OD.selected.map((claim:any) => claim.key.optionCode), [\"synthetic-finding\"])"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1313,
+              "text": "assert.ok(fact, \"canonical fact was actually persisted by the handler\")"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1315,
+              "text": "assert.equal(deferred().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1316,
+              "text": "assert.equal(finding().props.disabled, true, \"W138 Deferred locks the selected fact\")"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1317,
+              "text": "assert.equal(finding().props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1319,
+              "text": "assert.equal(attempts[1]?.status, 200, JSON.stringify(attempts[1]?.response))"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1320,
+              "text": "assert.deepEqual(attempts[1]?.body.eyes.OD.loaded, attempts[1]?.body.eyes.OD.selected, \"W138 no deselection accompanies Deferred\")"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1321,
+              "text": "assert.equal(attempts[1]?.body.eyes.OD.panel.state.deferred, true)"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1322,
+              "text": "assert.deepEqual(memory.all<Observation>(\"Observation\").find(o => o.id === fact.id), fact, \"W138 Deferred never changes the fact bytes or version\")"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1324,
+              "text": "assert.equal(finding().props.disabled, false)"
+            },
+            {
+              "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
+              "line": 1325,
+              "text": "assert.equal(finding().props[\"aria-pressed\"], true)"
+            }
+          ]
+        },
+        {
+          "test": "\"qualified finding definitions render qualifier controls for canonical presence-only history\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [],
+          "after": [
+            {
+              "test": "\"qualified finding definitions render qualifier controls for canonical presence-only history\"",
+              "line": 1354,
+              "text": "assert.match(rendered, /Synthetic Finding/)"
+            },
+            {
+              "test": "\"qualified finding definitions render qualifier controls for canonical presence-only history\"",
+              "line": 1355,
+              "text": "assert.match(rendered, /Synthetic qualifier control/)"
+            },
+            {
+              "test": "\"qualified finding definitions render qualifier controls for canonical presence-only history\"",
+              "line": 1358,
+              "text": "assert.equal(finding?.props[\"aria-pressed\"], true)"
+            }
+          ]
+        },
+        {
+          "test": "\"V21 V22 a saved negative scope stays frozen after the live normal template changes\"",
+          "mapping": "V21 / V22",
+          "before": [],
+          "after": [
+            {
+              "test": "\"V21 V22 a saved negative scope stays frozen after the live normal template changes\"",
+              "line": 2578,
+              "text": "assert.ok(definition)"
+            },
+            {
+              "test": "\"V21 V22 a saved negative scope stays frozen after the live normal template changes\"",
+              "line": 2602,
+              "text": "assert.deepEqual(templates, [\"Later edited live template.\", \"Later edited live template.\"])"
+            },
+            {
+              "test": "\"V21 V22 a saved negative scope stays frozen after the live normal template changes\"",
+              "line": 2604,
+              "text": "assert.equal(negativeAfter, negativeBefore, \"V22 the recorded negative scope and timestamp do not change with template prose\")"
+            },
+            {
+              "test": "\"V21 V22 a saved negative scope stays frozen after the live normal template changes\"",
+              "line": 2605,
+              "text": "assert.doesNotMatch(negativeAfter, /Later edited live template|Saved normal snapshot/)"
+            }
+          ]
+        },
+        {
+          "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+          "mapping": "V21 / V22",
+          "before": [],
+          "after": [
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3185,
+              "text": "assert.ok(vitreous && fundus)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3216,
+              "text": "assert.ok(saveButton)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3218,
+              "text": "assert.equal(posts.length, 1)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3219,
+              "text": "assert.match(posts[0]!.url, /ocular-health%3Aposterior%3Avitreous$/)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3220,
+              "text": "assert.match(posts[0]!.body, /CUSTOM_VITREOUS_FINDINGS/)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3221,
+              "text": "assert.match(posts[0]!.body, /floaters/)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3223,
+              "text": "assert.equal(posts.length, 1)"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3224,
+              "text": "assert.equal(fundusNegative(), negativeBefore, \"V22 unrelated save preserves recorded scope\")"
+            },
+            {
+              "test": "\"V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope\"",
+              "line": 3225,
+              "text": "assert.match(fundusNegative(), /Absent:/)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/diagnosisCarryForward.test.tsx",
+      "assertionCountBefore": 60,
+      "assertionCountAfter": 102,
+      "changedGroups": [
+        {
+          "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+          "mapping": "V25 / V36 / W142 / W143",
+          "before": [
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 369,
+              "text": "assert.deepEqual(selections, [\"Condition/current-checked\"])"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 370,
+              "text": "assert.equal(requests.length, 0)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 377,
+              "text": "assert.equal(requests.length, 1)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 378,
+              "text": "assert.deepEqual(requests[0]?.body, {\n    sourceEncounterReference: \"Encounter/recent\",\n    sourceConditionReference: \"Condition/source-a\",\n  })"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 386,
+              "text": "assert.equal(row(\"Condition/source-a\").props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 387,
+              "text": "assert.equal(row(\"Condition/source-b\").props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 388,
+              "text": "assert.deepEqual(selections, [\"Condition/current-checked\", \"Condition/current-a\"])"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 394,
+              "text": "assert.equal(requests.length, 2)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 395,
+              "text": "assert.deepEqual(requests[1]?.body, {\n    sourceEncounterReference: \"Encounter/older\",\n    sourceConditionReference: \"Condition/source-b\",\n  })"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 399,
+              "text": "assert.equal(row(\"Condition/source-a\").props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 400,
+              "text": "assert.equal(row(\"Condition/source-b\").props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific\"",
+              "line": 401,
+              "text": "assert.deepEqual(selections, [\"Condition/current-checked\", \"Condition/current-a\", \"Condition/current-b\"])"
+            }
+          ],
+          "after": []
+        },
+        {
+          "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+          "mapping": "V25 / V36 / W142 / W143",
+          "before": [],
+          "after": [
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 369,
+              "text": "assert.deepEqual(selections, [\"Condition/current-checked\"])"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 370,
+              "text": "assert.equal(requests.length, 0)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 378,
+              "text": "assert.equal(requests.length, 1)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 379,
+              "text": "assert.match((requests[0]?.body as { commandId: string }).commandId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 380,
+              "text": "assert.deepEqual(requests[0]?.body, {\n    commandId: (requests[0]?.body as { commandId: string }).commandId,\n    sourceEncounterReference: \"Encounter/recent\",\n    sourceConditionReference: \"Condition/source-a\",\n  })"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 389,
+              "text": "assert.equal(row(\"Condition/source-a\").props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 390,
+              "text": "assert.equal(row(\"Condition/source-b\").props[\"aria-pressed\"], false)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 391,
+              "text": "assert.deepEqual(selections, [\"Condition/current-checked\", \"Condition/current-a\"])"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 397,
+              "text": "assert.equal(requests.length, 2)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 398,
+              "text": "assert.notEqual((requests[1]?.body as { commandId: string }).commandId, (requests[0]?.body as { commandId: string }).commandId)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 399,
+              "text": "assert.deepEqual(requests[1]?.body, {\n    commandId: (requests[1]?.body as { commandId: string }).commandId,\n    sourceEncounterReference: \"Encounter/older\",\n    sourceConditionReference: \"Condition/source-b\",\n  })"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 404,
+              "text": "assert.equal(row(\"Condition/source-a\").props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 405,
+              "text": "assert.equal(row(\"Condition/source-b\").props[\"aria-pressed\"], true)"
+            },
+            {
+              "test": "\"read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific\"",
+              "line": 406,
+              "text": "assert.deepEqual(selections, [\"Condition/current-checked\", \"Condition/current-a\", \"Condition/current-b\"])"
+            }
+          ]
+        },
+        {
+          "test": "`V25 W135 carry refresh event follows ${scenario} server evidence`",
+          "mapping": "V25 / W135",
+          "before": [],
+          "after": [
+            {
+              "test": "`V25 W135 carry refresh event follows ${scenario} server evidence`",
+              "line": 534,
+              "text": "assert.deepEqual(events, scenario === \"unconfirmed\" ? [] : [\"Encounter/current\"], \"V25 confirmed carry refreshes overview and the other finding door; unconfirmed transport never claims a write\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+          "mapping": "W142",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 557,
+              "text": "assert.deepEqual(selections, [])"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 558,
+              "text": "assert.match(text(renderer), /Diagnosis: applied/)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 559,
+              "text": "assert.match(text(renderer), /Plan: applied/)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 560,
+              "text": "assert.match(text(renderer), /Visit link: applied/)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 561,
+              "text": "assert.match(text(renderer), /Findings: incomplete/)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 562,
+              "text": "assert.match(text(renderer), /Lineage: not-attempted/)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 564,
+              "text": "assert.ok(retry, \"partial carry must remain resumable\")"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 565,
+              "text": "assert.match(JSON.parse(bodies[0]!).commandId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 567,
+              "text": "assert.equal(bodies.length, 2)"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 568,
+              "text": "assert.equal(bodies[1], bodies[0])"
+            },
+            {
+              "test": "\"W142 partial carry shows steps and Finish carrying resends the identical command body\"",
+              "line": 569,
+              "text": "assert.deepEqual(selections, [\"Condition/carried\"])"
+            }
+          ]
+        },
+        {
+          "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+          "mapping": "V25 / V36 / W143",
+          "before": [],
+          "after": [
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 586,
+              "text": "assert.equal(requests.length,1,\"W143 checked is not proof that the persisted carry finished\")"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 587,
+              "text": "assert.equal(requests[0].replan,undefined,\"initial verification never forces a new carry plan\")"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 589,
+              "text": "assert.deepEqual(selections,[])"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 591,
+              "text": "assert.ok(retry,\"remounted incomplete carry exposes recovery\")"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 593,
+              "text": "assert.equal(reads,2,\"replan first reloads\")"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 593,
+              "text": "assert.equal(requests.length,2)"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 593,
+              "text": "assert.equal(requests[1].replan,true)"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 593,
+              "text": "assert.notEqual(requests[0].commandId,requests[1].commandId)"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 595,
+              "text": "assert.deepEqual(selections,[\"Condition/carried\"])"
+            },
+            {
+              "test": "`V25 V36 W143 remounted checked carry ${incomplete ? \"discovers incomplete plan\" : \"selects already complete without replan\"}`",
+              "line": 597,
+              "text": "assert.equal(requests.length,incomplete?2:1,\"confirmed completed carry selects without another POST\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+          "mapping": "W143",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 618,
+              "text": "assert.ok(replan, \"carry-incomplete must offer a reload and a new plan\")"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 620,
+              "text": "assert.deepEqual(order, [\"GET\", \"POST\", \"GET\"])"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 621,
+              "text": "assert.equal(bodies.length, 1)"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 623,
+              "text": "assert.deepEqual(order, [\"GET\", \"POST\", \"GET\", \"POST\"])"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 624,
+              "text": "assert.equal(bodies[1]?.replan, true)"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 625,
+              "text": "assert.notEqual(bodies[1]?.commandId, bodies[0]?.commandId)"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 626,
+              "text": "assert.notEqual(bodies[1]?.commandId, \"other-command\")"
+            },
+            {
+              "test": "\"W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved\"",
+              "line": 627,
+              "text": "assert.equal(bodies[1]?.sourceConditionReference, \"Condition/source\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W145 previous-exams unscoped records display their notice, including an empty page\"",
+          "mapping": "W145",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W145 previous-exams unscoped records display their notice, including an empty page\"",
+              "line": 636,
+              "text": "assert.equal(text(renderer).includes(\"Some older records could not be placed on a visit\"), unscopedCount > 0)"
+            }
+          ]
+        },
+        {
+          "test": "\"W142 a dropped pull response keeps its request for Finish carrying\"",
+          "mapping": "W142",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W142 a dropped pull response keeps its request for Finish carrying\"",
+              "line": 654,
+              "text": "assert.ok(retry)"
+            },
+            {
+              "test": "\"W142 a dropped pull response keeps its request for Finish carrying\"",
+              "line": 656,
+              "text": "assert.equal(bodies.length, 2)"
+            },
+            {
+              "test": "\"W142 a dropped pull response keeps its request for Finish carrying\"",
+              "line": 657,
+              "text": "assert.equal(bodies[1], bodies[0])"
+            },
+            {
+              "test": "\"W142 a dropped pull response keeps its request for Finish carrying\"",
+              "line": 658,
+              "text": "assert.equal(renderer.root.findByProps({ \"data-source-condition-reference\": \"Condition/source\" }).props[\"aria-pressed\"], true)"
+            }
+          ]
+        },
+        {
+          "test": "\"W143 failed reload preserves the prior carry and never posts a replan\"",
+          "mapping": "W143",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W143 failed reload preserves the prior carry and never posts a replan\"",
+              "line": 674,
+              "text": "assert.ok(retry)"
+            },
+            {
+              "test": "\"W143 failed reload preserves the prior carry and never posts a replan\"",
+              "line": 676,
+              "text": "assert.equal(gets, 2)"
+            },
+            {
+              "test": "\"W143 failed reload preserves the prior carry and never posts a replan\"",
+              "line": 677,
+              "text": "assert.equal(posts, 1)"
+            },
+            {
+              "test": "\"W143 failed reload preserves the prior carry and never posts a replan\"",
+              "line": 678,
+              "text": "assert.match(text(renderer), /Reload unavailable/)"
+            },
+            {
+              "test": "\"W143 failed reload preserves the prior carry and never posts a replan\"",
+              "line": 679,
+              "text": "assert.equal(renderer.root.findByProps({ \"data-source-condition-reference\": \"Condition/source\" }).props[\"aria-pressed\"], false)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/encounterUndo.test.tsx",
+      "assertionCountBefore": 76,
+      "assertionCountAfter": 85,
+      "changedGroups": [
+        {
+          "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+          "mapping": "V36 / W144",
+          "before": [
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 85,
+              "text": "assert.equal(result.count, 1)"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 86,
+              "text": "assert.deepEqual(result.restored, [\"Observation/o1\"])"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 87,
+              "text": "assert.deepEqual(result.ledger, emptyUndoLedger(\"e1\"))"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 88,
+              "text": "assert.match(calls[0]!.url, /\\/clinical-graph\\/encounters\\/e1\\/void\\/undo$/)"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 89,
+              "text": "assert.deepEqual(calls[0]!.body, { scope: \"section\", sectionKey: \"entrance:pupils\" })"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 92,
+              "text": "assert.rejects(() => undoEncounterVoid(ENCOUNTER, { scope: \"encounter\" }, closed), /Signed or closed encounters cannot be edited/)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 87,
+              "text": "assert.equal(result.count, 1)"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 88,
+              "text": "assert.deepEqual(result.restored, [\"Observation/o1\"])"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 89,
+              "text": "assert.deepEqual(result.ledger, emptyUndoLedger(\"e1\"))"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 90,
+              "text": "assert.match(calls[0]!.url, /\\/clinical-graph\\/encounters\\/e1\\/void\\/undo$/)"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 91,
+              "text": "assert.deepEqual(calls[0]!.body, { scope: \"section\", sectionKey: \"entrance:pupils\", voidActionId: VOID_ACTION_ID })"
+            },
+            {
+              "test": "\"undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error\"",
+              "line": 94,
+              "text": "assert.rejects(() => undoEncounterVoid(ENCOUNTER, { scope: \"encounter\", voidActionId: VOID_ACTION_ID }, closed), /Signed or closed encounters cannot be edited/)"
+            }
+          ]
+        },
+        {
+          "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+          "mapping": "W144",
+          "before": [],
+          "after": [
+            {
+              "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+              "line": 416,
+              "text": "assert.ok(\"voidActionId\" in loaded, \"W144 void response retains action identity\")"
+            },
+            {
+              "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+              "line": 417,
+              "text": "assert.equal(loaded.voidActionId, VOID_ACTION_ID, \"W144 void response retains exact action identity\")"
+            },
+            {
+              "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+              "line": 434,
+              "text": "assert.deepEqual(requests, [{ scope: surface, ...(surface === \"section\" ? { sectionKey: \"entrance:pupils\" } : {}), voidActionId: VOID_ACTION_ID }], \"W144 Undo must name the exact displayed action\")"
+            },
+            {
+              "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+              "line": 436,
+              "text": "assert.match(textOf(strip), /This undo no longer applies/, \"W144 superseded action explains refusal\")"
+            },
+            {
+              "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+              "line": 437,
+              "text": "assert.equal(strip.findAllByType(\"button\").length, 0, \"W144 superseded action has no retry control\")"
+            },
+            {
+              "test": "`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`",
+              "line": 438,
+              "text": "assert.equal(requests.length, 1)"
+            }
+          ]
+        },
+        {
+          "test": "\"W144 legacy slot without an action ID offers no blind Undo\"",
+          "mapping": "W144",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W144 legacy slot without an action ID offers no blind Undo\"",
+              "line": 445,
+              "text": "assert.fail(\"W144 cannot undo without an action ID\")"
+            },
+            {
+              "test": "\"W144 legacy slot without an action ID offers no blind Undo\"",
+              "line": 447,
+              "text": "assert.match(textOf(renderer.root), /This undo no longer applies/)"
+            },
+            {
+              "test": "\"W144 legacy slot without an action ID offers no blind Undo\"",
+              "line": 448,
+              "text": "assert.equal(renderer.root.findAllByType(\"button\").length, 0)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/examOverviewBoard.test.tsx",
+      "assertionCountBefore": 399,
+      "assertionCountAfter": 399,
+      "changedGroups": [
+        {
+          "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+          "mapping": "V21 / V22 / W-k (canonical fixture/projection migration)",
+          "before": [
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1076,
+              "text": "assert.deepEqual({\n    abnormal: abnormal.value,\n    normal: normal.value,\n  }, {\n    abnormal: \"OD Other Reports intermittent shimmer\",\n    normal: \"Stereo present · Other Reliable responses throughout\",\n  })"
+            },
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1083,
+              "text": "assert.equal(abnormal.formattedValue, \"Other Reports intermittent shimmer\")"
+            },
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1084,
+              "text": "assert.doesNotMatch(`${abnormal.value} ${normal.value}`, /Exam state|Normal template|entrance\\.stereo/)"
+            },
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1085,
+              "text": "assert.deepEqual(normal.componentCodes, [\"entrance.stereo\", \"EXAM_STATE\", \"NORMAL_TEMPLATE\", \"OTHER\"])"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1078,
+              "text": "assert.deepEqual({\n    abnormal: abnormal.value,\n    normal: normal.value,\n  }, {\n    abnormal: \"OD OTHER Reports intermittent shimmer\",\n    normal: \"Stereo present · Other Reliable responses throughout\",\n  })"
+            },
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1085,
+              "text": "assert.equal(abnormal.formattedValue, \"OTHER Reports intermittent shimmer\")"
+            },
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1086,
+              "text": "assert.doesNotMatch(`${abnormal.value} ${normal.value}`, /Exam state|Normal template|entrance\\.stereo/)"
+            },
+            {
+              "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+              "line": 1087,
+              "text": "assert.deepEqual(normal.componentCodes, [\"entrance.stereo\", \"EXAM_STATE\", \"NORMAL_TEMPLATE\", \"OTHER\"])"
+            }
+          ]
+        },
+        {
+          "test": "\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\"",
+          "mapping": "V21 / V22 / W-k (canonical fixture/projection migration)",
+          "before": [
+            {
+              "test": "\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\"",
+              "line": 1104,
+              "text": "assert.equal(abnormal.formattedValue, \"Other Reports intermittent shimmer\")"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\"",
+              "line": 1106,
+              "text": "assert.equal(abnormal.formattedValue, \"OTHER Reports intermittent shimmer\")"
+            }
+          ]
+        },
+        {
+          "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+          "mapping": "V36 / W144",
+          "before": [
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2407,
+              "text": "assert.equal(Boolean(visitUndo().props.disabled), canWriteDiagnosis !== true)"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2410,
+              "text": "assert.deepEqual(harness.undoRequests, [])"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2414,
+              "text": "assert.equal(Boolean(observationUndo.props.disabled), false, \"the Observation-only slot stays usable\")"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2417,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }])"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2418,
+              "text": "assert.equal(Boolean(visitUndo().props.disabled), true, \"the undo response refreshes capability for the remaining diagnosis slot\")"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2424,
+              "text": "assert.equal(Boolean(visitUndo().props.disabled), false, \"even a no-op void response refreshes capability without changing the ledger\")"
+            }
+          ],
+          "after": [
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2415,
+              "text": "assert.equal(Boolean(visitUndo().props.disabled), canWriteDiagnosis !== true)"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2418,
+              "text": "assert.deepEqual(harness.undoRequests, [])"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2422,
+              "text": "assert.equal(Boolean(observationUndo.props.disabled), false, \"the Observation-only slot stays usable\")"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2425,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }])"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2426,
+              "text": "assert.equal(Boolean(visitUndo().props.disabled), true, \"the undo response refreshes capability for the remaining diagnosis slot\")"
+            },
+            {
+              "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+              "line": 2432,
+              "text": "assert.equal(Boolean(visitUndo().props.disabled), false, \"even a no-op void response refreshes capability without changing the ledger\")"
+            }
+          ]
+        },
+        {
+          "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+          "mapping": "V36 / W144",
+          "before": [
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2491,
+              "text": "assert.deepEqual(slots.slice(0, 4), [\"patient\", \"cc-hpi-reserved\", \"exam-sections\", \"undo\"], \"the visit Undo sits beside exam-sections\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2493,
+              "text": "assert.match(textContent(visitSlot), /Cleared everything charted · up to 31 values/, \"a slot read back from the server is intent-derived: its count is an upper bound\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2497,
+              "text": "assert.equal(sheet.props.sectionId, \"va\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2499,
+              "text": "assert.match(textContent(strip), /Cleared Visual acuity · up to 2 values/, \"the sheet strip is scoped to VA's own slot, and a loaded slot reads as an upper bound\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2502,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }])"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2503,
+              "text": "assert.equal(visibleSheet(harness).findAllByProps({ \"data-undo-scope\": \"section\" }).length, 0, \"the strip is gone: the response ledger replaced ours\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2504,
+              "text": "assert.equal(harness.renderer.root.findAllByProps({ \"data-chart-bar-slot\": \"undo\" }).length, 1, \"the visit slot the response ledger still holds stays\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2507,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }, { scope: \"encounter\" }])"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2508,
+              "text": "assert.equal(harness.renderer.root.findAllByProps({ \"data-chart-bar-slot\": \"undo\" }).length, 0, \"the visit Undo is gone once the response ledger no longer holds it\")"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2499,
+              "text": "assert.deepEqual(slots.slice(0, 4), [\"patient\", \"cc-hpi-reserved\", \"exam-sections\", \"undo\"], \"the visit Undo sits beside exam-sections\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2501,
+              "text": "assert.match(textContent(visitSlot), /Cleared everything charted · up to 31 values/, \"a slot read back from the server is intent-derived: its count is an upper bound\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2505,
+              "text": "assert.equal(sheet.props.sectionId, \"va\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2507,
+              "text": "assert.match(textContent(strip), /Cleared Visual acuity · up to 2 values/, \"the sheet strip is scoped to VA's own slot, and a loaded slot reads as an upper bound\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2510,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }])"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2511,
+              "text": "assert.equal(visibleSheet(harness).findAllByProps({ \"data-undo-scope\": \"section\" }).length, 0, \"the strip is gone: the response ledger replaced ours\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2512,
+              "text": "assert.equal(harness.renderer.root.findAllByProps({ \"data-chart-bar-slot\": \"undo\" }).length, 1, \"the visit slot the response ledger still holds stays\")"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2515,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }, { scope: \"encounter\", voidActionId: \"visit-void\" }])"
+            },
+            {
+              "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+              "line": 2516,
+              "text": "assert.equal(harness.renderer.root.findAllByProps({ \"data-chart-bar-slot\": \"undo\" }).length, 0, \"the visit Undo is gone once the response ledger no longer holds it\")"
+            }
+          ]
+        },
+        {
+          "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+          "mapping": "V36 / W144",
+          "before": [
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2639,
+              "text": "assert.equal(confirmations.length, 1, \"a dirty sheet asks first\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2640,
+              "text": "assert.match(confirmations[0]!, /unsaved changes in Visual Acuity/i)"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2641,
+              "text": "assert.deepEqual(harness.undoRequests, [], \"declined: nothing is undone and nothing is discarded\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2642,
+              "text": "assert.equal(visibleSheet(harness).findAllByProps({ \"data-undo-scope\": \"section\" }).length, 1, \"the strip stays\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2645,
+              "text": "assert.equal(confirmations.length, 2)"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2646,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }], \"accepted: the undo proceeds\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2653,
+              "text": "assert.equal(confirmations.length, 3, \"the chart-bar Undo asks too while a dirty sheet is open\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2654,
+              "text": "assert.equal(harness.undoRequests.length, before)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2647,
+              "text": "assert.equal(confirmations.length, 1, \"a dirty sheet asks first\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2648,
+              "text": "assert.match(confirmations[0]!, /unsaved changes in Visual Acuity/i)"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2649,
+              "text": "assert.deepEqual(harness.undoRequests, [], \"declined: nothing is undone and nothing is discarded\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2650,
+              "text": "assert.equal(visibleSheet(harness).findAllByProps({ \"data-undo-scope\": \"section\" }).length, 1, \"the strip stays\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2653,
+              "text": "assert.equal(confirmations.length, 2)"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2654,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }], \"accepted: the undo proceeds\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2661,
+              "text": "assert.equal(confirmations.length, 3, \"the chart-bar Undo asks too while a dirty sheet is open\")"
+            },
+            {
+              "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+              "line": 2662,
+              "text": "assert.equal(harness.undoRequests.length, before)"
+            }
+          ]
+        },
+        {
+          "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+          "mapping": "V36 / W144",
+          "before": [
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2670,
+              "text": "assert.equal(confirmations.length, 1, \"the discard warning was asked and accepted\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2671,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }], \"the undo was attempted\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2673,
+              "text": "assert.equal(sheet.props.sectionId, \"va\", \"the sheet stays mounted with the typed edit\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2674,
+              "text": "assert.match(textContent(sheet.findByProps({ \"data-undo-scope\": \"section\" })), /Undo could not be applied/, \"the failure is reported in the strip\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2677,
+              "text": "assert.equal(confirmations.length, 2, \"the failed Undo must leave the sheet dirty for the next transition\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2678,
+              "text": "assert.equal(visibleSheet(harness).props.sectionId, \"va\", \"declined: the sheet with the typed edit is still there\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2683,
+              "text": "assert.equal(confirmations.length, 3)"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2684,
+              "text": "assert.equal(harness.undoRequests.length, 2)"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2686,
+              "text": "assert.equal(confirmations.length, 3, \"a successful Undo committed the discard; leaving no longer asks\")"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2678,
+              "text": "assert.equal(confirmations.length, 1, \"the discard warning was asked and accepted\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2679,
+              "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }], \"the undo was attempted\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2681,
+              "text": "assert.equal(sheet.props.sectionId, \"va\", \"the sheet stays mounted with the typed edit\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2682,
+              "text": "assert.match(textContent(sheet.findByProps({ \"data-undo-scope\": \"section\" })), /Undo could not be applied/, \"the failure is reported in the strip\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2685,
+              "text": "assert.equal(confirmations.length, 2, \"the failed Undo must leave the sheet dirty for the next transition\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2686,
+              "text": "assert.equal(visibleSheet(harness).props.sectionId, \"va\", \"declined: the sheet with the typed edit is still there\")"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2691,
+              "text": "assert.equal(confirmations.length, 3)"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2692,
+              "text": "assert.equal(harness.undoRequests.length, 2)"
+            },
+            {
+              "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+              "line": 2694,
+              "text": "assert.equal(confirmations.length, 3, \"a successful Undo committed the discard; leaving no longer asks\")"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/fixtures/entry-sheets.tsx",
+      "assertionCountBefore": 0,
+      "assertionCountAfter": 0,
+      "changedGroups": []
+    },
+    {
+      "file": "ui/tests/fixtures/r10CanonicalOcularFixture.ts",
+      "assertionCountBefore": 0,
+      "assertionCountAfter": 0,
+      "changedGroups": []
+    },
+    {
+      "file": "ui/tests/mgdReadThrough.test.tsx",
+      "assertionCountBefore": 20,
+      "assertionCountAfter": 20,
+      "changedGroups": []
+    },
+    {
+      "file": "ui/tests/ocularSweepValueOnly.test.tsx",
+      "assertionCountBefore": 29,
+      "assertionCountAfter": 29,
+      "changedGroups": [
+        {
+          "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+          "mapping": "V21 / V22 / W-k (canonical fixture/projection migration)",
+          "before": [
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 68,
+              "text": "assert.ok(posts.length > 0)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 69,
+              "text": "assert.deepEqual(posts.filter((post) => post.status !== 200), [], \"every posted request must be accepted\")"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 70,
+              "text": "assert.equal(posts.length, 9)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 71,
+              "text": "assert.ok(posts.every((post) => post.key !== stainingKey))"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 73,
+              "text": "assert.ok(post.body.eyes[eye].negativeAct.optionCodes.length > 0)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 75,
+              "text": "assert.equal(writes.filter((resource) => resource.resourceType === \"Observation\").length, 18)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 76,
+              "text": "assert.doesNotMatch(text(renderer.root), /Surface Staining failed/)"
+            }
+          ],
+          "after": [
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 67,
+              "text": "assert.ok(posts.length > 0)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 68,
+              "text": "assert.deepEqual(posts.filter((post) => post.status !== 200), [], \"every posted request must be accepted\")"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 69,
+              "text": "assert.equal(posts.length, 9)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 70,
+              "text": "assert.ok(posts.every((post) => post.key !== stainingKey))"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 72,
+              "text": "assert.ok(post.body.eyes[eye].negativeAct.scope.length > 0)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 74,
+              "text": "assert.equal(memory.all(\"Observation\").filter((resource) => resource.identifier?.some((id) => id.system === \"urn:odos:negative-act\")).length, 18)"
+            },
+            {
+              "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+              "line": 75,
+              "text": "assert.doesNotMatch(text(renderer.root), /Surface Staining failed/)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/r10A3OcularEditor.test.tsx",
+      "assertionCountBefore": 0,
+      "assertionCountAfter": 49,
+      "changedGroups": [
+        {
+          "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
+          "mapping": "W130 / W147",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
+              "line": 39,
+              "text": "assert.equal(h.button(\"Scar\",\"OD\").props[\"aria-pressed\"],true)"
+            },
+            {
+              "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
+              "line": 39,
+              "text": "assert.equal(h.button(\"Scar\",\"OD\").props.disabled,true)"
+            },
+            {
+              "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
+              "line": 39,
+              "text": "assert.deepEqual(e.loaded.map((f:any)=>f.key.optionCode),[\"scar\"])"
+            },
+            {
+              "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
+              "line": 39,
+              "text": "assert.deepEqual(e.selected,e.loaded)"
+            },
+            {
+              "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
+              "line": 39,
+              "text": "assert.equal(e.panel.state.remarks,\"Reviewed\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W137 recorded absent requires explicit selection and fromPresence\"",
+          "mapping": "W137",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W137 recorded absent requires explicit selection and fromPresence\"",
+              "line": 40,
+              "text": "assert.match(text(h.panel()),/Recorded absent/)"
+            },
+            {
+              "test": "\"W137 recorded absent requires explicit selection and fromPresence\"",
+              "line": 40,
+              "text": "assert.deepEqual(e.loaded,[])"
+            },
+            {
+              "test": "\"W137 recorded absent requires explicit selection and fromPresence\"",
+              "line": 40,
+              "text": "assert.equal(e.selected[0].fromPresence,\"absent\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W131 unconfirmed Retry resends byte-identical request\"",
+          "mapping": "W131",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W131 unconfirmed Retry resends byte-identical request\"",
+              "line": 41,
+              "text": "assert.equal(h.posts.length,2)"
+            },
+            {
+              "test": "\"W131 unconfirmed Retry resends byte-identical request\"",
+              "line": 41,
+              "text": "assert.equal(h.posts[0],h.posts[1])"
+            }
+          ]
+        },
+        {
+          "test": "\"W132 stale reload keeps choice and next save uses new command\"",
+          "mapping": "W132",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W132 stale reload keeps choice and next save uses new command\"",
+              "line": 42,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Keep this\")"
+            },
+            {
+              "test": "\"W132 stale reload keeps choice and next save uses new command\"",
+              "line": 42,
+              "text": "assert.notEqual(JSON.parse(h.posts[0]!).commandId,JSON.parse(h.posts[1]!).commandId)"
+            },
+            {
+              "test": "\"W132 stale reload keeps choice and next save uses new command\"",
+              "line": 42,
+              "text": "assert.ok(h.reads()>2)"
+            },
+            {
+              "test": "\"W132 stale reload keeps choice and next save uses new command\"",
+              "line": 42,
+              "text": "assert.equal(JSON.parse(h.posts[1]!).eyes.OD.selected.find((f:any)=>f.key.optionCode===\"staining\").baseline.versionId,\"2\")"
+            }
+          ]
+        },
+        {
+          "test": "\"W133 negative outcome shows causal message and is never saved\"",
+          "mapping": "W133",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W133 negative outcome shows causal message and is never saved\"",
+              "line": 43,
+              "text": "assert.match(r.message??\"\",/positive-in-negative-scope/)"
+            }
+          ]
+        },
+        {
+          "test": "`W134 ${reason} read only`",
+          "mapping": "W134",
+          "before": [],
+          "after": [
+            {
+              "test": "`W134 ${reason} read only`",
+              "line": 44,
+              "text": "assert.match(text(h.renderer.root),reason===\"encounter-closed\"?/Signed or closed visit/:/Test data from before the rebuild/)"
+            },
+            {
+              "test": "`W134 ${reason} read only`",
+              "line": 44,
+              "text": "assert.equal(h.button(\"Save Ocular Health\"),undefined)"
+            }
+          ]
+        },
+        {
+          "test": "\"W138 Deferred disables selections without deselection and toggles preserve them\"",
+          "mapping": "W138",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W138 Deferred disables selections without deselection and toggles preserve them\"",
+              "line": 45,
+              "text": "assert.equal(h.button(\"Scar\",\"OD\").props.disabled,true)"
+            },
+            {
+              "test": "\"W138 Deferred disables selections without deselection and toggles preserve them\"",
+              "line": 45,
+              "text": "assert.equal(h.button(\"Scar\",\"OD\").props[\"aria-pressed\"],true)"
+            },
+            {
+              "test": "\"W138 Deferred disables selections without deselection and toggles preserve them\"",
+              "line": 45,
+              "text": "assert.deepEqual(e.loaded,e.selected)"
+            },
+            {
+              "test": "\"W138 Deferred disables selections without deselection and toggles preserve them\"",
+              "line": 45,
+              "text": "assert.equal(e.panel.state.deferred,true)"
+            }
+          ]
+        },
+        {
+          "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+          "mapping": "W136",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(eyes.OD.panel.state.remarks,\"Right\")"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(eyes.OS.panel.state.remarks,\"Left\")"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(eyes.OD.panel.state.values.TBUT,7)"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(eyes.OS.panel.state.values.SELECT,\"b\")"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Right\")"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(h.panel(\"OS\").findByProps({\"aria-label\":\"OS Remarks\"}).props.value,\"Left\")"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(h.panel().findByProps({type:\"number\"}).props.value,7)"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.equal(h.panel(\"OS\").findByType(OdosSelect).props.value,\"b\")"
+            },
+            {
+              "test": "\"W136 per-eye Remarks and measurements are in independent panel states\"",
+              "line": 46,
+              "text": "assert.ok(h.reads()>2)"
+            }
+          ]
+        },
+        {
+          "test": "`W145 unscoped count ${count}`",
+          "mapping": "W145",
+          "before": [],
+          "after": [
+            {
+              "test": "`W145 unscoped count ${count}`",
+              "line": 47,
+              "text": "assert.equal(text(h.renderer.root).includes(\"Some older records could not be placed on a visit\"),count>0)"
+            }
+          ]
+        },
+        {
+          "test": "\"W135 diagnosis-door refresh merges fresh sibling without erasing pending choice\"",
+          "mapping": "W135",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W135 diagnosis-door refresh merges fresh sibling without erasing pending choice\"",
+              "line": 55,
+              "text": "assert.equal(h.button(\"Staining\",\"OD\").props[\"aria-pressed\"],true)"
+            },
+            {
+              "test": "\"W135 diagnosis-door refresh merges fresh sibling without erasing pending choice\"",
+              "line": 56,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Keep pending\")"
+            },
+            {
+              "test": "\"W135 diagnosis-door refresh merges fresh sibling without erasing pending choice\"",
+              "line": 59,
+              "text": "assert.deepEqual(eye.loaded.map((f:any)=>f.key.optionCode),[\"scar\",\"staining\"])"
+            },
+            {
+              "test": "\"W135 diagnosis-door refresh merges fresh sibling without erasing pending choice\"",
+              "line": 60,
+              "text": "assert.deepEqual(eye.selected.map((f:any)=>f.key.optionCode),[\"scar\",\"staining\"])"
+            }
+          ]
+        },
+        {
+          "test": "\"W133 negative-only conflict never calls onSaved\"",
+          "mapping": "W133",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W133 negative-only conflict never calls onSaved\"",
+              "line": 65,
+              "text": "assert.equal(h.saved(),0)"
+            },
+            {
+              "test": "\"W133 negative-only conflict never calls onSaved\"",
+              "line": 65,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct.scope.length,2)"
+            }
+          ]
+        },
+        {
+          "test": "\"W145 refreshed zero count removes a previous unscoped notice\"",
+          "mapping": "W145",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W145 refreshed zero count removes a previous unscoped notice\"",
+              "line": 71,
+              "text": "assert.match(text(h.renderer.root),/Some older records could not be placed on a visit/)"
+            },
+            {
+              "test": "\"W145 refreshed zero count removes a previous unscoped notice\"",
+              "line": 74,
+              "text": "assert.equal(text(h.renderer.root).includes(\"Some older records could not be placed on a visit\"),false)"
+            }
+          ]
+        },
+        {
+          "test": "\"W147 UI inactive owned witness remains checked and locked\"",
+          "mapping": "W147",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W147 UI inactive owned witness remains checked and locked\"",
+              "line": 84,
+              "text": "assert.ok(h.button(\"Scar\",\"OD\"),\"inactive live witness must stay visible\")"
+            },
+            {
+              "test": "\"W147 UI inactive owned witness remains checked and locked\"",
+              "line": 85,
+              "text": "assert.equal(h.button(\"Scar\",\"OD\").props[\"aria-pressed\"],true)"
+            },
+            {
+              "test": "\"W147 UI inactive owned witness remains checked and locked\"",
+              "line": 86,
+              "text": "assert.equal(h.button(\"Scar\",\"OD\").props.disabled,true)"
+            }
+          ]
+        },
+        {
+          "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+          "mapping": "W136",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+              "line": 96,
+              "text": "assert.equal(\"other\" in eye.panel.state,false)"
+            },
+            {
+              "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+              "line": 96,
+              "text": "assert.equal(\"remarks\" in eye.panel.state,false)"
+            },
+            {
+              "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+              "line": 97,
+              "text": "assert.deepEqual(eye.loaded,[])"
+            },
+            {
+              "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+              "line": 97,
+              "text": "assert.equal(eye.selected.length,1)"
+            },
+            {
+              "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+              "line": 97,
+              "text": "assert.equal(eye.selected[0].baseline.kind,\"absent\")"
+            },
+            {
+              "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
+              "line": 97,
+              "text": "assert.deepEqual(eye.selected[0].homes,[])"
+            }
+          ]
+        },
+        {
+          "test": "\"W134 diagnosis door names the closed-encounter refusal\"",
+          "mapping": "W134",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W134 diagnosis door names the closed-encounter refusal\"",
+              "line": 104,
+              "text": "assert.equal(findingReadOnlyLabel(\"encounter-closed\"), \"Signed or closed visit\")"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/r10A3Picker.test.tsx",
+      "assertionCountBefore": 0,
+      "assertionCountAfter": 19,
+      "changedGroups": [
+        {
+          "test": "\"W139 T16 fact homes determine proposed status despite contradictory Condition evidence\"",
+          "mapping": "W139",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W139 T16 fact homes determine proposed status despite contradictory Condition evidence\"",
+              "line": 29,
+              "text": "assert.equal(m.renderer.root.findAllByProps({\"aria-label\":\"Retract proposed Diagnosis OD\"}).length,1)"
+            },
+            {
+              "test": "\"W139 T16 fact homes determine proposed status despite contradictory Condition evidence\"",
+              "line": 29,
+              "text": "assert.equal(m.renderer.root.findAllByProps({\"aria-label\":\"Propose Diagnosis OS\"}).length,1)"
+            }
+          ]
+        },
+        {
+          "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+          "mapping": "W140",
+          "before": [],
+          "after": [
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.ok(pick)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.equal(pick.body.supportingFacts.length,2)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.equal(pick.body.laterality,\"OU\")"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.ok(scope)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.ok(m.calls.indexOf(pick)<m.calls.indexOf(scope))"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.equal(link,undefined)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.match(JSON.stringify(m.renderer.toJSON()),/Scope not saved/)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.ok(link)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.ok(m.calls.indexOf(scope)<m.calls.indexOf(link))"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.equal(link.body.targets.length,2)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.equal(link.body.commandId,pick.body.commandId)"
+            },
+            {
+              "test": "`W140 T17 shared pick scope link merges OD/OS supports: scope failure=${failScope}`",
+              "line": 30,
+              "text": "assert.deepEqual(link.body.targets.map((target:any)=>target.state.homes),[[\"Condition/c\"],[\"Condition/c\"]])"
+            }
+          ]
+        },
+        {
+          "test": "`W51 ${definition} remains on the legacy picker path`",
+          "mapping": "W51",
+          "before": [],
+          "after": [
+            {
+              "test": "`W51 ${definition} remains on the legacy picker path`",
+              "line": 47,
+              "text": "assert.equal(requests.length,1)"
+            },
+            {
+              "test": "`W51 ${definition} remains on the legacy picker path`",
+              "line": 47,
+              "text": "assert.equal(\"commandId\" in requests[0],false)"
+            },
+            {
+              "test": "`W51 ${definition} remains on the legacy picker path`",
+              "line": 47,
+              "text": "assert.equal(\"supportingFacts\" in requests[0],false)"
+            }
+          ]
+        },
+        {
+          "test": "\"W140 a late pick response cannot continue scope or link after changing visits\"",
+          "mapping": "W140",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W140 a late pick response cannot continue scope or link after changing visits\"",
+              "line": 58,
+              "text": "assert.equal(m.calls.filter(call=>call.url.includes(\"diagnosis-picks\")).length,1)"
+            },
+            {
+              "test": "\"W140 a late pick response cannot continue scope or link after changing visits\"",
+              "line": 59,
+              "text": "assert.equal(m.calls.filter(call=>call.method===\"PATCH\"||call.body?.operation===\"link\").length,0)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/r10A3ReleaseScenarios.test.ts",
+      "assertionCountBefore": 13,
+      "assertionCountAfter": 32,
+      "changedGroups": [
+        {
+          "test": "\"T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked\"",
+          "mapping": "V18 / W130",
+          "before": [],
+          "after": [
+            {
+              "test": "\"T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked\"",
+              "line": 164,
+              "text": "assert.ok(selected(\"OD\").some(label=>label.includes(\"Nuclear\")))"
+            },
+            {
+              "test": "\"T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked\"",
+              "line": 165,
+              "text": "assert.equal(selected(\"OS\").some(label=>label.includes(\"Nuclear\")),false)"
+            },
+            {
+              "test": "\"T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked\"",
+              "line": 166,
+              "text": "assert.equal(h.memory.writes.length,0)"
+            }
+          ]
+        },
+        {
+          "test": "\"T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye\"",
+          "mapping": "V18 / W130",
+          "before": [],
+          "after": [
+            {
+              "test": "\"T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye\"",
+              "line": 175,
+              "text": "assert.ok(selected)"
+            },
+            {
+              "test": "\"T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye\"",
+              "line": 176,
+              "text": "assert.equal(h.requests[0].eyes.OD.loaded.length,1)"
+            },
+            {
+              "test": "\"T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye\"",
+              "line": 176,
+              "text": "assert.deepEqual(h.requests[0].eyes.OD.selected,[])"
+            },
+            {
+              "test": "\"T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye\"",
+              "line": 177,
+              "text": "assert.equal((h.memory.resources.get(\"Observation/od\") as any).status,\"entered-in-error\")"
+            },
+            {
+              "test": "\"T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye\"",
+              "line": 178,
+              "text": "assert.deepEqual(h.memory.resources.get(\"Observation/os\"),before)"
+            }
+          ]
+        },
+        {
+          "test": "\"T6 Ocular Health All Normal skips an eye with a canonical positive\"",
+          "mapping": "V21 / V22",
+          "before": [],
+          "after": [
+            {
+              "test": "\"T6 Ocular Health All Normal skips an eye with a canonical positive\"",
+              "line": 187,
+              "text": "assert.equal(h.requests[0].eyes.OD,undefined,\"V22 supersedes the old retirement expectation: a touched eye is preserved\")"
+            },
+            {
+              "test": "\"T6 Ocular Health All Normal skips an eye with a canonical positive\"",
+              "line": 188,
+              "text": "assert.ok(h.requests[0].eyes.OS.negativeAct.scope.length)"
+            },
+            {
+              "test": "\"T6 Ocular Health All Normal skips an eye with a canonical positive\"",
+              "line": 189,
+              "text": "assert.deepEqual(h.memory.resources.get(\"Observation/od\"),before)"
+            }
+          ]
+        },
+        {
+          "test": "\"T21 pre-rebuild Ocular Health is labelled and has no save control\"",
+          "mapping": "W134",
+          "before": [],
+          "after": [
+            {
+              "test": "\"T21 pre-rebuild Ocular Health is labelled and has no save control\"",
+              "line": 197,
+              "text": "assert.match(JSON.stringify(h.renderer.toJSON()),/Test data from before the rebuild/)"
+            },
+            {
+              "test": "\"T21 pre-rebuild Ocular Health is labelled and has no save control\"",
+              "line": 198,
+              "text": "assert.equal(h.button(\"Save Ocular Health\"),undefined)"
+            },
+            {
+              "test": "\"T21 pre-rebuild Ocular Health is labelled and has no save control\"",
+              "line": 198,
+              "text": "assert.equal(h.memory.writes.length,0)"
+            }
+          ]
+        },
+        {
+          "test": "\"T22 Ocular Health UI writes only canonical fact and panel identities\"",
+          "mapping": "V18 / V21 / W130 / W136",
+          "before": [],
+          "after": [
+            {
+              "test": "\"T22 Ocular Health UI writes only canonical fact and panel identities\"",
+              "line": 206,
+              "text": "assert.ok(offered)"
+            },
+            {
+              "test": "\"T22 Ocular Health UI writes only canonical fact and panel identities\"",
+              "line": 207,
+              "text": "assert.ok(observations.length>0)"
+            },
+            {
+              "test": "\"T22 Ocular Health UI writes only canonical fact and panel identities\"",
+              "line": 208,
+              "text": "assert.ok(observation.identifier?.some(id=>[\"urn:odos:current-finding:v1\",\"urn:odos:finding-panel:v1\"].includes(id.system??\"\")),JSON.stringify(observation.identifier))"
+            },
+            {
+              "test": "\"T22 Ocular Health UI writes only canonical fact and panel identities\"",
+              "line": 209,
+              "text": "assert.equal(h.requests[0].eyes.OD.selected.length,1)"
+            },
+            {
+              "test": "\"T22 Ocular Health UI writes only canonical fact and panel identities\"",
+              "line": 209,
+              "text": "assert.equal(\"customFields\" in h.requests[0].eyes.OD,false)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

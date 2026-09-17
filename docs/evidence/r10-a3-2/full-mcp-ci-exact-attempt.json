@@ -1,0 +1,9 @@
+{
+  "exitCode": 1,
+  "validCiEquivalent": false,
+  "reason": "macOS /bin/bash does not support globstar; shell continued with narrower matches. Harness preflight and missing WeasyPrint PATH also failed. Retained as failed attempt, not final coverage.",
+  "tests": 5700,
+  "pass": 5645,
+  "fail": 2,
+  "skip": 53
+}

@@ -1,0 +1,541 @@
+TAP version 13
+# Subtest: SpineNav preserves its section inventory for an empty custom registry and safely appends missing-status custom sections
+ok 1 - SpineNav preserves its section inventory for an empty custom registry and safely appends missing-status custom sections
+  ---
+  duration_ms: 5.866625
+  type: 'test'
+  ...
+# Subtest: SpineNav groups the traditional spine and appends custom sections after every built-in group
+ok 2 - SpineNav groups the traditional spine and appends custom sections after every built-in group
+  ---
+  duration_ms: 0.870833
+  type: 'test'
+  ...
+# Subtest: only the active SpineNav group opens by default and a new active section auto-opens its group
+ok 3 - only the active SpineNav group opens by default and a new active section auto-opens its group
+  ---
+  duration_ms: 11.485125
+  type: 'test'
+  ...
+# Subtest: SpineNav status dots expose complete, incomplete, and read-only labels without dropping detailed summaries
+ok 4 - SpineNav status dots expose complete, incomplete, and read-only labels without dropping detailed summaries
+  ---
+  duration_ms: 0.930209
+  type: 'test'
+  ...
+# Subtest: ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomplete
+ok 5 - ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomplete
+  ---
+  duration_ms: 0.982625
+  type: 'test'
+  ...
+# Subtest: Dry Eye questionnaire persists total-score-only records and keeps unsaved scores bound to their instrument
+ok 6 - Dry Eye questionnaire persists total-score-only records and keeps unsaved scores bound to their instrument
+  ---
+  duration_ms: 16.497292
+  type: 'test'
+  ...
+# Subtest: Dry Eye treatment series survives a navigate-away-and-back round trip
+ok 7 - Dry Eye treatment series survives a navigate-away-and-back round trip
+  ---
+  duration_ms: 5.08
+  type: 'test'
+  ...
+# Subtest: Dry Eye disables series creation when the server reports a clinical conflict
+ok 8 - Dry Eye disables series creation when the server reports a clinical conflict
+  ---
+  duration_ms: 1.377208
+  type: 'test'
+  ...
+# Subtest: Eye Growth is default-visible for paediatric patients independent of reference-band coverage
+ok 9 - Eye Growth is default-visible for paediatric patients independent of reference-band coverage
+  ---
+  duration_ms: 3.10025
+  type: 'test'
+  ...
+# Subtest: Eye Growth screening and Myopia Management plan stay on separate surfaces
+ok 10 - Eye Growth screening and Myopia Management plan stay on separate surfaces
+  ---
+  duration_ms: 0.451583
+  type: 'test'
+  ...
+# Subtest: atropine frequency input accepts alternate dosing text and saves it to MedicationStatement dosage
+ok 11 - atropine frequency input accepts alternate dosing text and saves it to MedicationStatement dosage
+  ---
+  duration_ms: 2.820292
+  type: 'test'
+  ...
+# Subtest: the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history
+ok 12 - the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history
+  ---
+  duration_ms: 0.709958
+  type: 'test'
+  ...
+# Subtest: an optionless toggle displays its true fallback and can be unset
+ok 13 - an optionless toggle displays its true fallback and can be unset
+  ---
+  duration_ms: 1.68975
+  type: 'test'
+  ...
+# Subtest: gland-structure history reads the saved dropout grade back beside its meibography image
+ok 14 - gland-structure history reads the saved dropout grade back beside its meibography image
+  ---
+  duration_ms: 2.821875
+  type: 'test'
+  ...
+# Subtest: gland-structure grade retry reuses the successful image upload
+ok 15 - gland-structure grade retry reuses the successful image upload
+  ---
+  duration_ms: 3.825917
+  type: 'test'
+  ...
+# Subtest: the same generic renderer records a data-defined Procedure without an aesthetics component fork
+ok 16 - the same generic renderer records a data-defined Procedure without an aesthetics component fork
+  ---
+  duration_ms: 1.39325
+  type: 'test'
+  ...
+# Subtest: aesthetics consent renders server-owned Questionnaire text and submits the shared Patient reference
+ok 17 - aesthetics consent renders server-owned Questionnaire text and submits the shared Patient reference
+  ---
+  duration_ms: 2.149083
+  type: 'test'
+  ...
+# Subtest: the generic renderer reaches and captures a nested child option under its parent
+ok 18 - the generic renderer reaches and captures a nested child option under its parent
+  ---
+  duration_ms: 2.150625
+  type: 'test'
+  ...
+# Subtest: the custom-field editor captures hierarchy and priority metadata for new options
+ok 19 - the custom-field editor captures hierarchy and priority metadata for new options
+  ---
+  duration_ms: 0.938166
+  type: 'test'
+  ...
+# Subtest: the shared section editor composes fields through the shipped custom-field editor affordance
+ok 20 - the shared section editor composes fields through the shipped custom-field editor affordance
+  ---
+  duration_ms: 0.416541
+  type: 'test'
+  ...
+# Subtest: the ocular-health renderer exposes segment headers, accelerators, bilateral copy, deferred, priority, nesting, and Other controls
+ok 21 - the ocular-health renderer exposes segment headers, accelerators, bilateral copy, deferred, priority, nesting, and Other controls
+  ---
+  duration_ms: 6.446625
+  type: 'test'
+  ...
+# Subtest: every active top-level ocular finding renders immediately in priority-first order
+ok 22 - every active top-level ocular finding renders immediately in priority-first order
+  ---
+  duration_ms: 1.618583
+  type: 'test'
+  ...
+# Subtest: V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal
+ok 23 - V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal
+  ---
+  duration_ms: 7.214834
+  type: 'test'
+  ...
+# Subtest: ocular-health deferral controls come only from each definition's allowDeferred flag
+ok 24 - ocular-health deferral controls come only from each definition's allowDeferred flag
+  ---
+  duration_ms: 0.541166
+  type: 'test'
+  ...
+# Subtest: W138 deferred locks loaded findings while the canonical server preserves their bytes
+ok 25 - W138 deferred locks loaded findings while the canonical server preserves their bytes
+  ---
+  duration_ms: 15.614416
+  type: 'test'
+  ...
+# Subtest: qualified finding definitions render qualifier controls for canonical presence-only history
+ok 26 - qualified finding definitions render qualifier controls for canonical presence-only history
+  ---
+  duration_ms: 1.139417
+  type: 'test'
+  ...
+# Subtest: prior history never seeds current controls or changes the base POST body
+ok 27 - prior history never seeds current controls or changes the base POST body
+  ---
+  duration_ms: 2.998042
+  type: 'test'
+  ...
+# Subtest: unsaved ocular edits survive an asynchronously arriving encounter cutoff and prior history
+ok 28 - unsaved ocular edits survive an asynchronously arriving encounter cutoff and prior history
+  ---
+  duration_ms: 4.534791
+  type: 'test'
+  ...
+# Subtest: a failed optional prior read leaves current-encounter ocular hydration intact
+ok 29 - a failed optional prior read leaves current-encounter ocular hydration intact
+  ---
+  duration_ms: 2.731333
+  type: 'test'
+  ...
+# Subtest: prior ocular readings stay in the accessibility tree without renaming or focusing controls
+ok 30 - prior ocular readings stay in the accessibility tree without renaming or focusing controls
+  ---
+  duration_ms: 2.831166
+  type: 'test'
+  ...
+# Subtest: ocular priors remain absent without a stable encounter period date
+ok 31 - ocular priors remain absent without a stable encounter period date
+  ---
+  duration_ms: 2.26275
+  type: 'test'
+  ...
+# Subtest: every rendered qualifier and ungraded prior carries its own date and stays eye-specific
+ok 32 - every rendered qualifier and ungraded prior carries its own date and stays eye-specific
+  ---
+  duration_ms: 3.058375
+  type: 'test'
+  ...
+# Subtest: missing prior data renders no annotation or reserved prior slot
+ok 33 - missing prior data renders no annotation or reserved prior slot
+  ---
+  duration_ms: 2.001958
+  type: 'test'
+  ...
+# Subtest: the current encounter is removed before choosing the most recent prior reading
+ok 34 - the current encounter is removed before choosing the most recent prior reading
+  ---
+  duration_ms: 1.385291
+  type: 'test'
+  ...
+# Subtest: ocular-health read-forward preserves stored finding details through an unrelated save
+ok 35 - ocular-health read-forward preserves stored finding details through an unrelated save
+  ---
+  duration_ms: 2.386
+  type: 'test'
+  ...
+# Subtest: reopened history hydrates structures but posts only the one modified structure
+ok 36 - reopened history hydrates structures but posts only the one modified structure
+  ---
+  duration_ms: 6.867625
+  type: 'test'
+  ...
+# Subtest: ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable
+ok 37 - ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable
+  ---
+  duration_ms: 1.5735
+  type: 'test'
+  ...
+# Subtest: segmented finding grades replace the value and re-tapping clears the findingDetails entry
+ok 38 - segmented finding grades replace the value and re-tapping clears the findingDetails entry
+  ---
+  duration_ms: 7.392875
+  type: 'test'
+  ...
+# Subtest: all four finding qualifier controls write the server-validated value shapes
+ok 39 - all four finding qualifier controls write the server-validated value shapes
+  ---
+  duration_ms: 5.131917
+  type: 'test'
+  ...
+# Subtest: numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+ok 40 - numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+  ---
+  duration_ms: 5.000458
+  type: 'test'
+  ...
+# Subtest: presence-only ocular findings never create worksheet rows
+ok 41 - presence-only ocular findings never create worksheet rows
+  ---
+  duration_ms: 0.987
+  type: 'test'
+  ...
+# Subtest: described finding destruction is guarded from Zone A and the row remove path prunes the next POST
+ok 42 - described finding destruction is guarded from Zone A and the row remove path prunes the next POST
+  ---
+  duration_ms: 3.281583
+  type: 'test'
+  ...
+# Subtest: undescribed finding deselection is instant without a confirmation dialog
+ok 43 - undescribed finding deselection is instant without a confirmation dialog
+  ---
+  duration_ms: 1.272834
+  type: 'test'
+  ...
+# Subtest: removing a parent with selected child codes confirms before destroying the nested details
+ok 44 - removing a parent with selected child codes confirms before destroying the nested details
+  ---
+  duration_ms: 1.173542
+  type: 'test'
+  ...
+# Subtest: copying an eye confirms before replacing destination finding details
+ok 45 - copying an eye confirms before replacing destination finding details
+  ---
+  duration_ms: 1.464125
+  type: 'test'
+  ...
+# Subtest: copying into an undescribed destination does not ask for confirmation
+ok 46 - copying into an undescribed destination does not ask for confirmation
+  ---
+  duration_ms: 1.093292
+  type: 'test'
+  ...
+# Subtest: child details fold into the worksheet row and remain selection codes in the POST body
+ok 47 - child details fold into the worksheet row and remain selection codes in the POST body
+  ---
+  duration_ms: 2.801417
+  type: 'test'
+  ...
+# Subtest: copying mixed qualifiers mirrors only extents and clock-hour mirroring round-trips
+ok 48 - copying mixed qualifiers mirrors only extents and clock-hour mirroring round-trips
+  ---
+  duration_ms: 0.31625
+  type: 'test'
+  ...
+# Subtest: V21 V22 a saved negative scope stays frozen after the live normal template changes
+ok 49 - V21 V22 a saved negative scope stays frozen after the live normal template changes
+  ---
+  duration_ms: 1.060583
+  type: 'test'
+  ...
+# Subtest: SpineNav groups anterior and posterior definitions with Cup Disc in posterior
+ok 50 - SpineNav groups anterior and posterior definitions with Cup Disc in posterior
+  ---
+  duration_ms: 0.611209
+  type: 'test'
+  ...
+# Subtest: the full ocular-health runner lists all seeded structures blank and stays out of tear-film-only charting
+ok 51 - the full ocular-health runner lists all seeded structures blank and stays out of tear-film-only charting
+  ---
+  duration_ms: 8.918542
+  type: 'test'
+  ...
+# Subtest: the ocular-health runner derives finding count from capture selections
+ok 52 - the ocular-health runner derives finding count from capture selections
+  ---
+  duration_ms: 5.948417
+  type: 'test'
+  ...
+# Subtest: saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract
+ok 53 - saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract
+  ---
+  duration_ms: 9.8615
+  type: 'test'
+  ...
+# Subtest: fresh ocular-health history restores scoped diagnosis suggestions without a save
+ok 54 - fresh ocular-health history restores scoped diagnosis suggestions without a save
+  ---
+  duration_ms: 5.194708
+  type: 'test'
+  ...
+# Subtest: the ocular-health runner Next and Previous reuse structure scrolling and update the highlight
+ok 55 - the ocular-health runner Next and Previous reuse structure scrolling and update the highlight
+  ---
+  duration_ms: 5.476458
+  type: 'test'
+  ...
+# Subtest: posterior seeded history renders honestly and zero-data eyes remain untouched
+ok 56 - posterior seeded history renders honestly and zero-data eyes remain untouched
+  ---
+  duration_ms: 1.89425
+  type: 'test'
+  ...
+# Subtest: Fundus All Normal fills only the five posterior narratives and skips Cup Disc by construction
+ok 57 - Fundus All Normal fills only the five posterior narratives and skips Cup Disc by construction
+  ---
+  duration_ms: 0.167583
+  type: 'test'
+  ...
+# Subtest: V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope
+ok 58 - V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope
+  ---
+  duration_ms: 4.430958
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+ok 59 - AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+  ---
+  duration_ms: 3.355875
+  type: 'test'
+  ...
+# Subtest: remaining anterior structure grades render blank, persist typed values, and hydrate per eye
+ok 60 - remaining anterior structure grades render blank, persist typed values, and hydrate per eye
+  ---
+  duration_ms: 6.461041
+  type: 'test'
+  ...
+# Warning: Internal React error: Attempted to capture a commit phase error inside a detached tree. This indicates a bug in React. Likely causes include deleting the same fiber more than once, committing an already-finished tree, or an inconsistent return pointer.
+# Error message:
+# ReferenceError: window is not defined
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: ocular-health cleanup qualifiers render only for their selected finding
+ok 61 - ocular-health cleanup qualifiers render only for their selected finding
+  ---
+  duration_ms: 2.957916
+  type: 'test'
+  ...
+# Subtest: EXAM-1B per-eye negative act leaves touched OD alone and asserts OS
+ok 62 - EXAM-1B per-eye negative act leaves touched OD alone and asserts OS
+  ---
+  duration_ms: 8.510625
+  type: 'test'
+  ...
+# Subtest: hydrated state is pristine until a capture differs from its baseline
+ok 63 - hydrated state is pristine until a capture differs from its baseline
+  ---
+  duration_ms: 0.129333
+  type: 'test'
+  ...
+# Subtest: EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions
+ok 64 - EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions
+  ---
+  duration_ms: 0.623125
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine
+ok 65 - an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine
+  ---
+  duration_ms: 22.191834
+  type: 'test'
+  ...
+# Subtest: an eyecare-tagged Encounter does not load or render aesthetics procedure sections
+ok 66 - an eyecare-tagged Encounter does not load or render aesthetics procedure sections
+  ---
+  duration_ms: 11.830958
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: changing encounterId remounts charting and clears encounter-scoped completion statuses
+ok 67 - changing encounterId remounts charting and clears encounter-scoped completion statuses
+  ---
+  duration_ms: 19.959667
+  type: 'test'
+  ...
+# Subtest: CupDiscSection clears every eye field before loading a different encounter
+ok 68 - CupDiscSection clears every eye field before loading a different encounter
+  ---
+  duration_ms: 5.763083
+  type: 'test'
+  ...
+# Subtest: CupDiscSection preserves descriptor codes and selected order through OdosChips
+ok 69 - CupDiscSection preserves descriptor codes and selected order through OdosChips
+  ---
+  duration_ms: 3.0425
+  type: 'test'
+  ...
+# Subtest: GonioscopySection clears encounter state before fetch and hydrates pigmentation and note without dirty records
+ok 70 - GonioscopySection clears encounter state before fetch and hydrates pigmentation and note without dirty records
+  ---
+  duration_ms: 6.05225
+  type: 'test'
+  ...
+# Subtest: GonioscopySection eye copy preserves anatomical quadrant names
+ok 71 - GonioscopySection eye copy preserves anatomical quadrant names
+  ---
+  duration_ms: 1.75725
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: GonioscopySection preserves documented target pigmentation when the source is blank
+ok 72 - GonioscopySection preserves documented target pigmentation when the source is blank
+  ---
+  duration_ms: 1.997125
+  type: 'test'
+  ...
+# Subtest: EncounterCharting retains the shared ChartSidebar after the chart-open prototype is removed
+ok 73 - EncounterCharting retains the shared ChartSidebar after the chart-open prototype is removed
+  ---
+  duration_ms: 0.203166
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:1401:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion
+ok 74 - EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion
+  ---
+  duration_ms: 19.832875
+  type: 'test'
+  ...
+# EXAM-1B PARTIAL: named failure; 3 initial writes, 1 retry, 0 successful structures reasserted
+# Subtest: EXAM-1B partial failure names the structure and All Normal retries only that failure
+ok 75 - EXAM-1B partial failure names the structure and All Normal retries only that failure
+  ---
+  duration_ms: 5.971375
+  type: 'test'
+  ...
+# Subtest: EXAM-1B retry keeps the other segment failure visible until it succeeds
+ok 76 - EXAM-1B retry keeps the other segment failure visible until it succeeds
+  ---
+  duration_ms: 4.888417
+  type: 'test'
+  ...
+# Subtest: EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+ok 77 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+  ---
+  duration_ms: 2.989708
+  type: 'test'
+  ...
+# Subtest: EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+ok 78 - EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+  ---
+  duration_ms: 4.44075
+  type: 'test'
+  ...
+# Subtest: EXAM-1B in-flight edit remains unsaved after the older request completes
+ok 79 - EXAM-1B in-flight edit remains unsaved after the older request completes
+  ---
+  duration_ms: 2.331458
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 unentered normal does not invent an A/V ratio
+ok 80 - AVFILL-1 unentered normal does not invent an A/V ratio
+  ---
+  duration_ms: 3.569666
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 blank control does not invent an A/V ratio
+ok 81 - AVFILL-1 blank control does not invent an A/V ratio
+  ---
+  duration_ms: 0.644333
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 Fundus All Normal does not invent an A/V ratio
+ok 82 - AVFILL-1 Fundus All Normal does not invent an A/V ratio
+  ---
+  duration_ms: 7.525834
+  type: 'test'
+  ...
+# Subtest: AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
+ok 83 - AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
+  ---
+  duration_ms: 2.779375
+  type: 'test'
+  ...
+1..83
+# tests 83
+# suites 0
+# pass 83
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 852.190583

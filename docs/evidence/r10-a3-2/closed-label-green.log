@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W134 diagnosis door names the closed-encounter refusal
+ok 1 - W134 diagnosis door names the closed-encounter refusal
+  ---
+  duration_ms: 0.55775
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.817458

@@ -1,0 +1,113 @@
+TAP version 13
+# Subtest: W142 partial carry shows steps and Finish carrying resends the identical command body
+not ok 1 - W142 partial carry shows steps and Finish carrying resends the identical command body
+  ---
+  duration_ms: 28.438958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:18505'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Diagnosis: applied/. Input:
+
+    'Aug 1, 2026 · MedicalDry eyeOUDiagnosis could not be pulled. Try again.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Aug 1, 2026 · MedicalDry eyeOUDiagnosis could not be pulled. Try again.'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:536:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved
+not ok 2 - W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved
+  ---
+  duration_ms: 3.9995
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:20696'
+  failureType: 'testCodeFailure'
+  error: 'carry-incomplete must offer a reload and a new plan'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:568:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W145 previous-exams unscoped records display their notice, including an empty page
+not ok 3 - W145 previous-exams unscoped records display their notice, including an empty page
+  ---
+  duration_ms: 2.13575
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:22514'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:586:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W142 a dropped pull response keeps its request for Finish carrying
+not ok 4 - W142 a dropped pull response keeps its request for Finish carrying
+  ---
+  duration_ms: 5.626583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:23031'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(retry)
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:604:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W143 failed reload preserves the prior carry and never posts a replan
+not ok 5 - W143 failed reload preserves the prior carry and never posts a replan
+  ---
+  duration_ms: 3.292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:24264'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(retry)
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:624:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 0
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 280.198333

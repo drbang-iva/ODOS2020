@@ -1,0 +1,57 @@
+[
+  {
+    "guard": "W130",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W131",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W132",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W133",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W134",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W135",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W136",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W137",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W138",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W145",
+    "mutationExit": 1,
+    "restoreExit": 0
+  },
+  {
+    "guard": "W147-ui",
+    "mutationExit": 1,
+    "restoreExit": 0
+  }
+]

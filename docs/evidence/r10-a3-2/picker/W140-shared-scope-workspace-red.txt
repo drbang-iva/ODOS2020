@@ -1,0 +1,174 @@
+TAP version 13
+# Subtest: W3 Retry resends identical command
+ok 1 - W3 Retry resends identical command
+  ---
+  duration_ms: 44.371791
+  type: 'test'
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+ok 2 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 20.960625
+  type: 'test'
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+ok 3 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 12.165583
+  type: 'test'
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 4 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 17.730792
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 5 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 4.977125
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 6 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 3.650792
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 7 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 9.445542
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 8 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 3.029583
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+not ok 9 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 17.080625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10DiagnosisWorkspace.test.tsx:1:11417'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10DiagnosisWorkspace.test.tsx:69:413)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+not ok 10 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 17.300292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10DiagnosisWorkspace.test.tsx:1:11417'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10DiagnosisWorkspace.test.tsx:69:413)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+ok 11 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 8.923
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+ok 12 - W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+  ---
+  duration_ms: 14.726584
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+ok 13 - W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+  ---
+  duration_ms: 13.571958
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-different
+ok 14 - W55 kept eye choice uses current live rows and handles builder errors: eye-different
+  ---
+  duration_ms: 14.313375
+  type: 'test'
+  ...
+# Subtest: W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+ok 15 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+  ---
+  duration_ms: 8.088125
+  type: 'test'
+  ...
+# Subtest: W57 thrown PUT fetch offers Retry with the identical body
+ok 16 - W57 thrown PUT fetch offers Retry with the identical body
+  ---
+  duration_ms: 10.5455
+  type: 'test'
+  ...
+# Subtest: W59 pre-rebuild workspace disables diagnosis additions scope and rank
+ok 17 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
+  ---
+  duration_ms: 4.971125
+  type: 'test'
+  ...
+# Subtest: W60 linking a finding homed to B preserves B and adds A
+ok 18 - W60 linking a finding homed to B preserves B and adds A
+  ---
+  duration_ms: 8.683167
+  type: 'test'
+  ...
+# Subtest: W63 applied pick dispatches findings changed without a subsequent link
+ok 19 - W63 applied pick dispatches findings changed without a subsequent link
+  ---
+  duration_ms: 10.017541
+  type: 'test'
+  ...
+# Subtest: W55 kept shrink choice retires the current presence with its fresh baseline
+ok 20 - W55 kept shrink choice retires the current presence with its fresh baseline
+  ---
+  duration_ms: 12.714542
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+ok 21 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+  ---
+  duration_ms: 18.861083
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+ok 22 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+  ---
+  duration_ms: 20.878833
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 20
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 536.53175

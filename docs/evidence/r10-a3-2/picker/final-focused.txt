@@ -1,0 +1,616 @@
+TAP version 13
+# Subtest: height-capped common diagnosis rows opt out of flex shrinking
+ok 1 - height-capped common diagnosis rows opt out of flex shrinking
+  ---
+  duration_ms: 0.787334
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace preferences default safely and round-trip valid selections
+ok 2 - diagnosis workspace preferences default safely and round-trip valid selections
+  ---
+  duration_ms: 0.151167
+  type: 'test'
+  ...
+# Subtest: diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps
+ok 3 - diagnosis rail follows Encounter.diagnosis rank order without normalizing gaps
+  ---
+  duration_ms: 0.434834
+  type: 'test'
+  ...
+# Subtest: lateralized structure, Assessment, and Common surfaces keep one resolved code
+ok 4 - lateralized structure, Assessment, and Common surfaces keep one resolved code
+  ---
+  duration_ms: 6.292958
+  type: 'test'
+  ...
+# Subtest: Common names both active proposal eyes instead of arbitrarily choosing one code
+ok 5 - Common names both active proposal eyes instead of arbitrarily choosing one code
+  ---
+  duration_ms: 0.379292
+  type: 'test'
+  ...
+# Subtest: a non-lateralized Possible preserves the Common catalog code
+ok 6 - a non-lateralized Possible preserves the Common catalog code
+  ---
+  duration_ms: 0.572625
+  type: 'test'
+  ...
+# Subtest: Possible rows with identical recordedDate use id instead of FHIR search order
+ok 7 - Possible rows with identical recordedDate use id instead of FHIR search order
+  ---
+  duration_ms: 5.2435
+  type: 'test'
+  ...
+# Subtest: diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift
+ok 8 - diagnosis door pages encounter Conditions and renders Possible provenance plus confirmed rank drift
+  ---
+  duration_ms: 22.956541
+  type: 'test'
+  ...
+# Subtest: excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition
+ok 9 - excluded Encounter diagnosis references expose a disabled reorder explanation naming the condition
+  ---
+  duration_ms: 4.239833
+  type: 'test'
+  ...
+# Subtest: server-cleaned three-minus-one state renders two rows and submits their exact reorder
+ok 10 - server-cleaned three-minus-one state renders two rows and submits their exact reorder
+  ---
+  duration_ms: 10.021375
+  type: 'test'
+  ...
+# Subtest: catalog identity and pin reorder are explicit and stable
+ok 11 - catalog identity and pin reorder are explicit and stable
+  ---
+  duration_ms: 0.134167
+  type: 'test'
+  ...
+# Subtest: laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
+ok 12 - laterality-required diagnosis identity keeps OD, OS, and OU picks distinct
+  ---
+  duration_ms: 0.061083
+  type: 'test'
+  ...
+# Subtest: diagnosis workspace remount identity changes at either patient or encounter boundary
+ok 13 - diagnosis workspace remount identity changes at either patient or encounter boundary
+  ---
+  duration_ms: 0.041541
+  type: 'test'
+  ...
+# Subtest: diagnosis rank actions are disabled for read-only users and while a write is busy
+ok 14 - diagnosis rank actions are disabled for read-only users and while a write is busy
+  ---
+  duration_ms: 0.025334
+  type: 'test'
+  ...
+# Subtest: workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows
+ok 15 - workspace keeps one-click Make Principal on the complete reorder endpoint and opens grouped reorder rows
+  ---
+  duration_ms: 21.449541
+  type: 'test'
+  ...
+# Subtest: diagnosis pin moves require write access and respect the ordered-list edges
+ok 16 - diagnosis pin moves require write access and respect the ordered-list edges
+  ---
+  duration_ms: 0.086709
+  type: 'test'
+  ...
+# Subtest: Find dx searches the eligible catalog beyond bounded Common diagnoses
+ok 17 - Find dx searches the eligible catalog beyond bounded Common diagnoses
+  ---
+  duration_ms: 3.062166
+  type: 'test'
+  ...
+# Subtest: staged family search resolves an explicit member statement without exposing member rows
+ok 18 - staged family search resolves an explicit member statement without exposing member rows
+  ---
+  duration_ms: 0.244958
+  type: 'test'
+  ...
+# Subtest: staged family add uses segmented Stage then Scope and never offers unspecified
+ok 19 - staged family add uses segmented Stage then Scope and never offers unspecified
+  ---
+  duration_ms: 3.709625
+  type: 'test'
+  ...
+# Subtest: explicit stage search asks scope only and pending staged codes use the warning label
+ok 20 - explicit stage search asks scope only and pending staged codes use the warning label
+  ---
+  duration_ms: 2.5175
+  type: 'test'
+  ...
+# Subtest: selected pending family renders warning badges and re-stages from the header control
+ok 21 - selected pending family renders warning badges and re-stages from the header control
+  ---
+  duration_ms: 8.509875
+  type: 'test'
+  ...
+# Subtest: most recent prior stage is dated, excludes the selected Condition, and never supplies a default
+ok 22 - most recent prior stage is dated, excludes the selected Condition, and never supplies a default
+  ---
+  duration_ms: 0.095709
+  type: 'test'
+  ...
+# Subtest: bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible
+ok 23 - bilateral eyelid diagnoses render both resolved codes while legacy unspecified-eyelid codes remain visible
+  ---
+  duration_ms: 4.998375
+  type: 'test'
+  ...
+# Subtest: eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable
+ok 24 - eyelid laterality edit fails closed before FHIR writes when its declared catalog row is unavailable
+  ---
+  duration_ms: 5.107708
+  type: 'test'
+  ...
+# Subtest: selected diagnosis fails closed to edited when carry integrity is uncertain
+ok 25 - selected diagnosis fails closed to edited when carry integrity is uncertain
+  ---
+  duration_ms: 3.714583
+  type: 'test'
+  ...
+# Subtest: edited diagnosis carry is named distinctly without unchanged aging
+ok 26 - edited diagnosis carry is named distinctly without unchanged aging
+  ---
+  duration_ms: 3.242375
+  type: 'test'
+  ...
+# Subtest: ordinary unedited carry renders the immediate source and oldest unchanged exam
+ok 27 - ordinary unedited carry renders the immediate source and oldest unchanged exam
+  ---
+  duration_ms: 5.9415
+  type: 'test'
+  ...
+# Subtest: a failed same-diagnosis verification refresh cannot retain stale carry assertions
+ok 28 - a failed same-diagnosis verification refresh cannot retain stale carry assertions
+  ---
+  duration_ms: 7.359541
+  type: 'test'
+  ...
+# Subtest: switching diagnoses hides the prior findings payload while the new request is pending
+ok 29 - switching diagnoses hides the prior findings payload while the new request is pending
+  ---
+  duration_ms: 7.345084
+  type: 'test'
+  ...
+# Subtest: an older findings response cannot overwrite the newer selected diagnosis
+ok 30 - an older findings response cannot overwrite the newer selected diagnosis
+  ---
+  duration_ms: 5.383375
+  type: 'test'
+  ...
+# Subtest: finding rows sort charted before offered and search prioritizes selected-diagnosis candidates
+ok 31 - finding rows sort charted before offered and search prioritizes selected-diagnosis candidates
+  ---
+  duration_ms: 0.215542
+  type: 'test'
+  ...
+# Subtest: findings table keeps presence explicit, grade unanswered, explicit eye choices visible, and re-click clears
+ok 32 - findings table keeps presence explicit, grade unanswered, explicit eye choices visible, and re-click clears
+  ---
+  duration_ms: 1.28525
+  type: 'test'
+  ...
+# Subtest: unassigned tray offers current visit assignment and standalone without diagnosis creation
+ok 33 - unassigned tray offers current visit assignment and standalone without diagnosis creation
+  ---
+  duration_ms: 0.443583
+  type: 'test'
+  ...
+# Subtest: unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick
+ok 34 - unassigned tray renders quiet equal-weight suggestions in endpoint order and delegates the clinician pick
+  ---
+  duration_ms: 0.224084
+  type: 'test'
+  ...
+# Subtest: tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope
+ok 35 - tray leaf and family suggestions reuse the existing scope and stage prompt and persist only after explicit scope
+  ---
+  duration_ms: 4.596167
+  type: 'test'
+  ...
+# Subtest: same-encounter finding refresh reloads diagnosis candidates for newly charted findings
+ok 36 - same-encounter finding refresh reloads diagnosis candidates for newly charted findings
+  ---
+  duration_ms: 3.330125
+  type: 'test'
+  ...
+# Subtest: imaging hides the prior patient's rows as soon as the patient reference changes
+ok 37 - imaging hides the prior patient's rows as soon as the patient reference changes
+  ---
+  duration_ms: 0.858875
+  type: 'test'
+  ...
+# Subtest: diagnosis header visit-status picker excludes new and saves the selected diagnosis
+ok 38 - diagnosis header visit-status picker excludes new and saves the selected diagnosis
+  ---
+  duration_ms: 7.7735
+  type: 'test'
+  ...
+# Subtest: diagnosis status controls: finished
+ok 39 - diagnosis status controls: finished
+  ---
+  duration_ms: 3.380291
+  type: 'test'
+  ...
+# Subtest: diagnosis status controls: status-read-failure
+ok 40 - diagnosis status controls: status-read-failure
+  ---
+  duration_ms: 3.228125
+  type: 'test'
+  ...
+# Subtest: Assessment completion pointer targets the diagnosis and disappears when complete
+ok 41 - Assessment completion pointer targets the diagnosis and disappears when complete
+  ---
+  duration_ms: 0.365583
+  type: 'test'
+  ...
+# Subtest: doctor chooses Established with one tap and the header shows the saved choice after reload
+ok 42 - doctor chooses Established with one tap and the header shows the saved choice after reload
+  ---
+  duration_ms: 10.327542
+  type: 'test'
+  ...
+# Subtest: partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+ok 43 - partial newness response keeps doctor choice visible and marks only unavailable diagnosis
+  ---
+  duration_ms: 5.607083
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+ok 44 - STAFF-DX-GATE workspace separates diagnosis writes from pins: true
+  ---
+  duration_ms: 7.910916
+  type: 'test'
+  ...
+# Subtest: R10 staff finding commands use chart write capability independently of diagnosis permission: true
+ok 45 - R10 staff finding commands use chart write capability independently of diagnosis permission: true
+  ---
+  duration_ms: 0.886417
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+ok 46 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: true
+  ---
+  duration_ms: 5.299834
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+ok 47 - STAFF-DX-GATE workspace separates diagnosis writes from pins: false
+  ---
+  duration_ms: 10.42075
+  type: 'test'
+  ...
+# Subtest: R10 staff finding commands use chart write capability independently of diagnosis permission: false
+ok 48 - R10 staff finding commands use chart write capability independently of diagnosis permission: false
+  ---
+  duration_ms: 0.47825
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+ok 49 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: false
+  ---
+  duration_ms: 1.513375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+ok 50 - STAFF-DX-GATE workspace separates diagnosis writes from pins: undefined
+  ---
+  duration_ms: 8.965
+  type: 'test'
+  ...
+# Subtest: R10 staff finding commands use chart write capability independently of diagnosis permission: undefined
+ok 51 - R10 staff finding commands use chart write capability independently of diagnosis permission: undefined
+  ---
+  duration_ms: 0.481541
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+ok 52 - STAFF-DX-GATE Assessment reads diagnosis permission from the server: undefined
+  ---
+  duration_ms: 1.076167
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes
+ok 53 - STAFF-DX-GATE diagnosis capability cannot grant ordinary finding writes
+  ---
+  duration_ms: 0.320541
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler
+ok 54 - SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler
+  ---
+  duration_ms: 382.601584
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 2 FIXTURE: unseen anterior value-only definition is untouched
+ok 55 - SWEEP-1 guard 2 FIXTURE: unseen anterior value-only definition is untouched
+  ---
+  duration_ms: 0.301208
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 2 FIXTURE: unseen posterior value-only definition is untouched
+ok 56 - SWEEP-1 guard 2 FIXTURE: unseen posterior value-only definition is untouched
+  ---
+  duration_ms: 0.072541
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 3 REAL SEED: all 14 ordinary structures sweep both eyes with the frozen active scope
+ok 57 - SWEEP-1 guard 3 REAL SEED: all 14 ordinary structures sweep both eyes with the frozen active scope
+  ---
+  duration_ms: 0.364083
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 4 REAL SEED: Surface Staining has only values and remains untouched
+ok 58 - SWEEP-1 guard 4 REAL SEED: Surface Staining has only values and remains untouched
+  ---
+  duration_ms: 0.148542
+  type: 'test'
+  ...
+# Subtest: W130/W147 signed present witness is checked and locked; absent is outside loaded
+ok 59 - W130/W147 signed present witness is checked and locked; absent is outside loaded
+  ---
+  duration_ms: 28.412167
+  type: 'test'
+  ...
+# Subtest: W137 recorded absent requires explicit selection and fromPresence
+ok 60 - W137 recorded absent requires explicit selection and fromPresence
+  ---
+  duration_ms: 6.98275
+  type: 'test'
+  ...
+# Subtest: W131 unconfirmed Retry resends byte-identical request
+ok 61 - W131 unconfirmed Retry resends byte-identical request
+  ---
+  duration_ms: 7.479584
+  type: 'test'
+  ...
+# Subtest: W132 stale reload keeps choice and next save uses new command
+ok 62 - W132 stale reload keeps choice and next save uses new command
+  ---
+  duration_ms: 8.345
+  type: 'test'
+  ...
+# Subtest: W133 negative outcome shows causal message and is never saved
+ok 63 - W133 negative outcome shows causal message and is never saved
+  ---
+  duration_ms: 0.109209
+  type: 'test'
+  ...
+# Subtest: W134 encounter-closed read only
+ok 64 - W134 encounter-closed read only
+  ---
+  duration_ms: 1.800209
+  type: 'test'
+  ...
+# Subtest: W134 pre-rebuild-test-encounter read only
+ok 65 - W134 pre-rebuild-test-encounter read only
+  ---
+  duration_ms: 1.404833
+  type: 'test'
+  ...
+# Subtest: W138 Deferred disables selections without deselection and toggles preserve them
+ok 66 - W138 Deferred disables selections without deselection and toggles preserve them
+  ---
+  duration_ms: 7.035708
+  type: 'test'
+  ...
+# Subtest: W136 per-eye Remarks and measurements are in independent panel states
+ok 67 - W136 per-eye Remarks and measurements are in independent panel states
+  ---
+  duration_ms: 4.255209
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 0
+ok 68 - W145 unscoped count 0
+  ---
+  duration_ms: 1.81875
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 2
+ok 69 - W145 unscoped count 2
+  ---
+  duration_ms: 1.351375
+  type: 'test'
+  ...
+# Subtest: W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+ok 70 - W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+  ---
+  duration_ms: 5.346
+  type: 'test'
+  ...
+# Subtest: W133 negative-only conflict never calls onSaved
+ok 71 - W133 negative-only conflict never calls onSaved
+  ---
+  duration_ms: 2.741625
+  type: 'test'
+  ...
+# Subtest: W145 refreshed zero count removes a previous unscoped notice
+ok 72 - W145 refreshed zero count removes a previous unscoped notice
+  ---
+  duration_ms: 2.793834
+  type: 'test'
+  ...
+# Subtest: W147 UI inactive owned witness remains checked and locked
+ok 73 - W147 UI inactive owned witness remains checked and locked
+  ---
+  duration_ms: 1.56825
+  type: 'test'
+  ...
+# Subtest: W136 blank optional panel text is omitted; fresh offered option becomes a new assertion
+ok 74 - W136 blank optional panel text is omitted; fresh offered option becomes a new assertion
+  ---
+  duration_ms: 3.382542
+  type: 'test'
+  ...
+# Subtest: W139 T16 fact homes determine proposed status despite contradictory Condition evidence
+ok 75 - W139 T16 fact homes determine proposed status despite contradictory Condition evidence
+  ---
+  duration_ms: 15.797792
+  type: 'test'
+  ...
+# Subtest: W140 T17 shared pick scope link merges OD/OS supports: scope failure=false
+ok 76 - W140 T17 shared pick scope link merges OD/OS supports: scope failure=false
+  ---
+  duration_ms: 7.917792
+  type: 'test'
+  ...
+# Subtest: W140 T17 shared pick scope link merges OD/OS supports: scope failure=true
+ok 77 - W140 T17 shared pick scope link merges OD/OS supports: scope failure=true
+  ---
+  duration_ms: 3.5065
+  type: 'test'
+  ...
+# Subtest: W51 cvf remains on the legacy picker path
+ok 78 - W51 cvf remains on the legacy picker path
+  ---
+  duration_ms: 3.192166
+  type: 'test'
+  ...
+# Subtest: W51 refraction remains on the legacy picker path
+ok 79 - W51 refraction remains on the legacy picker path
+  ---
+  duration_ms: 2.05875
+  type: 'test'
+  ...
+# Subtest: W3 Retry resends identical command
+ok 80 - W3 Retry resends identical command
+  ---
+  duration_ms: 45.44125
+  type: 'test'
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+ok 81 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 21.324916
+  type: 'test'
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+ok 82 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 12.954375
+  type: 'test'
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 83 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 19.459542
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 84 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 6.63875
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 85 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 3.753208
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 86 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 9.915125
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 87 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 3.278
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+ok 88 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 18.58525
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+ok 89 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 14.084791
+  type: 'test'
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+ok 90 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 9.223125
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+ok 91 - W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+  ---
+  duration_ms: 14.801167
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+ok 92 - W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+  ---
+  duration_ms: 14.758791
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-different
+ok 93 - W55 kept eye choice uses current live rows and handles builder errors: eye-different
+  ---
+  duration_ms: 15.165625
+  type: 'test'
+  ...
+# Subtest: W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+ok 94 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+  ---
+  duration_ms: 9.623875
+  type: 'test'
+  ...
+# Subtest: W57 thrown PUT fetch offers Retry with the identical body
+ok 95 - W57 thrown PUT fetch offers Retry with the identical body
+  ---
+  duration_ms: 10.694125
+  type: 'test'
+  ...
+# Subtest: W59 pre-rebuild workspace disables diagnosis additions scope and rank
+ok 96 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
+  ---
+  duration_ms: 5.413208
+  type: 'test'
+  ...
+# Subtest: W60 linking a finding homed to B preserves B and adds A
+ok 97 - W60 linking a finding homed to B preserves B and adds A
+  ---
+  duration_ms: 8.755917
+  type: 'test'
+  ...
+# Subtest: W63 applied pick dispatches findings changed without a subsequent link
+ok 98 - W63 applied pick dispatches findings changed without a subsequent link
+  ---
+  duration_ms: 10.680625
+  type: 'test'
+  ...
+# Subtest: W55 kept shrink choice retires the current presence with its fresh baseline
+ok 99 - W55 kept shrink choice retires the current presence with its fresh baseline
+  ---
+  duration_ms: 13.46
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+ok 100 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+  ---
+  duration_ms: 17.876959
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+ok 101 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+  ---
+  duration_ms: 17.005375
+  type: 'test'
+  ...
+1..101
+# tests 101
+# suites 0
+# pass 101
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 854.409583

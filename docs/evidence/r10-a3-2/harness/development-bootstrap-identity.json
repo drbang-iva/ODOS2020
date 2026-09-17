@@ -1,0 +1,20 @@
+{
+  "projectId": "8a29b496-b7f1-4250-abe2-5649fe505768",
+  "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+  "provider": {
+    "practitionerReference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+    "policyReference": "AccessPolicy/a2fdc6bd-1b81-4123-8e06-520e03e6964e"
+  },
+  "staff": {
+    "practitionerReference": "Practitioner/320848f4-03c0-4949-9933-80df5b05891f",
+    "policyReference": "AccessPolicy/ea72dc0b-de1e-4991-a6dc-73032c73f5e3"
+  },
+  "encounters": {
+    "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+    "current": "Encounter/09c043b9-c705-4487-9365-5e47567636d1",
+    "prior": "Encounter/ffbe1926-887c-42a6-a01c-0ea997d9e707",
+    "closed": "Encounter/06bacd0f-e97c-4e6c-a3e0-ed3b62c1ee7b",
+    "preRebuild": "Encounter/80925357-458a-45c6-b180-cd2cf01add6f"
+  },
+  "definitions": 47
+}

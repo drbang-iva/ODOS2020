@@ -1,0 +1,54 @@
+TAP version 13
+# Subtest: V25 V36 W143 remounted checked carry discovers incomplete plan
+not ok 1 - V25 V36 W143 remounted checked carry discovers incomplete plan
+  ---
+  duration_ms: 25.0425
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:22703'
+  failureType: 'testCodeFailure'
+  error: |-
+    W143 checked is not proof that the persisted carry finished
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:586:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: V25 V36 W143 remounted checked carry selects already complete without replan
+not ok 2 - V25 V36 W143 remounted checked carry selects already complete without replan
+  ---
+  duration_ms: 3.220292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:22703'
+  failureType: 'testCodeFailure'
+  error: |-
+    W143 checked is not proof that the persisted carry finished
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:586:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 278.11

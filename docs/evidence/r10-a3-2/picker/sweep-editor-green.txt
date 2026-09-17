@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler
+ok 1 - SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler
+  ---
+  duration_ms: 378.250167
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 2 FIXTURE: unseen anterior value-only definition is untouched
+ok 2 - SWEEP-1 guard 2 FIXTURE: unseen anterior value-only definition is untouched
+  ---
+  duration_ms: 0.2655
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 2 FIXTURE: unseen posterior value-only definition is untouched
+ok 3 - SWEEP-1 guard 2 FIXTURE: unseen posterior value-only definition is untouched
+  ---
+  duration_ms: 0.06825
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 3 REAL SEED: all 14 ordinary structures sweep both eyes with the frozen active scope
+ok 4 - SWEEP-1 guard 3 REAL SEED: all 14 ordinary structures sweep both eyes with the frozen active scope
+  ---
+  duration_ms: 0.346125
+  type: 'test'
+  ...
+# Subtest: SWEEP-1 guard 4 REAL SEED: Surface Staining has only values and remains untouched
+ok 5 - SWEEP-1 guard 4 REAL SEED: Surface Staining has only values and remains untouched
+  ---
+  duration_ms: 0.126834
+  type: 'test'
+  ...
+# Subtest: W130/W147 signed present witness is checked and locked; absent is outside loaded
+ok 6 - W130/W147 signed present witness is checked and locked; absent is outside loaded
+  ---
+  duration_ms: 27.984416
+  type: 'test'
+  ...
+# Subtest: W137 recorded absent requires explicit selection and fromPresence
+ok 7 - W137 recorded absent requires explicit selection and fromPresence
+  ---
+  duration_ms: 6.006833
+  type: 'test'
+  ...
+# Subtest: W131 unconfirmed Retry resends byte-identical request
+ok 8 - W131 unconfirmed Retry resends byte-identical request
+  ---
+  duration_ms: 7.272
+  type: 'test'
+  ...
+# Subtest: W132 stale reload keeps choice and next save uses new command
+ok 9 - W132 stale reload keeps choice and next save uses new command
+  ---
+  duration_ms: 6.971541
+  type: 'test'
+  ...
+# Subtest: W133 negative outcome shows causal message and is never saved
+ok 10 - W133 negative outcome shows causal message and is never saved
+  ---
+  duration_ms: 0.096834
+  type: 'test'
+  ...
+# Subtest: W134 encounter-closed read only
+ok 11 - W134 encounter-closed read only
+  ---
+  duration_ms: 1.498416
+  type: 'test'
+  ...
+# Subtest: W134 pre-rebuild-test-encounter read only
+ok 12 - W134 pre-rebuild-test-encounter read only
+  ---
+  duration_ms: 1.346084
+  type: 'test'
+  ...
+# Subtest: W138 Deferred disables selections without deselection and toggles preserve them
+ok 13 - W138 Deferred disables selections without deselection and toggles preserve them
+  ---
+  duration_ms: 5.513208
+  type: 'test'
+  ...
+# Subtest: W136 per-eye Remarks and measurements are in independent panel states
+ok 14 - W136 per-eye Remarks and measurements are in independent panel states
+  ---
+  duration_ms: 3.592167
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 0
+ok 15 - W145 unscoped count 0
+  ---
+  duration_ms: 1.362916
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 2
+ok 16 - W145 unscoped count 2
+  ---
+  duration_ms: 1.062791
+  type: 'test'
+  ...
+# Subtest: W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+ok 17 - W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+  ---
+  duration_ms: 4.736542
+  type: 'test'
+  ...
+# Subtest: W133 negative-only conflict never calls onSaved
+ok 18 - W133 negative-only conflict never calls onSaved
+  ---
+  duration_ms: 3.036834
+  type: 'test'
+  ...
+# Subtest: W145 refreshed zero count removes a previous unscoped notice
+ok 19 - W145 refreshed zero count removes a previous unscoped notice
+  ---
+  duration_ms: 2.928917
+  type: 'test'
+  ...
+# Subtest: W147 UI inactive owned witness remains checked and locked
+ok 20 - W147 UI inactive owned witness remains checked and locked
+  ---
+  duration_ms: 1.352458
+  type: 'test'
+  ...
+# Subtest: W136 blank optional panel text is omitted; fresh offered option becomes a new assertion
+ok 21 - W136 blank optional panel text is omitted; fresh offered option becomes a new assertion
+  ---
+  duration_ms: 2.341708
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 729.834708

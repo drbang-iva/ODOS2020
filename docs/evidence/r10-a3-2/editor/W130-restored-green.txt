@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: W130/W147 signed present witness is checked and locked; absent is outside loaded
+ok 1 - W130/W147 signed present witness is checked and locked; absent is outside loaded
+  ---
+  duration_ms: 26.00675
+  type: 'test'
+  ...
+# Subtest: W137 recorded absent requires explicit selection and fromPresence
+ok 2 - W137 recorded absent requires explicit selection and fromPresence
+  ---
+  duration_ms: 6.7235
+  type: 'test'
+  ...
+# Subtest: W131 unconfirmed Retry resends byte-identical request
+ok 3 - W131 unconfirmed Retry resends byte-identical request
+  ---
+  duration_ms: 7.260125
+  type: 'test'
+  ...
+# Subtest: W132 stale reload keeps choice and next save uses new command
+ok 4 - W132 stale reload keeps choice and next save uses new command
+  ---
+  duration_ms: 6.033917
+  type: 'test'
+  ...
+# Subtest: W133 negative outcome shows causal message and is never saved
+ok 5 - W133 negative outcome shows causal message and is never saved
+  ---
+  duration_ms: 0.200792
+  type: 'test'
+  ...
+# Subtest: W134 encounter-closed read only
+ok 6 - W134 encounter-closed read only
+  ---
+  duration_ms: 1.867916
+  type: 'test'
+  ...
+# Subtest: W134 pre-rebuild-test-encounter read only
+ok 7 - W134 pre-rebuild-test-encounter read only
+  ---
+  duration_ms: 1.50325
+  type: 'test'
+  ...
+# Subtest: W138 Deferred disables selections without deselection and toggles preserve them
+ok 8 - W138 Deferred disables selections without deselection and toggles preserve them
+  ---
+  duration_ms: 3.08275
+  type: 'test'
+  ...
+# Subtest: W136 per-eye Remarks and measurements are in independent panel states
+ok 9 - W136 per-eye Remarks and measurements are in independent panel states
+  ---
+  duration_ms: 6.22025
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 0
+ok 10 - W145 unscoped count 0
+  ---
+  duration_ms: 1.432542
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 2
+ok 11 - W145 unscoped count 2
+  ---
+  duration_ms: 1.088333
+  type: 'test'
+  ...
+# Subtest: W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+ok 12 - W135 diagnosis-door refresh merges fresh sibling without erasing pending choice
+  ---
+  duration_ms: 3.470333
+  type: 'test'
+  ...
+# Subtest: W133 negative-only conflict never calls onSaved
+ok 13 - W133 negative-only conflict never calls onSaved
+  ---
+  duration_ms: 2.954834
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 293.868208

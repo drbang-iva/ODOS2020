@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: W139 T16 fact homes determine proposed status despite contradictory Condition evidence
+ok 1 - W139 T16 fact homes determine proposed status despite contradictory Condition evidence
+  ---
+  duration_ms: 14.863375
+  type: 'test'
+  ...
+# Subtest: W140 T17 shared pick scope link merges OD/OS supports: scope failure=false
+ok 2 - W140 T17 shared pick scope link merges OD/OS supports: scope failure=false
+  ---
+  duration_ms: 6.851334
+  type: 'test'
+  ...
+# Subtest: W140 T17 shared pick scope link merges OD/OS supports: scope failure=true
+ok 3 - W140 T17 shared pick scope link merges OD/OS supports: scope failure=true
+  ---
+  duration_ms: 2.752875
+  type: 'test'
+  ...
+# Subtest: W3 Retry resends identical command
+ok 4 - W3 Retry resends identical command
+  ---
+  duration_ms: 44.163167
+  type: 'test'
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+ok 5 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 21.408916
+  type: 'test'
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+ok 6 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 12.612417
+  type: 'test'
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 7 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 19.005125
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 8 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 5.119333
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 9 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 3.692042
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 10 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 9.867
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 11 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 3.213208
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+ok 12 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 21.069959
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+ok 13 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 12.967375
+  type: 'test'
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+ok 14 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 8.979792
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+ok 15 - W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+  ---
+  duration_ms: 14.917291
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+ok 16 - W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+  ---
+  duration_ms: 14.071917
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-different
+ok 17 - W55 kept eye choice uses current live rows and handles builder errors: eye-different
+  ---
+  duration_ms: 13.786
+  type: 'test'
+  ...
+# Subtest: W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+ok 18 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+  ---
+  duration_ms: 9.009041
+  type: 'test'
+  ...
+# Subtest: W57 thrown PUT fetch offers Retry with the identical body
+ok 19 - W57 thrown PUT fetch offers Retry with the identical body
+  ---
+  duration_ms: 12.017542
+  type: 'test'
+  ...
+# Subtest: W59 pre-rebuild workspace disables diagnosis additions scope and rank
+ok 20 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
+  ---
+  duration_ms: 4.772291
+  type: 'test'
+  ...
+# Subtest: W60 linking a finding homed to B preserves B and adds A
+ok 21 - W60 linking a finding homed to B preserves B and adds A
+  ---
+  duration_ms: 7.567458
+  type: 'test'
+  ...
+# Subtest: W63 applied pick dispatches findings changed without a subsequent link
+ok 22 - W63 applied pick dispatches findings changed without a subsequent link
+  ---
+  duration_ms: 10.617458
+  type: 'test'
+  ...
+# Subtest: W55 kept shrink choice retires the current presence with its fresh baseline
+ok 23 - W55 kept shrink choice retires the current presence with its fresh baseline
+  ---
+  duration_ms: 13.305
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+ok 24 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+  ---
+  duration_ms: 18.34525
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+ok 25 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+  ---
+  duration_ms: 15.51375
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 579.628292
