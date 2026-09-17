@@ -1,0 +1,56 @@
+{
+  "base": "95a8582f914b34a43ca724845f6e58a87cdac434",
+  "head": "working-tree",
+  "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
+  "files": [
+    {
+      "file": "ui/tests/r10A3OcularEditor.test.tsx",
+      "assertionCountBefore": 70,
+      "assertionCountAfter": 77,
+      "changedGroups": [
+        {
+          "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+          "mapping": "W131 / W148",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 194,
+              "text": "assert.equal(h.panel().props.disabled, true)"
+            },
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 196,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Submitted remark\")"
+            },
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 198,
+              "text": "assert.equal(h.button(\"Anterior All Normal\").props.disabled, true)"
+            },
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 200,
+              "text": "assert.equal(h.panel().findAll(node => Boolean(node.props[\"data-negative-act\"])).length,0)"
+            },
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 202,
+              "text": "assert.equal(h.posts[0],h.posts[1])"
+            },
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 203,
+              "text": "assert.equal(h.saved(),1)"
+            },
+            {
+              "test": "\"W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved\"",
+              "line": 204,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Submitted remark\")"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -147,6 +147,7 @@ export function OcularHealthSection({
   const [clearedNormalNotices, setClearedNormalNotices] = useState<Record<string, string>>({});
   const readOnlyReason = Object.values(canonical).flatMap(eyes => EYES.map(eye => eyes[eye])).find(eye => !eye.encounterEditable)?.readOnlyReason;
   const readOnly = Boolean(readOnlyReason);
+  const editingLocked = readOnly || saving || retryKeys.length > 0;
   useEffect(() => {
     const refresh = (event: Event) => {
       if ((event as CustomEvent).detail?.encounterReference !== encounterReference) return;
@@ -332,7 +333,7 @@ export function OcularHealthSection({
   }
 
   function updateEye(stableKey: string, eye: Eye, update: (capture: EyeCapture) => EyeCapture) {
-    if (readOnly || retryKeys.length) return;
+    if (editingLocked) return;
     replaceCaptures((current) => {
       const prior = current[stableKey]?.[eye] ?? emptyEye();
       const next = { ...update(prior) };
@@ -404,6 +405,7 @@ export function OcularHealthSection({
   }
 
   function allNormal(prefix: string, label: string) {
+    if (editingLocked) return;
     const dirty = new Set(changedDefinitions(definitions, currentCaptures.current, pristineRef.current).map(definition => definition.stableKey));
     for (const key of failureMessages.current.keys()) if (!dirty.has(key)) failureMessages.current.delete(key);
     const failed = definitions.filter(definition => failureMessages.current.has(definition.stableKey) && (definition.stableKey.startsWith(prefix) || prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY));
@@ -503,8 +505,8 @@ export function OcularHealthSection({
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-bg-deep/95 pb-4 backdrop-blur">
           <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Record what is present. Normal requires an explicit negative assertion.</p></div>
           {!readOnly && <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading || saving} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
-            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading || saving} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
+            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading || editingLocked} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
+            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading || editingLocked} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={definitions.map((definition) => definition.stableKey)}
@@ -551,7 +553,7 @@ export function OcularHealthSection({
                   <EyePanel
                     key={eye}
                     eye={eye}
-                    readOnly={readOnly || retryKeys.length > 0}
+                    readOnly={editingLocked}
                     facts={canonical[definition.stableKey]?.[eye].facts}
                     panelReadOnly={canonical[definition.stableKey]?.[eye].panel.editable === false}
                     onRemarks={(remarks) => updateEye(definition.stableKey, eye, current => ({ ...current, remarks }))}
