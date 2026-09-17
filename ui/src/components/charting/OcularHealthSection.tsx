@@ -687,7 +687,7 @@ function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, nor
   onOther(other: string): void;
   onCopy(): void;
 }) {
-  const options = (field?.options ?? []).filter((option) => option.active || facts?.some(fact => fact.key?.optionCode === option.code && fact.status === "live" && fact.presence === "present"));
+  const options = (field?.options ?? []).filter((option) => option.active || facts?.some(fact => fact.key?.optionCode === option.code && fact.status === "live"));
   const parents = options.filter((option) => !option.parentCode);
   const priority = parents.filter((option) => option.priority);
   const additional = parents.filter((option) => !option.priority);

@@ -1,0 +1,105 @@
+TAP version 13
+# Subtest: EXAM-1B in-flight edit remains unsaved after the older request completes
+ok 1 - EXAM-1B in-flight edit remains unsaved after the older request completes
+  ---
+  duration_ms: 27.819667
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives remarks with the same act id
+ok 2 - W133 pending All Normal survives remarks with the same act id
+  ---
+  duration_ms: 27.179667
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives measurement with the same act id
+ok 3 - W133 pending All Normal survives measurement with the same act id
+  ---
+  duration_ms: 7.362958
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives grade with the same act id
+ok 4 - W133 pending All Normal survives grade with the same act id
+  ---
+  duration_ms: 6.51675
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives Other cleared with the same act id
+ok 5 - W133 pending All Normal survives Other cleared with the same act id
+  ---
+  duration_ms: 4.429125
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after scoped positive
+ok 6 - W133 pending All Normal is dropped after scoped positive
+  ---
+  duration_ms: 4.240042
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after Other text
+ok 7 - W133 pending All Normal is dropped after Other text
+  ---
+  duration_ms: 3.514167
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after deferred
+ok 8 - W133 pending All Normal is dropped after deferred
+  ---
+  duration_ms: 5.164666
+  type: 'test'
+  ...
+# Subtest: W148 OD staged All Normal replacement is explained until positive-only save completes
+ok 9 - W148 OD staged All Normal replacement is explained until positive-only save completes
+  ---
+  duration_ms: 3.854958
+  type: 'test'
+  ...
+# Subtest: W148 OS staged All Normal replacement is explained until positive-only save completes
+ok 10 - W148 OS staged All Normal replacement is explained until positive-only save completes
+  ---
+  duration_ms: 4.747
+  type: 'test'
+  ...
+# Subtest: W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds
+ok 11 - W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds
+  ---
+  duration_ms: 3.902542
+  type: 'test'
+  ...
+# Subtest: W131/W148 identical Retry retains its original capture and leaves later edits unsaved
+ok 12 - W131/W148 identical Retry retains its original capture and leaves later edits unsaved
+  ---
+  duration_ms: 7.070458
+  type: 'test'
+  ...
+# Subtest: W148 retrying an older All Normal request retains a later replacement notice as unsaved
+ok 13 - W148 retrying an older All Normal request retains a later replacement notice as unsaved
+  ---
+  duration_ms: 4.493709
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+not ok 14 - W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+  ---
+  duration_ms: 3.131292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:19573'
+  failureType: 'testCodeFailure'
+  error: 'inactive recorded-absent history must remain visible'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:242:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 13
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 622.502708
