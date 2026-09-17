@@ -55,6 +55,8 @@ export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstra
     } finally {
       closeSync(fd);
     }
+    // Defends against filesystem-level write faults surviving fsync; deliberately not
+    // reachable through test interleaving because this entire save section is synchronous.
     if (!readEnv(input.envPath).includes(settings)) {
       throw new Error("The env file changed while credentials were being saved.");
     }
