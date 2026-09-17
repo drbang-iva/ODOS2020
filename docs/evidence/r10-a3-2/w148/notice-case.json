@@ -1,0 +1,15 @@
+{
+  "name": "w148-notice",
+  "file": "ui/src/components/charting/OcularHealthSection.tsx",
+  "anchor": "      {normalCleared && <p role=\"status\" className=\"mt-3 text-sm text-amber-200\">All Normal cleared for this eye because a finding was recorded</p>}",
+  "replacement": "",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=W148|pending All Normal",
+    "tests/r10A3OcularEditor.test.tsx"
+  ]
+}

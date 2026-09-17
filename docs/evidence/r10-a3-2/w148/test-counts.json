@@ -1,0 +1,30 @@
+{
+  "initial-red.tap": {
+    "tests": 10,
+    "pass": 7,
+    "fail": 3,
+    "skipped": 0,
+    "todo": 0
+  },
+  "green.tap": {
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "w148-notice-mutation-red.tap": {
+    "tests": 10,
+    "pass": 7,
+    "fail": 3,
+    "skipped": 0,
+    "todo": 0
+  },
+  "w148-notice-restored-green.tap": {
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+}
