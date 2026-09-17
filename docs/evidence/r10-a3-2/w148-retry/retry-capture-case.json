@@ -1,0 +1,16 @@
+{
+  "name": "retry-capture",
+  "file": "ui/src/components/charting/OcularHealthSection.tsx",
+  "anchor": "        const submitted = frozen?.captures ?? structuredClone(currentCaptures.current[stableKey]);",
+  "replacement": "        const submitted = structuredClone(currentCaptures.current[stableKey]);",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=identical Retry retains|W148|pending All Normal|in-flight edit remains",
+    "tests/r10A3OcularEditor.test.tsx",
+    "tests/customSections.test.tsx"
+  ]
+}

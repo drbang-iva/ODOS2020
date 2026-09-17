@@ -140,14 +140,14 @@ export function OcularHealthSection({
   const [reloadVersion, setReloadVersion] = useState(0);
   const [canonical, setCanonical] = useState<Record<string, Record<Eye, CanonicalEye>>>({});
   const [unscopedCount, setUnscopedCount] = useState(0);
-  const frozenBodies = useRef(new Map<string, string>());
+  const frozenBodies = useRef(new Map<string, { body: string; captures: Record<Eye, EyeCapture>; notices: Record<string, string> }>());
   const keepChoice = useRef(false);
   const hydratedIdentity = useRef<string>();
   const [retryKeys, setRetryKeys] = useState<string[]>([]);
   const [clearedNormalNotices, setClearedNormalNotices] = useState<Record<string, string>>({});
   const readOnlyReason = Object.values(canonical).flatMap(eyes => EYES.map(eye => eyes[eye])).find(eye => !eye.encounterEditable)?.readOnlyReason;
   const readOnly = Boolean(readOnlyReason);
-  const editingLocked = readOnly || saving || retryKeys.length > 0;
+  const editingLocked = readOnly || retryKeys.length > 0;
   useEffect(() => {
     const refresh = (event: Event) => {
       if ((event as CustomEvent).detail?.encounterReference !== encounterReference) return;
@@ -405,7 +405,7 @@ export function OcularHealthSection({
   }
 
   function allNormal(prefix: string, label: string) {
-    if (editingLocked) return;
+    if (saving || editingLocked) return;
     const dirty = new Set(changedDefinitions(definitions, currentCaptures.current, pristineRef.current).map(definition => definition.stableKey));
     for (const key of failureMessages.current.keys()) if (!dirty.has(key)) failureMessages.current.delete(key);
     const failed = definitions.filter(definition => failureMessages.current.has(definition.stableKey) && (definition.stableKey.startsWith(prefix) || prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY));
@@ -424,8 +424,10 @@ export function OcularHealthSection({
       for (const definition of onlyDefinitions) {
         const stableKey = definition.stableKey;
         if (!retry && !changedDefinitions([definition], currentCaptures.current, pristine).length) continue;
-        const submitted = structuredClone(currentCaptures.current[stableKey]);
-        let body = retry ? frozenBodies.current.get(stableKey) : undefined;
+        const frozen = retry ? frozenBodies.current.get(stableKey) : undefined;
+        const submitted = frozen?.captures ?? structuredClone(currentCaptures.current[stableKey]);
+        const submittedNotices = frozen?.notices ?? clearedNormalNotices;
+        let body = frozen?.body;
         if (!body) {
           const eyes = Object.fromEntries(EYES.flatMap(eye => {
             const capture = currentCaptures.current[stableKey][eye], original = pristine[stableKey][eye], history = canonical[stableKey][eye];
@@ -445,7 +447,7 @@ export function OcularHealthSection({
             }]];
           }));
           body = JSON.stringify({ commandId: crypto.randomUUID(), patientReference, encounterReference, eyes });
-          frozenBodies.current.set(stableKey, body);
+          frozenBodies.current.set(stableKey, { body, captures: submitted, notices: submittedNotices });
         }
         let result: FindingHttpResult;
         try {
@@ -464,7 +466,7 @@ export function OcularHealthSection({
             const next = { ...notices };
             for (const eye of EYES) {
               const key = `${stableKey}:${eye}`;
-              if (next[key] === clearedNormalNotices[key]) delete next[key];
+              if (next[key] === submittedNotices[key]) delete next[key];
             }
             return next;
           });
@@ -505,8 +507,8 @@ export function OcularHealthSection({
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-bg-deep/95 pb-4 backdrop-blur">
           <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Record what is present. Normal requires an explicit negative assertion.</p></div>
           {!readOnly && <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading || editingLocked} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
-            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading || editingLocked} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
+            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading || saving || editingLocked} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
+            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading || saving || editingLocked} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
             <ClearSectionButton
               encounterReference={encounterReference}
               sectionKey={definitions.map((definition) => definition.stableKey)}
