@@ -7,7 +7,7 @@ docker run -d --name odos-o1b-pg -e POSTGRES_DB=medplum -e POSTGRES_USER=medplum
 docker exec odos-o1b-pg pg_isready -U medplum -d medplum
 ```
 
-Each command below runs the named mutation, its focused red check, restores the original source bytes in `finally`, and reruns the same focused check green. The exact mutation and focused test command are in [`mcp/tests/catalog_guard_probe.py`](../../catalog_guard_probe.py); `/tmp/odos-o1b-guards/G*-red.tap` and `G*-green.tap` retain the full local outputs. Only `ODOS_POSTGRES_URL` is set for the test; `ODOS_CATALOG_TEST_POSTGRES_URL` is explicitly unset. No Medplum/admin credential is used. There are **no skipped tests** in either phase.
+Each command below runs the named mutation, its focused red check, restores the original source bytes in `finally`, and reruns the same focused check green. The exact mutation and focused test command are in [`mcp/tests/catalog_guard_probe.py`](../../catalog_guard_probe.py); `/tmp/odos-o1b-guards/G*-red.tap` and `G*-green.tap` retain the full local outputs. Only `ODOS_POSTGRES_URL` is set for the test; `ODOS_CATALOG_TEST_POSTGRES_URL` is explicitly unset. No Medplum/admin credential is used. The top-level focused TAP has zero skips in both phases; G25 deliberately observes two skipped child cases in its red phase.
 
 | Guard | Exact command and environment (worktree root) | Red (`exit/pass/fail/skip`) | Restored green (`exit/pass/fail/skip`) |
 |---|---|---|---|
