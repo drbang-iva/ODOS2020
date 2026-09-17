@@ -1,0 +1,20 @@
+[
+  {
+    "revision": "before",
+    "suggestionButtons": 2,
+    "scopeDisabled": {
+      "OD": false,
+      "OS": false,
+      "OU": false
+    }
+  },
+  {
+    "revision": "after",
+    "suggestionButtons": 1,
+    "scopeDisabled": {
+      "OD": true,
+      "OS": true,
+      "OU": false
+    }
+  }
+]

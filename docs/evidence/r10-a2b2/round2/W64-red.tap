@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: W64 conflict row replaces offered and choose-presence labels
+not ok 1 - W64 conflict row replaces offered and choose-presence labels
+  ---
+  duration_ms: 10.840542
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisTable.test.tsx:1:14669'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /Offered|Choose presence/. Input:
+    
+    '{"type":"section","props":{"className":"odos-diagnosis-findings","aria-labelledby":"diagnosis-findings-heading"},"children":[{"type":"div","props":{"className":"odos-diagnosis-findings-heading"},"children":[{"type":"div","props":{},"children":[{"type":"div","props":{"className":"odos-diagnosis-eyebrow"},"children":["Documentation"]},{"type":"h3","props":{"id":"diagnosis-findings-heading"},"children":["Findings"]}]}]},{"type":"div","props":{"className":"odos-diagnosis-findings-table-wrap"},"children":[{"type":"table","props":{"className":"odos-diagnosis-findings-table"},"children":[{"type":"thead","props":{},"children":[{"type":"tr","props":{},"children":[{"type":"th","props":{},"children":["Finding"]},{"type":"th","props":{},"children":["Exam section"]},{"type":"th","props":{},"children":["Presence"]},{"type":"th","props":{},"children":["Grade"]},{"type":"th","props":{},"children":["Laterality"]},{"type":"th","props":{},"children":["Finding actions"]}]}]},{"type":"tbody","props":{},"children":[{"type":"tr","props":{"className":"is-offered"},"children":[{"type":"td","props":{},"children":[{"type":"strong","props":{},"children":["Opacity"]},{"type":"small","props":{},"children":["Offered"]},{"type":"small","props":{},"children":["Conflicting records"]}]},{"type":"td","props":{},"children":["lens"]},{"type":"td","props":{},"children":[{"type":"div","props":{"className":"odos-finding-presence","role":"group","aria-label":"Opacity presence"},"children":[{"type":"button","props":{"type":"button","className":"","aria-label":"Record Opacity present","aria-pressed":false,"disabled":true},"children":["Present"]},{"type":"button","props":{"type":"button","className":"","aria-label":"Record Opacity absent","aria-pressed":false,"disabled":true},"children":["Absent"]}]}]},{"type":"td","props":{},"children":[{"type":"select","props":{"aria-label":"Grade Opacity","value":"1","disabled":true},"children":[{"type":"option","props":{"value":""},"children":["Not graded"]},{"type":"option","props":{"value":"1"},"children":["1"]},{"type":"option","props":{"value":"2"},"children":["2"]}]}]},{"type":"td","props":{},"children":[{"type":"span","props":{},"children":["OD"]},{"type":"select","props":{"aria-label":"Laterality Opacity","value":"OD","disabled":true},"children":[{"type":"option","props":{"value":"OD"},"children":["OD"]},{"type":"option","props":{"value":"OS"},"children":["OS"]},{"type":"option","props":{"value":"OU"},"children":["OU"]}]}]},{"type":"td","props":{},"children":["Choose presence"]}]}]}]}]},{"type":"div","props":{"className":"odos-diagnosis-finding-search"},"children":[{"type":"label","props":{},"children":[{"type":"span","props":{},"children":["Find another finding"]},{"type":"input","props":{"type":"search","value":"","placeholder":"Search findings","disabled":false},"children":null}]}]}]}'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '{"type":"section","props":{"className":"odos-diagnosis-findings","aria-labelledby":"diagnosis-findings-heading"},"children":[{"type":"div","props":{"className":"odos-diagnosis-findings-heading"},"children":[{"type":"div","props":{},"children":[{"type":"div","props":{"className":"odos-diagnosis-eyebrow"},"children":["Documentation"]},{"type":"h3","props":{"id":"diagnosis-findings-heading"},"children":["Findings"]}]}]},{"type":"div","props":{"className":"odos-diagnosis-findings-table-wrap"},"children":[{"type":"table","props":{"className":"odos-diagnosis-findings-table"},"children":[{"type":"thead","props":{},"children":[{"type":"tr","props":{},"children":[{"type":"th","props":{},"children":["Finding"]},{"type":"th","props":{},"children":["Exam section"]},{"type":"th","props":{},"children":["Presence"]},{"type":"th","props":{},"children":["Grade"]},{"type":"th","props":{},"children":["Laterality"]},{"type":"th","props":{},"children":["Finding actions"]}]}]},{"type":"tbody","props":{},"children":[{"type":"tr","props":{"className":"is-offered"},"children":[{"type":"td","props":{},"children":[{"type":"strong","props":{},"children":["Opacity"]},{"type":"small","props":{},"children":["Offered"]},{"type":"small","props":{},"children":["Conflicting records"]}]},{"type":"td","props":{},"children":["lens"]},{"type":"td","props":{},"children":[{"type":"div","props":{"className":"odos-finding-presence","role":"group","aria-label":"Opacity presence"},"children":[{"type":"button","props":{"type":"button","className":"","aria-label":"Record Opacity present","aria-pressed":false,"disabled":true},"children":["Present"]},{"type":"button","props":{"type":"button","className":"","aria-label":"Record Opacity absent","aria-pressed":false,"disabled":true},"children":["Absent"]}]}]},{"type":"td","props":{},"children":[{"type":"select","props":{"aria-label":"Grade Opacity","value":"1","disabled":true},"children":[{"type":"option","props":{"value":""},"children":["Not graded"]},{"type":"option","props":{"value":"1"},"children":["1"]},{"type":"option","props":{"value":"2"},"children":["2"]}]}]},{"type":"td","props":{},"children":[{"type":"span","props":{},"children":["OD"]},{"type":"select","props":{"aria-label":"Laterality Opacity","value":"OD","disabled":true},"children":[{"type":"option","props":{"value":"OD"},"children":["OD"]},{"type":"option","props":{"value":"OS"},"children":["OS"]},{"type":"option","props":{"value":"OU"},"children":["OU"]}]}]},{"type":"td","props":{},"children":["Choose presence"]}]}]}]}]},{"type":"div","props":{"className":"odos-diagnosis-finding-search"},"children":[{"type":"label","props":{},"children":[{"type":"span","props":{},"children":["Find another finding"]},{"type":"input","props":{"type":"search","value":"","placeholder":"Search findings","disabled":false},"children":null}]}]}]}'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisTable.test.tsx:125:103)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 213.357

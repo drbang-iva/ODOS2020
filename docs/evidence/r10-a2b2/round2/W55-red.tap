@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+not ok 1 - W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+  ---
+  duration_ms: 41.885458
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:12575'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:86:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+not ok 2 - W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+  ---
+  duration_ms: 15.813292
+  type: 'test'
+  location: '<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:1:12575'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/r10DiagnosisWorkspace.test.tsx:86:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-different
+ok 3 - W55 kept eye choice uses current live rows and handles builder errors: eye-different
+  ---
+  duration_ms: 14.948292
+  type: 'test'
+  ...
+# Subtest: W55 kept shrink choice retires the current presence with its fresh baseline
+ok 4 - W55 kept shrink choice retires the current presence with its fresh baseline
+  ---
+  duration_ms: 17.265625
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 300.309292

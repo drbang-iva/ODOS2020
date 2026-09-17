@@ -62,11 +62,22 @@ export function UnassignedFindingsTray({ rows,visitDiagnoses,patientReference,di
   if (!rows.length) return null;
   return <section className="odos-unassigned-findings" aria-labelledby="unassigned-findings-heading"><h2 id="unassigned-findings-heading" className="odos-diagnosis-rail-heading">Unassigned findings</h2>{groupFindingRows(rows).map(group => {
     const row=group[0], blocked=disabled || group.some(r => !r.editable || !r.key || !r.baseline);
-    const suggestions=Object.values(suggestionsByFinding).flatMap(finding => finding.candidates
-      .filter(candidate => candidate.supportingFacts?.some(fact => group.some(r => r.rowKey === fact.rowKey)))
-      .map(suggestion => ({finding,suggestion})));
+    const suggestions: Array<{finding: DiagnosisCandidateFinding; suggestion: DiagnosisCandidateSuggestion}> = [];
+    for (const finding of Object.values(suggestionsByFinding)) {
+      for (const candidate of finding.candidates) {
+        const supports = candidate.supportingFacts?.filter(fact => group.some(r => r.rowKey === fact.rowKey)) ?? [];
+        if (!supports.length) continue;
+        const diagnosis = candidate.diagnosisKey ?? candidate.familyGroup;
+        const existing = suggestions.find(({suggestion}) => (suggestion.diagnosisKey ?? suggestion.familyGroup) === diagnosis);
+        if (existing) {
+          existing.suggestion.supportingFacts = [...new Map([...existing.suggestion.supportingFacts!, ...supports].map(fact => [fact.rowKey, fact])).values()];
+        } else {
+          suggestions.push({finding, suggestion: {...candidate, supportingFacts: [...new Map(supports.map(fact => [fact.rowKey, fact])).values()]}});
+        }
+      }
+    }
     return <div className="odos-unassigned-finding" key={group.map(r => r.rowKey).join("|")}><strong>{row.display}</strong><small>{row.presence === "absent" ? "Absent" : "Present"} · {group.length === 2 ? "OU" : row.eye}</small>{!row.editable && <small>{findingReadOnlyLabel(row.readOnlyReason)}</small>}
-      {suggestions.length > 0 && <div className="odos-unassigned-finding-suggestions"><small>suggests:</small>{suggestions.map(({finding,suggestion}) => <button type="button" key={`${finding.findingInstanceId}:${suggestion.diagnosisKey ?? suggestion.familyGroup}`} className="odos-unassigned-finding-suggestion" disabled={blocked || (!canWriteDiagnosis && !visitDiagnoses.some(diagnosis => diagnosis.diagnosisKey === suggestion.diagnosisKey)) || suggestion.linkable === false || finding.linkable === false} aria-label={`Add suggested diagnosis ${suggestion.display}`} onClick={() => !blocked && onSuggest?.(suggestion,finding.findingInstanceId)}>{suggestion.display}</button>)}</div>}
+      {suggestions.length > 0 && <div className="odos-unassigned-finding-suggestions"><small>suggests:</small>{suggestions.map(({finding,suggestion}) => <button type="button" key={`${finding.findingInstanceId}:${suggestion.diagnosisKey ?? suggestion.familyGroup}`} className="odos-unassigned-finding-suggestion" disabled={blocked || (!canWriteDiagnosis && !visitDiagnoses.some(diagnosis => diagnosis.diagnosisKey === suggestion.diagnosisKey)) || (!suggestion.supportingFacts?.length && (!finding.findingInstanceId || finding.linkable === false))} aria-label={`Add suggested diagnosis ${suggestion.display}`} onClick={() => !blocked && onSuggest?.(suggestion,finding.findingInstanceId)}>{suggestion.display}</button>)}</div>}
       <div className="odos-unassigned-finding-actions">{visitDiagnoses.map(diagnosis => <button type="button" key={diagnosis.conditionReference} disabled={blocked} aria-label={`Assign ${row.display} to ${diagnosis.display}`} onClick={() => !blocked && void onMutate(buildFindingCommand(group,patientReference,"move",{selectedConditionReference:diagnosis.conditionReference}))}>{`Assign to ${diagnosis.display}`}</button>)}<button type="button" disabled={blocked} aria-label={`Record ${row.display} standalone`} onClick={() => !blocked && void onMutate(buildFindingCommand(group,patientReference,"standalone"))}>Record standalone</button></div>
     </div>;
   })}</section>;

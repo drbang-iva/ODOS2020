@@ -1,0 +1,6 @@
+{
+  "ui/src/components/charting/DiagnosisWorkspace.tsx": "ad04a0f8185fd8ea307c59ee1ac2e920b97ca6ccda7d814e9df67a398a46574d",
+  "ui/src/components/charting/DiagnosisFindingsTable.tsx": "52af795ec807d395a79e2d18676d5783c572cfc8b86a70ec1b274458d86abf08",
+  "ui/tests/r10DiagnosisWorkspace.test.tsx": "9e26888341e0fac39f6f13cc02c969d598c27902cee3f63f93b16da9b826d48d",
+  "ui/tests/r10DiagnosisTable.test.tsx": "bcaf1110fb61f3822423bfc38cd2aa85db82ba4455edc212173f210103d4efc7"
+}
