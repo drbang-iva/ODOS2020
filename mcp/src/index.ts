@@ -127,7 +127,7 @@ import { startEducationSequenceWorker } from "./comms/education-sequence-worker.
 import { createEducationSequenceDispatchRuntime, educationSequenceRuntimeConfig } from "./comms/education-sequence-runtime.js";
 import { createEducationSequenceOperations } from "./comms/education-sequence-operations.js";
 import { createFhirEducationEnrollmentStore } from "./comms/education-enrollment.js";
-import { loadDefaultEducationCatalogReader } from "./comms/education-catalog.js";
+import { createEducationCatalogFromEnv } from "./comms/visionforge-education-catalog.js";
 import {
   createFhirTrackedLinkStore, registerTrackedLinkRoutes,
 } from "./comms/tracked-links.js";
@@ -5779,6 +5779,8 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
     });
   }
 
+  const educationCatalog = createEducationCatalogFromEnv(process.env);
+  await educationCatalog.ready();
   const sequenceOperations = createEducationSequenceOperations({ fhir, practiceProjectId: INSTALLATION_PROJECT.projectId });
   let communicationsDeps: CommsApiRouteDeps | undefined;
   function communicationsDependencies(): CommsApiRouteDeps {
@@ -5787,7 +5789,8 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         authenticate: authenticateStaffRoute,
         fhir,
         dispatch: commsDispatch,
-        educationCatalog: loadDefaultEducationCatalogReader(),
+        educationCatalog,
+        educationCatalogControl: educationCatalog,
         enrollmentStore: createFhirEducationEnrollmentStore(fhir),
         trackedLinkStore: createFhirTrackedLinkStore(fhir),
         publicBaseUrl: commsPublicBaseUrlFromEnv(process.env),
@@ -8567,6 +8570,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
 
       await new Promise<void>((resolve, reject) => {
         const listener = app.listen(port, host, () => {
+          void educationCatalog.refresh();
           console.error(`odos-mcp: MCP server running on SSE at ${origin}/mcp/sse`);
           console.error(`odos-mcp: POST messages to ${origin}/mcp/messages?sessionId=<id>`);
           resolve();

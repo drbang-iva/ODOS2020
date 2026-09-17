@@ -108,6 +108,7 @@ const educationCatalogLedgerSchema = z.object({
 });
 
 export type EducationContentItem = z.infer<typeof educationItemSchema>;
+export { educationItemSchema };
 export type EducationCatalogManifest = z.infer<typeof educationCatalogManifestSchema>;
 export type EducationCatalogLedger = z.infer<typeof educationCatalogLedgerSchema>;
 
@@ -115,6 +116,23 @@ export interface EducationCatalogReader {
   readonly placeholderUrlHost?: string;
   list(): readonly EducationContentItem[];
   get(id: string, version?: number): EducationContentItem | undefined;
+}
+
+export type EducationLifecycleState = "active" | "retained" | "withdrawn";
+
+export interface EducationCatalogLifecycleReader extends EducationCatalogReader {
+  getForNewWork(id: string, version: number): EducationContentItem | undefined;
+  lifecycle(id: string, version: number): EducationLifecycleState | undefined;
+}
+
+export function withSeedLifecycle(reader: EducationCatalogReader): EducationCatalogLifecycleReader {
+  return {
+    placeholderUrlHost: reader.placeholderUrlHost,
+    list: () => reader.list(),
+    get: (id, version) => reader.get(id, version),
+    getForNewWork: (id, version) => reader.get(id, version),
+    lifecycle: (id, version) => reader.get(id, version) ? "active" : undefined,
+  };
 }
 
 export function createManifestEducationCatalogReader(
@@ -161,6 +179,18 @@ export function loadManifestEducationCatalogReader(
 }
 
 export function loadDefaultEducationCatalogReader(): EducationCatalogReader {
+  const dataDirectory = educationCatalogDataDirectory();
+  return loadManifestEducationCatalogReader(
+    resolve(dataDirectory, "education-catalog.json"),
+    resolve(dataDirectory, "code-bindings/patient-education-catalog-ledger.json"),
+  );
+}
+
+export function loadDefaultEducationCatalogLedger(): EducationCatalogLedger {
+  return parseLedger(readJson(resolve(educationCatalogDataDirectory(), "code-bindings/patient-education-catalog-ledger.json")));
+}
+
+function educationCatalogDataDirectory(): string {
   const moduleDirectory = dirname(fileURLToPath(import.meta.url));
   const dataDirectories = [
     resolve(moduleDirectory, "../../../data"),
@@ -168,10 +198,7 @@ export function loadDefaultEducationCatalogReader(): EducationCatalogReader {
   ];
   const dataDirectory = dataDirectories.find((candidate) =>
     existsSync(resolve(candidate, "education-catalog.json"))) ?? dataDirectories[0];
-  return loadManifestEducationCatalogReader(
-    resolve(dataDirectory, "education-catalog.json"),
-    resolve(dataDirectory, "code-bindings/patient-education-catalog-ledger.json"),
-  );
+  return dataDirectory;
 }
 
 function parseManifest(input: unknown): EducationCatalogManifest {

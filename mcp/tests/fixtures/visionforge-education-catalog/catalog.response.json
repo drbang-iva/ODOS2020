@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json; charset=UTF-8",
+    "etag": "\"423f9f77ef05467765c47a8501281ff4353a86d5d294db9382fe5f5d075cdc83\"",
+    "vary": "Origin"
+  }
+}

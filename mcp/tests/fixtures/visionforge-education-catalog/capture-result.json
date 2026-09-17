@@ -1,0 +1,18 @@
+{
+  "migrations": 31,
+  "statuses": [
+    200,
+    304,
+    401,
+    401
+  ],
+  "states": [
+    "retained",
+    "active",
+    "withdrawn"
+  ],
+  "omitted": [
+    "technical@1",
+    "partial@1"
+  ]
+}

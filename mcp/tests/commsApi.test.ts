@@ -2556,6 +2556,8 @@ async function startServer(options: {
       initialize: async () => undefined,
     },
     educationCatalog: {
+      getForNewWork(id, version) { return this.get(id, version); },
+      lifecycle(id, version) { return this.get(id, version) ? "active" : undefined; },
       list: () => structuredClone(EDUCATION_ITEMS),
       get: (id, version) => {
         const matches = EDUCATION_ITEMS.filter((item) => item.id === id);
