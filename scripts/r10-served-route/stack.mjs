@@ -6,6 +6,7 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateCaddyfile, assertCaddyParity } from './caddy.mjs';
 import { startResponseProxy } from './response-proxy.mjs';
+import { runReadinessChild } from './readiness-child.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const runtime = join(root, '.odos/r10-a3-2-served');
@@ -118,7 +119,7 @@ if (command === 'prepare') {
   try {
     await waitHealth(`http://127.0.0.1:${ports.mcp}/clinical-graph/encounters/harness-readiness/findings`, 120, [401]);
     await waitHealth(`http://127.0.0.1:${ports.frontdoor}/`);
-    run(process.execPath, ['--import', 'tsx', join(root, 'scripts/r10-served-route/verify-ready.ts'), runtime], { stdio: ['ignore', mcpLog, mcpLog] });
+    await runReadinessChild(process.execPath, ['--import', 'tsx', join(root, 'scripts/r10-served-route/verify-ready.ts'), runtime], { cwd: root, env: cleanEnv, stdio: ['ignore', mcpLog, mcpLog] });
     const index = await (await fetch(`http://127.0.0.1:${ports.frontdoor}/`)).text();
     const assets = [...index.matchAll(/(?:src|href)="([^\"]+\.(?:js|css))"/g)].map(match => match[1]);
     const hashes = {};
