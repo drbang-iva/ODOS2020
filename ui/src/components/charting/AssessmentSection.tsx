@@ -66,6 +66,7 @@ import {
   conditionResolvedCodeLabel,
   ICD10_CM_CODE_SYSTEM,
 } from "../../lib/diagnosis-code-resolution";
+import { loadDiagnosisFindings } from "../../lib/diagnosis-findings";
 import { DiagnosisDemotionImpactNotice } from "./DiagnosisDemotionImpactNotice";
 
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
@@ -200,20 +201,20 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         .filter(isEncounterDiagnosisCondition)
         .filter((condition) => !["refuted", "entered-in-error"].includes(verificationStatus(condition)));
     setConditions(loadedConditions);
-    const evidenceReferences = [...new Set(loadedConditions.flatMap((condition) =>
-      (condition.evidence ?? []).flatMap((evidence) => (evidence.detail ?? []).flatMap((detail) => detail.reference?.startsWith("Observation/") ? [detail.reference] : []))
-    ))];
-    const observationResults = await Promise.allSettled(evidenceReferences.map(async (reference) =>
-      fhir.read<Observation>("Observation", reference.replace(/^Observation\//, ""))
-    ));
-    const observations = observationResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
-    const observationsByReference = new Map(observations.map((observation) => [`Observation/${observation.id}`, observation]));
+    const projection = await loadDiagnosisFindings(encounterReference);
+    if (generation !== loadGeneration.current || currentEncounterReference.current !== encounterReference) return;
+    if ("result" in projection) {
+      setProvenanceLines({});
+      setError(projection.error);
+      return;
+    }
     setProvenanceLines(Object.fromEntries(loadedConditions.flatMap((condition) => {
       if (!condition.id) return [];
-      const lines = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
-        .flatMap((detail) => detail.reference ? [observationsByReference.get(detail.reference)] : [])
-        .flatMap((observation) => observation ? [findingProvenanceLine(observation)] : []);
-      return lines.length ? [[condition.id, lines.join(" · ")]] : [];
+      const lines = projection.findings
+        .filter((row) => row.status === "live" && row.presence !== "absent" &&
+          row.homeSources.some((home) => home.condition === `Condition/${condition.id}` && home.sources.length > 0))
+        .map((row) => [row.display, row.grade, row.laterality].filter(Boolean).join(" "));
+      return lines.length ? [[condition.id, [...new Set(lines)].join(" · ")]] : [];
     })));
   }
 
@@ -228,7 +229,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       if (detail?.encounterReference === encounterReference) void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
     };
     window.addEventListener("odos:diagnosis-picked", refresh);
-    return () => window.removeEventListener("odos:diagnosis-picked", refresh);
+    window.addEventListener("odos:encounter-findings-changed", refresh);
+    return () => {
+      window.removeEventListener("odos:diagnosis-picked", refresh);
+      window.removeEventListener("odos:encounter-findings-changed", refresh);
+    };
   }, [encounterReference]);
 
   const sortedConditions = useMemo(

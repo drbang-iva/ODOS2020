@@ -5,6 +5,8 @@ import {
   loadPreviousExamsPage,
   previousDiagnosisRowLabel,
   pullPreviousDiagnosis,
+  type DiagnosisPullRequest,
+  type DiagnosisPullResult,
   type PreviousExamDiagnosis,
   type PreviousExamGroup,
 } from "../../lib/diagnosis-carry-forward";
@@ -29,6 +31,8 @@ export function PreviousExams({
   const [pageError, setPageError] = useState<string>();
   const [pullError, setPullError] = useState<string>();
   const [pendingRows, setPendingRows] = useState<string[]>([]);
+  const [unscopedCount, setUnscopedCount] = useState(0);
+  const [carries, setCarries] = useState<Record<string, { request: DiagnosisPullRequest; result: DiagnosisPullResult; complete: boolean }>>({});
   const generation = useRef(0);
   const nextCursorRef = useRef<string>();
   const consumedCursors = useRef(new Set<string>());
@@ -56,6 +60,7 @@ export function PreviousExams({
       nextCursorRef.current = page.nextCursor;
       setEncounters((current) => appendPreviousExamsPage(current, page));
       setNextCursor(page.nextCursor);
+      setUnscopedCount(current => Math.max(current, page.unscopedCount ?? 0));
       setLoaded(true);
     } catch (caught) {
       if (generation.current !== requestGeneration) return;
@@ -82,6 +87,8 @@ export function PreviousExams({
     setPageError(undefined);
     setPullError(undefined);
     setPendingRows([]);
+    setCarries({});
+    setUnscopedCount(0);
     void loadPage(undefined, requestGeneration);
     return () => {
       generation.current += 1;
@@ -99,13 +106,14 @@ export function PreviousExams({
     return () => observer.disconnect();
   }, [loadPage, nextCursor]);
 
-  async function selectOrPull(encounter: PreviousExamGroup, diagnosis: PreviousExamDiagnosis) {
-    if (diagnosis.checked && diagnosis.currentConditionReference) {
+  async function selectOrPull(encounter: PreviousExamGroup, diagnosis: PreviousExamDiagnosis, action?: "retry" | "replan") {
+    const rowKey = `${encounter.encounterReference}|${diagnosis.conditionReference}`;
+    const previous = carries[rowKey];
+    if (!action && (!canWriteDiagnosis || previous?.complete) && diagnosis.checked && diagnosis.currentConditionReference) {
       onSelectDiagnosis(diagnosis.currentConditionReference);
       return;
     }
     if (!canWriteDiagnosis) return;
-    const rowKey = `${encounter.encounterReference}|${diagnosis.conditionReference}`;
     if (pendingPulls.current.has(rowKey)) return;
     const requestGeneration = generation.current;
     const requestToken = Symbol(rowKey);
@@ -113,13 +121,35 @@ export function PreviousExams({
     setPendingRows((current) => [...current, rowKey]);
     setPullError(undefined);
     try {
-      const result = await pullPreviousDiagnosis(
-        encounterReference,
-        encounter.encounterReference,
-        diagnosis.conditionReference,
-        fetchImpl,
-      );
+      if (action === "replan") {
+        const page = await loadPreviousExamsPage(encounterReference, undefined, fetchImpl);
+        if (generation.current !== requestGeneration) return;
+        setEncounters(current => [...page.encounters, ...current.filter(group => !page.encounters.some(fresh => fresh.encounterReference === group.encounterReference))]);
+        setUnscopedCount(page.unscopedCount ?? 0);
+      }
+      const request: DiagnosisPullRequest = previous && !previous.complete && action !== "replan" ? previous.request : {
+        commandId: crypto.randomUUID(),
+        sourceEncounterReference: encounter.encounterReference,
+        sourceConditionReference: diagnosis.conditionReference,
+        ...(action === "replan" ? { replan: true } : {}),
+      };
+      const response = await pullPreviousDiagnosis(encounterReference, request, fetchImpl);
       if (generation.current !== requestGeneration) return;
+      const result = response.body;
+      const complete = response.status >= 200 && response.status < 300 && !!result.conditionReference &&
+        typeof result.alreadyPresent === "boolean" &&
+        [result.conditionStep, result.planStep, result.linkStep].every(step => step === undefined || step === "applied") &&
+        (result.findings === undefined || result.findings.complete) &&
+        (result.lineageStep === undefined || result.lineageStep === "applied" || result.lineageStep === "not-attempted" && result.findings === undefined);
+      setCarries(current => ({ ...current, [rowKey]: { request, result, complete } }));
+      const confirmed = complete || [result.conditionStep, result.planStep, result.linkStep].includes("applied") ||
+        result.findings?.outcomes.some(outcome => outcome.clinicalWrite === "confirmed");
+      if (confirmed && typeof window !== "undefined") {
+        const event = new Event("odos:encounter-findings-changed");
+        Object.defineProperty(event, "detail", { value: { encounterReference } });
+        window.dispatchEvent(event);
+      }
+      if (!complete || !result.conditionReference) return;
       setEncounters((current) => current.map((group) => group.encounterReference !== encounter.encounterReference
         ? group
         : {
@@ -150,11 +180,12 @@ export function PreviousExams({
   }
 
   if (loaded && encounters.length === 0 && !pageError) {
-    return <p className="odos-diagnosis-muted">No previous exams recorded.</p>;
+    return <><p className="odos-diagnosis-muted">No previous exams recorded.</p>{unscopedCount > 0 && <p>Some older records could not be placed on a visit</p>}</>;
   }
 
   return (
     <div className="odos-previous-exams" data-testid="previous-exams">
+      {unscopedCount > 0 && <p>Some older records could not be placed on a visit</p>}
       {encounters.map((encounter) => (
         <section
           className="odos-previous-exam"
@@ -166,29 +197,45 @@ export function PreviousExams({
             {encounter.diagnoses.map((diagnosis) => {
               const rowKey = `${encounter.encounterReference}|${diagnosis.conditionReference}`;
               const pending = pendingRows.includes(rowKey);
+              const carry = carries[rowKey];
               return (
-                <button
-                  type="button"
-                  key={diagnosis.conditionReference}
-                  className="odos-previous-diagnosis-row"
-                  aria-label={`${diagnosis.checked ? "Select" : "Pull"} ${previousDiagnosisRowLabel(diagnosis)}`}
-                  aria-pressed={diagnosis.checked}
-                  aria-busy={pending}
-                  disabled={pending || (!canWriteDiagnosis && !(diagnosis.checked && diagnosis.currentConditionReference))}
-                  data-source-condition-reference={diagnosis.conditionReference}
-                  onClick={() => void selectOrPull(encounter, diagnosis)}
-                >
-                  <span className="odos-previous-diagnosis-check" aria-hidden="true">{diagnosis.checked ? "✓" : ""}</span>
-                  <span>
-                    <strong>{diagnosis.display}</strong>
-                    <small>{diagnosis.identity.laterality}</small>
-                    {diagnosis.findings.map((finding) => (
-                      <small key={finding.observationReference}>
-                        {finding.display}: {finding.presence}{finding.grade ? ` · Grade ${finding.grade}` : ""} · {finding.laterality}
-                      </small>
-                    ))}
-                  </span>
-                </button>
+                <div key={diagnosis.conditionReference}>
+                  <button
+                    type="button"
+                    key={diagnosis.conditionReference}
+                    className="odos-previous-diagnosis-row"
+                    aria-label={`${diagnosis.checked ? canWriteDiagnosis && !carry ? "Check carry and select" : "Select" : "Pull"} ${previousDiagnosisRowLabel(diagnosis)}`}
+                    aria-pressed={diagnosis.checked}
+                    aria-busy={pending}
+                    disabled={pending || !!carry && !carry.complete || (!canWriteDiagnosis && !(diagnosis.checked && diagnosis.currentConditionReference))}
+                    data-source-condition-reference={diagnosis.conditionReference}
+                    onClick={() => void selectOrPull(encounter, diagnosis)}
+                  >
+                    <span className="odos-previous-diagnosis-check" aria-hidden="true">{diagnosis.checked ? "✓" : ""}</span>
+                    <span>
+                      <strong>{diagnosis.display}</strong>
+                      <small>{diagnosis.identity.laterality}</small>
+                      {diagnosis.findings.map((finding) => (
+                        <small key={finding.observationReference}>
+                          {finding.display}: {finding.presence}{finding.grade ? ` · Grade ${finding.grade}` : ""} · {finding.laterality}
+                        </small>
+                      ))}
+                    </span>
+                  </button>
+                  {carry && <div role="status">
+                    {carry.result.conditionStep && <p>Diagnosis: {carry.result.conditionStep}</p>}
+                    {carry.result.planStep && <p>Plan: {carry.result.planStep}</p>}
+                    {carry.result.linkStep && <p>Visit link: {carry.result.linkStep}</p>}
+                    {carry.result.findings && <p>Findings: {carry.result.findings.complete ? "complete" : "incomplete"}</p>}
+                    {carry.result.lineageStep && <p>Lineage: {carry.result.lineageStep}</p>}
+                    {!carry.complete && <>
+                      <p>{carry.result.error ?? "Carrying is not complete."}</p>
+                      {canWriteDiagnosis && <button type="button" disabled={pending} onClick={() => void selectOrPull(encounter, diagnosis, carry.result.reason === "carry-incomplete" ? "replan" : "retry")}>
+                        {carry.result.reason === "carry-incomplete" ? "Reload and carry findings again" : "Finish carrying"}
+                      </button>}
+                    </>}
+                  </div>}
+                </div>
               );
             })}
           </div>

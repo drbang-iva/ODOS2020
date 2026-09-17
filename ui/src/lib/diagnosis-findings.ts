@@ -95,7 +95,7 @@ export async function handleFindingOutcome(response: FindingHttpResult, options:
     Object.defineProperty(event,"detail",{value:{encounterReference:options.encounterReference}});
     (options.eventTarget ?? (typeof window !== "undefined" ? window : undefined))?.dispatchEvent(event);
   }
-  return { retryIdentical, reloadChoice, auditPending, message: retryIdentical ? "Not confirmed — Retry" : body.result === "unavailable" ? "Findings unavailable" : reloadChoice ? "Current values reloaded. Your choice is kept; apply it as a new command." : command?.complete ? undefined : auditPending ? "Finding saved; audit repair pending." : "error" in body ? body.error : causal?.reason ?? "Finding command did not complete." };
+  return { retryIdentical, reloadChoice, auditPending, message: retryIdentical ? "Not confirmed — Retry" : body.result === "unavailable" ? "Findings unavailable" : reloadChoice ? `${causal?.reason ? `${causal.reason}. ` : ""}Current values reloaded. Your choice is kept; apply it as a new command.` : command?.complete ? undefined : auditPending ? "Finding saved; audit repair pending." : "error" in body ? body.error : causal?.reason ?? "Finding command did not complete." };
 }
 
 export function groupFindingRows(rows: readonly EncounterFindingRow[]): EncounterFindingRow[][] {

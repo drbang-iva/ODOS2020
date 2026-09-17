@@ -1,4 +1,5 @@
 import { authHeaders, clinicalGraphApiBase } from "./clinical-graph-client";
+import type { FindingHttpResult } from "./diagnosis-findings";
 
 export type PreviousExamLaterality = "OD" | "OS" | "OU" | "UNKNOWN";
 
@@ -38,11 +39,26 @@ export interface PreviousExamsPage {
   pageSize: 4;
   encounters: PreviousExamGroup[];
   nextCursor?: string;
+  unscopedCount?: number;
 }
 
 export interface DiagnosisPullResult {
-  conditionReference: string;
-  alreadyPresent: boolean;
+  conditionReference?: string;
+  alreadyPresent?: boolean;
+  conditionStep?: "applied" | "failed" | "unconfirmed";
+  planStep?: "applied" | "failed" | "unconfirmed";
+  linkStep?: "applied" | "failed" | "unconfirmed";
+  lineageStep?: "applied" | "not-attempted" | "unconfirmed";
+  findings?: Extract<FindingHttpResult["body"], { result: "command" }>;
+  reason?: string;
+  error?: string;
+}
+
+export interface DiagnosisPullRequest {
+  commandId: string;
+  sourceEncounterReference: string;
+  sourceConditionReference: string;
+  replan?: boolean;
 }
 
 export function appendPreviousExamsPage(
@@ -106,26 +122,30 @@ export async function loadPreviousExamsPage(
 
 export async function pullPreviousDiagnosis(
   encounterReference: string,
-  sourceEncounterReference: string,
-  sourceConditionReference: string,
+  request: DiagnosisPullRequest,
   fetchImpl: typeof fetch = fetch,
-): Promise<DiagnosisPullResult> {
+): Promise<{ status: number; body: DiagnosisPullResult }> {
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const fallback = "Diagnosis could not be pulled. Try again.";
-  const response = await safeFetch(
-    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/previous-exams`,
-    {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ sourceEncounterReference, sourceConditionReference }),
-    },
-    fetchImpl,
-    fallback,
-  );
-  const body = await safeJson(response, fallback);
-  if (!response.ok) throw new Error(safeServerError(body, fallback));
-  if (!isDiagnosisPullResult(body)) throw new Error(fallback);
-  return body;
+  let response: Response;
+  let body: unknown;
+  try {
+    response = await fetchImpl(
+      `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/previous-exams`,
+      {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      },
+    );
+    body = await response.json();
+  } catch {
+    return { status: 502, body: { reason: "pull-unconfirmed", error: "Carry response could not be confirmed." } };
+  }
+  if (!isDiagnosisPullResult(body)) {
+    return { status: response.ok ? 502 : response.status, body: { error: safeServerError(body, fallback) } };
+  }
+  return { status: response.status, body: { ...body, ...(body.error ? { error: safeServerError(body, fallback) } : {}) } };
 }
 
 async function safeFetch(
@@ -162,14 +182,20 @@ function isPreviousExamsPage(body: unknown): body is PreviousExamsPage {
   const page = body as Partial<PreviousExamsPage>;
   return page.pageSize === 4 && Array.isArray(page.encounters) && page.encounters.length <= page.pageSize &&
     page.encounters.every(isPreviousExamGroup) &&
+    (page.unscopedCount === undefined || Number.isInteger(page.unscopedCount) && page.unscopedCount >= 0) &&
     (page.nextCursor === undefined || trimmedNonblank(page.nextCursor));
 }
 
 function isDiagnosisPullResult(body: unknown): body is DiagnosisPullResult {
   if (!body || typeof body !== "object") return false;
   const result = body as Partial<DiagnosisPullResult>;
-  return typeof result.conditionReference === "string" && /^Condition\/[^/]+$/.test(result.conditionReference) &&
-    typeof result.alreadyPresent === "boolean";
+  return (result.conditionReference === undefined || reference(result.conditionReference, "Condition")) &&
+    (result.alreadyPresent === undefined || typeof result.alreadyPresent === "boolean") &&
+    [result.conditionStep, result.planStep, result.linkStep].every(step => step === undefined || ["applied", "failed", "unconfirmed"].includes(step)) &&
+    (result.lineageStep === undefined || ["applied", "not-attempted", "unconfirmed"].includes(result.lineageStep)) &&
+    (result.findings === undefined || result.findings !== null && result.findings.result === "command" && typeof result.findings.complete === "boolean" && Array.isArray(result.findings.outcomes)) &&
+    (result.reason === undefined || typeof result.reason === "string") &&
+    (result.error === undefined || typeof result.error === "string");
 }
 
 function isPreviousExamGroup(value: unknown): value is PreviousExamGroup {

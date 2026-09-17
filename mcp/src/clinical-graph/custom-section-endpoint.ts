@@ -696,7 +696,9 @@ async function saveOcularHealth(deps: CustomSectionEndpointDeps, staff: OcularSt
     }
     for (const claim of row.loaded) {
       const reason = findingTargetReadOnlyReason(context, claim.key);
-      if (reason) return ocularError(reason === "signed-or-cancelled" ? 422 : 409, reason);
+      const submitted = selected.get(factId(claim.key));
+      const witness = submitted && sameValue(claim.qualifiers, submitted.qualifiers) && sameHomes(claim.homes, submitted.homes);
+      if (reason && !(witness && ["signed-or-cancelled", "inactive-definition"].includes(reason))) return ocularError(reason === "signed-or-cancelled" ? 422 : 409, reason);
       if (!exact.has(factId(claim.key)) && !claimMatches(claim, context)) return ocularError(409, "stale-baseline", context.projection);
     }
     steps.push(...targets.map(target => ({ eye, target })));

@@ -46,7 +46,7 @@ interface Props {
   /** True only when this page saw `undoSlot` come back from a successful void; otherwise the strip reads as an upper bound. */
   undoConfirmed?: boolean;
   canWriteDiagnosis?: boolean;
-  onUndo?: () => void | Promise<void>;
+  onUndo?: (voidActionId: string) => void | Promise<void>;
   completeness?: ClinicalExamCompleteness;
   unassignedCount?: number;
   visitCharge?: VisitChargeResponse;
@@ -384,7 +384,7 @@ interface ExamChartBarProps {
   undoConfirmed?: boolean;
   canWriteDiagnosis?: boolean;
   undoDisabled?: boolean;
-  onUndo?: () => void | Promise<void>;
+  onUndo?: (voidActionId: string) => void | Promise<void>;
 }
 
 export function ExamChartBar({
@@ -428,7 +428,7 @@ export function ExamChartBar({
         // Its own slot beside exam-sections, not the `drafts` slot: that one is reserved for
         // slice-4 drafts and a test pins that reservation.
         <div className="odos-chart-bar-undo" data-chart-bar-slot="undo">
-          <UndoStrip slot={undoSlot} canWriteDiagnosis={canWriteDiagnosis} scope="encounter" confirmed={undoConfirmed} closed={undoDisabled} onUndo={() => onUndo?.()} />
+          <UndoStrip slot={undoSlot} canWriteDiagnosis={canWriteDiagnosis} scope="encounter" confirmed={undoConfirmed} closed={undoDisabled} onUndo={(voidActionId) => onUndo?.(voidActionId)} />
         </div>
       )}
       <div

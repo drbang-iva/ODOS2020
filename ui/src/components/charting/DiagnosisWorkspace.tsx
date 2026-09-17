@@ -1,3 +1,4 @@
+import { supportedDiagnosisPick, supportedFindingLink } from "../../lib/supported-diagnosis-pick";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
@@ -20,7 +21,6 @@ import {
   clinicalGraphApiBase,
   procedureChargeApi,
   readDiagnosisCandidates,
-  submitDiagnosisPickResult,
   type SupportingFindingFact,
   updateDiagnosisOrder,
   type AttachedProcedure,
@@ -365,11 +365,8 @@ export function DiagnosisWorkspace({
   async function linkSupports(commandId: string, supports: SupportingFindingFact[], conditionReference: string) {
     const current = findings;
     if (!current) return;
-    const rows = supports.map(support => current.searchIndex.find(row => row.rowKey === support.rowKey));
-    if (rows.some(row => !row || !row.editable)) { setPickSteps("Diagnosis saved; supporting findings need review before linking."); return; }
-    const command = buildFindingCommand(rows.filter((row): row is NonNullable<typeof row> => Boolean(row)), patientReference, "link", { selectedConditionReference: conditionReference, liveConditionReferences: [...current.visitDiagnoses.map(diagnosis => diagnosis.conditionReference), conditionReference] });
-    command.commandId = commandId;
-    command.targets = command.targets.map((target, index) => ({ ...target, baseline: supports[index]!.baseline }));
+    const command = supportedFindingLink(commandId, supports, current, patientReference, conditionReference);
+    if (!command) { setPickSteps("Diagnosis saved; supporting findings need review before linking."); return; }
     await finishLink(command);
   }
 
@@ -411,33 +408,25 @@ export function DiagnosisWorkspace({
     setPickSteps(undefined);
     setPendingLink(undefined);
     try {
-      const result = await submitDiagnosisPickResult({
-        encounterReference, commandId, diagnosisKey: resolvedRow.stableKey, action: "confirm",
-        source: row.suggestionSource ?? "catalog-search",
-        ...(row.findingInstanceId ? { findingInstanceId: row.findingInstanceId } : {}),
-        ...(row.supportingFacts ? { supportingFacts: row.supportingFacts } : {}),
-        ...(laterality ? { laterality } : {}), ...(row.stageDeferred ? { stageDeferred: true } : {}),
+      await supportedDiagnosisPick({
+        request: {
+          encounterReference, commandId, diagnosisKey: resolvedRow.stableKey, action: "confirm",
+          source: row.suggestionSource ?? "catalog-search",
+          ...(row.findingInstanceId ? { findingInstanceId: row.findingInstanceId } : {}),
+          ...(row.supportingFacts ? { supportingFacts: row.supportingFacts } : {}),
+          ...(laterality ? { laterality } : {}), ...(row.stageDeferred ? { stageDeferred: true } : {}),
+        },
+        ...(laterality ? { scope: { patientReference, laterality, ...(!row.stageDeferred ? { diagnosis: resolvedRow } : {}) } } : {}),
+        onPicked: async condition => {
+          setPendingDiagnosis(undefined);
+          onSelectDiagnosis(`Condition/${condition.id}`);
+          await load();
+          window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", { detail: { encounterReference } }));
+        },
+        onScoped: condition => { onSelectDiagnosis(`Condition/${condition.id}`); setPendingDiagnosis(undefined); },
+        ...(row.supportingFacts?.length ? { link: (reference: string) => linkSupports(commandId, row.supportingFacts!, reference) } : {}),
+        message: setPickSteps,
       });
-      if (result.result !== "pick" || result.conditionStep !== "applied") {
-        setPickSteps(result.result === "pick" && result.conditionStep === "unconfirmed" ? "Diagnosis not confirmed — reload" : result.error);
-        return;
-      }
-      setPendingDiagnosis(undefined);
-      onSelectDiagnosis(`Condition/${result.condition.id}`);
-      await load();
-      window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", { detail: { encounterReference } }));
-      let condition = result.condition;
-      setPickSteps(`Diagnosis saved${result.error ? `: ${result.error}` : ""}`);
-      if (laterality) {
-        try { condition = await updateConditionBodySite({ condition, patientReference, laterality, ...(!row.stageDeferred ? { diagnosis: resolvedRow } : {}) }); }
-        catch (caught) { setPickSteps(`Diagnosis saved · Scope not saved: ${caught instanceof Error ? caught.message : String(caught)}`); return; }
-      }
-      onSelectDiagnosis(`Condition/${condition.id}`);
-      setPendingDiagnosis(undefined);
-      if (row.supportingFacts?.length) await linkSupports(commandId, row.supportingFacts, `Condition/${condition.id}`);
-      else setPickSteps("Diagnosis saved · Scope saved");
-    } catch (caught) {
-      setPickSteps(`Diagnosis not confirmed — reload. ${caught instanceof Error ? caught.message : String(caught)}`);
     } finally { setBusy(undefined); }
   }
 

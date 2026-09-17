@@ -45,6 +45,7 @@ export interface EncounterVoidEntry {
 }
 
 export interface EncounterVoidResult {
+  voidActionId?: string;
   canWriteDiagnosis?: boolean;
   voided: string[];
   count: number;
@@ -89,6 +90,7 @@ export async function voidEncounterEntries(
     throw clinicalGraphResponseError(response, body, `Void failed (${response.status}).`);
   }
   return {
+    ...(body.voidActionId ? { voidActionId: body.voidActionId } : {}),
     canWriteDiagnosis: body.canWriteDiagnosis === true,
     voided: body.voided ?? [],
     count: body.count ?? 0,

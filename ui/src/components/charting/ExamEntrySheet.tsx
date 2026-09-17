@@ -155,7 +155,7 @@ export function ExamEntrySheet({
   encounterStatus?: Encounter["status"];
   onEncounterCleared?: (result: EncounterVoidResult) => void;
   /** This section's pending Undo (§4b.1): rendered as a status strip directly beneath the heading row. */
-  undo?: { slot: UndoLedgerSlot; canWriteDiagnosis?: boolean; onUndo: () => void | Promise<void>; confirmed?: boolean };
+  undo?: { slot: UndoLedgerSlot; canWriteDiagnosis?: boolean; onUndo: (voidActionId: string) => void | Promise<void>; confirmed?: boolean };
   onCheckpointDirty?: () => void;
   onClearDirtyCheckpoint?: () => void;
   onDirty?: () => void;

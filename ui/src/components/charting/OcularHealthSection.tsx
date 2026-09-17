@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { handleFindingOutcome, findingReadOnlyLabel, type EncounterFindingRow, type FindingBaseline, type FindingHttpResult } from "../../lib/diagnosis-findings";
 import { ClearSectionButton } from "./ClearControls";
 import { useEncounterEdit } from "./encounter-edit-context";
 import { OdosWheel } from "../inputs/OdosWheel";
@@ -47,6 +48,7 @@ export interface EyeCapture {
   grades?: Record<string, number | string>;
   findingDetails?: FindingDetails;
   other: string;
+  remarks?: string;
   normalTemplate?: string;
 }
 
@@ -61,6 +63,13 @@ interface HistoryRow {
   other?: string;
   normalTemplate?: string;
 }
+
+interface CanonicalEye {
+  encounterEditable: boolean; readOnlyReason?: string; facts: EncounterFindingRow[];
+  panel: { deferred: boolean; other?: string; remarks?: string; values: Record<string, number | string>; baseline: unknown; editable: boolean };
+  negativeActs: Array<{ scope: NegativeAct; status: "live" | "retired" }>;
+}
+interface CanonicalHistory { eyes?: Record<Eye, CanonicalEye>; rows?: HistoryRow[]; unscopedCount?: number; encounters?: Array<{ recordedAt: string; eyes: Record<Eye, CanonicalEye> }>; error?: string }
 
 interface CurrentHistory {
   identity: string;
@@ -117,17 +126,36 @@ export function OcularHealthSection({
     setCaptures(next);
   }
   const [pristine, setPristine] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
+  const pristineRef = useRef(pristine);
+  pristineRef.current = pristine;
+  const successfulKeys = useRef(new Set<string>());
+  const failureMessages = useRef(new Map<string, string>());
   const [currentHistory, setCurrentHistory] = useState<CurrentHistory | null>(null);
   const [priors, setPriors] = useState<Record<string, PriorReadings>>({});
   const [relatedReadings, setRelatedReadings] = useState<Record<string, RelatedFindingReadings>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savedDiagnosisObservations, setSavedDiagnosisObservations] = useState<Record<string, Partial<Record<Eye, string>>>>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [failedKeys, setFailedKeys] = useState<string[]>([]);
-  const [pendingSavedKeys, setPendingSavedKeys] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [canonical, setCanonical] = useState<Record<string, Record<Eye, CanonicalEye>>>({});
+  const [unscopedCount, setUnscopedCount] = useState(0);
+  const frozenBodies = useRef(new Map<string, string>());
+  const keepChoice = useRef(false);
+  const hydratedIdentity = useRef<string>();
+  const [retryKeys, setRetryKeys] = useState<string[]>([]);
+  const readOnlyReason = Object.values(canonical).flatMap(eyes => EYES.map(eye => eyes[eye])).find(eye => !eye.encounterEditable)?.readOnlyReason;
+  const readOnly = Boolean(readOnlyReason);
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      if ((event as CustomEvent).detail?.encounterReference !== encounterReference) return;
+      keepChoice.current = true;
+      setReloadVersion(value => value + 1);
+    };
+    if (typeof window === "undefined") return;
+    window.addEventListener("odos:encounter-findings-changed", refresh);
+    return () => window.removeEventListener("odos:encounter-findings-changed", refresh);
+  }, [encounterReference]);
   const { onCleared } = useEncounterEdit();
   const confirmDestructive = useConfirmDestructive();
   const definitionKey = useMemo(() => definitions.map((definition) => definition.stableKey).join("|"), [definitions]);
@@ -154,34 +182,37 @@ export function OcularHealthSection({
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    setError(null);
-    setFailedKeys([]);
-    setPendingSavedKeys([]);
-    setMessage(null);
+    if (reloadVersion === 0) { setError(null); setMessage(null); }
     setCurrentHistory(null);
     setPriors({});
-    setSavedDiagnosisObservations({});
     const base = apiBase ?? clinicalGraphApiBase();
     Promise.all(definitions.map(async (definition) => {
       const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
       const currentQuery = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
       const currentResponse = await fetchImpl(`${endpoint}?${currentQuery}`, { headers: authHeaders(), signal: controller.signal });
-      const currentBody = await currentResponse.json() as { rows?: HistoryRow[]; error?: string };
+      const currentBody = await currentResponse.json() as CanonicalHistory;
       if (!currentResponse.ok) throw new Error(currentBody.error ?? `${definition.display} history failed: ${currentResponse.status}`);
+      if (!currentBody.eyes?.OD || !currentBody.eyes?.OS) throw new Error(`${definition.display} canonical history is missing. Reload before saving.`);
       const currentRows = currentBody.rows ?? [];
       return [
         definition.stableKey,
         currentRows,
-        captureFromRows(definition, currentRows),
-        diagnosisObservationReferences(definition, currentRows),
+        captureFromCanonical(currentBody.eyes),
+        currentBody.eyes,
       ] as const;
     }))
       .then((rows) => {
         if (controller.signal.aborted) return;
         const hydrated = Object.fromEntries(rows.map(([stableKey, , capture]) => [stableKey, capture]));
-        replaceCaptures(hydrated);
+        const previous = currentCaptures.current;
+        replaceCaptures(hydratedIdentity.current === historyIdentity ? Object.fromEntries(rows.map(([stableKey, , capture]) => [stableKey,
+          Object.fromEntries(EYES.map(eye => [eye, mergePendingCapture(capture[eye], pristineRef.current[stableKey]?.[eye] ?? emptyEye(), previous[stableKey]?.[eye] ?? emptyEye())])) as Record<Eye, EyeCapture>
+        ])) : hydrated);
+        keepChoice.current = false;
+        hydratedIdentity.current = historyIdentity;
+        pristineRef.current = hydrated;
         setPristine(hydrated);
-        setSavedDiagnosisObservations(Object.fromEntries(rows.map(([stableKey, , , references]) => [stableKey, references])));
+        setCanonical(Object.fromEntries(rows.flatMap(([stableKey, , , eyes]) => eyes ? [[stableKey, eyes]] : [])));
         setCurrentHistory({
           identity: historyIdentity,
           rowsByStableKey: Object.fromEntries(rows.map(([stableKey, currentRows]) => [stableKey, currentRows])),
@@ -200,6 +231,7 @@ export function OcularHealthSection({
     const encounterTimestamp = encounterRecordedAt ? Date.parse(encounterRecordedAt) : Number.NaN;
     if (currentHistory?.identity !== historyIdentity || !Number.isFinite(encounterTimestamp)) {
       setPriors({});
+      setUnscopedCount(0);
       return;
     }
     const controller = new AbortController();
@@ -209,24 +241,28 @@ export function OcularHealthSection({
         const endpoint = `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history`;
         const patientQuery = new URLSearchParams({ patient: patientReference });
         const response = await fetchImpl(`${endpoint}?${patientQuery}`, { headers: authHeaders(), signal: controller.signal });
-        const body = await response.json() as { rows?: HistoryRow[]; error?: string };
+        const body = await response.json() as CanonicalHistory;
         if (!response.ok) throw new Error(body.error ?? `${definition.display} prior history failed: ${response.status}`);
         if (body.rows !== undefined && !Array.isArray(body.rows)) throw new Error(`${definition.display} prior history was malformed.`);
+        const canonicalRows = body.encounters?.flatMap(encounter => canonicalHistoryRows(definition, encounter.eyes, encounter.recordedAt));
         const priorRows = rowsBeforeEncounter(
-          excludeCurrentEncounterRows(body.rows ?? [], currentHistory.rowsByStableKey[definition.stableKey] ?? []),
+          excludeCurrentEncounterRows(canonicalRows ?? body.rows ?? [], currentHistory.rowsByStableKey[definition.stableKey] ?? []),
           encounterRecordedAt,
         );
-        return [definition.stableKey, priorReadingsFromRows(definition, priorRows)] as const;
+        return [definition.stableKey, priorReadingsFromRows(definition, priorRows), body.unscopedCount ?? 0] as const;
       } catch (caught) {
         if ((caught as Error).name === "AbortError") throw caught;
-        return [definition.stableKey, emptyPriorReadings()] as const;
+        return [definition.stableKey, emptyPriorReadings(), 0] as const;
       }
     }))
       .then((rows) => {
-        if (!controller.signal.aborted) setPriors(Object.fromEntries(rows));
+        if (!controller.signal.aborted) {
+          setPriors(Object.fromEntries(rows.map(([stableKey, readings]) => [stableKey, readings])));
+          setUnscopedCount(Math.max(0, ...rows.map(([, , count]) => count)));
+        }
       })
       .catch((caught) => {
-        if ((caught as Error).name !== "AbortError") setPriors({});
+        if ((caught as Error).name !== "AbortError") { setPriors({}); setUnscopedCount(0); }
       });
     return () => controller.abort();
   }, [historyIdentity, currentHistory, encounterRecordedAt, apiBase, fetchImpl]);
@@ -294,13 +330,22 @@ export function OcularHealthSection({
   }
 
   function updateEye(stableKey: string, eye: Eye, update: (capture: EyeCapture) => EyeCapture) {
-    replaceCaptures((current) => ({
-      ...current,
-      [stableKey]: {
-        ...current[stableKey],
-        [eye]: { ...update(current[stableKey]?.[eye] ?? emptyEye()), negativeAct: undefined },
-      },
-    }));
+    if (readOnly || retryKeys.length) return;
+    replaceCaptures((current) => {
+      const prior = current[stableKey]?.[eye] ?? emptyEye();
+      const next = { ...update(prior), negativeAct: prior.negativeAct?.id === pristineRef.current[stableKey]?.[eye].negativeAct?.id ? prior.negativeAct : undefined };
+      for (const fact of canonical[stableKey]?.[eye].facts ?? []) {
+        if (fact.editable || !fact.key) continue;
+        const code = fact.key.optionCode;
+        next.selections = next.selections.filter(value => value !== code);
+        if (prior.selections.includes(code)) next.selections.push(code);
+        next.findingDetails = { ...next.findingDetails, [code]: { ...fact.qualifiers } };
+      }
+      if (canonical[stableKey]?.[eye].panel.editable === false) {
+        next.state = prior.state; next.grades = prior.grades; next.other = prior.other; next.remarks = prior.remarks;
+      }
+      return { ...current, [stableKey]: { ...current[stableKey], [eye]: next } };
+    });
   }
 
   function toggleDeferred(definition: CustomFindingDefinition, eye: Eye) {
@@ -310,16 +355,7 @@ export function OcularHealthSection({
       setError(null);
       return;
     }
-    const conflicts = [
-      ...(current.selections.length > 0 ? ["the selected findings"] : []),
-      ...(current.other.trim() ? ["Other text"] : []),
-    ];
-    if (conflicts.length > 0) {
-      setError(`${definition.display} (${eye}): Clear ${formatList(conflicts)} before deferring.`);
-      setMessage(null);
-      return;
-    }
-    updateEye(definition.stableKey, eye, (capture) => ({ ...capture, state: "deferred", normalTemplate: undefined }));
+    updateEye(definition.stableKey, eye, (capture) => ({ ...capture, state: "deferred", selections: [...(pristine[definition.stableKey]?.[eye].selections ?? capture.selections)], findingDetails: pristine[definition.stableKey]?.[eye].findingDetails, normalTemplate: undefined }));
     setError(null);
   }
 
@@ -360,156 +396,97 @@ export function OcularHealthSection({
   }
 
   function allNormal(prefix: string, label: string) {
-    const dirtyKeys = new Set(changedDefinitions(definitions, captures, pristine).map((definition) => definition.stableKey));
-    const currentFailures = failedKeys.filter((key) => dirtyKeys.has(key));
-    setFailedKeys(currentFailures);
-    if (!currentFailures.length) setError(null);
-    const retry = definitions.filter((definition) => currentFailures.includes(definition.stableKey) &&
-      (definition.stableKey.startsWith(prefix) || (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)));
-    if (retry.length) return save(retry);
+    const dirty = new Set(changedDefinitions(definitions, currentCaptures.current, pristineRef.current).map(definition => definition.stableKey));
+    for (const key of failureMessages.current.keys()) if (!dirty.has(key)) failureMessages.current.delete(key);
+    const failed = definitions.filter(definition => failureMessages.current.has(definition.stableKey) && (definition.stableKey.startsWith(prefix) || prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY));
+    if (failed.length) return save(failed);
+    if (!failureMessages.current.size) setError(null);
     const result = applySegmentAllNormal(definitions, captures, prefix);
     replaceCaptures(result.captures);
     const { filled, skipped } = result;
     setMessage(`${label}: recorded a negative act for ${filled} untouched ${filled === 1 ? "eye" : "eyes"} (pending save)${skipped ? `; skipped ${skipped} already touched` : ""}.`);
   }
 
-  async function save(onlyDefinitions = definitions) {
-    const dirtyDefinitions = changedDefinitions(onlyDefinitions, captures, pristine);
-    let persistedCaptures = pristine;
-    const failures: string[] = [];
-    const successfulKeys: string[] = [];
-    const failureNames: string[] = [];
-    setSaving(true);
-    setError(null);
-    setMessage(null);
+  async function saveCanonical(onlyDefinitions: CustomFindingDefinition[], retry = false) {
+    setSaving(true); setError(null); setMessage(null);
+    const retries: string[] = [];
     try {
-      if (!dirtyDefinitions.length && !failedKeys.length && !pendingSavedKeys.length) throw new Error("Capture at least one ocular-health structure before saving.");
-      for (const definition of dirtyDefinitions) {
-        try {
-          const field = abnormalField(definition);
-          const grades = gradeFields(definition);
-          const row = captures[definition.stableKey] ?? emptyRow();
-          const eyes = Object.fromEntries(EYES.flatMap((eye) => {
-            const capture = row[eye];
-            const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
+      for (const definition of onlyDefinitions) {
+        const stableKey = definition.stableKey;
+        if (!retry && !changedDefinitions([definition], currentCaptures.current, pristine).length) continue;
+        const submitted = structuredClone(currentCaptures.current[stableKey]);
+        let body = retry ? frozenBodies.current.get(stableKey) : undefined;
+        if (!body) {
+          const eyes = Object.fromEntries(EYES.flatMap(eye => {
+            const capture = currentCaptures.current[stableKey][eye], original = pristine[stableKey][eye], history = canonical[stableKey][eye];
             if (sameCapture(capture, original)) return [];
-            const state = derivedExamState(capture);
-            return [[eye, {
-              state,
-              ...(capture.negativeAct ? { negativeAct: {
-                id: capture.negativeAct.id,
-                definitionStableKey: capture.negativeAct.definitionStableKey,
-                eye: capture.negativeAct.eye,
-                optionCodes: capture.negativeAct.optionCodes,
-                exclusions: capture.negativeAct.exclusions,
-                assertedAt: capture.negativeAct.assertedAt,
-              } } : {}),
-              customFields: [
-                ...(field && capture.selections.length
-                  ? [{ code: field.localCode, value: capture.selections }]
-                  : []),
-                ...(state === "deferred" ? [] : grades.flatMap((grade) => {
-                  const value = capture.grades?.[grade.localCode] ?? "";
-                  return value === "" ? [] : [{
-                    code: grade.localCode,
-                    value: grade.valueType === "number" ? Number(value) : value,
-                  }];
-                })),
-              ],
-              ...(hasFindingDetails(capture.findingDetails)
-                ? { findingDetails: capture.findingDetails }
-                : {}),
-              ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
+            const loaded = history.facts.filter(fact => fact.status === "live" && fact.presence === "present").map(factClaim);
+            const selected = history.facts.filter(fact => capture.selections.includes(fact.key?.optionCode ?? "")).map(fact => ({
+              ...factClaim(fact), qualifiers: capture.findingDetails?.[fact.key!.optionCode] ?? {},
+              homes: loaded.some(claim => claim.key.optionCode === fact.key!.optionCode) ? fact.homes : [],
+              ...(fact.status === "live" && fact.presence === "absent" ? { fromPresence: "absent" } : {}),
+            }));
+            return [[eye, { loaded, selected,
+              ...(history.panel.editable ? { panel: { baseline: history.panel.baseline, state: { deferred: capture.state === "deferred", ...(capture.other.trim() ? { other: capture.other.trim() } : {}), ...(capture.remarks?.trim() ? { remarks: capture.remarks.trim() } : {}), values: Object.fromEntries(gradeFields(definition).flatMap(field => {
+                const value = capture.grades?.[field.localCode];
+                return value === undefined || value === "" ? [] : [[field.localCode, field.valueType === "number" ? Number(value) : value]];
+              })) } } } : {}),
+              ...(capture.negativeAct && capture.negativeAct.id !== original.negativeAct?.id ? { negativeAct: { id: capture.negativeAct.id, scope: capture.negativeAct.optionCodes, exclusions: capture.negativeAct.exclusions } } : {}),
             }]];
           }));
-          const response = await fetchImpl(
-            `${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`,
-            {
-              method: "POST",
-              headers: { ...authHeaders(), "Content-Type": "application/json" },
-              body: JSON.stringify({ patientReference, encounterReference, eyes }),
-            },
-          );
-          const body = await response.json() as {
-            eyes?: Partial<Record<Eye, { observationReference?: string; negativeAct?: NegativeAct }>>;
-            error?: string;
-          };
-          if (!response.ok) throw new Error(body.error ?? `${definition.display} save failed: ${response.status}`);
-          setSavedDiagnosisObservations((current) => ({
-            ...current,
-            [definition.stableKey]: Object.fromEntries(EYES.flatMap((eye) => {
-              const observationReference = body.eyes?.[eye]?.observationReference ?? current[definition.stableKey]?.[eye];
-              return row[eye]?.selections.length && observationReference ? [[eye, observationReference]] : [];
-            })),
-          }));
-          const savedRow = Object.fromEntries(EYES.map((eye) => {
-            const capture = row[eye] ?? emptyEye();
-            const original = pristine[definition.stableKey]?.[eye] ?? emptyEye();
-            const state = touched(capture) || touched(original) ? derivedExamState(capture) : capture.state;
-            return [eye, {
-              ...capture,
-              ...(body.eyes?.[eye]?.negativeAct ? { negativeAct: body.eyes[eye]!.negativeAct } : {}),
-              state,
-              normalTemplate: state === "normal" ? definition.normalTemplate : undefined,
-            }];
-          })) as Record<Eye, EyeCapture>;
-          persistedCaptures = { ...persistedCaptures, [definition.stableKey]: savedRow };
-          setPristine(persistedCaptures);
-          replaceCaptures((current) => ({
-            ...current,
-            [definition.stableKey]: Object.fromEntries(EYES.map((eye) => {
-              const capture = current[definition.stableKey]?.[eye] ?? emptyEye();
-              return [eye, sameCapture(capture, row[eye] ?? emptyEye()) ? savedRow[eye] : capture];
-            })) as Record<Eye, EyeCapture>,
-          }));
-          successfulKeys.push(definition.stableKey);
-        } catch (caught) {
-          failures.push(definition.stableKey);
-          failureNames.push(`${definition.display} (${caught instanceof Error ? caught.message : String(caught)})`);
+          body = JSON.stringify({ commandId: crypto.randomUUID(), patientReference, encounterReference, eyes });
+          frozenBodies.current.set(stableKey, body);
         }
+        let result: FindingHttpResult;
+        try {
+          const response = await fetchImpl(`${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(stableKey)}`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body });
+          result = { status: response.status, body: await response.json() };
+        } catch {
+          result = { status: 502, body: { result: "command", commandId: JSON.parse(body).commandId, complete: false, executionOrder: [0], outcomes: [{ target: stableKey, status: "unconfirmed", clinicalWrite: "unknown" }] } };
+        }
+        const complete = result.body.result === "command" && result.body.complete;
+        if (complete) {
+          pristineRef.current = { ...pristineRef.current, [stableKey]: submitted };
+          setPristine(pristineRef.current);
+          successfulKeys.current.add(stableKey);
+          failureMessages.current.delete(stableKey);
+        }
+        const outcome = await handleFindingOutcome(result, { encounterReference, refresh: () => { keepChoice.current = true; setReloadVersion(value => value + 1); } });
+        if (outcome.retryIdentical) retries.push(stableKey);
+        else frozenBodies.current.delete(stableKey);
+        if (!complete) failureMessages.current.set(stableKey, `${definition.display} (${outcome.message ?? "Finding command did not complete."})`);
       }
-      const dirtyKeys = new Set(changedDefinitions(definitions, currentCaptures.current, persistedCaptures).map((definition) => definition.stableKey));
-      const unattemptedFailures = failedKeys.filter((key) => dirtyKeys.has(key) && !dirtyDefinitions.some((definition) => definition.stableKey === key));
-      const remainingFailures = [...unattemptedFailures, ...failures];
-      const remainingFailureNames = [...unattemptedFailures.map((key) => definitions.find((definition) => definition.stableKey === key)!.display), ...failureNames];
-      const allSavedKeys = [...new Set([...pendingSavedKeys, ...successfulKeys])];
-      setPendingSavedKeys(allSavedKeys);
-      setFailedKeys(remainingFailures);
-      if (remainingFailures.length) {
-        setError(`Failed: ${remainingFailureNames.join("; ")}. ${allSavedKeys.length} structures saved; retry only the failed structures with All Normal or Save.`);
-        return;
+      setRetryKeys(retries);
+      const dirty = changedDefinitions(definitions, currentCaptures.current, pristineRef.current);
+      if (failureMessages.current.size) {
+        setError(`Failed: ${[...failureMessages.current.values()].join("; ")}`);
+      } else if (dirty.length) {
+        setMessage(`Unsaved changes: ${dirty.map(definition => definition.display).join("; ")}. Use Save Ocular Health to persist these edits.`);
+      } else if (successfulKeys.current.size) {
+        const keys = [...successfulKeys.current];
+        const summary = `${keys.length}/${definitions.length} ocular-health structures saved`;
+        setMessage(summary);
+        onSaved({ completed: true, summary, savedAt: new Date().toISOString(), operator: "ODOS UI ocular health" }, keys);
+        successfulKeys.current.clear();
       }
-      const unsavedDefinitions = definitions.filter((definition) => dirtyKeys.has(definition.stableKey));
-      if (unsavedDefinitions.length) {
-        setMessage(`Unsaved changes: ${unsavedDefinitions.map((definition) => definition.display).join("; ")}. Use Save Ocular Health to persist these edits.`);
-        return;
-      }
-      if (!allSavedKeys.length) {
-        setMessage("No unsaved changes.");
-        return;
-      }
-      const status = {
-        completed: true,
-        summary: `${allSavedKeys.length}/${definitions.length} ocular-health structures saved`,
-        savedAt: new Date().toISOString(),
-        operator: "ODOS UI ocular health",
-      };
-      setMessage(status.summary);
-      onSaved(status, allSavedKeys);
-      setPendingSavedKeys([]);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setSaving(false);
+    } finally { setSaving(false); }
+  }
+
+  async function save(onlyDefinitions = definitions) {
+    if (readOnly) return;
+    if (!onlyDefinitions.every(definition => canonical[definition.stableKey])) {
+      setError("Canonical history is missing. Reload before saving.");
+      return;
     }
+    return saveCanonical(onlyDefinitions);
   }
 
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="mx-auto max-w-7xl">
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-bg-deep/95 pb-4 backdrop-blur">
-          <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Record what is present. Unmarked structures save as normal when touched.</p></div>
-          <div className="flex flex-wrap gap-2">
+          <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Record what is present. Normal requires an explicit negative assertion.</p></div>
+          {!readOnly && <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading || saving} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Anterior All Normal</button>
             <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading || saving} className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-lo)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-accent-hi)] hover:bg-[color:var(--odos-accent-tint-hi)] disabled:opacity-40">Fundus All Normal</button>
             <ClearSectionButton
@@ -524,8 +501,10 @@ export function OcularHealthSection({
                 onCleared?.({ scope: "section", result });
               }}
             />
-          </div>
+          </div>}
         </div>
+        {readOnly && <p role="status">{readOnlyReason === "encounter-closed" ? "Signed or closed visit" : findingReadOnlyLabel(readOnlyReason)}</p>}
+        {unscopedCount > 0 && <p>Some older records could not be placed on a visit</p>}
         {loading && <div className="py-8 text-sm text-white/45">Loading ocular-health findings…</div>}
         {!loading && <div className={runnerEnabled ? "mt-5 grid items-start gap-5 lg:grid-cols-[13rem_minmax(0,1fr)]" : "mt-5"}>
           {runnerEnabled && highlightedStructureKey && <StructureRail
@@ -542,7 +521,7 @@ export function OcularHealthSection({
             const row = captures[definition.stableKey] ?? emptyRow();
             const prior = priors[definition.stableKey] ?? emptyPriorReadings();
             const related = relatedReadings[definition.stableKey] ?? emptyRelatedReadings();
-            const diagnosisObservations = Object.values(savedDiagnosisObservations[definition.stableKey] ?? {});
+            const hasFacts = EYES.some(eye => canonical[definition.stableKey]?.[eye].facts.some(fact => fact.status === "live" && fact.presence === "present"));
             const focused = runnerEnabled && definition.stableKey === highlightedStructureKey;
             return (
               <article
@@ -556,6 +535,10 @@ export function OcularHealthSection({
                   <EyePanel
                     key={eye}
                     eye={eye}
+                    readOnly={readOnly || retryKeys.length > 0}
+                    facts={canonical[definition.stableKey]?.[eye].facts}
+                    panelReadOnly={canonical[definition.stableKey]?.[eye].panel.editable === false}
+                    onRemarks={(remarks) => updateEye(definition.stableKey, eye, current => ({ ...current, remarks }))}
                     capture={row[eye]}
                     prior={prior[eye]}
                     related={related[eye]}
@@ -582,10 +565,12 @@ export function OcularHealthSection({
                     onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
                   />
                 ))}</div>
-                {diagnosisObservations.length > 0 && <DiagnosisPicker
+                {hasFacts && <DiagnosisPicker
                   encounterReference={encounterReference}
                   findingDefinitionKey={definition.stableKey}
-                  observationReferences={diagnosisObservations}
+                  patientReference={patientReference}
+                  linkMode="facts"
+                  refreshKey={reloadVersion}
                   mode="proposal"
                 />}
               </article>
@@ -595,7 +580,8 @@ export function OcularHealthSection({
         </div>}
         <div className="sticky bottom-0 mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-bg-deep/95 py-4 backdrop-blur">
           <div className="min-h-6 text-sm">{error ? <span className="text-rose-200">{error}</span> : <span className="text-white/55">{message}</span>}</div>
-          <button type="button" onClick={() => save()} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Ocular Health"}</button>
+          {retryKeys.length > 0 && <button type="button" disabled={saving} onClick={() => saveCanonical(definitions.filter(definition => retryKeys.includes(definition.stableKey)), true)}>Retry</button>}
+          {!readOnly && <button type="button" onClick={() => save()} disabled={saving || loading || retryKeys.length > 0} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Ocular Health"}</button>}
         </div>
       </div>
     </section>
@@ -662,8 +648,9 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
   );
 }
 
-function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemplate, allowDeferred, onDeferred, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
+function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, prior, related, field, gradeFields, normalTemplate, allowDeferred, onDeferred, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
   eye: Eye;
+  readOnly: boolean; panelReadOnly: boolean; facts?: EncounterFindingRow[]; onRemarks(remarks: string): void;
   capture: EyeCapture;
   prior: PriorFindingReadings;
   related: RelatedFindingReading[];
@@ -678,7 +665,7 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
   onOther(other: string): void;
   onCopy(): void;
 }) {
-  const options = (field?.options ?? []).filter((option) => option.active);
+  const options = (field?.options ?? []).filter((option) => option.active || facts?.some(fact => fact.key?.optionCode === option.code && fact.status === "live" && fact.presence === "present"));
   const parents = options.filter((option) => !option.parentCode);
   const priority = parents.filter((option) => option.priority);
   const additional = parents.filter((option) => !option.priority);
@@ -690,10 +677,11 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
   });
   const displayedNormalTemplate = capture.state === "normal" && capture.normalTemplate ? capture.normalTemplate : normalTemplate;
   return (
-    <div data-eye-panel={eye} className="rounded border border-white/10 bg-bg-deep/60 p-4">
+    <fieldset disabled={readOnly} data-eye-panel={eye} className="rounded border border-white/10 bg-bg-deep/60 p-4">
       <div className="flex items-center justify-between"><span className="text-sm font-semibold text-white">{eye}</span><EyeCopyButton eye={eye} onCopy={onCopy} /></div>
       {allowDeferred && <div className="mt-3"><button
         type="button"
+        disabled={panelReadOnly}
         aria-pressed={capture.state === "deferred"}
         onClick={onDeferred}
         className={capture.state === "deferred" ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-white" : "rounded border border-white/15 px-3 py-1.5 text-xs text-white/55 hover:border-white/30"}
@@ -706,6 +694,7 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
         <p>Not covered: {options.filter((option) => !capture.negativeAct!.optionCodes.includes(option.code)).map((option) => option.display).join(", ") || "None"}</p>
       </details> : <p className="mt-3 text-xs text-white/45">No explicit negative assertion recorded</p>}
       {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
+      <fieldset disabled={panelReadOnly}>
       {gradeFields.map((grade) => <label key={grade.localCode} className="mt-4 block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
         {grade.valueType === "number" ? (
@@ -738,38 +727,40 @@ function EyePanel({ eye, capture, prior, related, field, gradeFields, normalTemp
           ariaLabel={grade.display}
         />}
       </label>)}
+      </fieldset>
       {field && (
         <div className="mt-4 space-y-4">
           <div role="group" aria-label="What is present" className="space-y-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">What is present</div>
-            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} />
-            {additional.length > 0 && <OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} related={related} onChange={onSelections} />}
+            <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} prior={prior} related={related} disabled={readOnly || capture.state === "deferred"} facts={facts} onChange={onSelections} />
+            {additional.length > 0 && <OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} prior={prior} related={related} disabled={readOnly || capture.state === "deferred"} facts={facts} onChange={onSelections} />}
           </div>
           {worksheetOptions.length > 0 && (
             <div role="group" aria-label="Describe each" className="space-y-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">Describe each</div>
               {worksheetOptions.map((option) => (
-                <FindingWorksheetRow
-                  key={option.code}
+                <fieldset key={option.code} disabled={capture.state === "deferred" || facts?.some(fact => fact.key?.optionCode === option.code && !fact.editable)}><FindingWorksheetRow
                   option={option}
                   allOptions={options}
                   capture={capture}
                   prior={prior}
                   onSelections={onSelections}
                   onFindingDetail={onFindingDetail}
-                />
+                /></fieldset>
               ))}
             </div>
           )}
         </div>
       )}
-      <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand" /></label>
-    </div>
+      <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea disabled={panelReadOnly} value={capture.other} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand" /></label>
+      <label className="mt-4 block">Remarks<textarea aria-label={`${eye} Remarks`} disabled={panelReadOnly} value={capture.remarks ?? ""} onChange={event => onRemarks(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white" /></label>
+    </fieldset>
   );
 }
 
-function OptionList({ ariaLabel, options, allOptions, selected, prior, related, onChange }: {
+function OptionList({ ariaLabel, options, allOptions, selected, prior, related, disabled, facts, onChange }: {
   ariaLabel: string;
+  disabled: boolean; facts?: EncounterFindingRow[];
   options: NonNullable<CustomFindingField["options"]>;
   allOptions: NonNullable<CustomFindingField["options"]>;
   selected: string[];
@@ -786,7 +777,11 @@ function OptionList({ ariaLabel, options, allOptions, selected, prior, related, 
   return (
     <div>
       <OdosChips
-        options={options.map((option) => ({ value: option.code, label: findingChipLabel(option.display) }))}
+        disabled={disabled}
+        options={options.map((option) => {
+          const fact = facts?.find(fact => fact.key?.optionCode === option.code);
+          return { value: option.code, label: `${findingChipLabel(option.display)}${fact?.status === "live" && fact.presence === "absent" ? " · Recorded absent" : ""}`, disabled: fact?.editable === false };
+        })}
         selected={selected.filter((code) => optionCodes.includes(code))}
         onChange={(nextOptions) => {
           const removedParents = optionCodes.filter((code) => selected.includes(code) && !nextOptions.includes(code));
@@ -848,46 +843,6 @@ function confirmDestroy(confirmDestructive: ReturnType<typeof useConfirmDestruct
     consequence: "",
     confirmLabel: "Continue",
   });
-}
-
-function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]): Record<Eye, EyeCapture> {
-  const field = abnormalField(definition);
-  const grades = gradeFields(definition);
-  return Object.fromEntries(EYES.map((eye) => {
-    const row = rows.find((candidate) => candidate.eye === eye);
-    const value = row?.values.find((candidate) => candidate.code === field?.localCode)?.value;
-    return [eye, {
-      ...(row?.state ? { state: row.state } : {}),
-      ...(row?.negativeAct ? { negativeAct: row.negativeAct } : {}),
-      selections: Array.isArray(value) ? value : [],
-      ...(hasFindingDetails(row?.findingDetails) ? { findingDetails: row.findingDetails } : {}),
-      grades: Object.fromEntries(grades.reduce<Array<[string, number | string]>>((values, grade) => {
-        const gradeValue = row?.values.find((candidate) => candidate.code === grade.localCode)?.value;
-        if (grade.valueType === "number") {
-          if (typeof gradeValue === "number") values.push([grade.localCode, gradeValue]);
-          return values;
-        }
-        if (typeof gradeValue !== "string") return values;
-        const option = grade.options?.find((candidate) => candidate.code === gradeValue || candidate.display === gradeValue);
-        if (option) values.push([grade.localCode, option.code]);
-        return values;
-      }, [])),
-      other: row?.other ?? "",
-      ...(row?.normalTemplate ? { normalTemplate: row.normalTemplate } : {}),
-    }];
-  })) as Record<Eye, EyeCapture>;
-}
-
-function diagnosisObservationReferences(definition: CustomFindingDefinition, rows: HistoryRow[]): Partial<Record<Eye, string>> {
-  const field = abnormalField(definition);
-  if (!field) return {};
-  return Object.fromEntries(EYES.flatMap((eye) => {
-    const row = rows.find((candidate) => candidate.eye === eye);
-    const selections = row?.values.find((candidate) => candidate.code === field.localCode)?.value;
-    return Array.isArray(selections) && selections.length > 0 && row?.observationReference
-      ? [[eye, row.observationReference]]
-      : [];
-  }));
 }
 
 function excludeCurrentEncounterRows(patientRows: HistoryRow[], currentRows: HistoryRow[]): HistoryRow[] {
@@ -1067,18 +1022,9 @@ function emptyEye(): EyeCapture {
 
 function touched(capture: EyeCapture): boolean {
   return Boolean(
-    capture.state || capture.other.trim() || capture.selections.length ||
+    capture.state || capture.other.trim() || capture.remarks?.trim() || capture.selections.length ||
     Object.keys(capture.grades ?? {}).length || hasFindingDetails(capture.findingDetails)
   );
-}
-
-function derivedExamState(capture: EyeCapture): ExamState {
-  if (capture.state === "deferred") return "deferred";
-  return capture.selections.length > 0 || Boolean(capture.other.trim()) ? "abnormal" : "normal";
-}
-
-function formatList(values: string[]): string {
-  return values.length === 2 ? `${values[0]} and ${values[1]}` : values[0] ?? "recorded findings";
 }
 
 function structureRailState(row: Record<Eye, EyeCapture>): string {
@@ -1113,6 +1059,7 @@ function sameCapture(left: EyeCapture, right: EyeCapture): boolean {
   return JSON.stringify(left.negativeAct) === JSON.stringify(right.negativeAct) &&
     left.state === right.state &&
     left.other === right.other &&
+    (left.remarks ?? "") === (right.remarks ?? "") &&
     left.normalTemplate === right.normalTemplate &&
     sameGrades(left.grades, right.grades) &&
     sameFindingDetails(left.findingDetails, right.findingDetails) &&
@@ -1263,4 +1210,44 @@ function domId(stableKey: string): string {
 
 function scrollToStructure(stableKey: string): void {
   document.getElementById(domId(stableKey))?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function factClaim(fact: EncounterFindingRow) {
+  return { key: fact.key!, baseline: fact.baseline as FindingBaseline, presence: "present" as const, qualifiers: fact.qualifiers, homes: fact.homes };
+}
+function captureFromCanonical(eyes: Record<Eye, CanonicalEye>): Record<Eye, EyeCapture> {
+  return Object.fromEntries(EYES.map(eye => {
+    const history = eyes[eye], present = history.facts.filter(fact => fact.status === "live" && fact.presence === "present");
+    return [eye, { selections: present.map(fact => fact.key!.optionCode), findingDetails: Object.fromEntries(present.map(fact => [fact.key!.optionCode, fact.qualifiers])), grades: history.panel.values, other: history.panel.other ?? "", remarks: history.panel.remarks ?? "", ...(history.panel.deferred ? { state: "deferred" as const } : {}), ...(history.negativeActs.find(act => act.status === "live") ? { negativeAct: history.negativeActs.find(act => act.status === "live")!.scope } : {}) }];
+  })) as Record<Eye, EyeCapture>;
+}
+function canonicalHistoryRows(definition: CustomFindingDefinition, eyes: Record<Eye, CanonicalEye>, recordedAt: string): HistoryRow[] {
+  const captures = captureFromCanonical(eyes), field = abnormalField(definition);
+  return EYES.map(eye => ({ eye, recordedAt, values: [...(field ? [{code: field.localCode, value: captures[eye].selections}] : []), ...Object.entries(captures[eye].grades ?? {}).map(([code, value]) => ({code,value}))], findingDetails: captures[eye].findingDetails, other: captures[eye].other, state: captures[eye].state }));
+}
+
+function mergePendingCapture(fresh: EyeCapture, baseline: EyeCapture, pending: EyeCapture): EyeCapture {
+  const selected = new Set(fresh.selections);
+  for (const code of baseline.selections) if (!pending.selections.includes(code)) selected.delete(code);
+  for (const code of pending.selections) if (!baseline.selections.includes(code)) selected.add(code);
+  const findingDetails = { ...fresh.findingDetails };
+  for (const code of new Set([...Object.keys(baseline.findingDetails ?? {}), ...Object.keys(pending.findingDetails ?? {})])) {
+    if (JSON.stringify(baseline.findingDetails?.[code] ?? {}) !== JSON.stringify(pending.findingDetails?.[code] ?? {})) {
+      if (pending.findingDetails?.[code]) findingDetails[code] = pending.findingDetails[code];
+      else delete findingDetails[code];
+    }
+  }
+  const grades = { ...fresh.grades };
+  for (const code of new Set([...Object.keys(baseline.grades ?? {}), ...Object.keys(pending.grades ?? {})])) {
+    if (baseline.grades?.[code] !== pending.grades?.[code]) {
+      if (pending.grades?.[code] !== undefined) grades[code] = pending.grades[code];
+      else delete grades[code];
+    }
+  }
+  return { ...fresh, selections: [...selected], findingDetails, grades,
+    ...(baseline.state !== pending.state ? { state: pending.state } : {}),
+    ...(baseline.other !== pending.other ? { other: pending.other } : {}),
+    ...((baseline.remarks ?? "") !== (pending.remarks ?? "") ? { remarks: pending.remarks } : {}),
+    ...(baseline.negativeAct?.id !== pending.negativeAct?.id ? { negativeAct: pending.negativeAct } : {}),
+  };
 }

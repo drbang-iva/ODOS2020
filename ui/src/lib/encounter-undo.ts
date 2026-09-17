@@ -25,6 +25,7 @@ export interface UndoLedgerEntry {
 }
 
 export interface UndoLedgerSlot {
+  voidActionId?: string;
   voided: UndoLedgerEntry[];
   label: string;
   count: number;
@@ -41,8 +42,8 @@ export interface EncounterUndoLedger {
 }
 
 export type EncounterUndoRequest =
-  | { scope: "encounter" }
-  | { scope: "section"; sectionKey: string };
+  | { scope: "encounter"; voidActionId: string }
+  | { scope: "section"; sectionKey: string; voidActionId: string };
 
 export interface EncounterUndoState {
   ledger: EncounterUndoLedger;
@@ -124,6 +125,10 @@ export async function readEncounterUndoLedger(
   }
 }
 
+export class UndoSupersededError extends Error {
+  constructor() { super("This undo no longer applies"); }
+}
+
 export async function undoEncounterVoid(
   encounterReference: string,
   request: EncounterUndoRequest,
@@ -140,6 +145,7 @@ export async function undoEncounterVoid(
   );
   const body = await response.json().catch(() => ({})) as Partial<EncounterUndoResult> & ClinicalGraphErrorBody;
   if (!response.ok) {
+    if (body.code === "undo-superseded") throw new UndoSupersededError();
     throw clinicalGraphResponseError(response, body, `Undo failed (${response.status}).`);
   }
   return {
@@ -199,7 +205,7 @@ export function undoButtonTitle(slot: UndoLedgerSlot, confirmed: boolean): strin
 
 /** Identity of a slot for confirmation bookkeeping: its placement plus the action's timestamp. */
 export function undoSlotKey(placement: "encounter" | string, slot: UndoLedgerSlot): string {
-  return `${placement}|${slot.at}`;
+  return `${placement}|${slot.voidActionId ?? slot.at}`;
 }
 
 /**

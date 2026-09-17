@@ -1,3 +1,4 @@
+import { memoryFhir } from "../../mcp/tests/fixtures/r10/writer-harness";
 import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
@@ -5,7 +6,7 @@ import { act, create, type ReactTestInstance, type ReactTestRenderer } from "rea
 import type { Observation, Provenance } from "@medplum/fhirtypes";
 import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store.js";
 import { customFieldEntries } from "../../mcp/src/clinical-graph/custom-fields.js";
-import { handleCustomSectionCaptureRequest, type CustomSectionEndpointDeps } from "../../mcp/src/clinical-graph/custom-section-endpoint.js";
+import { handleCustomSectionHistoryRequest, handleCustomSectionCaptureRequest, type CustomSectionEndpointDeps } from "../../mcp/src/clinical-graph/custom-section-endpoint.js";
 import { OcularHealthSection, applyAnteriorAllNormal, applyPosteriorAllNormal, type EyeCapture, type NegativeAct } from "../src/components/charting/OcularHealthSection";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 
@@ -29,24 +30,22 @@ function text(node: ReactTestInstance | string): string {
 }
 
 test("SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler", async () => {
-  const writes: Array<Observation | Provenance> = [];
+  const memory = memoryFhir([{ resourceType: "Encounter", id: "sweep-test", status: "in-progress", class: { code: "synthetic" }, subject: { reference: "Patient/sweep-test" } }]);
   const deps: CustomSectionEndpointDeps = {
     findingDefinitions: () => seeds,
     authenticate: async () => ({
       staffReference: "Practitioner/sweep-test", actorRole: "provider",
-      fhir: {
-        search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
-        create: async (resource) => {
-          const saved = { ...resource, id: `sweep-${writes.length + 1}` };
-          writes.push(saved);
-          return saved;
-        },
-      },
+      fhir: { ...memory.fhir, create: async (resource, headers) => (await memory.fhir.createWithOutcome(resource, headers)).resource },
     }),
   };
-  const posts: Array<{ key: string; body: { eyes: Record<string, { negativeAct: NegativeAct }> }; status: number; response: unknown }> = [];
+  const posts: Array<{ key: string; body: { eyes: Record<string, { negativeAct: { scope: string[] } }> }; status: number; response: unknown }> = [];
   const fetchImpl = (async (input, init) => {
-    if (init?.method !== "POST") return Response.json({ rows: [] });
+    if (init?.method !== "POST") {
+      const url = new URL(String(input));
+      const key = decodeURIComponent(url.pathname.split("/").at(-2)!);
+      const result = await handleCustomSectionHistoryRequest(deps, { authHeader: undefined, params: { stableKey: key }, query: Object.fromEntries(url.searchParams) });
+      return Response.json(result.body, { status: result.status });
+    }
     const key = decodeURIComponent(String(input).split("/").at(-1)!);
     const body = JSON.parse(String(init.body));
     const result = await handleCustomSectionCaptureRequest(deps, {
@@ -70,9 +69,9 @@ test("SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepte
     assert.equal(posts.length, 9);
     assert.ok(posts.every((post) => post.key !== stainingKey));
     for (const post of posts) {
-      for (const eye of ["OD", "OS"]) assert.ok(post.body.eyes[eye].negativeAct.optionCodes.length > 0);
+      for (const eye of ["OD", "OS"]) assert.ok(post.body.eyes[eye].negativeAct.scope.length > 0);
     }
-    assert.equal(writes.filter((resource) => resource.resourceType === "Observation").length, 18);
+    assert.equal(memory.all("Observation").filter((resource) => resource.identifier?.some((id) => id.system === "urn:odos:negative-act")).length, 18);
     assert.doesNotMatch(text(renderer.root), /Surface Staining failed/);
   } finally { act(() => renderer?.unmount()); }
 });

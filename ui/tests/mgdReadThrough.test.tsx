@@ -1,3 +1,4 @@
+import { canonicalOcularFixture } from "./fixtures/r10CanonicalOcularFixture";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
@@ -266,7 +267,7 @@ async function renderLids(
         encounterRecordedAt: ENCOUNTER_RECORDED_AT,
         onSaved: () => undefined,
         apiBase: "http://test",
-        fetchImpl,
+        fetchImpl: canonicalOcularFixture(fetchImpl, [lids]),
       },
     ));
     await flushEffects();

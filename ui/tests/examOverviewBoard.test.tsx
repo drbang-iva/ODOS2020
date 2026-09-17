@@ -1,3 +1,5 @@
+import { memoryFhir } from "../../mcp/tests/fixtures/r10/writer-harness";
+import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
@@ -1077,10 +1079,10 @@ test("custom state writer preserves other-only notes for normal and abnormal fin
     abnormal: abnormal.value,
     normal: normal.value,
   }, {
-    abnormal: "OD Other Reports intermittent shimmer",
+    abnormal: "OD OTHER Reports intermittent shimmer",
     normal: "Stereo present · Other Reliable responses throughout",
   });
-  assert.equal(abnormal.formattedValue, "Other Reports intermittent shimmer");
+  assert.equal(abnormal.formattedValue, "OTHER Reports intermittent shimmer");
   assert.doesNotMatch(`${abnormal.value} ${normal.value}`, /Exam state|Normal template|entrance\.stereo/);
   assert.deepEqual(normal.componentCodes, ["entrance.stereo", "EXAM_STATE", "NORMAL_TEMPLATE", "OTHER"]);
 });
@@ -1101,7 +1103,7 @@ test("abnormal custom state other-only value leaves the exact unformatted sentin
     "abnormal",
     "Reports intermittent shimmer",
   );
-  assert.equal(abnormal.formattedValue, "Other Reports intermittent shimmer");
+  assert.equal(abnormal.formattedValue, "OTHER Reports intermittent shimmer");
 });
 
 test("normal other composition preserves the template and every selected sheet finding", () => {
@@ -1259,7 +1261,8 @@ const KNOWN_EXERCISED_WRITER_SCHEMA_BLIND_SPOTS: Readonly<Record<string, string>
   "entrance:stereo:NORMAL_TEMPLATE": "Covered by the endpoint-backed normal custom-state fixture.",
   "entrance:stereo:OTHER": "Covered by the endpoint-backed normal and deferred custom-state fixtures.",
   "entrance:stereo:entrance.stereo": "Internal documentation marker is bypassed by the normal and deferred render paths.",
-  "ocular-health:anterior:conjunctiva:EXAM_STATE": "Internal state is asserted through the abnormal projection branch.",
+  "ocular-health:anterior:conjunctiva:R10_PANEL_META": "Canonical per-eye panel identity (V21).",
+  "ocular-health:anterior:conjunctiva:R10_OPERATION": "Canonical panel retry marker (V20).",
   "ocular-health:anterior:conjunctiva:OTHER": "Covered by the endpoint-backed abnormal other-only fixture.",
 };
 
@@ -2153,7 +2156,9 @@ async function renderedWriterStateSectionValue(
   const definitions = buildFindingDefinitionSeeds();
   const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
   assert.ok(definition);
-  const fhir = new EomWriterFhir();
+  const shared = definition.valueSchema.type === "ocular-health-structure";
+  const memory = memoryFhir([{ resourceType: "Encounter", id: "state-writer-fixture", status: "in-progress", class: { code: "synthetic" }, subject: { reference: "Patient/state-writer-fixture" } }]);
+  const fhir = shared ? { ...memory.fhir, create: async (resource: any, headers: any) => (await memory.fhir.createWithOutcome(resource, headers)).resource } : new EomWriterFhir();
   const deps: CustomSectionEndpointDeps = {
     authenticate: async () => ({
       staffReference: "Practitioner/state-writer-fixture",
@@ -2169,13 +2174,16 @@ async function renderedWriterStateSectionValue(
     body: {
       patientReference: "Patient/state-writer-fixture",
       encounterReference: "Encounter/state-writer-fixture",
-      ...(definition.valueSchema.perEye === true
+      ...(shared ? { commandId: randomUUID(), eyes: { OD: { loaded: [], selected: [], panel: {
+        baseline: { kind: "absent", key: { v: 1, patientId: "state-writer-fixture", encounterId: "state-writer-fixture", stableKey, eye: "OD" } },
+        state: { deferred: state === "deferred", values: {}, other },
+      } } } } : definition.valueSchema.perEye === true
         ? { eyes: { OD: { customFields: [], state, other } } }
         : { customFields: [], state, other }),
     },
   });
   assert.equal(result.status, 200, JSON.stringify(result.body));
-  const observation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation");
+  const observation = (shared ? [...memory.resources.values()] : (fhir as EomWriterFhir).resources).find((resource): resource is Observation => resource.resourceType === "Observation");
   assert.ok(observation);
   const writerProjection = buildExamOverviewProjection({
     encounterReference: "Encounter/state-writer-fixture",
@@ -2352,7 +2360,7 @@ const PENDING_UNDO_LEDGER: EncounterUndoLedger = {
     voided: [{ ref: "Observation/o1", priorStatus: "final" }],
     label: "everything charted",
     count: 31,
-    at: "2026-09-01T15:00:00.000Z",
+    at: "2026-09-01T15:00:00.000Z", voidActionId: "visit-void",
     sectionKeys: [],
     scope: "encounter",
   },
@@ -2361,7 +2369,7 @@ const PENDING_UNDO_LEDGER: EncounterUndoLedger = {
       voided: [{ ref: "Observation/va-od", priorStatus: "preliminary" }],
       label: "Visual acuity",
       count: 2,
-      at: "2026-09-01T14:00:00.000Z",
+      at: "2026-09-01T14:00:00.000Z", voidActionId: "va-void",
       sectionKeys: ["va"],
       scope: "section",
     },
@@ -2414,7 +2422,7 @@ for (const canWriteDiagnosis of [true, false, undefined]) {
       assert.equal(Boolean(observationUndo.props.disabled), false, "the Observation-only slot stays usable");
       options.canWriteDiagnosis = false;
       await act(async () => { await observationUndo.props.onClick(); await flushEffects(); });
-      assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }]);
+      assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va", voidActionId: "va-void" }]);
       assert.equal(Boolean(visitUndo().props.disabled), true, "the undo response refreshes capability for the remaining diagnosis slot");
 
       options.canWriteDiagnosis = true;
@@ -2499,12 +2507,12 @@ test("fixback P2#3: the ledger loads with the encounter, both placements render 
     assert.match(textContent(strip), /Cleared Visual acuity · up to 2 values/, "the sheet strip is scoped to VA's own slot, and a loaded slot reads as an upper bound");
 
     await act(async () => { await undoButtonIn(sheet).props.onClick(); await flushEffects(); await flushEffects(); });
-    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }]);
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va", voidActionId: "va-void" }]);
     assert.equal(visibleSheet(harness).findAllByProps({ "data-undo-scope": "section" }).length, 0, "the strip is gone: the response ledger replaced ours");
     assert.equal(harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" }).length, 1, "the visit slot the response ledger still holds stays");
 
     await act(async () => { await undoButtonIn(harness.renderer.root.findByProps({ "data-chart-bar-slot": "undo" })).props.onClick(); await flushEffects(); await flushEffects(); });
-    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }, { scope: "encounter" }]);
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va", voidActionId: "va-void" }, { scope: "encounter", voidActionId: "visit-void" }]);
     assert.equal(harness.renderer.root.findAllByProps({ "data-chart-bar-slot": "undo" }).length, 0, "the visit Undo is gone once the response ledger no longer holds it");
   } finally {
     harness.restore();
@@ -2586,7 +2594,7 @@ test("G2: a successful no-op clear must not promote an older partial slot from '
       voided: [{ ref: "Observation/o1", priorStatus: "final" }, { ref: "Observation/o2", priorStatus: "final" }, { ref: "Observation/o3", priorStatus: "final" }],
       label: "everything charted",
       count: 3,
-      at: "2026-09-02T09:00:00.000Z",
+      at: "2026-09-02T09:00:00.000Z", voidActionId: "old-visit-void",
       sectionKeys: [],
       scope: "encounter",
     },
@@ -2643,7 +2651,7 @@ test("fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, 
 
     confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(visibleSheet(harness)).props.onClick(), true));
     assert.equal(confirmations.length, 2);
-    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }], "accepted: the undo proceeds");
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va", voidActionId: "va-void" }], "accepted: the undo proceeds");
 
     // The visit-level Undo in the chart bar guards the open sheet the same way.
     act(() => harness.renderer.root.findByType(ExamOverviewBoard).props.onOpenEditor("va"));
@@ -2668,7 +2676,7 @@ test("fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed —
     harness.undoFailure.status = 503;
     confirmations.push(await answerDiscardInDialog(harness, () => undoButtonIn(visibleSheet(harness)).props.onClick(), true));
     assert.equal(confirmations.length, 1, "the discard warning was asked and accepted");
-    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va" }], "the undo was attempted");
+    assert.deepEqual(harness.undoRequests, [{ scope: "section", sectionKey: "va", voidActionId: "va-void" }], "the undo was attempted");
     const sheet = visibleSheet(harness);
     assert.equal(sheet.props.sectionId, "va", "the sheet stays mounted with the typed edit");
     assert.match(textContent(sheet.findByProps({ "data-undo-scope": "section" })), /Undo could not be applied/, "the failure is reported in the strip");
@@ -4064,14 +4072,14 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
         // row the clear meant to void — whether or not the transaction is then refused.
         undoLedgerState = {
           encounterId: "exam-1",
-          encounter: { voided: voided.map((ref) => ({ ref, priorStatus: "final" })), label: "everything charted", count: 3, at: "2026-09-02T10:00:00.000Z", sectionKeys: [], scope: "encounter" },
+          encounter: { voided: voided.map((ref) => ({ ref, priorStatus: "final" })), label: "everything charted", count: 3, at: "2026-09-02T10:00:00.000Z", voidActionId: "new-visit-void", sectionKeys: [], scope: "encounter" },
           sections: {},
         };
       }
       if (!body.preview && voidFailure.status) {
         return new Response(JSON.stringify(voidFailure.body ?? { error: "void failed" }), { status: voidFailure.status, headers: { "Content-Type": "application/json" } });
       }
-      return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, voided, count: 3, sections, entries: [], preview: Boolean(body.preview), ...(body.preview ? {} : { ledger: undoLedgerState }) });
+      return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, voided, count: 3, sections, entries: [], preview: Boolean(body.preview), ...(body.preview ? {} : { ledger: undoLedgerState, voidActionId: undoLedgerState?.encounter?.voidActionId }) });
     }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/undo") && init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { scope: string; sectionKey?: string };

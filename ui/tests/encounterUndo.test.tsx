@@ -7,7 +7,7 @@ import { EncounterEditContext } from "../src/components/charting/encounter-edit-
 import { ExamChartBar } from "../src/components/charting/EncounterHeader";
 import { ExamEntrySheet } from "../src/components/charting/ExamEntrySheet";
 import { UndoStrip } from "../src/components/charting/UndoStrip";
-import { SIGNED_ENCOUNTER_TOOLTIP } from "../src/lib/encounter-void";
+import { voidEncounterEntries, SIGNED_ENCOUNTER_TOOLTIP } from "../src/lib/encounter-void";
 import {
   emptyUndoLedger,
   readEncounterUndoLedger,
@@ -21,9 +21,11 @@ import {
 } from "../src/lib/encounter-undo";
 
 const ENCOUNTER = "Encounter/e1";
+const VOID_ACTION_ID = "ca5234a9-95d4-4aed-a577-c93233dd08e0";
 
 function slot(overrides: Partial<UndoLedgerSlot> = {}): UndoLedgerSlot {
   return {
+    voidActionId: VOID_ACTION_ID,
     voided: [{ ref: "Observation/o1", priorStatus: "final" }],
     label: "Pupils",
     count: 6,
@@ -81,15 +83,15 @@ test("undoEncounterVoid posts the scope to the undo endpoint, returns the restor
     calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
     return Response.json({ restored: ["Observation/o1"], count: 1, skipped: [], scope: "section", sectionKey: "entrance:pupils", ledger: emptyUndoLedger("e1") });
   };
-  const result = await undoEncounterVoid(ENCOUNTER, { scope: "section", sectionKey: "entrance:pupils" }, fetchImpl);
+  const result = await undoEncounterVoid(ENCOUNTER, { scope: "section", sectionKey: "entrance:pupils", voidActionId: VOID_ACTION_ID }, fetchImpl);
   assert.equal(result.count, 1);
   assert.deepEqual(result.restored, ["Observation/o1"]);
   assert.deepEqual(result.ledger, emptyUndoLedger("e1"));
   assert.match(calls[0]!.url, /\/clinical-graph\/encounters\/e1\/void\/undo$/);
-  assert.deepEqual(calls[0]!.body, { scope: "section", sectionKey: "entrance:pupils" });
+  assert.deepEqual(calls[0]!.body, { scope: "section", sectionKey: "entrance:pupils", voidActionId: VOID_ACTION_ID });
 
   const closed: typeof fetch = async () => Response.json({ error: "Signed or closed encounters cannot be edited.", code: "encounter-closed" }, { status: 409 });
-  await assert.rejects(() => undoEncounterVoid(ENCOUNTER, { scope: "encounter" }, closed), /Signed or closed encounters cannot be edited/);
+  await assert.rejects(() => undoEncounterVoid(ENCOUNTER, { scope: "encounter", voidActionId: VOID_ACTION_ID }, closed), /Signed or closed encounters cannot be edited/);
 });
 
 test("undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent", () => {
@@ -372,7 +374,7 @@ test("STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledg
     const loaded = await readEncounterUndoLedger(ENCOUNTER, fetchImpl);
     assert.equal(loaded.canWriteDiagnosis, canWriteDiagnosis === true);
     assert.deepEqual(loaded.ledger, ledger);
-    const undone = await undoEncounterVoid(ENCOUNTER, { scope: "encounter" }, fetchImpl);
+    const undone = await undoEncounterVoid(ENCOUNTER, { scope: "encounter", voidActionId: VOID_ACTION_ID }, fetchImpl);
     assert.equal(undone.canWriteDiagnosis, canWriteDiagnosis === true);
     assert.deepEqual(undone.ledger, ledger);
   }
@@ -399,3 +401,50 @@ for (const canWriteDiagnosis of [true, false, undefined]) {
     assert.equal(writes, canWriteDiagnosis === true ? 2 : 0);
   });
 }
+
+
+for (const surface of ["section", "encounter"] as const) {
+  for (const source of ["void-response", "ledger"] as const) {
+    test(`W144 ${surface} Undo sends the action ID retained from ${source} and refuses a superseded retry`, async () => {
+      const savedSlot = slot({ scope: surface });
+      const ledger: EncounterUndoLedger = { encounterId: "e1", encounter: surface === "encounter" ? savedSlot : null, sections: surface === "section" ? { "entrance:pupils": savedSlot } : {} };
+      const response: typeof fetch = async () => Response.json({ ledger, voidActionId: VOID_ACTION_ID, voided: ["Observation/o1"], count: 1 });
+      const loaded = source === "void-response"
+        ? await voidEncounterEntries(ENCOUNTER, { scope: "encounter" }, { fetchImpl: response })
+        : await readEncounterUndoLedger(ENCOUNTER, response);
+      if (source === "void-response") {
+        assert.ok("voidActionId" in loaded, "W144 void response retains action identity");
+        assert.equal(loaded.voidActionId, VOID_ACTION_ID, "W144 void response retains exact action identity");
+      }
+      const retainedSlot = surface === "encounter" ? loaded.ledger!.encounter! : loaded.ledger!.sections["entrance:pupils"]!;
+      const requests: unknown[] = [];
+      const refused: typeof fetch = async (_input, init) => {
+        requests.push(JSON.parse(String(init?.body)));
+        return Response.json({ code: "undo-superseded", error: "This void action is no longer current." }, { status: 409 });
+      };
+      const onUndo = async (voidActionId: string) => {
+        await undoEncounterVoid(ENCOUNTER, surface === "encounter" ? { scope: surface, voidActionId } : { scope: surface, sectionKey: "entrance:pupils", voidActionId }, refused);
+      };
+      const element = surface === "section"
+        ? <ExamEntrySheet sectionId="pupils" onCancel={() => undefined} encounterReference={ENCOUNTER} encounterStatus="in-progress" onEncounterCleared={() => undefined} undo={{ slot: retainedSlot, onUndo }}><div>body</div></ExamEntrySheet>
+        : <ExamChartBar patientName="Pat" patientDetail="" visitControlsOpen={false} onToggleVisitControls={() => undefined} onBlackout={() => undefined} requestFinishEncounter={() => undefined} signDisabled={false} signLabel="Sign & finish" undoSlot={retainedSlot} onUndo={onUndo} />;
+      const renderer = render(element);
+      try {
+        await act(async () => { await renderer.root.findByType(UndoStrip).findByType("button").props.onClick(); });
+        assert.deepEqual(requests, [{ scope: surface, ...(surface === "section" ? { sectionKey: "entrance:pupils" } : {}), voidActionId: VOID_ACTION_ID }], "W144 Undo must name the exact displayed action");
+        const strip = renderer.root.findByType(UndoStrip);
+        assert.match(textOf(strip), /This undo no longer applies/, "W144 superseded action explains refusal");
+        assert.equal(strip.findAllByType("button").length, 0, "W144 superseded action has no retry control");
+        assert.equal(requests.length, 1);
+      } finally { act(() => renderer.unmount()); }
+    });
+  }
+}
+
+test("W144 legacy slot without an action ID offers no blind Undo", () => {
+  const renderer = render(<UndoStrip slot={slot({ voidActionId: undefined })} closed={false} onUndo={() => assert.fail("W144 cannot undo without an action ID")} />);
+  try {
+    assert.match(textOf(renderer.root), /This undo no longer applies/);
+    assert.equal(renderer.root.findAllByType("button").length, 0);
+  } finally { act(() => renderer.unmount()); }
+});
