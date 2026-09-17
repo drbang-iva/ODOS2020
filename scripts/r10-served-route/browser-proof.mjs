@@ -48,6 +48,14 @@ async function openOcular(page) {
  await page.locator('[data-editor-section-id="ocular-health:anterior:lens"],button[aria-label="Edit Lens"]').click();
  await page.getByRole('heading',{name:'Anterior & Posterior Segments'}).waitFor();
 }
+async function undoActualSection(page,destinationPath) {
+ const strip=page.locator('[data-undo-scope="section"]').filter({has:page.getByRole('button',{name:'Undo',exact:true})}).first();
+ await strip.scrollIntoViewIfNeeded();
+ await screenshot(page,'g-undo-control');
+ const response=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void/undo',{timeout:30000});
+ const [reply]=await Promise.all([response,(async()=>{await strip.getByRole('button',{name:'Undo',exact:true}).focus();await strip.getByRole('button',{name:'Undo',exact:true}).press('Enter');const confirm=page.getByRole('button',{name:'Continue',exact:true});const needsConfirmation=await Promise.race([response.then(()=>false),confirm.waitFor({state:'visible'}).then(()=>true)]);if(needsConfirmation)await confirm.click();})()]);
+ assert.equal(reply.status(),200);result.undoActivation={method:'keyboard focus and Enter on actual enabled section Undo button',pointerLimitation:'Existing Add section group absolute-positioned control intercepts pointer clicks; g-undo-control.png retains the obstruction. No layout change or force click.'};const body=await reply.json();result.lastUndoResponse=body;writeFileSync(join(evidence,`${mode}-result.json`),JSON.stringify(result,null,2));return body;
+}
 async function screenshot(page,name) {
  assert.equal(await page.locator('input[type=password]').count(),0,'Never screenshot credentials');
  const path=join(evidence,name+'.png');await page.screenshot({path,fullPage:true});result.screenshots.push(path);
@@ -72,8 +80,7 @@ try {
   const od=lens.locator('[data-eye-panel="OD"]');
   const changedGrade=baseline.find(row=>row.eye==='OD').qualifiers?.grade==='2+'?'3+':'2+';
   await od.locator('[data-finding-row="nuclear-sclerosis"]').getByRole('group',{name:'Grade',exact:true}).getByRole('button',{name:changedGrade,exact:true}).click();
-  let reply=page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000});reply.catch(()=>{});
-  await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();
+  let [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000}),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);
   assert.equal((await reply).status(),200);
   const graded=await nucleus();assert.equal(graded.find(row=>row.eye==='OD').qualifiers.grade,changedGrade);
   assert.deepEqual(graded.find(row=>row.eye==='OS').baseline,baseline.find(row=>row.eye==='OS').baseline);
@@ -84,15 +91,13 @@ try {
   await rows.nth(1).waitFor();assert.equal(await rows.count(),2);
   await rows.first().scrollIntoViewIfNeeded();await screenshot(page,'c-diagnosis-split');await page.setViewportSize({width:2200,height:1500});await rows.last().scrollIntoViewIfNeeded();await screenshot(page,'c-diagnosis-split-wide');await page.locator('.odos-diagnosis-findings-table-wrap').evaluate(element=>{element.scrollLeft=element.scrollWidth;});await screenshot(page,'c-diagnosis-split-laterality');await page.setViewportSize({width:1600,height:1100});
   const osRow=page.locator('tr:has(select[aria-label="Laterality nuclear sclerosis"] option[value="OS"]:checked)');
-  reply=page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings'));
-  await osRow.getByRole('button',{name:'Clear present nuclear sclerosis',exact:true}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings')),osRow.getByRole('button',{name:'Clear present nuclear sclerosis',exact:true}).click()]);assert.equal((await reply).status(),200);
   await openOcular(page);
   assert.equal(await lens.locator('[data-eye-panel="OS"]').getByRole('button',{name:'Nuclear Sclerosis',exact:true}).getAttribute('aria-pressed'),'false');
   await lens.scrollIntoViewIfNeeded();await screenshot(page,'c-ocular-OS-cleared');
   await page.getByRole('button',{name:'By diagnosis',exact:true}).click();await page.locator('.odos-diagnosis-visit-row').first().click();
   await page.getByPlaceholder('Search findings').fill('nuclear sclerosis');
-  reply=page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings'));
-  await page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:/OS$/}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings')),page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:/OS$/}).click()]);assert.equal((await reply).status(),200);
   const reasserted=await nucleus();assert.equal(reasserted.find(row=>row.eye==='OS').baseline.reference,baseline.find(row=>row.eye==='OS').baseline.reference);
   record({name:'c',status:'PASS',graded:graded.map(row=>({key:row.key,baseline:row.baseline,qualifiers:row.qualifiers})),reasserted:reasserted.map(row=>({key:row.key,baseline:row.baseline}))});
   await openOcular(page);
@@ -111,43 +116,37 @@ try {
   record({name:'e',status:'PASS',identicalRequest:true,panelAfterDrop:panelAfterDrop.body.eyes.OD.panel.baseline,panelAfterRetry:panelAfterRetry.body.eyes.OD.panel.baseline,commandId:JSON.parse(requests[0]).commandId,facts:afterRetry.map(row=>row.baseline),drop:await(await fetch(`http://127.0.0.1:${manifest.ports.control}/status`)).json()});
   const tear=page.locator('#structure-ocular-health-anterior-tear-film').locator('[data-eye-panel="OD"]');
   const tbutValue=await tear.getByRole('combobox',{name:'TBUT',exact:true}).inputValue()==='9'?'8':'9';await tear.getByRole('combobox',{name:'TBUT',exact:true}).fill(tbutValue);await tear.getByRole('combobox',{name:'TBUT',exact:true}).press('Enter');
-  reply=page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Atear-film'));
-  await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Atear-film')),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);assert.equal((await reply).status(),200);
   await route(page);await openOcular(page);assert.equal(await tear.getByRole('combobox',{name:'TBUT',exact:true}).inputValue(),tbutValue);await tear.scrollIntoViewIfNeeded();await screenshot(page,'h-TBUT-reloaded');
   const tearHistory=await api(page,`/clinical-graph/custom/ocular-health%3Aanterior%3Atear-film/history?patient=${fixture.patientReference}&encounter=${fixture.current}`);
   record({name:'h',status:'PASS',panel:tearHistory.body.eyes.OD.panel});
-  if(await lens.locator('[data-eye-panel="OD"]').getByRole('button',{name:'Cortical Cataract',exact:true}).getAttribute('aria-pressed')==='true'){await lens.locator('[data-eye-panel="OD"]').getByRole('button',{name:'Cortical Cataract',exact:true}).click();if(await page.getByRole('button',{name:'Continue',exact:true}).isVisible())await page.getByRole('button',{name:'Continue',exact:true}).click();const cleanReply=page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'));await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();assert.equal((await cleanReply).status(),200);}
+  if(await lens.locator('[data-eye-panel="OD"]').getByRole('button',{name:'Cortical Cataract',exact:true}).getAttribute('aria-pressed')==='true'){await lens.locator('[data-eye-panel="OD"]').getByRole('button',{name:'Cortical Cataract',exact:true}).click();if(await page.getByRole('button',{name:'Continue',exact:true}).isVisible())await page.getByRole('button',{name:'Continue',exact:true}).click();const [cleanReply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens')),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);assert.equal((await cleanReply).status(),200);}
   const second=await authenticated();await route(second);await openOcular(second);
   await route(page);await openOcular(page);
   const secondOD=second.locator('#structure-ocular-health-anterior-lens [data-eye-panel="OD"]');
   await secondOD.getByRole('button',{name:'Cortical Cataract',exact:true}).click();
-  reply=second.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'));
-  await second.getByRole('button',{name:'Save Ocular Health',exact:true}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([second.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens')),second.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);assert.equal((await reply).status(),200);
   const beforeDeselect=await api(page,path);
   const cortex=row=>row.key?.optionCode==='cortical-cataract'&&row.eye==='OD';
   const added=beforeDeselect.body.searchIndex.find(cortex);assert.equal(added.presence,'present');
   await lens.locator('[data-eye-panel="OD"]').getByRole('button',{name:'Nuclear Sclerosis',exact:true}).click();
   await page.getByRole('button',{name:'Continue',exact:true}).click();
   await screenshot(page,'d-pending-unrelated-deselect');
-  reply=page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000});reply.catch(()=>{});
-  await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000}),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);assert.equal((await reply).status(),200);
   const afterDeselect=await api(page,path);assert.deepEqual(afterDeselect.body.searchIndex.find(cortex).baseline,added.baseline);
   assert.notEqual(afterDeselect.body.searchIndex.find(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.eye==='OD').presence,'present');
   await route(page);await openOcular(page);await route(second);await openOcular(second);
   const grade=(target,value)=>target.locator('#structure-ocular-health-anterior-lens [data-eye-panel="OD"] [data-finding-row="cortical-cataract"]').getByRole('group',{name:'Grade',exact:true}).getByRole('button',{name:value,exact:true}).click();
   await grade(page,'1+');await grade(second,'3+');
-  reply=second.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'));
-  await second.getByRole('button',{name:'Save Ocular Health',exact:true}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([second.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens')),second.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);assert.equal((await reply).status(),200);
   const later=await api(second,path);
-  reply=page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000});reply.catch(()=>{});
-  await page.getByRole('button',{name:'Save Ocular Health',exact:true}).click();const conflict=await reply;assert.equal(conflict.status(),409);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000}),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);const conflict=await reply;assert.equal(conflict.status(),409);
   const afterConflict=await api(second,path);assert.deepEqual(afterConflict.body.searchIndex.find(cortex).baseline,later.body.searchIndex.find(cortex).baseline);assert.equal(afterConflict.body.searchIndex.find(cortex).qualifiers.grade,'3+');
   await screenshot(page,'d-two-context-stale-conflict');
   record({name:'d',status:'PASS',contexts:2,addition:added.baseline,afterUnrelatedDeselect:afterDeselect.body.searchIndex.find(cortex).baseline,laterValue:later.body.searchIndex.find(cortex),conflict:await conflict.json()});
   await route(page);await page.getByRole('button',{name:'By diagnosis',exact:true}).click();await page.locator('.odos-diagnosis-visit-row').first().click();
   await page.getByPlaceholder('Search findings').fill('nuclear sclerosis');
-  reply=page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings'));
-  await page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:/OD$/}).click();assert.equal((await reply).status(),200);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings')),page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:/OD$/}).click()]);assert.equal((await reply).status(),200);
   const sourceFacts=await nucleus();assert.equal(sourceFacts.filter(row=>row.presence==='present'&&row.homes.includes(state.conditionReference)).length,2);
   await route(page,fixture.destination);await page.getByRole('button',{name:'By diagnosis',exact:true}).click();
   for(let older=0;!await page.locator(`[data-source-condition-reference="${state.conditionReference}"]`).count()&&older<20;older++){const load=page.getByRole('button',{name:'Load older encounters',exact:true});assert.ok(await load.count(),'Source diagnosis must be reachable in actual Previous Exams paging');await load.click();await page.waitForLoadState('networkidle');}
@@ -158,8 +157,7 @@ try {
   const destinationPath=`/clinical-graph/encounters/${fixture.destination.slice(10)}`;
   const droppedCarry=await api(page,destinationPath+'/findings');
   await screenshot(page,'g-carry-unconfirmed');
-  reply=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===pullPath);
-  await page.getByRole('button',{name:'Finish carrying',exact:true}).click();const carriedReply=await reply;assert.equal(carriedReply.status(),200);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===pullPath),page.getByRole('button',{name:'Finish carrying',exact:true}).click()]);const carriedReply=await reply;assert.equal(carriedReply.status(),200);
   await page.getByRole('button',{name:'Finish carrying',exact:true}).waitFor({state:'detached'});page.off('request',trackPull);
   assert.equal(pullRequests.length,2);assert.equal(pullRequests[0],pullRequests[1]);
   const carry=await carriedReply.json();const carried=await api(page,destinationPath+'/findings');
@@ -170,22 +168,30 @@ try {
   result.carryProgress={identicalCarryRequest:true,carry,carriedFacts,overview:overviewBefore.body,completeness:completeBefore.body};writeFileSync(join(evidence,`${mode}-result.json`),JSON.stringify(result,null,2));
   await openOcular(page);await screenshot(page,'g-carried-OU');
   await page.getByRole('button',{name:'Clear Ocular Health',exact:true}).click();
-  reply=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void'&&!response.url().includes('preview'));
-  await page.getByRole('dialog').getByRole('button',{name:'Clear Ocular Health',exact:true}).click();const voidResponse=await reply;assert.equal(voidResponse.status(),200);const voided=await voidResponse.json();
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void'&&!response.url().includes('preview')),page.getByRole('alertdialog').getByRole('button',{name:'Clear Ocular Health',exact:true}).click()]);const voidResponse=await reply;assert.equal(voidResponse.status(),200);const voided=await voidResponse.json();
   await page.getByRole('button',{name:'Undo',exact:true}).first().waitFor();
   const afterVoid=await api(page,destinationPath+'/findings');assert.equal(afterVoid.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.presence==='present'&&row.status==='live').length,0);
   const overviewVoid=await api(page,destinationPath+'/exam-overview'),completeVoid=await api(page,destinationPath+'/diagnosis-completeness');
   const carriedOverview=body=>body.findings.filter(row=>row.findingKey==='ocular-health:anterior:lens'&&row.provenance.state==='carried-unreasserted');
   assert.equal(carriedOverview(overviewBefore.body).length,2);assert.ok(carriedOverview(overviewBefore.body).every(row=>row.creditsCompleteness===false));assert.equal(carriedOverview(overviewVoid.body).length,0);assert.deepEqual(completeVoid.body.diagnoses,[]);assert.deepEqual(completeBefore.body.diagnoses,[]);
   await screenshot(page,'g-section-void');
-  reply=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname===destinationPath+'/void/undo');
-  await page.getByRole('button',{name:'Undo',exact:true}).first().click();const undoneReply=await reply;assert.equal(undoneReply.status(),200);
+  const undoResult=await undoActualSection(page,destinationPath);
   const restored=await api(page,destinationPath+'/findings');const restoredFacts=restored.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.presence==='present'&&row.status==='live');assert.equal(restoredFacts.length,2);assert.deepEqual(restoredFacts.map(row=>row.baseline.reference).sort(),carriedFacts.map(row=>row.baseline.reference).sort());
   const overviewUndo=await api(page,destinationPath+'/exam-overview'),completeUndo=await api(page,destinationPath+'/diagnosis-completeness');
-  assert.equal(carriedOverview(overviewUndo.body).length,2);assert.ok(carriedOverview(overviewUndo.body).every(row=>row.creditsCompleteness===false));assert.deepEqual(completeUndo.body.diagnoses,[]);
+  const restoredOverview=overviewUndo.body.findings.filter(row=>row.findingKey==='ocular-health:anterior:lens'&&row.provenance.state==='current');assert.equal(restoredOverview.length,2);assert.ok(restoredOverview.every(row=>row.creditsCompleteness===false));assert.deepEqual(completeUndo.body.diagnoses,[]);
   await screenshot(page,'g-section-undo');
-  record({name:'g',status:'PASS',completenessLimitation:'Shipped nuclear cataract has no configured keyFindings; exact missing-requirement arrays remain empty, so this scenario does not prove a diagnosis-completeness transition. Carried findings remain explicitly uncredited throughout.',identicalCarryRequest:true,carry,carriedFacts,voided,undo:await undoneReply.json(),restoredFacts,overview:{before:overviewBefore.body,void:overviewVoid.body,undo:overviewUndo.body},completeness:{before:completeBefore.body,void:completeVoid.body,undo:completeUndo.body}});
+  record({name:'g',status:'PASS',completenessLimitation:'Shipped nuclear cataract has no configured keyFindings; exact missing-requirement arrays remain empty, so this scenario does not prove a diagnosis-completeness transition. Findings remain explicitly uncredited throughout; after Undo their advanced versions read current/edited per W75/W126.',identicalCarryRequest:true,carry,carriedFacts,voided,undo:undoResult,restoredFacts,overview:{before:overviewBefore.body,void:overviewVoid.body,undo:overviewUndo.body},completeness:{before:completeBefore.body,void:completeVoid.body,undo:completeUndo.body}});
 
+ }
+ if(mode==='undo-only') {
+  const previous=JSON.parse(readFileSync(join(evidence,'final-result.json'),'utf8'));assert.ok(previous.carryProgress);
+  await route(page,fixture.destination);await openOcular(page);
+  const prefix=`/clinical-graph/encounters/${fixture.destination.slice(10)}`;
+  const before=await api(page,prefix+'/findings');assert.equal(before.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.status==='live'&&row.presence==='present').length,0);
+  const undo=await undoActualSection(page,prefix);
+  const after=await api(page,prefix+'/findings');const facts=after.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.status==='live'&&row.presence==='present');assert.equal(facts.length,2);assert.deepEqual(facts.map(row=>row.baseline.reference).sort(),previous.carryProgress.carriedFacts.map(row=>row.baseline.reference).sort());
+  const overview=await api(page,prefix+'/exam-overview');const carried=overview.body.findings.filter(row=>row.findingKey==='ocular-health:anterior:lens'&&row.provenance.state==='current');assert.equal(carried.length,2);assert.ok(carried.every(row=>row.creditsCompleteness===false));
+  await page.locator('#structure-ocular-health-anterior-lens').scrollIntoViewIfNeeded();await screenshot(page,'g-section-undo');record({name:'g-undo-continuation',status:'PASS',sourceResult:'final-result.json',undo,restoredFacts:facts,overview:overview.body,completeness:await api(page,prefix+'/diagnosis-completeness')});
  }
  if(mode==='before') {
   let payload=await api(page,`/clinical-graph/encounters/${fixture.current.slice(10)}/findings`);
@@ -200,8 +206,7 @@ try {
   await route(page);await page.getByRole('button',{name:'By diagnosis',exact:true}).click();
   await page.locator('.odos-diagnosis-visit-row').filter({hasText:pick.body.condition.code.text}).first().click();
   await page.getByPlaceholder('Search findings').fill('nuclear sclerosis');
-  const assertResponse=page.waitForResponse(response=>response.request().method()==='PUT' && response.url().endsWith('/findings'));
-  await page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:'nuclear sclerosis'}).first().click();
+  const [assertResponse]=await Promise.all([page.waitForResponse(response=>response.request().method()==='PUT' && response.url().endsWith('/findings')),page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:'nuclear sclerosis'}).first().click()]);
   const written=await assertResponse;assert.equal(written.status(),200,await written.text());
   payload=await api(page,`/clinical-graph/encounters/${fixture.current.slice(10)}/findings`);
   const facts=payload.body.searchIndex.filter(row=>row.key?.optionCode==='nuclear-sclerosis'&&row.status==='live'&&row.presence==='present');assert.equal(facts.length,2);
