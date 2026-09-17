@@ -32,7 +32,7 @@ SHA-256 of each file, in hexadecimal bytes. Concatenate the byte pairs to recove
 
 | File | SHA-256 bytes |
 |---|---|
-| MUTATION-RESULTS.md | `dc bc 1d 5f 2e a4 74 c9 a8 49 f3 72 18 86 50 43 5e f5 47 7b 14 62 86 51 87 a6 2b 2b f0 13 6d 8f` |
+| MUTATION-RESULTS.md | `ae a5 92 96 20 b9 8b 42 6f 45 8e b2 8e 14 56 ea 5b 15 38 5a 2b 0c be 10 2b c9 79 75 da 92 95 c7` |
 | anonymous.body | `c2 85 a5 b8 71 ff fa f3 18 77 38 24 9e f3 62 c1 85 63 23 d0 54 33 63 1d 96 38 2b 48 56 80 ec 20` |
 | anonymous.response.json | `58 92 13 5d 83 bf 1f ea ab 69 fb f9 9c f7 f9 9b a9 ac 52 4c ad 45 be 8e 97 27 61 52 0d 22 2f 8b` |
 | before-absence.body | `28 c9 b9 c9 8d 26 27 b7 f8 bd aa f7 88 a2 e6 3d c9 fc 75 0d d9 52 d0 50 8c c1 5b d7 32 3e e3 9e` |

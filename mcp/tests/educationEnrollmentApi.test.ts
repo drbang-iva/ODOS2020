@@ -1635,8 +1635,23 @@ test("O1 seed catalog staff status and refresh are gated and rate limited", asyn
       assert.equal((await response.json()).state, "seed-placeholder");
     }
     let status = 0;
-    for (let i = 0; i < 10; i++) status = (await request(fixture.base, "/communications/education/catalog/refresh", "POST")).status;
+    for (let i = 0; i < 120; i++) {
+      status = (await request(fixture.base, "/communications/education/catalog/refresh", "POST")).status;
+      assert.equal(status, i >= 118 ? 429 : 200, `refresh attempt ${i + 2}`);
+    }
     assert.equal(status, 429);
+  } finally { await fixture.close(); }
+});
+
+test("G26 staff read resolves the highest retained version and hides a withdrawn-only item", async () => {
+  const catalog = await capturedLifecycleCatalog(); await catalog.retire();
+  const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+  try {
+    const retained = await request(fixture.base, "/communications/education/history", "GET");
+    assert.equal(retained.status, 200);
+    assert.equal((await retained.json()).item.version, 2);
+    const withdrawn = await request(fixture.base, "/communications/education/withdrawn", "GET");
+    assert.equal(withdrawn.status, 404);
   } finally { await fixture.close(); }
 });
 

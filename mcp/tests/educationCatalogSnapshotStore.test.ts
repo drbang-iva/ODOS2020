@@ -4,10 +4,11 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { PgEducationCatalogSnapshotStore } from '../src/comms/education-catalog-snapshot-store.js';
 
-test('snapshot persistence keeps accepted evidence and local copy unchanged on refusal and 304', {
-  skip: !process.env.ODOS_CATALOG_TEST_POSTGRES_URL,
-}, async () => {
-  const store = new PgEducationCatalogSnapshotStore({ postgresUrl: process.env.ODOS_CATALOG_TEST_POSTGRES_URL });
+const postgresUrl = process.env.ODOS_POSTGRES_URL
+  ?? 'postgresql://medplum:medplum@127.0.0.1:5433/medplum';
+
+test('snapshot persistence keeps accepted evidence and local copy unchanged on refusal and 304', async () => {
+  const store = new PgEducationCatalogSnapshotStore({ postgresUrl });
   const practiceId = `store-${randomUUID()}`;
   const envelope = JSON.parse(readFileSync(new URL('./fixtures/visionforge-education-catalog/catalog.body', import.meta.url), 'utf8'));
   const localCopy = envelope.entries.map((entry: object) => ({ ...entry, absentUpstream: false, asOf: envelope.asOf }));
@@ -30,7 +31,7 @@ test('snapshot persistence keeps accepted evidence and local copy unchanged on r
       assert.equal(next?.lastAttemptOutcome, outcome);
       assert.equal(next?.lastRefusalCode, refusalCode);
     }
-    const restarted = new PgEducationCatalogSnapshotStore({ postgresUrl: process.env.ODOS_CATALOG_TEST_POSTGRES_URL });
+    const restarted = new PgEducationCatalogSnapshotStore({ postgresUrl });
     try { assert.deepEqual((await restarted.load(practiceId))?.localCopy, localCopy); }
     finally { await restarted.close(); }
   } finally { await store.close(); }

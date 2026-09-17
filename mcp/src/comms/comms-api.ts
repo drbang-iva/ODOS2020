@@ -496,7 +496,7 @@ export function registerCommsApiRoutes(
     req, res, deps, "communications.read", "Basic", "communications-education-catalog-status", undefined,
     async () => ({ status: 200, body: catalogStatus() }),
   ));
-  const catalogRefreshLimit = rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
+  const catalogRefreshLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false });
   app.post("/communications/education/catalog/refresh", catalogRefreshLimit, async (req, res) => withStaff(
     req, res, deps, "communications.content.read", "Basic", "communications-education-catalog-refresh", undefined,
     async () => {

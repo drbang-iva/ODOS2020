@@ -68,7 +68,8 @@ export function createEducationCatalogFromEnv(
   let base: URL | undefined;
   try {
     base = new URL(env.VISIONFORGE_BASE_URL ?? "");
-    if (!["http:", "https:"].includes(base.protocol) || base.username || base.password || base.search || base.hash) invalid.add(names[0]);
+    const loopbackHttp = base.protocol === "http:" && (base.hostname === "127.0.0.1" || base.hostname === "[::1]");
+    if (!(base.protocol === "https:" || loopbackHttp) || base.username || base.password || base.search || base.hash) invalid.add(names[0]);
   } catch { invalid.add(names[0]); }
   if (!/^[A-Za-z0-9_-]+$/.test(env.VISIONFORGE_PRACTICE_ID ?? "") || env.VISIONFORGE_PRACTICE_ID === "platform") invalid.add(names[1]);
   if (/\s/.test(env.VISIONFORGE_SEAM_TOKEN ?? "")) invalid.add(names[2]);
@@ -90,22 +91,29 @@ export function createVisionForgeEducationCatalogReader(
 ): EducationCatalogRuntime {
   const verifiedCodes = new Set(loadDefaultEducationCatalogLedger().diagnosisCodes.map(({ code }) => code));
   let snapshot: EducationCatalogSnapshot | undefined;
+  let baseline: "unloaded" | "loaded" | "absent" | "failed" = "unloaded";
   let attempt: Pick<EducationCatalogStatus, "lastAttemptAt" | "lastAttemptOutcome" | "lastRefusalCode"> = { lastAttemptAt: null, lastAttemptOutcome: null, lastRefusalCode: null };
   let readyPromise: Promise<void> | undefined;
   let inFlight: Promise<RefreshResult> | undefined;
-  function ready(): Promise<void> {
-    return readyPromise ??= (async () => {
-      try {
-        const row = await store.load(config.practiceId);
-        if (row) {
-          localCopySchema.parse(row.localCopy);
-          if (row.practiceId !== config.practiceId) throw new Error("Stored practice mismatch");
-          snapshot = structuredClone(row);
-          attempt = { lastAttemptAt: row.lastAttemptAt, lastAttemptOutcome: row.lastAttemptOutcome, lastRefusalCode: row.lastRefusalCode };
-        }
-      } catch { snapshot = undefined; }
-    })();
+  async function loadBaseline(): Promise<void> {
+    try {
+      const row = await store.load(config.practiceId);
+      if (row) {
+        localCopySchema.parse(row.localCopy);
+        if (row.practiceId !== config.practiceId) throw new Error("Stored practice mismatch");
+        snapshot = structuredClone(row);
+        attempt = { lastAttemptAt: row.lastAttemptAt, lastAttemptOutcome: row.lastAttemptOutcome, lastRefusalCode: row.lastRefusalCode };
+        baseline = "loaded";
+      } else {
+        snapshot = undefined;
+        baseline = "absent";
+      }
+    } catch {
+      snapshot = undefined;
+      baseline = "failed";
+    }
   }
+  function ready(): Promise<void> { return readyPromise ??= loadBaseline(); }
   async function recordAttempt(outcome: "refused" | "not-modified", refusalCode: string | null, at: string): Promise<RefreshResult> {
     attempt = { lastAttemptAt: at, lastAttemptOutcome: outcome, lastRefusalCode: refusalCode };
     try { await store.recordAttempt(config.practiceId, { at, outcome, refusalCode }); }
@@ -146,6 +154,11 @@ export function createVisionForgeEducationCatalogReader(
   async function refreshOnce(): Promise<RefreshResult> {
     await ready();
     const at = new Date().toISOString();
+    if (baseline === "failed" || baseline === "unloaded") await loadBaseline();
+    if (baseline === "failed" || baseline === "unloaded") {
+      attempt = { lastAttemptAt: at, lastAttemptOutcome: "refused", lastRefusalCode: "storage-unavailable" };
+      return { outcome: "refused", refusalCode: "storage-unavailable" };
+    }
     const signal = AbortSignal.timeout(10_000);
     let response: Response; let input: unknown;
     try {
@@ -173,7 +186,7 @@ export function createVisionForgeEducationCatalogReader(
     refresh: () => inFlight ??= refreshOnce().finally(() => { inFlight = undefined; }),
     list: () => structuredClone((snapshot?.localCopy ?? []).filter(entry => effectiveLifecycle(entry) === "active").map(entry => entry.item)),
     get(id, version) {
-      const candidates = (snapshot?.localCopy ?? []).filter(entry => entry.item.id === id && (version === undefined ? effectiveLifecycle(entry) === "active" : entry.item.version === version && effectiveLifecycle(entry) !== "withdrawn"));
+      const candidates = (snapshot?.localCopy ?? []).filter(entry => entry.item.id === id && (version === undefined ? effectiveLifecycle(entry) !== "withdrawn" : entry.item.version === version && effectiveLifecycle(entry) !== "withdrawn"));
       const selected = candidates.sort((a, b) => b.item.version - a.item.version)[0];
       return selected ? structuredClone(selected.item) : undefined;
     },
