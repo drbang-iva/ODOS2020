@@ -23,5 +23,10 @@
     "file": "fixback/ruling-base-education-repeat.txt",
     "original": "ba89443ce9b41bdff1d85a1d2f54b9ed775a6fe12532a049ed96f8885cd889e8",
     "readable": "f4855edeeb0e9623ecfb94f879a48040e8d658444178fdfd5bab9b57423a566f"
+  },
+  {
+    "file": "fixback/ruling-mcp-build.txt",
+    "original": "79d812332743de9cbe0b1e9272d1388f2cdcf7d56abdac8397b03137a4312914",
+    "readable": "f4a3e7c1853fb7b196a03ff575fbf4d2b86badcac7b13943b03775032c3c4c54"
   }
 ]
