@@ -1,0 +1,1151 @@
+{
+  "row": "V27",
+  "before": "Missing expectations; fallback to c.result",
+  "after": {
+    "1": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "findings": [
+        {
+          "observationReference": "Observation/custom-deferred",
+          "findingKey": "ocular-health:anterior:cornea",
+          "sectionKey": "ocular-health:anterior:cornea",
+          "display": "ocular-health:anterior:cornea",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "deferred-with-reason",
+            "reason": "Unable to position",
+            "sourceEncoding": "exam-state"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "deferred"
+                }
+              },
+              {
+                "code": "OTHER",
+                "value": {
+                  "kind": "string",
+                  "value": "Unable to position"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "observationReference": "Observation/dilation-declined",
+          "findingKey": "entrance:dilation",
+          "sectionKey": "entrance:dilation",
+          "display": "entrance:dilation",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "deferred-with-reason",
+            "reason": "Patient is driving",
+            "sourceEncoding": "dilation-declined"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "COUNSELED_RISKS",
+                "value": {
+                  "kind": "string",
+                  "value": "Retinal warning signs reviewed"
+                }
+              },
+              {
+                "code": "DECLINE_REASON",
+                "value": {
+                  "kind": "string",
+                  "value": "Patient is driving"
+                }
+              },
+              {
+                "code": "DILATION_DECLINED",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "observationReference": "Observation/iop-not-visualized",
+          "findingKey": "intraocular_pressure",
+          "sectionKey": "tonometry",
+          "display": "intraocular_pressure",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "deferred-without-reason",
+            "sourceEncoding": "not-visualized-json"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "json",
+              "value": {
+                "notVisualized": true,
+                "date": "2026-08-16"
+              }
+            },
+            "components": []
+          }
+        },
+        {
+          "observationReference": "Observation/cup-disc-not-visualized",
+          "findingKey": "cup_disc_ratio",
+          "sectionKey": "optic-nerve",
+          "display": "cup_disc_ratio",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "deferred-without-reason",
+            "sourceEncoding": "not-visualized-json"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "json",
+              "value": {
+                "notVisualized": true,
+                "discAppearanceDescriptors": []
+              }
+            },
+            "components": []
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "2": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "limited",
+      "findings": [
+        {
+          "observationReference": "Observation/lids",
+          "findingKey": "ocular-health:anterior:lids-lashes",
+          "sectionKey": "ocular-health:anterior:lids-lashes",
+          "display": "ocular-health:anterior:lids-lashes",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": []
+          }
+        }
+      ],
+      "sections": [
+        {
+          "sectionKey": "ocular-health",
+          "label": "Ocular Health",
+          "state": "partial",
+          "findingObservationReferences": [
+            "Observation/lids"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "requiredSectionCount": 1,
+        "resolvedSectionCount": 0,
+        "trace": [
+          {
+            "sectionKey": "ocular-health",
+            "label": "Ocular Health",
+            "state": "partial",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          }
+        ],
+        "documentationIssues": []
+      }
+    },
+    "10": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "findings": [
+        {
+          "observationReference": "Observation/lids",
+          "findingKey": "ocular-health:anterior:lids-lashes",
+          "sectionKey": "ocular-health:anterior:lids-lashes",
+          "display": "ocular-health:anterior:lids-lashes",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": []
+          }
+        },
+        {
+          "observationReference": "Observation/cornea",
+          "findingKey": "ocular-health:anterior:cornea",
+          "sectionKey": "ocular-health:anterior:cornea",
+          "display": "ocular-health:anterior:cornea",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": []
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "11": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "findings": [
+        {
+          "observationReference": "Observation/iop-current",
+          "findingKey": "intraocular_pressure",
+          "sectionKey": "tonometry",
+          "display": "intraocular_pressure",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "quantity",
+              "value": 18,
+              "unit": "mmHg",
+              "code": "mm[Hg]"
+            },
+            "components": []
+          },
+          "prior": {
+            "recordedAt": "2026-07-10T12:00:00.000Z",
+            "value": {
+              "kind": "quantity",
+              "value": 15,
+              "unit": "mmHg",
+              "code": "mm[Hg]"
+            },
+            "components": []
+          },
+          "changeFromPrior": {
+            "kind": "numeric",
+            "delta": 3,
+            "unit": "mmHg"
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "12": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "exams",
+      "findings": [
+        {
+          "observationReference": "Observation/history",
+          "findingKey": "hpi_ros",
+          "sectionKey": "hpi",
+          "display": "hpi_ros",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "string",
+              "value": "Routine examination"
+            },
+            "components": []
+          }
+        },
+        {
+          "observationReference": "Observation/entrance",
+          "findingKey": "entrance:pupils",
+          "sectionKey": "entrance:pupils",
+          "display": "entrance:pupils",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "deferred-without-reason",
+            "sourceEncoding": "exam-state"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "deferred"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "observationReference": "Observation/entrance-examined",
+          "findingKey": "entrance:pupils",
+          "sectionKey": "entrance:pupils",
+          "display": "entrance:pupils",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "normal"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "observationReference": "Observation/refraction",
+          "findingKey": "refraction",
+          "sectionKey": "refraction",
+          "display": "refraction",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "string",
+              "value": "Manifest"
+            },
+            "components": []
+          }
+        },
+        {
+          "observationReference": "Observation/pretest",
+          "findingKey": "wearing_rx",
+          "sectionKey": "wearing",
+          "display": "wearing_rx",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "string",
+              "value": "Current glasses"
+            },
+            "components": []
+          }
+        },
+        {
+          "observationReference": "Observation/ocular-health",
+          "findingKey": "ocular-health:anterior:cornea",
+          "sectionKey": "ocular-health:anterior:cornea",
+          "display": "ocular-health:anterior:cornea",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "normal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sections": [
+        {
+          "sectionKey": "history",
+          "label": "History",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/history"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "entrance",
+          "label": "Entrance",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/entrance",
+            "Observation/entrance-examined"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 1
+        },
+        {
+          "sectionKey": "refraction",
+          "label": "Refraction",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/refraction"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "pretest",
+          "label": "Pretest",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/pretest"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "ocular-health",
+          "label": "Ocular Health",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/ocular-health"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "assessment",
+          "label": "Assessment",
+          "state": "examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        }
+      ],
+      "completeness": {
+        "status": "complete",
+        "requiredSectionCount": 6,
+        "resolvedSectionCount": 6,
+        "trace": [
+          {
+            "sectionKey": "history",
+            "label": "History",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "entrance",
+            "label": "Entrance",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "refraction",
+            "label": "Refraction",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "pretest",
+            "label": "Pretest",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "ocular-health",
+            "label": "Ocular Health",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "assessment",
+            "label": "Assessment",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          }
+        ],
+        "documentationIssues": [
+          {
+            "sectionKey": "entrance",
+            "issue": "deferred-reason-missing"
+          }
+        ]
+      }
+    },
+    "13": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "exams",
+      "findings": [
+        {
+          "observationReference": "Observation/history",
+          "findingKey": "hpi_ros",
+          "sectionKey": "hpi",
+          "display": "hpi_ros",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "carried-unreasserted",
+            "sourceDate": "2026-07-10"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "string",
+              "value": "Carried history"
+            },
+            "components": []
+          }
+        }
+      ],
+      "sections": [
+        {
+          "sectionKey": "history",
+          "label": "History",
+          "state": "not-examined",
+          "findingObservationReferences": [
+            "Observation/history"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 1,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "entrance",
+          "label": "Entrance",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "refraction",
+          "label": "Refraction",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "pretest",
+          "label": "Pretest",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "ocular-health",
+          "label": "Ocular Health",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "assessment",
+          "label": "Assessment",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "requiredSectionCount": 6,
+        "resolvedSectionCount": 0,
+        "trace": [
+          {
+            "sectionKey": "history",
+            "label": "History",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 1
+          },
+          {
+            "sectionKey": "entrance",
+            "label": "Entrance",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "refraction",
+            "label": "Refraction",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "pretest",
+            "label": "Pretest",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "ocular-health",
+            "label": "Ocular Health",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "assessment",
+            "label": "Assessment",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          }
+        ],
+        "documentationIssues": []
+      }
+    },
+    "14": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "exams",
+      "findings": [
+        {
+          "observationReference": "Observation/history",
+          "findingKey": "hpi_ros",
+          "sectionKey": "hpi",
+          "display": "hpi_ros",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "carried-reasserted",
+            "sourceDate": "2026-07-10"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "value": {
+              "kind": "string",
+              "value": "Carried history"
+            },
+            "components": []
+          }
+        }
+      ],
+      "sections": [
+        {
+          "sectionKey": "history",
+          "label": "History",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/history"
+          ],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "entrance",
+          "label": "Entrance",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "refraction",
+          "label": "Refraction",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "pretest",
+          "label": "Pretest",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "ocular-health",
+          "label": "Ocular Health",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "assessment",
+          "label": "Assessment",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "requiredSectionCount": 6,
+        "resolvedSectionCount": 1,
+        "trace": [
+          {
+            "sectionKey": "history",
+            "label": "History",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "entrance",
+            "label": "Entrance",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "refraction",
+            "label": "Refraction",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "pretest",
+            "label": "Pretest",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "ocular-health",
+            "label": "Ocular Health",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          },
+          {
+            "sectionKey": "assessment",
+            "label": "Assessment",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          }
+        ],
+        "documentationIssues": []
+      }
+    },
+    "15": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "limited",
+      "findings": [
+        {
+          "observationReference": "Observation/iop-abnormal",
+          "findingKey": "intraocular_pressure",
+          "sectionKey": "tonometry",
+          "display": "intraocular_pressure",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "abnormal",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": []
+          }
+        },
+        {
+          "observationReference": "Observation/iop-borderline",
+          "findingKey": "intraocular_pressure",
+          "sectionKey": "tonometry",
+          "display": "intraocular_pressure",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "borderline",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": []
+          }
+        }
+      ],
+      "sections": [
+        {
+          "sectionKey": "pretest",
+          "label": "Pretest",
+          "state": "examined",
+          "findingObservationReferences": [
+            "Observation/iop-abnormal",
+            "Observation/iop-borderline"
+          ],
+          "abnormalCount": 1,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        }
+      ],
+      "completeness": {
+        "status": "complete",
+        "requiredSectionCount": 1,
+        "resolvedSectionCount": 1,
+        "trace": [
+          {
+            "sectionKey": "pretest",
+            "label": "Pretest",
+            "state": "examined",
+            "resolved": true,
+            "carriedUnreassertedCount": 0
+          }
+        ],
+        "documentationIssues": []
+      }
+    },
+    "16": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "findings": [
+        {
+          "observationReference": "Observation/cup-disc-equivocal",
+          "findingKey": "cup_disc_ratio",
+          "sectionKey": "ocular-health",
+          "display": "cup_disc_ratio",
+          "laterality": "UNKNOWN",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "borderline",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": []
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "17": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "diagnostic-only",
+      "findings": [],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "18": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "constructor",
+      "findings": [],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "19": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "visitTypeCategoryId": "limited",
+      "findings": [],
+      "sections": [
+        {
+          "sectionKey": "history",
+          "label": "History",
+          "state": "not-examined",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        },
+        {
+          "sectionKey": "refraction",
+          "label": "Refraction",
+          "state": "not-indicated",
+          "findingObservationReferences": [],
+          "abnormalCount": 0,
+          "carriedUnreassertedCount": 0,
+          "deferredWithoutReasonCount": 0
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "requiredSectionCount": 1,
+        "resolvedSectionCount": 0,
+        "trace": [
+          {
+            "sectionKey": "history",
+            "label": "History",
+            "state": "not-examined",
+            "resolved": false,
+            "carriedUnreassertedCount": 0
+          }
+        ],
+        "documentationIssues": []
+      }
+    },
+    "20": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "findings": [
+        {
+          "observationReference": "Observation/cvf-od",
+          "findingKey": "entrance:cvf",
+          "sectionKey": "entrance:cvf",
+          "display": "entrance:cvf",
+          "laterality": "OD",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "normal"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "observationReference": "Observation/pupils-od",
+          "findingKey": "entrance:pupils",
+          "sectionKey": "entrance:pupils",
+          "display": "entrance:pupils",
+          "laterality": "OD",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "normal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "21": {
+      "encounterReference": "Encounter/e1",
+      "patientReference": "Patient/p1",
+      "findings": [
+        {
+          "observationReference": "Observation/pupils-od",
+          "findingKey": "entrance:pupils",
+          "sectionKey": "entrance:pupils",
+          "display": "entrance:pupils",
+          "laterality": "OD",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "current"
+          },
+          "current": {
+            "recordedAt": "2026-08-16T12:00:00.000Z",
+            "components": [
+              {
+                "code": "EXAM_STATE",
+                "value": {
+                  "kind": "string",
+                  "value": "normal"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    }
+  }
+}

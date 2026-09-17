@@ -1,0 +1,14 @@
+{
+  "name": "parity",
+  "file": "mcp/tests/r10-parity.test.ts",
+  "anchor": "  \"1\": {\"encounterReference\":\"Encounter/e1\",\"patientReference\":\"Patient/p1\",\"findings\":[{\"observationReference\":\"Observation/custom-deferred\",\"findingKey\":\"ocular-health:anterior:cornea\",\"sectionKey\":\"ocular-health:anterior:cornea\",\"display\":\"ocular-health:anterior:cornea\",\"laterality\":\"UNKNOWN\",\"examination\":{\"state\":\"deferred-with-reason\",\"reason\":\"Unable to position\",\"sourceEncoding\":\"exam-state\"},\"interpretation\":\"unknown\",\"provenance\":{\"state\":\"current\"},\"current\":{\"recordedAt\":\"2026-08-16T12:00:00.000Z\",\"components\":[{\"code\":\"EXAM_STATE\",\"value\":{\"kind\":\"string\",\"value\":\"deferred\"}},{\"code\":\"OTHER\",\"value\":{\"kind\":\"string\",\"value\":\"Unable to position\"}}]}},{\"observationReference\":\"Observation/dilation-declined\",\"findingKey\":\"entrance:dilation\",\"sectionKey\":\"entrance:dilation\",\"display\":\"entrance:dilation\",\"laterality\":\"UNKNOWN\",\"examination\":{\"state\":\"deferred-with-reason\",\"reason\":\"Patient is driving\",\"sourceEncoding\":\"dilation-declined\"},\"interpretation\":\"unknown\",\"provenance\":{\"state\":\"current\"},\"current\":{\"recordedAt\":\"2026-08-16T12:00:00.000Z\",\"components\":[{\"code\":\"COUNSELED_RISKS\",\"value\":{\"kind\":\"string\",\"value\":\"Retinal warning signs reviewed\"}},{\"code\":\"DECLINE_REASON\",\"value\":{\"kind\":\"string\",\"value\":\"Patient is driving\"}},{\"code\":\"DILATION_DECLINED\",\"value\":{\"kind\":\"boolean\",\"value\":true}}]}},{\"observationReference\":\"Observation/iop-not-visualized\",\"findingKey\":\"intraocular_pressure\",\"sectionKey\":\"tonometry\",\"display\":\"intraocular_pressure\",\"laterality\":\"UNKNOWN\",\"examination\":{\"state\":\"deferred-without-reason\",\"sourceEncoding\":\"not-visualized-json\"},\"interpretation\":\"unknown\",\"provenance\":{\"state\":\"current\"},\"current\":{\"recordedAt\":\"2026-08-16T12:00:00.000Z\",\"value\":{\"kind\":\"json\",\"value\":{\"notVisualized\":true,\"date\":\"2026-08-16\"}},\"components\":[]}},{\"observationReference\":\"Observation/cup-disc-not-visualized\",\"findingKey\":\"cup_disc_ratio\",\"sectionKey\":\"optic-nerve\",\"display\":\"cup_disc_ratio\",\"laterality\":\"UNKNOWN\",\"examination\":{\"state\":\"deferred-without-reason\",\"sourceEncoding\":\"not-visualized-json\"},\"interpretation\":\"unknown\",\"provenance\":{\"state\":\"current\"},\"current\":{\"recordedAt\":\"2026-08-16T12:00:00.000Z\",\"value\":{\"kind\":\"json\",\"value\":{\"notVisualized\":true,\"discAppearanceDescriptors\":[]}},\"components\":[]}}],\"sections\":[],\"completeness\":{\"status\":\"unconfigured\",\"requiredSectionCount\":0,\"resolvedSectionCount\":0,\"trace\":[],\"documentationIssues\":[]}},\n",
+  "replacement": "",
+  "cwd": "mcp",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "tests/r10-parity.test.ts"
+  ]
+}

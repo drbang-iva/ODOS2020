@@ -1,13 +1,14 @@
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {loadVerifiedOperatorFhirClient} from '../operator-identity.ts';
-const root=resolve(new URL('../..',import.meta.url).pathname),runtime=join(root,'.odos/r10-a3-2-served');
+const root=resolve(fileURLToPath(new URL('../..',import.meta.url))),runtime=join(root,'.odos/r10-a3-2-served');
 const read=name=>JSON.parse(readFileSync(join(runtime,name),'utf8'));
 const manifest=read('manifest.json'),credentials=read('credentials.json'),fixture=read('fixture.json');
 assert.equal(manifest.project,'odos-r10-a3-2-served');
-const evidence=join(root,'docs/evidence/r10-a3-2/served-route/screens');mkdirSync(evidence,{recursive:true});
+const evidence=join(process.env.R10_EVIDENCE ?? join(root,'docs/evidence/r10-a3-2'),'served-route/screens');mkdirSync(evidence,{recursive:true});
 const operator=await loadVerifiedOperatorFhirClient({baseUrl:`http://127.0.0.1:${manifest.ports.medplum}`,projectId:credentials.projectId,postgresUrl:`postgresql://medplum:medplum@127.0.0.1:${manifest.ports.postgres}/medplum`,credentialPath:join(runtime,'operator.env'),statePath:join(runtime,'operator-state.json')});
 const template=await operator.fhir.read('Encounter',fixture.current.slice(10));
 const {id,meta,identifier,diagnosis,...body}=template;
@@ -15,7 +16,7 @@ const encounter=await operator.fhir.create({...body,status:'in-progress',period:
 const encounterReference=`Encounter/${encounter.id}`;
 const result={build:read('identity.json'),encounterReference,initialVersion:encounter.meta.versionId,steps:[],screenshots:[]};
 const require=createRequire(join(root,'ui/package.json'));const {chromium}=require('playwright-core');
-const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const browser=await chromium.launch({executablePath:process.env.R10_CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
 const page=await browser.newPage({viewport:{width:1600,height:1100}});page.setDefaultTimeout(20000);
 const base=`http://127.0.0.1:${manifest.ports.frontdoor}`;
 async function api(path,method='GET',body){return page.evaluate(async ({path,method,body})=>{const session=JSON.parse(sessionStorage.getItem('odos.session.v1'));const r=await fetch(path,{method,headers:{Authorization:`Bearer ${session.accessToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};},{path,method,body});}

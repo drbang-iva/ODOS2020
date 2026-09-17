@@ -1,0 +1,15 @@
+{
+  "name": "negative-act",
+  "file": "ui/src/components/charting/OcularHealthSection.tsx",
+  "anchor": "      const act = prior.negativeAct;\n      const pending = act && act.id !== pristineRef.current[stableKey]?.[eye].negativeAct?.id;\n      const contradictsAct = pending && (next.state !== \"normal\" || Boolean(next.other.trim()) ||\n        next.selections.some(code => !prior.selections.includes(code) && act.optionCodes.includes(code) && !act.exclusions.includes(code)));\n      next.negativeAct = contradictsAct ? undefined : act;\n",
+  "replacement": "      next.negativeAct = prior.negativeAct?.id === pristineRef.current[stableKey]?.[eye].negativeAct?.id ? prior.negativeAct : undefined;\n",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=W133 pending",
+    "tests/r10A3OcularEditor.test.tsx"
+  ]
+}

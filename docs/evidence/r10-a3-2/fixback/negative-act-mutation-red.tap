@@ -1,0 +1,120 @@
+TAP version 13
+# Subtest: W133 pending All Normal survives remarks with the same act id
+not ok 1 - W133 pending All Normal survives remarks with the same act id
+  ---
+  duration_ms: 27.710333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:12881'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - '4ede9dc2-dca4-4045-a8bb-dda2132eaef5'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '4ede9dc2-dca4-4045-a8bb-dda2132eaef5'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:130:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W133 pending All Normal survives measurement with the same act id
+not ok 2 - W133 pending All Normal survives measurement with the same act id
+  ---
+  duration_ms: 7.303833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:12881'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'e81ab2c9-1121-42e6-bada-58ab10022b46'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'e81ab2c9-1121-42e6-bada-58ab10022b46'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:130:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W133 pending All Normal survives grade with the same act id
+not ok 3 - W133 pending All Normal survives grade with the same act id
+  ---
+  duration_ms: 7.893542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:12881'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - '1bd860ae-f4e4-4720-a048-7a78a2994967'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1bd860ae-f4e4-4720-a048-7a78a2994967'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:130:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W133 pending All Normal survives Other cleared with the same act id
+not ok 4 - W133 pending All Normal survives Other cleared with the same act id
+  ---
+  duration_ms: 4.762625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:12881'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'fafa4b56-0cc4-4254-b895-c9b64cb9e0d9'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'fafa4b56-0cc4-4254-b895-c9b64cb9e0d9'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:130:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W133 pending All Normal is dropped after scoped positive
+ok 5 - W133 pending All Normal is dropped after scoped positive
+  ---
+  duration_ms: 4.193334
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after Other text
+ok 6 - W133 pending All Normal is dropped after Other text
+  ---
+  duration_ms: 3.3975
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after deferred
+ok 7 - W133 pending All Normal is dropped after deferred
+  ---
+  duration_ms: 4.309166
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 3
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 313.813959

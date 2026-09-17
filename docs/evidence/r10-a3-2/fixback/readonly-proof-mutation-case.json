@@ -1,0 +1,12 @@
+{
+  "name": "readonly-proof",
+  "file": "scripts/r10-served-route/readonly-proof.mjs",
+  "anchor": "resolve(fileURLToPath(new URL('../..',import.meta.url)))",
+  "replacement": "resolve(new URL('../..',import.meta.url).pathname)",
+  "command": [
+    "node",
+    "--test",
+    "--test-name-pattern=W146 readonly-proof resolves",
+    "scripts/r10-served-route/harness.test.mjs"
+  ]
+}

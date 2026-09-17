@@ -1,6 +1,6 @@
 # R10 A3.2 disposable served route harness
 
-Run from the task checkout. Requires Docker, Docker Compose (`docker compose` or `docker-compose`), Node with installed repo dependencies, and Caddy. This harness never reads the checkout's `.env` files into its processes.
+Run from the task checkout. Requires Docker, Docker Compose (`docker compose` or `docker-compose`), Node with installed repo dependencies, and Caddy. Browser proofs also require an installed Chrome/Chromium executable. Set `R10_CHROME=/absolute/path/to/chrome` for Linux or a custom installation; all four browser proof scripts honor it. The default is `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` on macOS. This harness never reads the checkout's `.env` files into its processes.
 
 ```
 node scripts/r10-served-route/stack.mjs prepare
@@ -51,3 +51,5 @@ python3 docs/evidence/r10-a3-2/harness/mutate-caddy.py
 The mutation command edits the actual generated Caddyfile, runs the CLI guard to a failing exit with a line diagnostic, restores in `finally`, and reruns to exit 0. It does not reload Caddy.
 
 The isolated synthetic project uses Medplum 5.1.30 `userFhirQuota=5000000` and `totalFhirQuota=50000000` weighted FHIR units per minute. The default 50000-unit user quota interrupted the real Ocular Health route with HTTP 429. `seed-ui.ts` sets and reads back only these project settings, preserving both caller AccessPolicies byte-for-byte; limits remain enabled. No service or database restart was needed. `synthetic-fhir-quota.json` records the verified settings.
+
+For proof after the final commit, set `R10_EVIDENCE` to an absolute directory under the gitignored `.odos/` folder. All browser scripts then write their evidence below that directory, preserving a clean checkout while `identity.json` records the final PR head with `dirty:false`. Keep that head fixed through CI and review; attach the final bundle to the handoff. Run `node scripts/r10-served-route/sse-proof.mjs` against the running harness to verify the real MCP SSE endpoint and JSON-RPC initialization response through Caddy and the response proxy.

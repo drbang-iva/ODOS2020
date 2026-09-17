@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: W133 pending All Normal survives remarks with the same act id
+ok 1 - W133 pending All Normal survives remarks with the same act id
+  ---
+  duration_ms: 25.769125
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives measurement with the same act id
+ok 2 - W133 pending All Normal survives measurement with the same act id
+  ---
+  duration_ms: 6.45425
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives grade with the same act id
+ok 3 - W133 pending All Normal survives grade with the same act id
+  ---
+  duration_ms: 6.121833
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives Other cleared with the same act id
+ok 4 - W133 pending All Normal survives Other cleared with the same act id
+  ---
+  duration_ms: 4.042625
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after scoped positive
+ok 5 - W133 pending All Normal is dropped after scoped positive
+  ---
+  duration_ms: 4.063458
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after Other text
+ok 6 - W133 pending All Normal is dropped after Other text
+  ---
+  duration_ms: 2.864458
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after deferred
+ok 7 - W133 pending All Normal is dropped after deferred
+  ---
+  duration_ms: 4.068125
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 302.435125

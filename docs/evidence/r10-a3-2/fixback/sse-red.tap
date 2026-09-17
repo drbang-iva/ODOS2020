@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: W146 Caddy parity rejects any non-port edit and names its line
+ok 1 - W146 Caddy parity rejects any non-port edit and names its line
+  ---
+  duration_ms: 0.620834
+  type: 'test'
+  ...
+# Subtest: response proxy drops exactly one matching response after upstream completion
+ok 2 - response proxy drops exactly one matching response after upstream completion
+  ---
+  duration_ms: 22.384708
+  type: 'test'
+  ...
+# Subtest: readiness child completes through a live parent HTTP server without blocking it
+ok 3 - readiness child completes through a live parent HTTP server without blocking it
+  ---
+  duration_ms: 63.304
+  type: 'test'
+  ...
+# Subtest: W146 response proxy rejects URL authority escapes and preserves origin-form query paths
+ok 4 - W146 response proxy rejects URL authority escapes and preserves origin-form query paths
+  ---
+  duration_ms: 4.072459
+  type: 'test'
+  ...
+# Subtest: W146 GET MCP SSE delivers events before upstream completion
+not ok 5 - W146 GET MCP SSE delivers events before upstream completion
+  ---
+  duration_ms: 1504.4585
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:80:39'
+  failureType: 'testCodeFailure'
+  error: ''
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    node:internal/deps/undici/undici:14976:13
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:93:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W146 POST MCP SSE delivers events before upstream completion
+not ok 6 - W146 POST MCP SSE delivers events before upstream completion
+  ---
+  duration_ms: 1503.535542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:80:39'
+  failureType: 'testCodeFailure'
+  error: ''
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    node:internal/deps/undici/undici:14976:13
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:93:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 4
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3148.71875

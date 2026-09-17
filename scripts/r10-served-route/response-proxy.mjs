@@ -15,17 +15,19 @@ export async function startResponseProxy({ upstream, port, controlPort, logPath 
     const drop = armed?.method === incoming.method && armed.path === path;
     if (drop) armed = undefined;
     const forwarded = request({ hostname: destination.hostname, port: destination.port, path: target, method: incoming.method, headers: { ...incoming.headers, host: destination.host } }, response => {
-      const chunks = [];
-      response.on('data', chunk => chunks.push(chunk));
+      if (drop) response.resume();
+      else { outgoing.writeHead(response.statusCode ?? 502, response.headers); response.pipe(outgoing); }
+      response.on('error', () => outgoing.destroy());
       response.on('end', () => {
         const event = { method: incoming.method, path, status: response.statusCode, dropped: drop, completedAt: new Date().toISOString() };
         events.push(event);
         if (logPath) appendFileSync(logPath, `${JSON.stringify(event)}\n`);
         if (drop) outgoing.destroy();
-        else { outgoing.writeHead(response.statusCode ?? 502, response.headers); outgoing.end(Buffer.concat(chunks)); }
+
       });
     });
-    forwarded.on('error', () => { outgoing.writeHead(502); outgoing.end(); });
+    forwarded.on('error', () => { if (!outgoing.headersSent) outgoing.writeHead(502); outgoing.end(); });
+    outgoing.on('close', () => forwarded.destroy());
     incoming.pipe(forwarded);
   });
   const control = createServer(async (incoming, outgoing) => {

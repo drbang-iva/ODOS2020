@@ -116,3 +116,33 @@ for (const recorded of ["fact", "absent", "panel", "negative", "retired", "empty
   assert.equal(h.posts.length, 0);
  } finally { h.close(); }
 });
+
+for (const edit of ["remarks", "measurement", "grade", "Other cleared"]) test(`W133 pending All Normal survives ${edit} with the same act id`, async () => {
+ const h = await mount(history());
+ try {
+  await act(async () => h.button("Anterior All Normal").props.onClick());
+  const id = h.panel().find(node => Boolean(node.props["data-negative-act"])).props["data-negative-act"];
+  if (edit === "remarks") await h.remarks("Reviewed carefully");
+  else if (edit === "measurement") await act(async () => h.panel().findByProps({type:"number"}).props.onChange({target:{value:"7"}}));
+  else if (edit === "grade") await act(async () => h.panel().findByType(OdosSelect).props.onChange("b"));
+  else await act(async () => h.panel().findAllByType("textarea").find(node => !node.props["aria-label"])!.props.onChange({target:{value:""}}));
+  await h.save();
+  assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id);
+ } finally { h.close(); }
+});
+for (const edit of ["scoped positive", "Other text", "deferred"]) test(`W133 pending All Normal is dropped after ${edit}`, async () => {
+ const offered = {...fact("OD","scar"),status:"absent",presence:undefined,baseline:{kind:"absent",key:key("OD","scar")}};
+ const h = await mount(history([offered]), [{status:422,body:{result:"command",complete:false,executionOrder:[],outcomes:[],error:"contradictory selection refused"}}]);
+ try {
+  await act(async () => h.button("Anterior All Normal").props.onClick());
+  assert.equal(h.panel().findAll(node => Boolean(node.props["data-negative-act"])).length,1);
+  if (edit === "scoped positive") await act(async () => h.button("Scar","OD").props.onClick());
+  else if (edit === "deferred") await act(async () => h.button("Not performed / deferred","OD").props.onClick());
+  else await act(async () => h.panel().findAllByType("textarea").find(node => !node.props["aria-label"])!.props.onChange({target:{value:"Other observation"}}));
+  assert.equal(h.panel().findAll(node => Boolean(node.props["data-negative-act"])).length,0);
+  await h.save();
+  assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct,undefined);
+  if (edit === "scoped positive") assert.equal(JSON.parse(h.posts[0]!).eyes.OD.selected[0].key.optionCode,"scar");
+  assert.equal(h.saved(),0);
+ } finally { h.close(); }
+});

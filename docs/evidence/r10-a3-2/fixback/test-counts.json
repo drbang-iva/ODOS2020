@@ -1,0 +1,218 @@
+{
+  "link-mutation-red.tap": {
+    "tests": 4,
+    "pass": 3,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "sse-red.tap": {
+    "tests": 6,
+    "pass": 4,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "parity-mutation-red.tap": {
+    "tests": 170,
+    "pass": 169,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "readonly-proof-mutation-red.tap": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "link-restored-green.tap": {
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "chrome-mutation-red.tap": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "harness-green.tap": {
+    "tests": 11,
+    "pass": 11,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "sse-restored-green.tap": {
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "negative-act-red.tap": {
+    "tests": 7,
+    "pass": 3,
+    "fail": 4,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "chrome-restored-green.tap": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "negative-act-restored-green.tap": {
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "carry-error-mutation-red.tap": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "browser-proof-restored-green.tap": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "parity-restored-green.tap": {
+    "tests": 170,
+    "pass": 170,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "screens-proof-mutation-red.tap": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "undo-superseded-proof-mutation-red.tap": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "carry-error-restored-green.tap": {
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "sse-mutation-red.tap": {
+    "tests": 6,
+    "pass": 4,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "portable-red.tap": {
+    "tests": 11,
+    "pass": 6,
+    "fail": 5,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "readonly-proof-restored-green.tap": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "undo-superseded-proof-restored-green.tap": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "carry-error-red.tap": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "browser-proof-mutation-red.tap": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "parity-missing-red.tap": {
+    "tests": 170,
+    "pass": 156,
+    "fail": 14,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "negative-act-mutation-red.tap": {
+    "tests": 7,
+    "pass": 3,
+    "fail": 4,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "screens-proof-restored-green.tap": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "negative-act-green.tap": {
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+}

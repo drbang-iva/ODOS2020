@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: W140 saved diagnosis reports link rejection at its actual step
+not ok 1 - W140 saved diagnosis reports link rejection at its actual step
+  ---
+  duration_ms: 9.21575
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3Picker.test.tsx:1:7555'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Diagnosis saved · Linking incomplete: link failed/. Input:
+
+    'Diagnosis saved · Follow-up incomplete: link failed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Diagnosis saved · Follow-up incomplete: link failed'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3Picker.test.tsx:72:81)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W140 saved diagnosis reports pick rejection at its actual step
+ok 2 - W140 saved diagnosis reports pick rejection at its actual step
+  ---
+  duration_ms: 0.797875
+  type: 'test'
+  ...
+# Subtest: W140 saved diagnosis reports onPicked rejection at its actual step
+ok 3 - W140 saved diagnosis reports onPicked rejection at its actual step
+  ---
+  duration_ms: 0.591666
+  type: 'test'
+  ...
+# Subtest: W140 picker Finish linking retries only the link after a lost response
+ok 4 - W140 picker Finish linking retries only the link after a lost response
+  ---
+  duration_ms: 13.186208
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 252.56825

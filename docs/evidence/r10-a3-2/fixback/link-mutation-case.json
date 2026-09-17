@@ -1,0 +1,15 @@
+{
+  "name": "link",
+  "file": "ui/src/lib/supported-diagnosis-pick.ts",
+  "anchor": "    if (options.link) {\n      try { await options.link(`Condition/${condition.id}`); }\n      catch (caught) { options.message(`Diagnosis saved \u00b7 Linking incomplete: ${caught instanceof Error ? caught.message : String(caught)}`); }\n    }",
+  "replacement": "    if (options.link) await options.link(`Condition/${condition.id}`);",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=W140 saved|W140 picker Finish",
+    "tests/r10A3Picker.test.tsx"
+  ]
+}

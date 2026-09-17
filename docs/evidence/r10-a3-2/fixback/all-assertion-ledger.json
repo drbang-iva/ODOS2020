@@ -1,0 +1,351 @@
+{
+  "base": "4e351b1642a94f0603fb4a70fbc5d10e544e9a8a",
+  "head": "working-tree",
+  "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
+  "files": [
+    {
+      "file": "mcp/tests/r10-parity.test.ts",
+      "assertionCountBefore": 17,
+      "assertionCountAfter": 18,
+      "changedGroups": [
+        {
+          "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+          "mapping": "V27 / overview parity / evaluator item 2",
+          "before": [
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 60,
+              "text": "assert.ok(section,\"Every atomic fixture has its actual section fixture/definitions\")"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 67,
+              "text": "assert.ok(captures.some(o=>o.suite===c.suite&&o.kind===\"atomicFindingRows\"&&JSON.stringify(o.args[0])===JSON.stringify(c.args[0])))"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 69,
+              "text": "assert.deepEqual(clean(buildExamOverviewProjection(input)),expected)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 76,
+              "text": "assert.deepEqual(clean(findingInstancesFromObservation(observation,definitions)),c.result)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 84,
+              "text": "assert.deepEqual(keyFindingSatisfied(entry,definition,current,historical,now),c.result)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 86,
+              "text": "assert.deepEqual(keyFindingSatisfied(entry,definition,projected(current),projected(historical),now),c.result)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 89,
+              "text": "assert.deepEqual(clean(p.definitionViews.map(({projectionKey,contributors,...r})=>r)),[o])"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 90,
+              "text": "assert.equal(p.currentFacts.length,0)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 92,
+              "text": "assert.ok([\"this-encounter\",\"any-on-file\"].includes(entry.satisfiedBy))"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 93,
+              "text": "assert.fail(`Unclassified fixture ${c.kind}`)"
+            }
+          ],
+          "after": [
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 76,
+              "text": "assert.ok(section,\"Every atomic fixture has its actual section fixture/definitions\")"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 83,
+              "text": "assert.ok(captures.some(o=>o.suite===c.suite&&o.kind===\"atomicFindingRows\"&&JSON.stringify(o.args[0])===JSON.stringify(c.args[0])))"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 86,
+              "text": "assert.ok(expected, `Missing recorded overview expectation for capture ${i+1}: ${c.suite} ${c.kind}`)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 87,
+              "text": "assert.deepEqual(clean(buildExamOverviewProjection(input)),expected)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 94,
+              "text": "assert.deepEqual(clean(findingInstancesFromObservation(observation,definitions)),c.result)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 102,
+              "text": "assert.deepEqual(keyFindingSatisfied(entry,definition,current,historical,now),c.result)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 104,
+              "text": "assert.deepEqual(keyFindingSatisfied(entry,definition,projected(current),projected(historical),now),c.result)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 107,
+              "text": "assert.deepEqual(clean(p.definitionViews.map(({projectionKey,contributors,...r})=>r)),[o])"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 108,
+              "text": "assert.equal(p.currentFacts.length,0)"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 110,
+              "text": "assert.ok([\"this-encounter\",\"any-on-file\"].includes(entry.satisfiedBy))"
+            },
+            {
+              "test": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`",
+              "line": 111,
+              "text": "assert.fail(`Unclassified fixture ${c.kind}`)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/r10-served-route/harness.test.mjs",
+      "assertionCountBefore": 18,
+      "assertionCountAfter": 26,
+      "changedGroups": [
+        {
+          "test": "`W146 ${method} MCP SSE delivers events before upstream completion`",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "`W146 ${method} MCP SSE delivers events before upstream completion`",
+              "line": 94,
+              "text": "assert.equal(response.headers.get('content-type'), 'text/event-stream')"
+            },
+            {
+              "test": "`W146 ${method} MCP SSE delivers events before upstream completion`",
+              "line": 99,
+              "text": "assert.equal(chunk.done, false, 'SSE must remain open while delivering events')"
+            },
+            {
+              "test": "`W146 ${method} MCP SSE delivers events before upstream completion`",
+              "line": 102,
+              "text": "assert.match(received, /data: first/)"
+            },
+            {
+              "test": "`W146 ${method} MCP SSE delivers events before upstream completion`",
+              "line": 103,
+              "text": "assert.match(received, /data: second/)"
+            }
+          ]
+        },
+        {
+          "test": "`W146 ${script} resolves a checkout path with spaces`",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "`W146 ${script} resolves a checkout path with spaces`",
+              "line": 114,
+              "text": "assert.ok(expression, `${script}: root expression anchor missing`)"
+            },
+            {
+              "test": "`W146 ${script} resolves a checkout path with spaces`",
+              "line": 116,
+              "text": "assert.equal(root,'/tmp/task checkout')"
+            }
+          ]
+        },
+        {
+          "test": "'W146 screens proof honors the explicit Chrome executable'",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "'W146 screens proof honors the explicit Chrome executable'",
+              "line": 121,
+              "text": "assert.ok(expression,'screens proof executable expression anchor missing')"
+            },
+            {
+              "test": "'W146 screens proof honors the explicit Chrome executable'",
+              "line": 122,
+              "text": "assert.equal(Function('process',`return ${expression}`)({env:{R10_CHROME:'/tmp/custom browser'}}),'/tmp/custom browser')"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/diagnosisCarryForward.test.tsx",
+      "assertionCountBefore": 102,
+      "assertionCountAfter": 105,
+      "changedGroups": [
+        {
+          "test": "`W142 failed carry ${status} without error receives a fallback`",
+          "mapping": "W142",
+          "before": [],
+          "after": [
+            {
+              "test": "`W142 failed carry ${status} without error receives a fallback`",
+              "line": 819,
+              "text": "assert.equal(response.status,status)"
+            },
+            {
+              "test": "`W142 failed carry ${status} without error receives a fallback`",
+              "line": 819,
+              "text": "assert.equal(response.body.conditionStep,\"failed\")"
+            },
+            {
+              "test": "`W142 failed carry ${status} without error receives a fallback`",
+              "line": 819,
+              "text": "assert.equal(response.body.error,\"Diagnosis could not be pulled. Try again.\")"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/r10A3OcularEditor.test.tsx",
+      "assertionCountBefore": 51,
+      "assertionCountAfter": 57,
+      "changedGroups": [
+        {
+          "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+          "mapping": "W133",
+          "before": [],
+          "after": [
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 130,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id)"
+            }
+          ]
+        },
+        {
+          "test": "`W133 pending All Normal is dropped after ${edit}`",
+          "mapping": "W133",
+          "before": [],
+          "after": [
+            {
+              "test": "`W133 pending All Normal is dropped after ${edit}`",
+              "line": 138,
+              "text": "assert.equal(h.panel().findAll(node => Boolean(node.props[\"data-negative-act\"])).length,1)"
+            },
+            {
+              "test": "`W133 pending All Normal is dropped after ${edit}`",
+              "line": 142,
+              "text": "assert.equal(h.panel().findAll(node => Boolean(node.props[\"data-negative-act\"])).length,0)"
+            },
+            {
+              "test": "`W133 pending All Normal is dropped after ${edit}`",
+              "line": 144,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct,undefined)"
+            },
+            {
+              "test": "`W133 pending All Normal is dropped after ${edit}`",
+              "line": 145,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.selected[0].key.optionCode,\"scar\")"
+            },
+            {
+              "test": "`W133 pending All Normal is dropped after ${edit}`",
+              "line": 146,
+              "text": "assert.equal(h.saved(),0)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "ui/tests/r10A3Picker.test.tsx",
+      "assertionCountBefore": 19,
+      "assertionCountAfter": 30,
+      "changedGroups": [
+        {
+          "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+          "mapping": "W140",
+          "before": [],
+          "after": [
+            {
+              "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+              "line": 71,
+              "text": "assert.match(messages.at(-1)!,/Diagnosis not confirmed/)"
+            },
+            {
+              "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+              "line": 71,
+              "text": "assert.equal(picked,0)"
+            },
+            {
+              "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+              "line": 71,
+              "text": "assert.equal(linked,0)"
+            },
+            {
+              "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+              "line": 72,
+              "text": "assert.doesNotMatch(messages.at(-1)!,/Diagnosis not confirmed/)"
+            },
+            {
+              "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+              "line": 72,
+              "text": "assert.match(messages.at(-1)!,failure===\"link\"?/Diagnosis saved · Linking incomplete: link failed/:/Diagnosis saved · Follow-up incomplete: refresh failed/)"
+            },
+            {
+              "test": "`W140 saved diagnosis reports ${failure} rejection at its actual step`",
+              "line": 72,
+              "text": "assert.equal(picked,1)"
+            }
+          ]
+        },
+        {
+          "test": "\"W140 picker Finish linking retries only the link after a lost response\"",
+          "mapping": "W140",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W140 picker Finish linking retries only the link after a lost response\"",
+              "line": 79,
+              "text": "assert.match(JSON.stringify(m.renderer.toJSON()),/Diagnosis saved · Linking incomplete/)"
+            },
+            {
+              "test": "\"W140 picker Finish linking retries only the link after a lost response\"",
+              "line": 80,
+              "text": "assert.ok(finish)"
+            },
+            {
+              "test": "\"W140 picker Finish linking retries only the link after a lost response\"",
+              "line": 82,
+              "text": "assert.equal(m.calls.filter(c=>c.url.includes(\"diagnosis-picks\")).length,1)"
+            },
+            {
+              "test": "\"W140 picker Finish linking retries only the link after a lost response\"",
+              "line": 83,
+              "text": "assert.equal(links.length,2)"
+            },
+            {
+              "test": "\"W140 picker Finish linking retries only the link after a lost response\"",
+              "line": 83,
+              "text": "assert.deepEqual(links[0].body,links[1].body)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
