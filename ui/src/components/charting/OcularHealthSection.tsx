@@ -333,7 +333,7 @@ export function OcularHealthSection({
     if (readOnly || retryKeys.length) return;
     replaceCaptures((current) => {
       const prior = current[stableKey]?.[eye] ?? emptyEye();
-      const next = { ...update(prior), negativeAct: prior.negativeAct?.id === pristineRef.current[stableKey]?.[eye].negativeAct?.id ? prior.negativeAct : undefined };
+      const next = { ...update(prior) };
       for (const fact of canonical[stableKey]?.[eye].facts ?? []) {
         if (fact.editable || !fact.key) continue;
         const code = fact.key.optionCode;
@@ -344,6 +344,11 @@ export function OcularHealthSection({
       if (canonical[stableKey]?.[eye].panel.editable === false) {
         next.state = prior.state; next.grades = prior.grades; next.other = prior.other; next.remarks = prior.remarks;
       }
+      const act = prior.negativeAct;
+      const pending = act && act.id !== pristineRef.current[stableKey]?.[eye].negativeAct?.id;
+      const contradictsAct = pending && (next.state !== "normal" || Boolean(next.other.trim()) ||
+        next.selections.some(code => !prior.selections.includes(code) && act.optionCodes.includes(code) && !act.exclusions.includes(code)));
+      next.negativeAct = contradictsAct ? undefined : act;
       return { ...current, [stableKey]: { ...current[stableKey], [eye]: next } };
     });
   }

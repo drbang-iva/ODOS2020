@@ -145,7 +145,7 @@ export async function pullPreviousDiagnosis(
   if (!isDiagnosisPullResult(body)) {
     return { status: response.ok ? 502 : response.status, body: { error: safeServerError(body, fallback) } };
   }
-  return { status: response.status, body: { ...body, ...(body.error ? { error: safeServerError(body, fallback) } : {}) } };
+  return { status: response.status, body: { ...body, ...(!response.ok || body.error ? { error: safeServerError(body, fallback) } : {}) } };
 }
 
 async function safeFetch(

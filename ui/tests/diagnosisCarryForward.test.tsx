@@ -810,3 +810,12 @@ for (const canWriteDiagnosis of [false, undefined]) {
     }
   });
 }
+
+for (const status of [409, 500]) test(`W142 failed carry ${status} without error receives a fallback`, async () => {
+ const {pullPreviousDiagnosis}=await import("../src/lib/diagnosis-carry-forward");
+ const previousWindow=globalThis.window;Object.defineProperty(globalThis,"window",{configurable:true,value:new EventTarget()});
+ try {
+  const response=await pullPreviousDiagnosis("Encounter/e",{commandId:"c",sourceEncounterReference:"Encounter/old",sourceConditionReference:"Condition/old"},async()=>Response.json({conditionStep:"failed"},{status}));
+  assert.equal(response.status,status);assert.equal(response.body.conditionStep,"failed");assert.equal(response.body.error,"Diagnosis could not be pulled. Try again.");
+ } finally {Object.defineProperty(globalThis,"window",{configurable:true,value:previousWindow});}
+});

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync,mkdirSync,existsSync,readdirSync,copyFileSync} from 'node:fs';
@@ -7,11 +8,11 @@ import {loadVerifiedOperatorFhirClient} from '../operator-identity.ts';
 import {canonicalFact,keyFor} from '../../mcp/tests/fixtures/r10/writer-harness.ts';
 import {snapshot,comp} from '../../mcp/tests/fixtures/r10/factories.ts';
 import {currentFindingIdentifier} from '../../mcp/src/clinical-graph/current-finding-identity.ts';
-const root=resolve(new URL('../..',import.meta.url).pathname),runtime=resolve(process.env.R10_RUNTIME??join(root,'.odos/r10-a3-2-served'));
+const root=resolve(fileURLToPath(new URL('../..',import.meta.url))),runtime=resolve(process.env.R10_RUNTIME??join(root,'.odos/r10-a3-2-served'));
 const read=name=>JSON.parse(readFileSync(join(runtime,name),'utf8'));
 const manifest=read('manifest.json'),credentials=read('credentials.json'),mainFixture=read('fixture.json');
 assert.equal(manifest.project,'odos-r10-a3-2-served');
-const evidence=join(root,'docs/evidence/r10-a3-2/readonly');mkdirSync(evidence,{recursive:true});
+const evidence=join(process.env.R10_EVIDENCE ?? join(root,'docs/evidence/r10-a3-2'),'readonly');mkdirSync(evidence,{recursive:true});
 const priorFiles=readdirSync(evidence,{withFileTypes:true}).filter(f=>f.isFile()&&f.name!=='run.log');if(priorFiles.length){const archive=join(evidence,'attempts',new Date().toISOString().replaceAll(':','-'));mkdirSync(archive,{recursive:true});for(const file of priorFiles)copyFileSync(join(evidence,file.name),join(archive,file.name));}
 const fixturePath=join(runtime,'readonly-fixture.json');
 const operator=await loadVerifiedOperatorFhirClient({baseUrl:`http://127.0.0.1:${manifest.ports.medplum}`,projectId:credentials.projectId,postgresUrl:`postgresql://medplum:medplum@127.0.0.1:${manifest.ports.postgres}/medplum`,credentialPath:join(runtime,'operator.env'),statePath:join(runtime,'operator-state.json')});

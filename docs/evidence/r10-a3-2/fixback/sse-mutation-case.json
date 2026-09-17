@@ -1,0 +1,11 @@
+{
+  "name": "sse",
+  "file": "scripts/r10-served-route/response-proxy.mjs",
+  "anchor": "      if (drop) response.resume();\n      else { outgoing.writeHead(response.statusCode ?? 502, response.headers); response.pipe(outgoing); }\n      response.on('error', () => outgoing.destroy());",
+  "replacement": "      const chunks = [];\n      response.on('data', chunk => chunks.push(chunk));\n      response.on('end', () => { if (!drop) { outgoing.writeHead(response.statusCode ?? 502, response.headers); outgoing.end(Buffer.concat(chunks)); } });",
+  "command": [
+    "node",
+    "--test",
+    "scripts/r10-served-route/harness.test.mjs"
+  ]
+}

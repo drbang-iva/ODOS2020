@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: W142 failed carry 409 without error receives a fallback
+ok 1 - W142 failed carry 409 without error receives a fallback
+  ---
+  duration_ms: 8.394958
+  type: 'test'
+  ...
+# Subtest: W142 failed carry 500 without error receives a fallback
+ok 2 - W142 failed carry 500 without error receives a fallback
+  ---
+  duration_ms: 0.79175
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 451.492625

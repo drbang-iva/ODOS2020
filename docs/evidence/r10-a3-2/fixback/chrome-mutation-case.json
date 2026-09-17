@@ -1,0 +1,12 @@
+{
+  "name": "chrome",
+  "file": "scripts/r10-served-route/screens-proof.mjs",
+  "anchor": "process.env.R10_CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'",
+  "replacement": "'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'",
+  "command": [
+    "node",
+    "--test",
+    "--test-name-pattern=W146 screens proof honors",
+    "scripts/r10-served-route/harness.test.mjs"
+  ]
+}

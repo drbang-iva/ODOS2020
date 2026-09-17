@@ -1,0 +1,12 @@
+{
+  "name": "browser-proof",
+  "file": "scripts/r10-served-route/browser-proof.mjs",
+  "anchor": "resolve(fileURLToPath(new URL('../..',import.meta.url)))",
+  "replacement": "resolve(new URL('../..',import.meta.url).pathname)",
+  "command": [
+    "node",
+    "--test",
+    "--test-name-pattern=W146 browser-proof resolves",
+    "scripts/r10-served-route/harness.test.mjs"
+  ]
+}

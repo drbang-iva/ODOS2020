@@ -1,0 +1,12 @@
+{
+  "name": "undo-superseded-proof",
+  "file": "scripts/r10-served-route/undo-superseded-proof.mjs",
+  "anchor": "resolve(fileURLToPath(new URL('../..',import.meta.url)))",
+  "replacement": "resolve(new URL('../..',import.meta.url).pathname)",
+  "command": [
+    "node",
+    "--test",
+    "--test-name-pattern=W146 undo-superseded-proof resolves",
+    "scripts/r10-served-route/harness.test.mjs"
+  ]
+}

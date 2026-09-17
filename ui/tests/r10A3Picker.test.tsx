@@ -5,7 +5,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { DiagnosisPicker } from "../src/components/charting/DiagnosisPicker";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/lib/clinical-actions";
 const stableKey="ocular-health:anterior:lens";
-async function mount(proposed=false, failScope=false, deferPick=false) {
+async function mount(proposed=false, failScope=false, deferPick=false, failLink=false) {
  let releasePick: (()=>void) | undefined;
  const previousFetch=globalThis.fetch, previousWindow=globalThis.window;
  Object.defineProperty(globalThis,"window",{configurable:true,value:new EventTarget()});
@@ -15,6 +15,7 @@ async function mount(proposed=false, failScope=false, deferPick=false) {
  globalThis.fetch=async(input,init)=>{const url=String(input),method=init?.method??"GET",body=init?.body?JSON.parse(String(init.body)):undefined;if(method!=="GET")calls.push({url,method,body});
  if(url.includes("diagnosis-candidates"))return Response.json({findings:rows.map(row=>({findingInstanceId:row.rowKey,findingDefinitionKey:stableKey,candidates:[{diagnosisKey:"dx",display:`Diagnosis ${row.key.eye}`,codingStatus:"provisional",priority:true,source:"mapping",supportingFacts:[{rowKey:row.rowKey,key:row.key,baseline:row.baseline}]}]}))});
  if(url.includes("diagnosis-catalog"))return Response.json({canWriteDiagnosis:true,diagnoses:[]});
+ if(url.includes("/findings") && method === "PUT" && failLink) { failLink=false; throw new Error("Link response lost"); }
  if(url.includes("/findings"))return Response.json(method==="GET"?{encounterEditable:true,canWrite:true,canWriteDiagnosis:true,findings:rows,searchIndex:rows,visitDiagnoses:proposed?[{conditionReference:"Condition/c",diagnosisKey:"dx",laterality:"OD"}]:[],catalog:[],unassigned:rows,auditDebt:[],bySection:{}}:{result:"command",complete:true,executionOrder:[0],outcomes:[{status:"applied",clinicalWrite:"confirmed"}]});
  if(url.includes("diagnosis-picks")){if(deferPick)await new Promise<void>(resolve=>{releasePick=resolve;});return Response.json({result:"pick",conditionStep:"applied",link:"pending",condition});}
  if(url.includes("BodyStructure"))return Response.json({resourceType:"Bundle",entry:[{resource:{resourceType:"BodyStructure",id:"eye"}}]});
@@ -58,4 +59,27 @@ test("W140 a late pick response cannot continue scope or link after changing vis
    assert.equal(m.calls.filter(call=>call.url.includes("diagnosis-picks")).length,1);
    assert.equal(m.calls.filter(call=>call.method==="PATCH"||call.body?.operation==="link").length,0);
  }finally{m.close();}
+});
+
+for (const failure of ["link", "pick", "onPicked"]) test(`W140 saved diagnosis reports ${failure} rejection at its actual step`, async () => {
+ const {supportedDiagnosisPick} = await import("../src/lib/supported-diagnosis-pick");
+ const previousFetch=globalThis.fetch, previousWindow=globalThis.window;const messages:string[]=[];let picked=0;let linked=0;
+ Object.defineProperty(globalThis,"window",{configurable:true,value:new EventTarget()});
+ globalThis.fetch=async()=>{if(failure==="pick")throw new Error("pick failed");return Response.json({result:"pick",conditionStep:"applied",condition:{resourceType:"Condition",id:"saved"}});};
+ try {
+  await supportedDiagnosisPick({request:{encounterReference:"Encounter/e",commandId:"command",diagnosisKey:"synthetic",action:"possible",source:"mapping"},onPicked:()=>{picked++;if(failure==="onPicked")throw new Error("refresh failed");},onScoped:()=>undefined,link:async()=>{linked++;throw new Error("link failed");},message:value=>messages.push(value)});
+  if(failure==="pick") { assert.match(messages.at(-1)!,/Diagnosis not confirmed/);assert.equal(picked,0);assert.equal(linked,0); }
+  else { assert.doesNotMatch(messages.at(-1)!,/Diagnosis not confirmed/);assert.match(messages.at(-1)!,failure==="link"?/Diagnosis saved · Linking incomplete: link failed/:/Diagnosis saved · Follow-up incomplete: refresh failed/);assert.equal(picked,1); }
+ } finally {globalThis.fetch=previousFetch;Object.defineProperty(globalThis,"window",{configurable:true,value:previousWindow});}
+});
+test("W140 picker Finish linking retries only the link after a lost response",async()=>{
+ const m=await mount(false,false,false,true);
+ try {
+  await act(async()=>m.renderer.root.findByProps({"aria-label":"Propose Diagnosis OD"}).props.onClick());
+  assert.match(JSON.stringify(m.renderer.toJSON()),/Diagnosis saved · Linking incomplete/);
+  const finish=m.renderer.root.findAllByType("button").find(n=>n.children.join("")==="Finish linking");assert.ok(finish);
+  await act(async()=>finish.props.onClick());
+  assert.equal(m.calls.filter(c=>c.url.includes("diagnosis-picks")).length,1);
+  const links=m.calls.filter(c=>c.body?.operation==="link");assert.equal(links.length,2);assert.deepEqual(links[0].body,links[1].body);
+ } finally {m.close();}
 });

@@ -1,0 +1,179 @@
+TAP version 13
+# Subtest: W146 Caddy parity rejects any non-port edit and names its line
+ok 1 - W146 Caddy parity rejects any non-port edit and names its line
+  ---
+  duration_ms: 0.727959
+  type: 'test'
+  ...
+# Subtest: response proxy drops exactly one matching response after upstream completion
+ok 2 - response proxy drops exactly one matching response after upstream completion
+  ---
+  duration_ms: 22.105333
+  type: 'test'
+  ...
+# Subtest: readiness child completes through a live parent HTTP server without blocking it
+ok 3 - readiness child completes through a live parent HTTP server without blocking it
+  ---
+  duration_ms: 63.827292
+  type: 'test'
+  ...
+# Subtest: W146 response proxy rejects URL authority escapes and preserves origin-form query paths
+ok 4 - W146 response proxy rejects URL authority escapes and preserves origin-form query paths
+  ---
+  duration_ms: 3.884333
+  type: 'test'
+  ...
+# Subtest: W146 GET MCP SSE delivers events before upstream completion
+ok 5 - W146 GET MCP SSE delivers events before upstream completion
+  ---
+  duration_ms: 33.997541
+  type: 'test'
+  ...
+# Subtest: W146 POST MCP SSE delivers events before upstream completion
+ok 6 - W146 POST MCP SSE delivers events before upstream completion
+  ---
+  duration_ms: 34.074917
+  type: 'test'
+  ...
+# Subtest: W146 browser-proof resolves a checkout path with spaces
+not ok 7 - W146 browser-proof resolves a checkout path with spaces
+  ---
+  duration_ms: 1.045292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:110:101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '/tmp/task%20checkout'
+    - '/tmp/task checkout'
+                ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '/tmp/task checkout'
+  actual: '/tmp/task%20checkout'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:116:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W146 readonly-proof resolves a checkout path with spaces
+not ok 8 - W146 readonly-proof resolves a checkout path with spaces
+  ---
+  duration_ms: 0.352625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:110:101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '/tmp/task%20checkout'
+    - '/tmp/task checkout'
+                ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '/tmp/task checkout'
+  actual: '/tmp/task%20checkout'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:116:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W146 undo-superseded-proof resolves a checkout path with spaces
+not ok 9 - W146 undo-superseded-proof resolves a checkout path with spaces
+  ---
+  duration_ms: 0.259459
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:110:101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '/tmp/task%20checkout'
+    - '/tmp/task checkout'
+                ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '/tmp/task checkout'
+  actual: '/tmp/task%20checkout'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:116:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W146 screens-proof resolves a checkout path with spaces
+not ok 10 - W146 screens-proof resolves a checkout path with spaces
+  ---
+  duration_ms: 0.49075
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:110:101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '/tmp/task%20checkout'
+    - '/tmp/task checkout'
+                ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '/tmp/task checkout'
+  actual: '/tmp/task%20checkout'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:116:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W146 screens proof honors the explicit Chrome executable
+not ok 11 - W146 screens proof honors the explicit Chrome executable
+  ---
+  duration_ms: 0.182125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:118:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    - '/tmp/custom browser'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '/tmp/custom browser'
+  actual: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:122:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 6
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 208.753375

@@ -1,9 +1,10 @@
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
-const root=resolve(new URL('../..',import.meta.url).pathname);
+const root=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const require=createRequire(join(root,'ui/package.json'));
 const {chromium}=require('playwright-core');
 const runtime=resolve(process.env.R10_RUNTIME ?? join(root,'.odos/r10-a3-2-served'));
@@ -11,7 +12,7 @@ const read=name=>JSON.parse(readFileSync(join(runtime,name),'utf8'));
 const manifest=read('manifest.json'), fixture=read('fixture.json'), credentials=read('credentials.json');
 assert.equal(manifest.project,'odos-r10-a3-2-served');
 const base=`http://127.0.0.1:${manifest.ports.frontdoor}`;
-const evidence=join(root,'docs/evidence/r10-a3-2/served-route');mkdirSync(evidence,{recursive:true});
+const evidence=join(process.env.R10_EVIDENCE ?? join(root,'docs/evidence/r10-a3-2'),'served-route');mkdirSync(evidence,{recursive:true});
 const mode=process.argv[2] ?? 'inspect';
 for(const suffix of ['result.json','failure.png','failure.txt']){const previous=join(evidence,`${mode}-${suffix}`);if(existsSync(previous))copyFileSync(previous,join(evidence,`${mode}-attempt-${Date.now()}-${suffix}`));}
 const result={mode,startedAt:new Date().toISOString(),build:read('build.json'),steps:[],screenshots:[],errors:[]};

@@ -1,0 +1,15 @@
+{
+  "name": "carry-error",
+  "file": "ui/src/lib/diagnosis-carry-forward.ts",
+  "anchor": "...(!response.ok || body.error ? { error: safeServerError(body, fallback) } : {})",
+  "replacement": "...(body.error ? { error: safeServerError(body, fallback) } : {})",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=W142 failed carry",
+    "tests/diagnosisCarryForward.test.tsx"
+  ]
+}

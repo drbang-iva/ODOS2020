@@ -20,12 +20,14 @@ export async function supportedDiagnosisPick(options: {
   link?(conditionReference: string): Promise<void>;
   message(value: string): void;
 }) {
+  let diagnosisSaved = false;
   try {
     const result = await submitDiagnosisPickResult(options.request);
     if (result.result !== "pick" || result.conditionStep !== "applied") {
       options.message(result.result === "pick" && result.conditionStep === "unconfirmed" ? "Diagnosis not confirmed — reload" : result.error);
       return;
     }
+    diagnosisSaved = true;
     if (await options.onPicked(result.condition) === false) return;
     let condition = result.condition;
     options.message(`Diagnosis saved${result.error ? `: ${result.error}` : ""}`);
@@ -34,9 +36,12 @@ export async function supportedDiagnosisPick(options: {
       catch (caught) { options.message(`Diagnosis saved · Scope not saved: ${caught instanceof Error ? caught.message : String(caught)}`); return; }
     }
     options.onScoped(condition);
-    if (options.link) await options.link(`Condition/${condition.id}`);
+    if (options.link) {
+      try { await options.link(`Condition/${condition.id}`); }
+      catch (caught) { options.message(`Diagnosis saved · Linking incomplete: ${caught instanceof Error ? caught.message : String(caught)}`); }
+    }
     else options.message("Diagnosis saved · Scope saved");
   } catch (caught) {
-    options.message(`Diagnosis not confirmed — reload. ${caught instanceof Error ? caught.message : String(caught)}`);
+    options.message(`${diagnosisSaved ? "Diagnosis saved · Follow-up incomplete:" : "Diagnosis not confirmed — reload."} ${caught instanceof Error ? caught.message : String(caught)}`);
   }
 }

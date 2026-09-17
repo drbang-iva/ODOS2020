@@ -76,3 +76,48 @@ test('W146 response proxy rejects URL authority escapes and preserves origin-for
     await Promise.all([upstream, spy].map(server => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); })));
   }
 });
+
+for (const method of ['GET', 'POST']) test(`W146 ${method} MCP SSE delivers events before upstream completion`, async () => {
+  const upstream = createServer((incoming, response) => {
+    incoming.resume();
+    response.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    response.write('event: message\ndata: first\n\n');
+    const timer = setTimeout(() => response.write('event: message\ndata: second\n\n'), 30);
+    response.on('close', () => clearTimeout(timer));
+  });
+  await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve));
+  const proxy = await startResponseProxy({ upstream: `http://127.0.0.1:${upstream.address().port}`, port: 0, controlPort: 0 });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1500);
+  try {
+    const response = await fetch(`http://127.0.0.1:${proxy.port}/mcp`, {method, signal:controller.signal});
+    assert.equal(response.headers.get('content-type'), 'text/event-stream');
+    const reader = response.body.getReader();
+    let received = '';
+    while (!received.includes('data: second')) {
+      const chunk = await reader.read();
+      assert.equal(chunk.done, false, 'SSE must remain open while delivering events');
+      received += new TextDecoder().decode(chunk.value);
+    }
+    assert.match(received, /data: first/);
+    assert.match(received, /data: second/);
+    await reader.cancel();
+  } finally {
+    clearTimeout(timer); controller.abort(); await proxy.close(); upstream.closeAllConnections(); await new Promise(resolve => upstream.close(resolve));
+  }
+});
+
+for (const script of ['browser-proof', 'readonly-proof', 'undo-superseded-proof', 'screens-proof']) test(`W146 ${script} resolves a checkout path with spaces`, async () => {
+  const {fileURLToPath} = await import('node:url'); const {resolve} = await import('node:path');
+  const source=readFileSync(new URL(`./${script}.mjs`,import.meta.url),'utf8');
+  const expression=source.match(/const root=(.*?)(?:,runtime=|;)/)?.[1];
+  assert.ok(expression, `${script}: root expression anchor missing`);
+  const root=Function('resolve','fileURLToPath','URL','moduleUrl',`return ${expression.replaceAll('import.meta.url','moduleUrl')}`)(resolve,fileURLToPath,URL,`file:///tmp/task%20checkout/scripts/r10-served-route/${script}.mjs`);
+  assert.equal(root,'/tmp/task checkout');
+});
+test('W146 screens proof honors the explicit Chrome executable', () => {
+  const source=readFileSync(new URL('./screens-proof.mjs',import.meta.url),'utf8');
+  const expression=source.match(/executablePath:(.*?),headless:/)?.[1];
+  assert.ok(expression,'screens proof executable expression anchor missing');
+  assert.equal(Function('process',`return ${expression}`)({env:{R10_CHROME:'/tmp/custom browser'}}),'/tmp/custom browser');
+});

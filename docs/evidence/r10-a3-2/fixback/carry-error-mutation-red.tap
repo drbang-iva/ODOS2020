@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: W142 failed carry 409 without error receives a fallback
+not ok 1 - W142 failed carry 409 without error receives a fallback
+  ---
+  duration_ms: 10.996125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:34776'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'Diagnosis could not be pulled. Try again.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Diagnosis could not be pulled. Try again.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:819:98)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W142 failed carry 500 without error receives a fallback
+not ok 2 - W142 failed carry 500 without error receives a fallback
+  ---
+  duration_ms: 1.465583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:34776'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'Diagnosis could not be pulled. Try again.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Diagnosis could not be pulled. Try again.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:819:98)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 334.479459
