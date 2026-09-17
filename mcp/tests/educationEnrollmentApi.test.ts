@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createVisionForgeEducationCatalogReader } from "../src/comms/visionforge-education-catalog.js";
+import type { EducationCatalogLifecycleReader } from "../src/comms/education-catalog.js";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
@@ -7,6 +10,8 @@ import type { Basic, Bundle, Communication, Encounter, Patient, Provenance, Reso
 import express from "express";
 import {
   registerCommsApiRoutes,
+  prepareEducationSequenceDispatch,
+  dispatchEducationAs,
   type CommsApiRouteDeps,
 } from "../src/comms/comms-api.js";
 import type { CommsProvider, SendEmailRequest, SendSmsRequest } from "../src/comms/comms-provider.js";
@@ -776,6 +781,7 @@ async function createEnrollment(base: string) {
 }
 
 async function startEnrollmentServer(options: {
+  educationCatalog?: EducationCatalogLifecycleReader;
   enrollmentStore?: EducationEnrollmentStore;
   optedOut?: boolean;
   marketingContent?: boolean;
@@ -992,6 +998,8 @@ async function startEnrollmentServer(options: {
       getAdapterForRole: () => suppressedProvider,
     },
     educationCatalog: {
+      getForNewWork(id, version) { return this.get(id, version); },
+      lifecycle(id, version) { return this.get(id, version) ? "active" : undefined; },
       list: () => [],
       get: (id, version) => !options.unavailableContent && id === "dry-eye-basics" && version === 2 ? {
         id,
@@ -1010,6 +1018,7 @@ async function startEnrollmentServer(options: {
         },
       } : undefined,
     },
+    ...(options.educationCatalog ? { educationCatalog: options.educationCatalog } : {}),
     trackedLinkStore: {
       async create(link) {
         trackedLinks.push(structuredClone(link));
@@ -1032,6 +1041,8 @@ async function startEnrollmentServer(options: {
   await once(server, "listening");
   const address = server.address() as AddressInfo;
   return {
+    deps,
+    patient,
     base: `http://127.0.0.1:${address.port}`,
     enrollmentStore,
     communications,
@@ -1493,5 +1504,156 @@ test("staff resume cannot claim a pending worker-bound sequence attempt", async 
     assert.equal(claims, 0);
     assert.equal(fixture.underlyingSends.length, 0);
     assert.equal(enrollment.immediateSends[0].state, "pending");
+  } finally { await fixture.close(); }
+});
+
+
+async function capturedLifecycleCatalog() {
+  const envelope = JSON.parse(readFileSync(new URL("./fixtures/visionforge-education-catalog/catalog.body", import.meta.url), "utf8"));
+  const reader = createVisionForgeEducationCatalogReader({ baseUrl: "http://capture.example.test", practiceId: "o1-practice-a", token: "synthetic-seam-token" }, {
+    load: async () => undefined, accept: async () => {}, recordAttempt: async () => {},
+  }, async () => new Response(JSON.stringify(envelope), { status: 200 }) as Response);
+  assert.equal((await reader.refresh()).outcome, "accepted");
+  return { reader, envelope, async retire() {
+    envelope.entries.find((entry: any) => entry.item.id === "history" && entry.item.version === 2).lifecycle.state = "retained";
+    assert.equal((await reader.refresh()).outcome, "accepted");
+  }, async withdraw() {
+    envelope.entries.find((entry: any) => entry.item.id === "history" && entry.item.version === 2).lifecycle.state = "withdrawn";
+    assert.equal((await reader.refresh()).outcome, "accepted");
+  } };
+}
+
+for (const content of [{ id: "history", version: 1 }, { id: "withdrawn", version: 1 }]) {
+  test(`O1 refuses new immediate enrollment for ${content.id}@${content.version}`, async () => {
+    const catalog = await capturedLifecycleCatalog();
+    const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+    try {
+      const body = enrollmentBody();
+      body.initialStage.immediateSends[0] = { ...body.initialStage.immediateSends[0]!, educationId: content.id, version: content.version };
+      const response = await request(fixture.base, "/communications/education/enrollments", "POST", body);
+      assert.equal(response.status, 404);
+      assert.equal(fixture.underlyingSends.length, 0);
+    } finally { await fixture.close(); }
+  });
+  test(`O1 refuses new sequence enrollment for ${content.id}@${content.version}`, async () => {
+    const catalog = await capturedLifecycleCatalog();
+    const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+    try {
+      const body = futureEnrollmentBody(); body.initialStage.sequence.steps[0]!.content = content;
+      assert.equal((await request(fixture.base, "/communications/education/enrollments", "POST", body)).status, 404);
+      assert.equal(fixture.underlyingSends.length, 0);
+    } finally { await fixture.close(); }
+  });
+  test(`O1 refuses one-off dispatch for ${content.id}@${content.version}`, async () => {
+    const catalog = await capturedLifecycleCatalog();
+    const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+    try {
+      const response = await request(fixture.base, "/communications/education/dispatch", "POST", {
+        patientReference: PATIENT_REFERENCE, educationId: content.id, version: content.version,
+        channel: "sms", lane: "clinical", alsoUpdateChart: false, idempotencyKey: "o1-one-off",
+      });
+      assert.equal(response.status, 404);
+      assert.equal(fixture.underlyingSends.length, 0);
+    } finally { await fixture.close(); }
+  });
+}
+
+test("O1 scheduled preparation accepts retained and holds withdrawn content-unavailable", async () => {
+  const catalog = await capturedLifecycleCatalog();
+  const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+  try {
+    const staff = await fixture.deps.authenticate("Bearer provider"); assert.ok(staff);
+    const body = { patientReference: PATIENT_REFERENCE, educationId: "history", version: 1,
+      channel: "sms" as const, lane: "clinical" as const, alsoUpdateChart: false, idempotencyKey: "o1-scheduled" };
+    assert.equal((await prepareEducationSequenceDispatch(fixture.deps, staff.fhir, fixture.patient, body)).kind, "ready");
+    assert.deepEqual(await prepareEducationSequenceDispatch(fixture.deps, staff.fhir, fixture.patient, { ...body, educationId: "withdrawn" }),
+      { kind: "held", reason: "content-unavailable" });
+  } finally { await fixture.close(); }
+});
+
+test("O1 claimed transition delivery accepts content retired after claim", async () => {
+  const catalog = await capturedLifecycleCatalog();
+  const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+  try {
+    const create = enrollmentBody(); create.initialStage.immediateSends[0]!.educationId = "history";
+    const created = await request(fixture.base, "/communications/education/enrollments", "POST", create);
+    assert.equal(created.status, 201); const { enrollment } = await created.json();
+    const originalClaim = fixture.enrollmentStore.claimImmediateSend.bind(fixture.enrollmentStore);
+    fixture.enrollmentStore.claimImmediateSend = async (...args) => { const claimed = await originalClaim(...args); await catalog.retire(); return claimed; };
+    const transition = transitionBody(); transition.targetStage.immediateSends[0]!.educationId = "history";
+    const response = await request(fixture.base, `/communications/education/enrollments/${enrollment.id}/transitions`, "POST", transition);
+    assert.equal(response.status, 200, await response.text());
+    assert.equal(fixture.underlyingSends.length, 2);
+  } finally { await fixture.close(); }
+});
+
+test("O1 existing transition and sequence admission accept retained content", async () => {
+  const catalog = await capturedLifecycleCatalog();
+  const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+  try {
+    const create = enrollmentBody(); create.initialStage.immediateSends[0]!.educationId = "history";
+    const created = await request(fixture.base, "/communications/education/enrollments", "POST", create);
+    assert.equal(created.status, 201); const { enrollment } = await created.json();
+    const sequence = sequenceBody(); sequence.steps[0]!.content = { id: "history", version: 1 };
+    const admission = await request(fixture.base, `/communications/education/enrollments/${enrollment.id}/sequences`, "POST", { stageId: "welcome", sequence, requestId: "o1-existing-admission" });
+    assert.equal(admission.status, 200, await admission.text());
+    const transition = transitionBody();
+    transition.targetStage.immediateSends[0] = { ...transition.targetStage.immediateSends[0]!, educationId: "history", version: 1 };
+    const response = await request(fixture.base, `/communications/education/enrollments/${enrollment.id}/transitions`, "POST", {
+      ...transition, requestId: "o1-transition-admission", targetStage: { ...transition.targetStage, sequence: { ...sequence, id: "o1-transition-sequence" } },
+    });
+    assert.equal(response.status, 200, await response.text());
+    assert.equal(fixture.underlyingSends.length, 2);
+  } finally { await fixture.close(); }
+});
+
+test("O1 pending enrollment resume accepts content retired after enrollment", async () => {
+  const catalog = await capturedLifecycleCatalog();
+  const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+  try {
+    const originalClaim = fixture.enrollmentStore.claimImmediateSend.bind(fixture.enrollmentStore);
+    fixture.enrollmentStore.claimImmediateSend = async () => { throw new Error("Synthetic interruption before claim"); };
+    const create = enrollmentBody(); create.initialStage.immediateSends[0]!.educationId = "history";
+    const created = await request(fixture.base, "/communications/education/enrollments", "POST", create);
+    assert.equal(created.status, 502);
+    fixture.enrollmentStore.claimImmediateSend = originalClaim;
+    await catalog.retire();
+    const resumed = await request(fixture.base, "/communications/education/enrollments/enrollment-api-synthetic-1/resume", "POST", {});
+    assert.equal(resumed.status, 200, await resumed.text());
+    assert.equal(fixture.underlyingSends.length, 1);
+  } finally { await fixture.close(); }
+});
+
+test("O1 seed catalog staff status and refresh are gated and rate limited", async () => {
+  const fixture = await startEnrollmentServer();
+  try {
+    for (const [path, method] of [["status", "GET"], ["refresh", "POST"]]) {
+      const anonymous = await fetch(`${fixture.base}/communications/education/catalog/${path}`, { method });
+      assert.equal(anonymous.status, 401);
+      const response = await request(fixture.base, `/communications/education/catalog/${path}`, method as "GET" | "POST");
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).state, "seed-placeholder");
+    }
+    let status = 0;
+    for (let i = 0; i < 10; i++) status = (await request(fixture.base, "/communications/education/catalog/refresh", "POST")).status;
+    assert.equal(status, 429);
+  } finally { await fixture.close(); }
+});
+
+
+test("O1 prepared scheduled dispatch refuses content withdrawn after preflight", async () => {
+  const catalog = await capturedLifecycleCatalog();
+  const fixture = await startEnrollmentServer({ educationCatalog: catalog.reader });
+  try {
+    const staff = await fixture.deps.authenticate("Bearer provider"); assert.ok(staff);
+    const body = { patientReference: PATIENT_REFERENCE, educationId: "history", version: 2,
+      channel: "sms" as const, lane: "clinical" as const, alsoUpdateChart: false, idempotencyKey: "education-sequence-synthetic" };
+    const preparation = await prepareEducationSequenceDispatch(fixture.deps, staff.fhir, fixture.patient, body);
+    assert.equal(preparation.kind, "ready");
+    if (preparation.kind !== "ready") return;
+    await catalog.withdraw();
+    await assert.rejects(() => dispatchEducationAs({ kind: "system", reference: "Practitioner/synthetic-worker", onBehalfOf: staff.staffReference, fhir: staff.fhir },
+      fixture.deps, fixture.patient, body, { prepared: preparation.prepared }), /Education content not found/);
+    assert.equal(fixture.underlyingSends.length, 0);
   } finally { await fixture.close(); }
 });

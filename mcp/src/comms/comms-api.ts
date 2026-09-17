@@ -1,3 +1,5 @@
+import { rateLimit } from "express-rate-limit";
+import { seedEducationCatalogStatus, type EducationCatalogRuntime } from "./visionforge-education-catalog.js";
 import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION } from "./suppression-gate.js";
 import type { PatientWriteVersion } from "./patient-version.js";
 import { resolvePractitionerReference } from "../authz/practitioner-reference.js";
@@ -28,7 +30,7 @@ import {
 } from "./comms-config.js";
 import type { CommsProvider, ConversationSummary } from "./comms-provider.js";
 import type { EducationSequenceOperations } from "./education-sequence-operations.js";
-import type { EducationCatalogReader, EducationContentItem } from "./education-catalog.js";
+import type { EducationCatalogLifecycleReader, EducationContentItem } from "./education-catalog.js";
 import {
   EducationEnrollmentDuplicateError,
   EducationEnrollmentTransitionError,
@@ -81,7 +83,8 @@ export interface CommsApiRouteDeps {
   authenticate(authHeader: string | undefined): Promise<CommsStaff | null>;
   fhir: SmsOptOutManagementFhir;
   dispatch: CommsDispatch;
-  educationCatalog: EducationCatalogReader;
+  educationCatalog: EducationCatalogLifecycleReader;
+  educationCatalogControl?: Pick<EducationCatalogRuntime, "status" | "refresh">;
   enrollmentStore?: EducationEnrollmentStore;
   sequenceOperations?: EducationSequenceOperations;
   trackedLinkStore: TrackedLinkStore;
@@ -259,7 +262,7 @@ export function registerCommsApiRoutes(
           throw new CommsApiCapabilityError(`Education content is not published for ${send.channel}.`);
         }
       }
-      await validateSequenceAdmission(deps, staff, patient, body.targetStage.sequence);
+      await validateSequenceAdmission(deps, staff, patient, body.targetStage.sequence, "existing-enrollment");
       const sendStartIndex = existing.immediateSends.length;
       let enrollment: EducationEnrollment;
       try {
@@ -383,7 +386,7 @@ export function registerCommsApiRoutes(
       const existing = await store.read(id);
       if (!existing) throw new CommsApiNotFoundError("Education enrollment not found.");
       const patient = await readPatient(staff.fhir, existing.patientReference);
-      await validateSequenceAdmission(deps, staff, patient, sequence);
+      await validateSequenceAdmission(deps, staff, patient, sequence, "existing-enrollment");
       const enrollment = await store.admitSequence(id, {
         requestId: idempotencyKeyFromBody(body.requestId), sequence,
         authorizedAt: deps.now?.() ?? new Date().toISOString(), authorizedBy: staff.staffReference,
@@ -426,7 +429,7 @@ export function registerCommsApiRoutes(
         body.patientReference,
       );
       for (const send of body.initialStage.immediateSends) {
-        const item = deps.educationCatalog.get(send.educationId, send.version);
+        const item = deps.educationCatalog.getForNewWork(send.educationId, send.version);
         if (!item || item.audience !== "patient") {
           throw new CommsApiNotFoundError("Education content not found.");
         }
@@ -435,7 +438,7 @@ export function registerCommsApiRoutes(
         }
       }
       const store = enrollmentStore(deps);
-      await validateSequenceAdmission(deps, staff, patient, body.initialStage.sequence);
+      await validateSequenceAdmission(deps, staff, patient, body.initialStage.sequence, "new-enrollment");
       const duplicates = await store.listActiveForPatient(body.patientReference);
       if (!body.initialStage.sequence && duplicates.some((enrollment) => enrollment.journey.id === body.journey.id)) {
         throw new CommsApiRefusalError("duplicate-active-enrollment");
@@ -488,6 +491,20 @@ export function registerCommsApiRoutes(
     },
   ));
 
+  const catalogStatus = () => deps.educationCatalogControl?.status() ?? seedEducationCatalogStatus(deps.educationCatalog);
+  app.get("/communications/education/catalog/status", async (req, res) => withStaff(
+    req, res, deps, "communications.read", "Basic", "communications-education-catalog-status", undefined,
+    async () => ({ status: 200, body: catalogStatus() }),
+  ));
+  const catalogRefreshLimit = rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
+  app.post("/communications/education/catalog/refresh", catalogRefreshLimit, async (req, res) => withStaff(
+    req, res, deps, "communications.content.read", "Basic", "communications-education-catalog-refresh", undefined,
+    async () => {
+      await deps.educationCatalogControl?.refresh();
+      return { status: 200, body: catalogStatus() };
+    },
+  ));
+
   app.get("/communications/education/:educationId", async (req, res) => withStaff(
     req,
     res,
@@ -530,7 +547,7 @@ export function registerCommsApiRoutes(
         throw new CommsApiRefusalError(body.channel === "print" ? "print-sequence-electronic-dispatch-refused" : "sequence-dispatch-not-enabled");
       }
       await enforceEducationLifecycle(deps, staff);
-      return { status: 200, body: await dispatchEducation(deps, staff, patient, body) };
+      return { status: 200, body: await dispatchEducation(deps, staff, patient, body, "new-enrollment") };
     },
   ));
 
@@ -895,12 +912,16 @@ function sequenceFromBody(value: unknown): EducationSequenceInput | undefined {
   return structuredClone(sequence);
 }
 
+type EducationDispatchMode = "new-enrollment" | "existing-enrollment";
+
 async function validateSequenceAdmission(
-  deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, sequence?: EducationSequenceInput,
+  deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, sequence: EducationSequenceInput | undefined, mode: EducationDispatchMode,
 ): Promise<void> {
   if (!sequence) return;
   for (const step of sequence.steps) {
-    const item = deps.educationCatalog.get(step.content.id, step.content.version);
+    const item = mode === "new-enrollment"
+      ? deps.educationCatalog.getForNewWork(step.content.id, step.content.version)
+      : deps.educationCatalog.get(step.content.id, step.content.version);
     if (!item || item.audience !== "patient") throw new CommsApiNotFoundError("Education content not found.");
     if (!item.channels.includes(step.channel)) throw new CommsApiCapabilityError(`Education content is not published for ${step.channel}.`);
     if (step.channel === "sms" && item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)) throw new CommsApiRefusalError("marketing-consent-absent");
@@ -968,7 +989,7 @@ async function dispatchEnrollmentSend(
     encounterReference: current.enteredFromEncounterReference,
     idempotencyKey,
     ...(scheduled ? { recipientOverride: { reference: scheduled.recipientReference } } : {}),
-  }, { reconcileOnly, senderReference: current.enrolledBy });
+  }, "existing-enrollment", { reconcileOnly, senderReference: current.enrolledBy });
   return store.recordImmediateSendOutcome(current.id, sendIndex, outcome);
 }
 
@@ -1044,9 +1065,11 @@ export type EducationSequencePreparation =
   | { kind: "deferred"; notBefore: string };
 
 async function prepareEducationDispatch(
-  deps: CommsApiRouteDeps, fhir: MedplumClient, patient: Patient, body: EducationDispatchBody,
+  deps: CommsApiRouteDeps, fhir: MedplumClient, patient: Patient, body: EducationDispatchBody, mode: EducationDispatchMode,
 ): Promise<Omit<PreparedEducationSequenceDispatch, "body">> {
-  const item = deps.educationCatalog.get(body.educationId, body.version);
+  const item = mode === "new-enrollment"
+    ? deps.educationCatalog.getForNewWork(body.educationId, body.version)
+    : deps.educationCatalog.get(body.educationId, body.version);
   if (!item || item.audience !== "patient") {
     throw new CommsApiNotFoundError("Education content not found.");
   }
@@ -1077,7 +1100,7 @@ export async function prepareEducationSequenceDispatch(
   if (body.channel === "print") return { kind: "held", reason: "needs-acknowledgement" };
   let prepared: Omit<PreparedEducationSequenceDispatch, "body">;
   try {
-    prepared = await prepareEducationDispatch(deps, fhir, patient, body);
+    prepared = await prepareEducationDispatch(deps, fhir, patient, body, "existing-enrollment");
   } catch (error) {
     if (error instanceof CommsApiNotFoundError) return { kind: "held", reason: "content-unavailable" };
     if (error instanceof CommsApiRefusalError) return { kind: "held", reason: error.reason === "marketing-consent-absent" ? "preference-withheld" : "patient-opt-out" };
@@ -1151,13 +1174,13 @@ export async function readEducationDispatchEvidence(fhir: MedplumClient, body: E
 type EducationDispatchResult = EducationEnrollmentSendOutcome & { chartUpdate?: "conflict"; chartUpdateNotice?: string; preferenceUpdate?: "failed" };
 
 async function dispatchEducation(
-  deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, body: EducationDispatchBody,
+  deps: CommsApiRouteDeps, staff: CommsStaff, patient: Patient, body: EducationDispatchBody, mode: EducationDispatchMode,
   options: { reconcileOnly?: boolean; senderReference?: string } = {},
 ): Promise<EducationDispatchResult> {
   let chartConflict = false;
   let chartUpdateNotice: string | undefined;
   let preferenceFailed = false;
-  const result = await dispatchEducationInternal({ kind: "staff", staff }, deps, patient, body, options,
+  const result = await dispatchEducationInternal({ kind: "staff", staff }, deps, patient, body, options, mode,
     (notice) => { if (notice) chartUpdateNotice = notice; else chartConflict = true; }, () => { preferenceFailed = true; });
   return result.outcome === "sent" || result.outcome === "print" ? { ...result, ...(chartUpdateNotice ? { chartUpdateNotice } : {}), ...(chartConflict ? { chartUpdate: "conflict" as const } : {}), ...(preferenceFailed ? { preferenceUpdate: "failed" as const } : {}) } : result;
 }
@@ -1169,7 +1192,7 @@ export async function dispatchEducationAs(
   body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch } = {},
 ): Promise<EducationEnrollmentSendOutcome> {
-  return dispatchEducationInternal(actor, deps, patient, body, options);
+  return dispatchEducationInternal(actor, deps, patient, body, options, "existing-enrollment");
 }
 
 async function dispatchEducationInternal(
@@ -1178,6 +1201,7 @@ async function dispatchEducationInternal(
   patient: Patient | undefined,
   body: EducationDispatchBody,
   options: { reconcileOnly?: boolean; senderReference?: string; prepared?: PreparedEducationSequenceDispatch },
+  mode: EducationDispatchMode,
   onRecipientConflict?: (notice?: string) => void,
   onPreferenceFailure?: () => void,
 ): Promise<EducationEnrollmentSendOutcome> {
@@ -1211,8 +1235,11 @@ async function dispatchEducationInternal(
     if (educationDispatchIdentity(options.prepared.body, false) !== educationDispatchIdentity(body, false)) {
       throw new CommsApiValidationError("Prepared education request does not match dispatch.");
     }
+    if (!deps.educationCatalog.get(body.educationId, body.version)) {
+      throw new CommsApiNotFoundError("Education content not found.");
+    }
   }
-  const { item, recipient, laneSelection, campaignId } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body);
+  const { item, recipient, laneSelection, campaignId } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body, mode);
   const requiredConsent = { consentClass: item.consentClass,
     ...(actor.kind === "system" && item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) };
   const frozenContext = (providerMessageIdentifierSystem: string): string => JSON.stringify({
