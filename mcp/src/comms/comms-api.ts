@@ -492,7 +492,8 @@ export function registerCommsApiRoutes(
   ));
 
   const catalogStatus = () => deps.educationCatalogControl?.status() ?? seedEducationCatalogStatus(deps.educationCatalog);
-  app.get("/communications/education/catalog/status", async (req, res) => withStaff(
+  const catalogStatusLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false });
+  app.get("/communications/education/catalog/status", catalogStatusLimit, async (req, res) => withStaff(
     req, res, deps, "communications.read", "Basic", "communications-education-catalog-status", undefined,
     async () => ({ status: 200, body: catalogStatus() }),
   ));
