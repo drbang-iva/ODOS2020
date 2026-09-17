@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: EXAM-1B in-flight edit remains unsaved after the older request completes
+ok 1 - EXAM-1B in-flight edit remains unsaved after the older request completes
+  ---
+  duration_ms: 27.16175
+  type: 'test'
+  ...
+# Subtest: W147 UI inactive owned witness remains checked and locked
+ok 2 - W147 UI inactive owned witness remains checked and locked
+  ---
+  duration_ms: 21.38875
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives remarks with the same act id
+ok 3 - W133 pending All Normal survives remarks with the same act id
+  ---
+  duration_ms: 10.45675
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives measurement with the same act id
+ok 4 - W133 pending All Normal survives measurement with the same act id
+  ---
+  duration_ms: 8.414958
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives grade with the same act id
+ok 5 - W133 pending All Normal survives grade with the same act id
+  ---
+  duration_ms: 4.7795
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives Other cleared with the same act id
+ok 6 - W133 pending All Normal survives Other cleared with the same act id
+  ---
+  duration_ms: 4.702125
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after scoped positive
+ok 7 - W133 pending All Normal is dropped after scoped positive
+  ---
+  duration_ms: 3.969208
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after Other text
+ok 8 - W133 pending All Normal is dropped after Other text
+  ---
+  duration_ms: 4.212708
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after deferred
+ok 9 - W133 pending All Normal is dropped after deferred
+  ---
+  duration_ms: 3.1215
+  type: 'test'
+  ...
+# Subtest: W148 OD staged All Normal replacement is explained until positive-only save completes
+ok 10 - W148 OD staged All Normal replacement is explained until positive-only save completes
+  ---
+  duration_ms: 4.647708
+  type: 'test'
+  ...
+# Subtest: W148 OS staged All Normal replacement is explained until positive-only save completes
+ok 11 - W148 OS staged All Normal replacement is explained until positive-only save completes
+  ---
+  duration_ms: 4.557667
+  type: 'test'
+  ...
+# Subtest: W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds
+ok 12 - W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds
+  ---
+  duration_ms: 4.048125
+  type: 'test'
+  ...
+# Subtest: W131/W148 identical Retry retains its original capture and leaves later edits unsaved
+ok 13 - W131/W148 identical Retry retains its original capture and leaves later edits unsaved
+  ---
+  duration_ms: 7.108584
+  type: 'test'
+  ...
+# Subtest: W148 retrying an older All Normal request retains a later replacement notice as unsaved
+ok 14 - W148 retrying an older All Normal request retains a later replacement notice as unsaved
+  ---
+  duration_ms: 4.555875
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+ok 15 - W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+  ---
+  duration_ms: 3.102
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive absent child remains visible and locked with parent selected false
+ok 16 - W130/W137 inactive absent child remains visible and locked with parent selected false
+  ---
+  duration_ms: 3.725792
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive absent child remains visible and locked with parent selected true
+ok 17 - W130/W137 inactive absent child remains visible and locked with parent selected true
+  ---
+  duration_ms: 4.2125
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive present child remains visible and locked with parent selected false
+ok 18 - W130/W137 inactive present child remains visible and locked with parent selected false
+  ---
+  duration_ms: 3.703416
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive present child remains visible and locked with parent selected true
+ok 19 - W130/W137 inactive present child remains visible and locked with parent selected true
+  ---
+  duration_ms: 4.066417
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 627.027208

@@ -1,0 +1,16 @@
+{
+  "name": "nested-visibility",
+  "file": "ui/src/components/charting/OcularHealthSection.tsx",
+  "anchor": "  const visibleChips = options.filter((option) => !option.parentCode || !option.active);",
+  "replacement": "  const visibleChips = options.filter((option) => !option.parentCode);",
+  "cwd": "ui",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=inactive|W148|pending All Normal|in-flight edit remains",
+    "tests/r10A3OcularEditor.test.tsx",
+    "tests/customSections.test.tsx"
+  ]
+}

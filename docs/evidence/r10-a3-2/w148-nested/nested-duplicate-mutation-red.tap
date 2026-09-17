@@ -1,0 +1,156 @@
+TAP version 13
+# Subtest: EXAM-1B in-flight edit remains unsaved after the older request completes
+ok 1 - EXAM-1B in-flight edit remains unsaved after the older request completes
+  ---
+  duration_ms: 26.815208
+  type: 'test'
+  ...
+# Subtest: W147 UI inactive owned witness remains checked and locked
+ok 2 - W147 UI inactive owned witness remains checked and locked
+  ---
+  duration_ms: 21.587125
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives remarks with the same act id
+ok 3 - W133 pending All Normal survives remarks with the same act id
+  ---
+  duration_ms: 10.090375
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives measurement with the same act id
+ok 4 - W133 pending All Normal survives measurement with the same act id
+  ---
+  duration_ms: 8.496209
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives grade with the same act id
+ok 5 - W133 pending All Normal survives grade with the same act id
+  ---
+  duration_ms: 5.113458
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal survives Other cleared with the same act id
+ok 6 - W133 pending All Normal survives Other cleared with the same act id
+  ---
+  duration_ms: 4.368833
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after scoped positive
+ok 7 - W133 pending All Normal is dropped after scoped positive
+  ---
+  duration_ms: 3.962167
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after Other text
+ok 8 - W133 pending All Normal is dropped after Other text
+  ---
+  duration_ms: 4.026916
+  type: 'test'
+  ...
+# Subtest: W133 pending All Normal is dropped after deferred
+ok 9 - W133 pending All Normal is dropped after deferred
+  ---
+  duration_ms: 2.930166
+  type: 'test'
+  ...
+# Subtest: W148 OD staged All Normal replacement is explained until positive-only save completes
+ok 10 - W148 OD staged All Normal replacement is explained until positive-only save completes
+  ---
+  duration_ms: 4.588791
+  type: 'test'
+  ...
+# Subtest: W148 OS staged All Normal replacement is explained until positive-only save completes
+ok 11 - W148 OS staged All Normal replacement is explained until positive-only save completes
+  ---
+  duration_ms: 4.0395
+  type: 'test'
+  ...
+# Subtest: W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds
+ok 12 - W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds
+  ---
+  duration_ms: 4.204917
+  type: 'test'
+  ...
+# Subtest: W131/W148 identical Retry retains its original capture and leaves later edits unsaved
+ok 13 - W131/W148 identical Retry retains its original capture and leaves later edits unsaved
+  ---
+  duration_ms: 6.65975
+  type: 'test'
+  ...
+# Subtest: W148 retrying an older All Normal request retains a later replacement notice as unsaved
+ok 14 - W148 retrying an older All Normal request retains a later replacement notice as unsaved
+  ---
+  duration_ms: 4.159875
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+ok 15 - W130/W137 inactive recorded-absent fact stays visible, unchecked and locked
+  ---
+  duration_ms: 3.014833
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive absent child remains visible and locked with parent selected false
+ok 16 - W130/W137 inactive absent child remains visible and locked with parent selected false
+  ---
+  duration_ms: 3.575875
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive absent child remains visible and locked with parent selected true
+not ok 17 - W130/W137 inactive absent child remains visible and locked with parent selected true
+  ---
+  duration_ms: 3.855291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:20338'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    2 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:262:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W130/W137 inactive present child remains visible and locked with parent selected false
+ok 18 - W130/W137 inactive present child remains visible and locked with parent selected false
+  ---
+  duration_ms: 4.633375
+  type: 'test'
+  ...
+# Subtest: W130/W137 inactive present child remains visible and locked with parent selected true
+not ok 19 - W130/W137 inactive present child remains visible and locked with parent selected true
+  ---
+  duration_ms: 1.489084
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:20338'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    2 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:262:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 17
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 627.037542
