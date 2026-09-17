@@ -1,0 +1,6 @@
+
+> odos2020@0.0.1 typecheck:scripts
+> tsc -p tsconfig.scripts.json
+
+mcp/tests/integration-helpers.ts(50,3): error TS2741: Property 'GITHUB_ENV' is missing in type 'Dict<string>' but required in type 'Pick<ProcessEnv, "GITHUB_ENV">'.
+mcp/tests/integration-helpers.ts(288,17): error TS18046: 'result.content' is of type 'unknown'.

@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: W147 unchanged signed loaded witness permits Remarks without changing the fact
+ok 1 - W147 unchanged signed loaded witness permits Remarks without changing the fact
+  ---
+  duration_ms: 18.219083
+  type: 'test'
+  ...
+# Subtest: W147 signed deselect remains refused with zero writes
+ok 2 - W147 signed deselect remains refused with zero writes
+  ---
+  duration_ms: 7.006458
+  type: 'test'
+  ...
+# Subtest: W147 signed regrade remains refused with zero writes
+ok 3 - W147 signed regrade remains refused with zero writes
+  ---
+  duration_ms: 6.867083
+  type: 'test'
+  ...
+# Subtest: W147 unchanged signed witness with a moved fresh version refuses stale baseline
+not ok 4 - W147 unchanged signed witness with a moved fresh version refuses stale baseline
+  ---
+  duration_ms: 10.509792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3OcularDoor.test.ts:1:34743'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3OcularDoor.test.ts:195:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W147 inactive option is an unchanged witness while active panel Remarks save
+ok 5 - W147 inactive option is an unchanged witness while active panel Remarks save
+  ---
+  duration_ms: 9.474083
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 242.951458

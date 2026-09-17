@@ -1,0 +1,2091 @@
+{
+  "base": "a211b368",
+  "head": "3eaba076",
+  "generatedAt": "2026-09-17T17:40:00.962157+00:00",
+  "status": "Author evidence only; NOT EVALUATED",
+  "method": "Raw recorded logs parsed without rerunning checks. Last TAP total in each file; no process exit inferred from test totals. Null exits are unrecorded. Running logs may be incomplete at index capture. Historical attempts are included, not latest-head claims.",
+  "checks": [
+    {
+      "path": "assessment-green.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 264.013292
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "assessment-mutation-green.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 249.989209
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "assessment-mutation-red.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 267.7705
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "assessment-red.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 303.958833
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "assessment-regressions.log",
+      "counts": {
+        "tests": 41,
+        "suites": 0,
+        "pass": 41,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 398.547584
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/W142-new-command.log",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 0,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 233.783
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/W143-no-reload.log",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 0,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 228.591375
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/W143-no-replan.log",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 1,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 228.494125
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/W143-old-command.log",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 1,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 233.765917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/W145-ignore-count.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 214.689375
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/baseline-red.tap",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 0,
+        "fail": 5,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 280.198333
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry/restored-green.tap",
+      "counts": {
+        "tests": 20,
+        "suites": 0,
+        "pass": 20,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 291.370209
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry-integration/carry-event-green.log",
+      "counts": {
+        "tests": 23,
+        "suites": 0,
+        "pass": 23,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 337.276166
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry-integration/carry-event-red.log",
+      "counts": {
+        "tests": 3,
+        "suites": 0,
+        "pass": 1,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 271.841959
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry-integration/carry-integration-green.log",
+      "counts": {
+        "tests": 25,
+        "suites": 0,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 321.430584
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "carry-integration/carry-integration-types.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "carry-integration/carry-remount-red.log",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 0,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 278.11
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "custom-sections/custom-before.log",
+      "counts": {
+        "tests": 83,
+        "suites": 0,
+        "pass": 46,
+        "fail": 37,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 873.660791
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "custom-sections/custom-deferred-red.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 537.125375
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "custom-sections/custom-qualifiers-red.log",
+      "counts": {
+        "tests": 4,
+        "suites": 0,
+        "pass": 0,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 587.663708
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "custom-sections/custom-restored.log",
+      "counts": {
+        "tests": 83,
+        "suites": 0,
+        "pass": 83,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 852.190583
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W130-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 305.24875
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W130-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 293.868208
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W131-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 301.3865
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W131-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 299.809875
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W132-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 304.659083
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W132-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 312.469833
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W133-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 314.90675
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W133-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 289.916584
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W134-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 299.678791
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W134-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 293.596917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W135-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 300.342125
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W135-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 290.468791
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W136-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 303.915375
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W136-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 292.990416
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W137-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 306.307458
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W137-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 295.678
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W138-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 304.538291
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W138-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 293.041583
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W145-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 307.056834
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W145-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 301.772333
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W147-ui-mutation-red.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 312.357791
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/W147-ui-restored-green.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 301.104209
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/green-attempt.txt",
+      "counts": {
+        "tests": 13,
+        "suites": 0,
+        "pass": 13,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 306.078917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/initial-red.txt",
+      "counts": {
+        "tests": 11,
+        "suites": 0,
+        "pass": 1,
+        "fail": 10,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 495.429
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/refresh-inactive-green.txt",
+      "counts": {
+        "tests": 15,
+        "suites": 0,
+        "pass": 15,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 311.212
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor/refresh-inactive-red.txt",
+      "counts": {
+        "tests": 15,
+        "suites": 0,
+        "pass": 13,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 335.908375
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "editor-wrong-cwd.log",
+      "counts": {
+        "tests": 15,
+        "suites": 0,
+        "pass": 1,
+        "fail": 14,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 236.885208
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "entry-focused.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 33649.610084
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "entry-focused2.log",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 3215.897042
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "final-partial-editor.log",
+      "counts": {
+        "tests": 15,
+        "suites": 0,
+        "pass": 15,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 299.109666
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "final-partial-preflight.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "final-partial-ui-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "full-mcp-ci-exact.log",
+      "counts": {
+        "tests": 5700,
+        "suites": 0,
+        "pass": 5645,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 53,
+        "todo": 0,
+        "duration_ms": 111502.555625
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "full-mcp-current.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "full-mcp-stable.log",
+      "counts": {
+        "tests": 6005,
+        "suites": 0,
+        "pass": 5952,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 53,
+        "todo": 0,
+        "duration_ms": 131472.951167
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "full-ui-current.log",
+      "counts": {
+        "tests": 1722,
+        "suites": 0,
+        "pass": 1722,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 197946.185834
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "full-ui-final.log",
+      "counts": {
+        "tests": 1727,
+        "suites": 0,
+        "pass": 1727,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 197361.475083
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "harness/W146-command.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "harness/W146-generated-file-green.log",
+      "counts": null,
+      "exitCode": 0,
+      "exitSource": "explicit log marker",
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "harness/W146-generated-file-red.log",
+      "counts": null,
+      "exitCode": 1,
+      "exitSource": "explicit log marker",
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "harness/W146-red.tap",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 45.315958
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "harness/restored-green.tap",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 90.622917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "harness/scripts-typecheck.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "harness-tests.log",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 93.694167
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "live-authz/exit-code.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "live-authz/live-authz.log",
+      "counts": {
+        "tests": 73,
+        "suites": 0,
+        "pass": 73,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 69471.36025
+      },
+      "exitCode": 0,
+      "exitSource": "live-authz/exit-code.txt",
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "mcp-base-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "mcp-build-current.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "mgd-green.log",
+      "counts": {
+        "tests": 8,
+        "suites": 0,
+        "pass": 8,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 390.676458
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "overview-green.log",
+      "counts": {
+        "tests": 100,
+        "suites": 0,
+        "pass": 100,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 2033.231917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W139-picker-red.txt",
+      "counts": {
+        "tests": 3,
+        "suites": 0,
+        "pass": 2,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 258.406125
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W139-restored-green.txt",
+      "counts": {
+        "tests": 25,
+        "suites": 0,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 589.643125
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W140-shared-scope-picker-red.txt",
+      "counts": {
+        "tests": 3,
+        "suites": 0,
+        "pass": 1,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 252.346041
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W140-shared-scope-restored-green.txt",
+      "counts": {
+        "tests": 25,
+        "suites": 0,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 601.60775
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W140-shared-scope-workspace-red.txt",
+      "counts": {
+        "tests": 22,
+        "suites": 0,
+        "pass": 20,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 536.53175
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W140-supports-picker-red.txt",
+      "counts": {
+        "tests": 3,
+        "suites": 0,
+        "pass": 1,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 250.299292
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W140-supports-restored-green.txt",
+      "counts": {
+        "tests": 25,
+        "suites": 0,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 580.043667
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/W51-green.txt",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 260.586958
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/blank-panel-red.txt",
+      "counts": {
+        "tests": 16,
+        "suites": 0,
+        "pass": 15,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 414.84175
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/carried-suggestions.txt",
+      "counts": {
+        "tests": 2,
+        "suites": 0,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 565.574667
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/exam1b-attempt.txt",
+      "counts": {
+        "tests": 6,
+        "suites": 0,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 787.534083
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/exam1b-green.txt",
+      "counts": {
+        "tests": 6,
+        "suites": 0,
+        "pass": 6,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 572.8115
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/final-focused.txt",
+      "counts": {
+        "tests": 101,
+        "suites": 0,
+        "pass": 101,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 854.409583
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/green-attempt.txt",
+      "counts": {
+        "tests": 25,
+        "suites": 0,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 579.628292
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/green.txt",
+      "counts": {
+        "tests": 25,
+        "suites": 0,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 577.536916
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/initial-red.txt",
+      "counts": {
+        "tests": 3,
+        "suites": 0,
+        "pass": 0,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 248.5585
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/integration.txt",
+      "counts": {
+        "tests": 68,
+        "suites": 0,
+        "pass": 68,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 614.452917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/offered-selection-red.txt",
+      "counts": {
+        "tests": 16,
+        "suites": 0,
+        "pass": 15,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 389.962875
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/panel-offered-restored-green.txt",
+      "counts": {
+        "tests": 16,
+        "suites": 0,
+        "pass": 16,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 356.957
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/scope-change-green.txt",
+      "counts": {
+        "tests": 28,
+        "suites": 0,
+        "pass": 28,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 571.98675
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/scope-change-red.txt",
+      "counts": {
+        "tests": 1,
+        "suites": 0,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 254.799916
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/sweep-editor-attempt.txt",
+      "counts": {
+        "tests": 21,
+        "suites": 0,
+        "pass": 20,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 521.930791
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/sweep-editor-green.txt",
+      "counts": {
+        "tests": 21,
+        "suites": 0,
+        "pass": 21,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 729.834708
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/typecheck.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "picker/workspace-before.txt",
+      "counts": {
+        "tests": 22,
+        "suites": 0,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 637.623416
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "picker/workspace-extracted.txt",
+      "counts": {
+        "tests": 22,
+        "suites": 0,
+        "pass": 22,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 544.272959
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "preflight-base.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "preflight-current.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "readonly-loaded-probe.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "release-base.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "release-current.log",
+      "counts": {
+        "tests": 9,
+        "suites": 0,
+        "pass": 9,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 434.369833
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "release-root-diagnostic.log",
+      "counts": {
+        "tests": 9,
+        "suites": 0,
+        "pass": 0,
+        "fail": 9,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 278.765542
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "release-strict-progress.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "release-strict-progress2.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "resume-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "resume-preflight.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "resume-release.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "resume-ui-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "resume-ui-failures.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "resume-ui-full.log",
+      "counts": {
+        "tests": 1698,
+        "suites": 0,
+        "pass": 1648,
+        "fail": 46,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 4,
+        "duration_ms": 236263.785833
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "scripts-typecheck-current.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "served-route/before-failure.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "served-route/before619-mcp-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "served-route/before619-ui-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "served-route/inspect-ocular-failure.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "served-route/inspection-current-route.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "served-route/inspection-inspect-structure-route.txt",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "sweep-green.log",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 4,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 757.140209
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "ui-base-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "ui-base.log",
+      "counts": {
+        "tests": 1685,
+        "suites": 0,
+        "pass": 1673,
+        "fail": 8,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 4,
+        "duration_ms": 202053.854792
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "ui-build-final.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "void-undo/undo-identity-red.log",
+      "counts": {
+        "tests": 32,
+        "suites": 0,
+        "pass": 28,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 266.47
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "void-undo/undo-superseded-red.log",
+      "counts": {
+        "tests": 32,
+        "suites": 0,
+        "pass": 28,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 260.111292
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "void-undo/void-after.log",
+      "counts": {
+        "tests": 74,
+        "suites": 0,
+        "pass": 74,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 1395.604417
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "void-undo/void-before.log",
+      "counts": {
+        "tests": 42,
+        "suites": 0,
+        "pass": 40,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 1396.811292
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "void-undo/void-restored.log",
+      "counts": {
+        "tests": 74,
+        "suites": 0,
+        "pass": 74,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 1379.45275
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "void-undo/void-result-red.log",
+      "counts": {
+        "tests": 74,
+        "suites": 0,
+        "pass": 70,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 1390.358041
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "void-undo/void-types.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "w147-build.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "w147-editability-on-witness-red.log",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 2,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 235.997917
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-editability-on-witness-restored.log",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 241.864333
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-final-scoped.log",
+      "counts": {
+        "tests": 92,
+        "suites": 0,
+        "pass": 92,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 6215.788417
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-green.log",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 276.91675
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-initial-red.log",
+      "counts": {
+        "tests": 4,
+        "suites": 0,
+        "pass": 2,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 1006.149417
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-preflight.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "w147-scoped.log",
+      "counts": {
+        "tests": 92,
+        "suites": 0,
+        "pass": 92,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 6005.276541
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-skip-witness-match-red.log",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 4,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 242.951458
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "w147-skip-witness-match-restored.log",
+      "counts": {
+        "tests": 5,
+        "suites": 0,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 233.585958
+      },
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": true,
+      "note": null
+    },
+    {
+      "path": "weasyprint-install.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    },
+    {
+      "path": "weasyprint-install312.log",
+      "counts": null,
+      "exitCode": null,
+      "exitSource": null,
+      "completeTapSummary": false,
+      "note": "No TAP total; inspect raw log. Build/typecheck/release or incomplete run; success not inferred."
+    }
+  ],
+  "W147ExactTestNames": [
+    "W147 unchanged signed loaded witness permits Remarks without changing the fact",
+    "W147 signed deselect remains refused with zero writes",
+    "W147 signed regrade remains refused with zero writes",
+    "W147 unchanged signed witness with a moved fresh version refuses stale baseline",
+    "W147 inactive option is an unchanged witness while active panel Remarks save"
+  ],
+  "workspaceUnchanged": {
+    "ui/tests/diagnosisWorkspace.test.tsx": true
+  },
+  "workspaceEvidence": [
+    "picker/workspace-before.txt",
+    "picker/workspace-extracted.txt"
+  ],
+  "limitations": [
+    "Existing live-authz lifecycle Provenance PUT404 is tolerated by its test, not proven successful.",
+    "Missing explicit process exits remain null; parent should record its active raw CI MCP run upon completion."
+  ]
+}

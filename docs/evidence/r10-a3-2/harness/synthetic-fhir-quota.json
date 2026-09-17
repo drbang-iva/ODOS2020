@@ -1,0 +1,14 @@
+{
+  "projectId": "8a29b496-b7f1-4250-abe2-5649fe505768",
+  "weightedUnitsPerMinute": [
+    {
+      "name": "userFhirQuota",
+      "valueInteger": 5000000
+    },
+    {
+      "name": "totalFhirQuota",
+      "valueInteger": 50000000
+    }
+  ],
+  "callerPoliciesUnchanged": true
+}

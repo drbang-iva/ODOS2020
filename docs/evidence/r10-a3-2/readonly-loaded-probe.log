@@ -1,0 +1,2 @@
+{"case":"preliminary","encounterEditable":true,"factEditable":true,"panelEditable":true,"status":200,"complete":true,"writes":2,"remark":"Synthetic new remark","originalFactUnchanged":true}
+{"case":"final","encounterEditable":true,"factEditable":false,"panelEditable":true,"status":422,"reason":"signed-or-cancelled","writes":0,"remark":null,"originalFactUnchanged":true}

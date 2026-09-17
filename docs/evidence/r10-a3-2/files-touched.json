@@ -1,0 +1,41 @@
+{
+  "base": "a211b36887b49139ab29cf2d811a5a30f261034d",
+  "implementationHead": "3eaba076951d86562fe1287044f3485b0f480703",
+  "files": [
+    "mcp/src/clinical-graph/custom-section-endpoint.ts",
+    "mcp/tests/r10A3OcularDoor.test.ts",
+    "ui/src/components/charting/AssessmentSection.tsx",
+    "ui/src/components/charting/DiagnosisPicker.tsx",
+    "ui/src/components/charting/DiagnosisWorkspace.tsx",
+    "ui/src/components/charting/EncounterHeader.tsx",
+    "ui/src/components/charting/ExamEntrySheet.tsx",
+    "ui/src/components/charting/OcularHealthSection.tsx",
+    "ui/src/components/charting/PreviousExams.tsx",
+    "ui/src/components/charting/UndoStrip.tsx",
+    "ui/src/lib/diagnosis-carry-forward.ts",
+    "ui/src/lib/diagnosis-findings.ts",
+    "ui/src/lib/encounter-undo.ts",
+    "ui/src/lib/encounter-void.ts",
+    "ui/src/lib/supported-diagnosis-pick.ts",
+    "ui/src/scenes/EncounterCharting.tsx",
+    "ui/tests/customSections.test.tsx",
+    "ui/tests/diagnosisCarryForward.test.tsx",
+    "ui/tests/encounterUndo.test.tsx",
+    "ui/tests/examOverviewBoard.test.tsx",
+    "ui/tests/fixtures/entry-sheets.tsx",
+    "ui/tests/fixtures/r10CanonicalOcularFixture.ts",
+    "ui/tests/mgdReadThrough.test.tsx",
+    "ui/tests/ocularSweepValueOnly.test.tsx",
+    "ui/tests/r10A3OcularEditor.test.tsx",
+    "ui/tests/r10A3Picker.test.tsx",
+    "ui/tests/r10A3ReleaseScenarios.test.ts"
+  ],
+  "scopeNotes": [
+    "MCP production change restricted to loaded-claim loop in custom-section-endpoint.ts; MCP tests only r10A3OcularDoor.test.ts.",
+    "DiagnosisWorkspace.tsx extraction only; its test file unchanged.",
+    "EncounterCharting.tsx changes only voidActionId callback plumbing.",
+    "Harness and evidence additions are separately authorized by section9.",
+    "No terminology or regulatory bindings added; no new Mandate14 ledger rows required.",
+    "No new decision authored; companion decisions index unchanged."
+  ]
+}

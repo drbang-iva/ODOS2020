@@ -1,0 +1,316 @@
+TAP version 13
+# Subtest: readEncounterUndoLedger fetches the ledger, and answers the empty ledger for a non-ledger body or a failed request
+ok 1 - readEncounterUndoLedger fetches the ledger, and answers the empty ledger for a non-ledger body or a failed request
+  ---
+  duration_ms: 8.345208
+  type: 'test'
+  ...
+# Subtest: undo ledger rejects an entire slot containing an invalid entry before rendering
+ok 2 - undo ledger rejects an entire slot containing an invalid entry before rendering
+  ---
+  duration_ms: 5.691791
+  type: 'test'
+  ...
+# Subtest: undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error
+ok 3 - undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error
+  ---
+  duration_ms: 0.420875
+  type: 'test'
+  ...
+# Subtest: undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent
+ok 4 - undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent
+  ---
+  duration_ms: 4.548458
+  type: 'test'
+  ...
+# Subtest: G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing
+ok 5 - G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing
+  ---
+  duration_ms: 0.121667
+  type: 'test'
+  ...
+# Subtest: strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed
+ok 6 - strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed
+  ---
+  duration_ms: 0.085
+  type: 'test'
+  ...
+# Subtest: F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default
+ok 7 - F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default
+  ---
+  duration_ms: 0.038125
+  type: 'test'
+  ...
+# Subtest: UndoStrip is a polite status row with one Undo verb; Undo calls back and reports a failure inline
+ok 8 - UndoStrip is a polite status row with one Undo verb; Undo calls back and reports a failure inline
+  ---
+  duration_ms: 3.921292
+  type: 'test'
+  ...
+# Subtest: F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title
+ok 9 - F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title
+  ---
+  duration_ms: 0.309
+  type: 'test'
+  ...
+# Subtest: UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed
+ok 10 - UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 0.886583
+  type: 'test'
+  ...
+# Subtest: the entry sheet renders the section's Undo strip directly beneath its heading row, scoped to that section
+ok 11 - the entry sheet renders the section's Undo strip directly beneath its heading row, scoped to that section
+  ---
+  duration_ms: 1.44925
+  type: 'test'
+  ...
+# Subtest: the entry sheet shows no strip when the section has nothing to undo, and a disabled one after sign
+ok 12 - the entry sheet shows no strip when the section has nothing to undo, and a disabled one after sign
+  ---
+  duration_ms: 0.5815
+  type: 'test'
+  ...
+# Subtest: the chart bar carries the visit Undo in its own slot immediately after exam-sections, only while a visit clear is pending
+ok 13 - the chart bar carries the visit Undo in its own slot immediately after exam-sections, only while a visit clear is pending
+  ---
+  duration_ms: 1.224833
+  type: 'test'
+  ...
+# Subtest: CvfSection's tier-1 remove names both of the sheet's section keys so the server files one Undo slot for the sheet
+ok 14 - CvfSection's tier-1 remove names both of the sheet's section keys so the server files one Undo slot for the sheet
+  ---
+  duration_ms: 0.206959
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+ok 15 - STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+  ---
+  duration_ms: 0.443333
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+ok 16 - STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+  ---
+  duration_ms: 0.253042
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+ok 17 - STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+  ---
+  duration_ms: 0.2675
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+ok 18 - STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+  ---
+  duration_ms: 0.212416
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+ok 19 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+  ---
+  duration_ms: 0.204542
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+ok 20 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+  ---
+  duration_ms: 0.171916
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+ok 21 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+  ---
+  duration_ms: 0.214833
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+ok 22 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+  ---
+  duration_ms: 0.165458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+ok 23 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+  ---
+  duration_ms: 0.401334
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+ok 24 - STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+  ---
+  duration_ms: 0.555458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+ok 25 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+  ---
+  duration_ms: 0.931208
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+ok 26 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+  ---
+  duration_ms: 0.516583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+ok 27 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+  ---
+  duration_ms: 0.426875
+  type: 'test'
+  ...
+# Subtest: W144 section Undo sends the action ID retained from void-response and refuses a superseded retry
+not ok 28 - W144 section Undo sends the action ID retained from void-response and refuses a superseded retry
+  ---
+  duration_ms: 2.516041
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:1:18863'
+  failureType: 'testCodeFailure'
+  error: |-
+    W144 Undo must name the exact displayed action
+    + actual - expected
+
+      [
+        {
+          scope: 'section',
+          sectionKey: 'entrance:pupils',
+    -     voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      scope: 'section'
+      sectionKey: 'entrance:pupils'
+      voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+  actual:
+    0:
+      scope: 'section'
+      sectionKey: 'entrance:pupils'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:434:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W144 section Undo sends the action ID retained from ledger and refuses a superseded retry
+not ok 29 - W144 section Undo sends the action ID retained from ledger and refuses a superseded retry
+  ---
+  duration_ms: 1.739708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:1:18863'
+  failureType: 'testCodeFailure'
+  error: |-
+    W144 Undo must name the exact displayed action
+    + actual - expected
+
+      [
+        {
+          scope: 'section',
+          sectionKey: 'entrance:pupils',
+    -     voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      scope: 'section'
+      sectionKey: 'entrance:pupils'
+      voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+  actual:
+    0:
+      scope: 'section'
+      sectionKey: 'entrance:pupils'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:434:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W144 encounter Undo sends the action ID retained from void-response and refuses a superseded retry
+not ok 30 - W144 encounter Undo sends the action ID retained from void-response and refuses a superseded retry
+  ---
+  duration_ms: 0.944042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:1:18863'
+  failureType: 'testCodeFailure'
+  error: |-
+    W144 Undo must name the exact displayed action
+    + actual - expected
+
+      [
+        {
+          scope: 'encounter',
+    -     voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      scope: 'encounter'
+      voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+  actual:
+    0:
+      scope: 'encounter'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:434:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W144 encounter Undo sends the action ID retained from ledger and refuses a superseded retry
+not ok 31 - W144 encounter Undo sends the action ID retained from ledger and refuses a superseded retry
+  ---
+  duration_ms: 0.753292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:1:18863'
+  failureType: 'testCodeFailure'
+  error: |-
+    W144 Undo must name the exact displayed action
+    + actual - expected
+
+      [
+        {
+          scope: 'encounter',
+    -     voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      scope: 'encounter'
+      voidActionId: 'ca5234a9-95d4-4aed-a577-c93233dd08e0'
+  actual:
+    0:
+      scope: 'encounter'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/encounterUndo.test.tsx:434:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W144 legacy slot without an action ID offers no blind Undo
+ok 32 - W144 legacy slot without an action ID offers no blind Undo
+  ---
+  duration_ms: 0.177791
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 28
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 266.47

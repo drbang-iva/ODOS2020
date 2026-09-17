@@ -1,0 +1,12 @@
+mcp/tests/r10A3OcularDoor.test.ts: 4 changed groups; 131 -> 147 assertions
+ui/tests/customSections.test.tsx: 23 changed groups; 473 -> 494 assertions
+ui/tests/diagnosisCarryForward.test.tsx: 9 changed groups; 60 -> 102 assertions
+ui/tests/encounterUndo.test.tsx: 3 changed groups; 76 -> 85 assertions
+ui/tests/examOverviewBoard.test.tsx: 6 changed groups; 399 -> 399 assertions
+ui/tests/fixtures/entry-sheets.tsx: 0 changed groups; 0 -> 0 assertions
+ui/tests/fixtures/r10CanonicalOcularFixture.ts: 0 changed groups; 0 -> 0 assertions
+ui/tests/mgdReadThrough.test.tsx: 0 changed groups; 20 -> 20 assertions
+ui/tests/ocularSweepValueOnly.test.tsx: 1 changed groups; 29 -> 29 assertions
+ui/tests/r10A3OcularEditor.test.tsx: 15 changed groups; 0 -> 49 assertions
+ui/tests/r10A3Picker.test.tsx: 4 changed groups; 0 -> 19 assertions
+ui/tests/r10A3ReleaseScenarios.test.ts: 5 changed groups; 13 -> 32 assertions

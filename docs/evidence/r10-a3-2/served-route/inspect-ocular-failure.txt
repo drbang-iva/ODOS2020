@@ -1,0 +1,169 @@
+ODOS 20/20
+Clinic
+›
+Encounter
+Find a patient
+▦
+Schedule
+＋ New…
+Sections
+🔔
+RA
+PATIENT
+R10 Synthetic Served Proof
+DOB 1980-01-01 · in-progress
+Exam sections: Not configured
+0 unassigned
+Visit — none
+●
+Blackout
+Sign & finish
+Role
+Doctor
+▾
+Abandon encounter
+By diagnosis
+By structure
+
+STRUCTURE VIEW
+
+Exam overview
+Refresh exam overview
+Contact Lenses
+Not required for this visit type
+DOCTOR
+Soft Contact Lenses
+Available when needed
+Specialty Contact Lens
+Available when needed
+Ortho-K
+Available when needed
+Myopia Management
+Available when needed
+Chart another finding
+History
+Chart another finding
+Pretest
+Chart another finding
+Refraction
+Chart another finding
+Ocular Health
+Periocular Adnexa
+↗
+Expand
+Lids & Lashes
+↗
+Expand
+Palpebral Conjunctiva
+↗
+Expand
+Conjunctiva
+↗
+Expand
+Tear Film
+↗
+Expand
+Cornea
+↗
+Expand
+Anterior Chamber
+↗
+Expand
+Iris
+↗
+Expand
+Lens
+↗
+Expand
+Vitreous
+↗
+Expand
+Cup/Disc
+▣
+Entry sheet
+Fundus
+↗
+Expand
+Macula
+↗
+Expand
+Vessels
+↗
+Expand
+Periphery
+↗
+Expand
+Gonioscopy
+▣
+Entry sheet
+Dry Eye
+▣
+Entry sheet
+Chart another finding
+Assessment & Plan
+Photos
+Imaging
+Engage
+Longitudinal imaging
+
+Clinical photos across visits
+
+Timeline
+Compare
+
+Two photos are needed for comparison.
+
+Capture or import photo
+×
+Sections
+
+Every working surface, one slide away.
+
+EVERY DAY
+✓
+Consent evidence
+preference gaps by tier
+▤
+Education review
+held steps and staff handouts
+▦
+Schedule
+day grid, all providers
+⌂
+Front desk
+schedule and floor
+⇄
+Work
+reason-grouped billing work
+◫
+Reports / A-R
+production and aging
+▤
+Statements
+patient statement runs
+◇
+Lab orders
+optical orders in flight
+CATALOG & OPERATIONS
+⌗
+Catalog & pricing
+frames catalog and pricing
+▥
+Inventory
+frames inventory
+⚭
+Integrations
+Frames Data
+PRACTICE
+≡
+Audit log
+every access and change
+◉
+Clinic
+Clinic home and patients
+▣
+Protocol Library
+author and manage clinical protocols
+Build a211b36 · drbang-iva/r10-a3-2
+Built 7m ago
+CURRENT

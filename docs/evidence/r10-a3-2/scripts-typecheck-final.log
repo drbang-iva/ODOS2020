@@ -1,0 +1,3 @@
+
+> odos2020@0.0.1 typecheck:scripts
+> tsc -p tsconfig.scripts.json

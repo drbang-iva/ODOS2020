@@ -1,0 +1,228 @@
+TAP version 13
+# Subtest: W130/W147 signed present witness is checked and locked; absent is outside loaded
+not ok 1 - W130/W147 signed present witness is checked and locked; absent is outside loaded
+  ---
+  duration_ms: 18.744375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:3165'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:24:207)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W137 recorded absent requires explicit selection and fromPresence
+not ok 2 - W137 recorded absent requires explicit selection and fromPresence
+  ---
+  duration_ms: 2.933958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:3732'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Recorded absent/. Input:
+
+    'ODCopy to OS →Not performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOther'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'ODCopy to OS →Not performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOther'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:25:158)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W131 unconfirmed Retry resends byte-identical request
+not ok 3 - W131 unconfirmed Retry resends byte-identical request
+  ---
+  duration_ms: 2.418
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:4168'
+  failureType: 'testCodeFailure'
+  error: 'No instances found with props: {"aria-label":"OD Remarks"}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    expectOne (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18499:9)
+    ReactTestInstance.findByProps (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18395:12)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:20:77)
+    act (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2512:16)
+    Object.remarks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:20:53)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:26:261)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W132 stale reload keeps choice and next save uses new command
+not ok 4 - W132 stale reload keeps choice and next save uses new command
+  ---
+  duration_ms: 2.74225
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:4604'
+  failureType: 'testCodeFailure'
+  error: 'No instances found with props: {"aria-label":"OD Remarks"}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    expectOne (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18499:9)
+    ReactTestInstance.findByProps (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18395:12)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:20:77)
+    act (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2512:16)
+    Object.remarks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:20:53)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:27:306)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W133 negative outcome shows causal message and is never saved
+not ok 5 - W133 negative outcome shows causal message and is never saved
+  ---
+  duration_ms: 0.367417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:5176'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /positive-in-negative-scope/. Input:
+
+    'Current values reloaded. Your choice is kept; apply it as a new command.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Current values reloaded. Your choice is kept; apply it as a new command.'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:28:367)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W134 encounter-closed read only
+not ok 6 - W134 encounter-closed read only
+  ---
+  duration_ms: 2.645333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:5681'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Signed or closed visit/. Input:
+
+    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentCorneaODCopy to OS →Not performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherOS← Copy to ODNot performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherSave Ocular Health'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentCorneaODCopy to OS →Not performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherOS← Copy to ODNot performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherSave Ocular Health'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:29:164)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W134 pre-rebuild-test-encounter read only
+not ok 7 - W134 pre-rebuild-test-encounter read only
+  ---
+  duration_ms: 1.595291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:5681'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Test data from before the rebuild/. Input:
+
+    'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentCorneaODCopy to OS →Not performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherOS← Copy to ODNot performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherSave Ocular Health'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Ocular HealthAnterior & Posterior SegmentsRecord what is present. Unmarked structures save as normal when touched.Anterior All NormalFundus All NormalAnterior SegmentCorneaODCopy to OS →Not performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherOS← Copy to ODNot performed / deferredNo explicit negative assertion recordedTBUTWhat is presentScarStainingOtherSave Ocular Health'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:29:164)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W138 Deferred disables selections without deselection and toggles preserve them
+not ok 8 - W138 Deferred disables selections without deselection and toggles preserve them
+  ---
+  duration_ms: 2.264125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:5965'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:30:237)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W136 per-eye Remarks and measurements are in independent panel states
+not ok 9 - W136 per-eye Remarks and measurements are in independent panel states
+  ---
+  duration_ms: 1.497208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:6468'
+  failureType: 'testCodeFailure'
+  error: 'No instances found with props: {"aria-label":"OD Remarks"}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    expectOne (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18499:9)
+    ReactTestInstance.findByProps (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:18395:12)
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:20:77)
+    act (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2512:16)
+    Object.remarks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:20:53)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:31:131)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W145 unscoped count 0
+ok 10 - W145 unscoped count 0
+  ---
+  duration_ms: 2.48275
+  type: 'test'
+  ...
+# Subtest: W145 unscoped count 2
+not ok 11 - W145 unscoped count 2
+  ---
+  duration_ms: 1.665167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:1:6991'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3OcularEditor.test.tsx:32:123)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 1
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 495.429

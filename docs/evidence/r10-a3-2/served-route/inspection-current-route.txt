@@ -1,0 +1,112 @@
+ODOS 20/20
+Clinic
+›
+Encounter
+Find a patient
+▦
+Schedule
+＋ New…
+Sections
+🔔
+RA
+PATIENT
+R10 Synthetic Served Proof
+DOB 1980-01-01 · in-progress
+Exam sections: Not configured
+0 unassigned
+Visit — none
+●
+Blackout
+Sign & finish
+Role
+Doctor
+▾
+Abandon encounter
+By diagnosis
+By structure
+Diagnoses
+THIS VISIT
+
+No visit diagnoses.
+
+PREVIOUS EXAMS
+Sep 16, 2026 · Visit type not recorded
+Sep 15, 2026 · Visit type not recorded
+Sep 14, 2026 · Visit type not recorded
+COMMON
+
+No Common diagnoses configured.
+
+FIND DX
+Find diagnosis
+diagnosis quick-list read failed
+No diagnosis selected
+
+Select a diagnosis from This visit, or add one from Common or Find dx.
+
+Photos
+Imaging
+Engage
+Longitudinal imaging
+
+Clinical photos across visits
+
+Timeline
+Compare
+
+Two photos are needed for comparison.
+
+Capture or import photo
+×
+Sections
+
+Every working surface, one slide away.
+
+EVERY DAY
+✓
+Consent evidence
+preference gaps by tier
+▤
+Education review
+held steps and staff handouts
+▦
+Schedule
+day grid, all providers
+⌂
+Front desk
+schedule and floor
+⇄
+Work
+reason-grouped billing work
+◫
+Reports / A-R
+production and aging
+▤
+Statements
+patient statement runs
+◇
+Lab orders
+optical orders in flight
+CATALOG & OPERATIONS
+⌗
+Catalog & pricing
+frames catalog and pricing
+▥
+Inventory
+frames inventory
+⚭
+Integrations
+Frames Data
+PRACTICE
+≡
+Audit log
+every access and change
+◉
+Clinic
+Clinic home and patients
+▣
+Protocol Library
+author and manage clinical protocols
+Build a211b36 · drbang-iva/r10-a3-2
+Built 5m ago
+CURRENT

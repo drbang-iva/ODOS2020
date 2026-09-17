@@ -1,0 +1,25 @@
+{
+  "command": "npm --prefix mcp run test:live-authz",
+  "baseUrl": "http://127.0.0.1:28103",
+  "postgresHost": "127.0.0.1:25433",
+  "projectId": "8a29b496-b7f1-4250-abe2-5649fe505768",
+  "patientReference": "Patient/eabe6b52-a8a7-4ce9-99a3-a2879f65965c",
+  "envKeys": [
+    "HOME",
+    "LANG",
+    "MEDPLUM_ADMIN_EMAIL",
+    "MEDPLUM_ADMIN_PASSWORD",
+    "MEDPLUM_BASE_URL",
+    "MEDPLUM_CONTRACT_BOOTSTRAP",
+    "MEDPLUM_PROJECT_ID",
+    "ODOS_OPERATOR_CLIENT_ID",
+    "ODOS_OPERATOR_CLIENT_SECRET",
+    "ODOS_OPERATOR_PROJECT_ID",
+    "ODOS_POSTGRES_URL",
+    "PATH",
+    "TMPDIR"
+  ],
+  "head": "a211b36887b49139ab29cf2d811a5a30f261034d",
+  "workingTree": "A3.2 uncommitted changes",
+  "startedAt": "2026-09-17T17:12:00.293Z"
+}

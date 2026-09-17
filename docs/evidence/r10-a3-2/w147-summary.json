@@ -1,0 +1,51 @@
+{
+  "w147-initial-red.log": {
+    "tests": "4",
+    "pass": "2",
+    "fail": "2",
+    "skipped": "0",
+    "todo": "0"
+  },
+  "w147-green.log": {
+    "tests": "5",
+    "pass": "5",
+    "fail": "0",
+    "skipped": "0",
+    "todo": "0"
+  },
+  "w147-editability-on-witness-red.log": {
+    "tests": "5",
+    "pass": "2",
+    "fail": "3",
+    "skipped": "0",
+    "todo": "0"
+  },
+  "w147-editability-on-witness-restored.log": {
+    "tests": "5",
+    "pass": "5",
+    "fail": "0",
+    "skipped": "0",
+    "todo": "0"
+  },
+  "w147-skip-witness-match-red.log": {
+    "tests": "5",
+    "pass": "4",
+    "fail": "1",
+    "skipped": "0",
+    "todo": "0"
+  },
+  "w147-skip-witness-match-restored.log": {
+    "tests": "5",
+    "pass": "5",
+    "fail": "0",
+    "skipped": "0",
+    "todo": "0"
+  },
+  "w147-scoped.log": {
+    "tests": "92",
+    "pass": "92",
+    "fail": "0",
+    "skipped": "0",
+    "todo": "0"
+  }
+}

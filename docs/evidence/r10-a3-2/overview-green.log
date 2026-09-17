@@ -1,0 +1,613 @@
+TAP version 13
+# Subtest: by-exception board renders exactly one row per performed or deferred finding
+ok 1 - by-exception board renders exactly one row per performed or deferred finding
+  ---
+  duration_ms: 11.557833
+  type: 'test'
+  ...
+# Subtest: five row patterns use clinical display values without exposing machine state
+ok 2 - five row patterns use clinical display values without exposing machine state
+  ---
+  duration_ms: 2.754875
+  type: 'test'
+  ...
+# Subtest: finding rows keep native disclosures accessible beside a finite editor button
+ok 3 - finding rows keep native disclosures accessible beside a finite editor button
+  ---
+  duration_ms: 1.295375
+  type: 'test'
+  ...
+# Subtest: refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed
+ok 4 - refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed
+  ---
+  duration_ms: 1.733542
+  type: 'test'
+  ...
+# Subtest: refraction uses a manifest when present and otherwise labels the recorded non-final block by type
+ok 5 - refraction uses a manifest when present and otherwise labels the recorded non-final block by type
+  ---
+  duration_ms: 0.815834
+  type: 'test'
+  ...
+# Subtest: refraction distance acuity never renders a code-only machine value
+ok 6 - refraction distance acuity never renders a code-only machine value
+  ---
+  duration_ms: 0.23625
+  type: 'test'
+  ...
+# Subtest: manual keratometry projects only its allowlisted measurements in OD-first order
+ok 7 - manual keratometry projects only its allowlisted measurements in OD-first order
+  ---
+  duration_ms: 0.309208
+  type: 'test'
+  ...
+# Subtest: stored visual acuity renders the raw Snellen value and correction
+ok 8 - stored visual acuity renders the raw Snellen value and correction
+  ---
+  duration_ms: 1.128917
+  type: 'test'
+  ...
+# Subtest: stored non-Snellen visual acuity discloses its chart type
+ok 9 - stored non-Snellen visual acuity discloses its chart type
+  ---
+  duration_ms: 2.02425
+  type: 'test'
+  ...
+# Subtest: stored pachymetry resolves laterality-prefixed CCT components
+ok 10 - stored pachymetry resolves laterality-prefixed CCT components
+  ---
+  duration_ms: 1.056125
+  type: 'test'
+  ...
+# Subtest: stored auto keratometry shares the manual keratometry display convention
+ok 11 - stored auto keratometry shares the manual keratometry display convention
+  ---
+  duration_ms: 0.751459
+  type: 'test'
+  ...
+# Subtest: stored Wearing Rx renders in its own worksheet row
+ok 12 - stored Wearing Rx renders in its own worksheet row
+  ---
+  duration_ms: 0.768875
+  type: 'test'
+  ...
+# Subtest: a newer OD-only Wearing save retains the latest stored OS in the worksheet row
+ok 13 - a newer OD-only Wearing save retains the latest stored OS in the worksheet row
+  ---
+  duration_ms: 0.738625
+  type: 'test'
+  ...
+# Subtest: a newer OD-only Wearing save retains both eyes in the refraction comparison
+ok 14 - a newer OD-only Wearing save retains both eyes in the refraction comparison
+  ---
+  duration_ms: 0.663042
+  type: 'test'
+  ...
+# Subtest: overview truth changes preserve the exact IOP value
+ok 15 - overview truth changes preserve the exact IOP value
+  ---
+  duration_ms: 0.796792
+  type: 'test'
+  ...
+# Subtest: overview truth changes preserve the exact Dilation event value
+ok 16 - overview truth changes preserve the exact Dilation event value
+  ---
+  duration_ms: 0.820625
+  type: 'test'
+  ...
+# Subtest: the pending overview projection exception map is empty after History is formatted
+ok 17 - the pending overview projection exception map is empty after History is formatted
+  ---
+  duration_ms: 0.078875
+  type: 'test'
+  ...
+# Subtest: complaint-only History renders its summary while completeness remains Not examined
+ok 18 - complaint-only History renders its summary while completeness remains Not examined
+  ---
+  duration_ms: 1.301042
+  type: 'test'
+  ...
+# Subtest: the finding formatter exposes one exact unformatted sentinel
+ok 19 - the finding formatter exposes one exact unformatted sentinel
+  ---
+  duration_ms: 0.046416
+  type: 'test'
+  ...
+# Subtest: every active catalog finding has a fixture and no pending exception
+ok 20 - every active catalog finding has a fixture and no pending exception
+  ---
+  duration_ms: 6.192875
+  type: 'test'
+  ...
+# Subtest: every catalog fixture control reaches the exact unformatted sentinel
+ok 21 - every catalog fixture control reaches the exact unformatted sentinel
+  ---
+  duration_ms: 0.122625
+  type: 'test'
+  ...
+# Subtest: every charted catalog fixture leaves the exact unformatted sentinel
+ok 22 - every charted catalog fixture leaves the exact unformatted sentinel
+  ---
+  duration_ms: 0.433125
+  type: 'test'
+  ...
+# Subtest: charted EOM renders writer-shaped OU positions in anatomical eye groups on the preserved grading scale
+ok 23 - charted EOM renders writer-shaped OU positions in anatomical eye groups on the preserved grading scale
+  ---
+  duration_ms: 6.901
+  type: 'test'
+  ...
+# Subtest: charted EOM renders writer-permitted abnormal details and the normal template
+ok 24 - charted EOM renders writer-permitted abnormal details and the normal template
+  ---
+  duration_ms: 29.542708
+  type: 'test'
+  ...
+# Subtest: charted CVF defects survive the persisted per-eye prefixes into the review diagrams
+ok 25 - charted CVF defects survive the persisted per-eye prefixes into the review diagrams
+  ---
+  duration_ms: 8.968417
+  type: 'test'
+  ...
+# Subtest: abnormal cover-test endpoint persistence projects an exception row with details
+ok 26 - abnormal cover-test endpoint persistence projects an exception row with details
+  ---
+  duration_ms: 7.475834
+  type: 'test'
+  ...
+# Subtest: high-risk cup-disc capture path projects an exception row with details
+ok 27 - high-risk cup-disc capture path projects an exception row with details
+  ---
+  duration_ms: 7.472625
+  type: 'test'
+  ...
+# Subtest: EOM free-text notes preserve delimiter text as one atomic segment
+ok 28 - EOM free-text notes preserve delimiter text as one atomic segment
+  ---
+  duration_ms: 6.640334
+  type: 'test'
+  ...
+# Subtest: custom state writer preserves other-only notes for normal and abnormal findings
+ok 29 - custom state writer preserves other-only notes for normal and abnormal findings
+  ---
+  duration_ms: 16.570208
+  type: 'test'
+  ...
+# Subtest: normal OTHER notes preserve delimiter text exactly once
+ok 30 - normal OTHER notes preserve delimiter text exactly once
+  ---
+  duration_ms: 7.268542
+  type: 'test'
+  ...
+# Subtest: abnormal custom state other-only value leaves the exact unformatted sentinel behind
+ok 31 - abnormal custom state other-only value leaves the exact unformatted sentinel behind
+  ---
+  duration_ms: 7.225583
+  type: 'test'
+  ...
+# Subtest: normal other composition preserves the template and every selected sheet finding
+ok 32 - normal other composition preserves the template and every selected sheet finding
+  ---
+  duration_ms: 0.077709
+  type: 'test'
+  ...
+# Subtest: normal other composition preserves sheet findings when a normal label wins the base formatter
+ok 33 - normal other composition preserves sheet findings when a normal label wins the base formatter
+  ---
+  duration_ms: 0.070042
+  type: 'test'
+  ...
+# Subtest: slice-added component formatters preserve a stored scalar value
+ok 34 - slice-added component formatters preserve a stored scalar value
+  ---
+  duration_ms: 0.06725
+  type: 'test'
+  ...
+# Subtest: normal other composition preserves downstream summary and scalar values
+ok 35 - normal other composition preserves downstream summary and scalar values
+  ---
+  duration_ms: 0.051542
+  type: 'test'
+  ...
+# Subtest: exercised EOM and custom-state writers declare every schema-blind component code
+ok 36 - exercised EOM and custom-state writers declare every schema-blind component code
+  ---
+  duration_ms: 31.945709
+  type: 'test'
+  ...
+# Subtest: the permanent chart bar keeps draft state reserved instead of inferring it from section status
+ok 37 - the permanent chart bar keeps draft state reserved instead of inferring it from section status
+  ---
+  duration_ms: 49.475834
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: true
+ok 38 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: true
+  ---
+  duration_ms: 37.563083
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: false
+ok 39 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: false
+  ---
+  duration_ms: 33.529375
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: undefined
+ok 40 - STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: undefined
+  ---
+  duration_ms: 32.613
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late clear-failure
+ok 41 - Undo ignores a previous encounter's late clear-failure
+  ---
+  duration_ms: 27.340791
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late ledger-response
+ok 42 - Undo ignores a previous encounter's late ledger-response
+  ---
+  duration_ms: 30.386625
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-click
+ok 43 - Undo ignores a previous encounter's late undo-click
+  ---
+  duration_ms: 20.221125
+  type: 'test'
+  ...
+# Subtest: Undo ignores a previous encounter's late undo-response
+ok 44 - Undo ignores a previous encounter's late undo-response
+  ---
+  duration_ms: 23.658333
+  type: 'test'
+  ...
+# Subtest: fixback P2\#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger
+ok 45 - fixback P2\#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger
+  ---
+  duration_ms: 28.258334
+  type: 'test'
+  ...
+# Subtest: a failed Clear everything re-reads the overview alongside its error, so the screen cannot contradict the database
+ok 46 - a failed Clear everything re-reads the overview alongside its error, so the screen cannot contradict the database
+  ---
+  duration_ms: 20.478
+  type: 'test'
+  ...
+# Subtest: F2: a successful Clear everything renders the exact count — this page saw the slot confirmed by the void's own response
+ok 47 - F2: a successful Clear everything renders the exact count — this page saw the slot confirmed by the void's own response
+  ---
+  duration_ms: 21.842334
+  type: 'test'
+  ...
+# Subtest: G2: a successful no-op clear must not promote an older partial slot from 'up to 3' to an exact '3'
+ok 48 - G2: a successful no-op clear must not promote an older partial slot from 'up to 3' to an exact '3'
+  ---
+  duration_ms: 22.586625
+  type: 'test'
+  ...
+# Subtest: fixback P2\#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing
+ok 49 - fixback P2\#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing
+  ---
+  duration_ms: 30.745583
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks
+ok 50 - fixback 56ff8d36 P2\#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks
+  ---
+  duration_ms: 28.80225
+  type: 'test'
+  ...
+# Subtest: a zero-finding comprehensive encounter renders every required trace row with its projected state
+ok 51 - a zero-finding comprehensive encounter renders every required trace row with its projected state
+  ---
+  duration_ms: 0.539083
+  type: 'test'
+  ...
+# Subtest: the worksheet omits Imaging because patient studies live in the permanent Images tab
+ok 52 - the worksheet omits Imaging because patient studies live in the permanent Images tab
+  ---
+  duration_ms: 0.301709
+  type: 'test'
+  ...
+# Subtest: the combined Pretest row resolves only when both Entrance and Pretest traces resolve
+ok 53 - the combined Pretest row resolves only when both Entrance and Pretest traces resolve
+  ---
+  duration_ms: 0.504333
+  type: 'test'
+  ...
+# Subtest: worksheet rows expose owners and keep Contact Lenses visibly optional
+ok 54 - worksheet rows expose owners and keep Contact Lenses visibly optional
+  ---
+  duration_ms: 0.361709
+  type: 'test'
+  ...
+# Subtest: a zero-finding Pretest section renders one labeled blank per chartable editor
+ok 55 - a zero-finding Pretest section renders one labeled blank per chartable editor
+  ---
+  duration_ms: 0.364958
+  type: 'test'
+  ...
+# Subtest: only the single-slot Refraction group keeps Chart another finding
+ok 56 - only the single-slot Refraction group keeps Chart another finding
+  ---
+  duration_ms: 0.444958
+  type: 'test'
+  ...
+# Subtest: Assessment keeps prescription available but visibly not required
+ok 57 - Assessment keeps prescription available but visibly not required
+  ---
+  duration_ms: 0.305208
+  type: 'test'
+  ...
+# Subtest: partial sections use a clinical label and remain unresolved
+ok 58 - partial sections use a clinical label and remain unresolved
+  ---
+  duration_ms: 1.087917
+  type: 'test'
+  ...
+# Subtest: ocular rows stay in anatomical slots and render findings instead of status words
+ok 59 - ocular rows stay in anatomical slots and render findings instead of status words
+  ---
+  duration_ms: 0.645125
+  type: 'test'
+  ...
+# Subtest: the encounter screen renders only the registry-backed completeness count
+ok 60 - the encounter screen renders only the registry-backed completeness count
+  ---
+  duration_ms: 9.43225
+  type: 'test'
+  ...
+# Subtest: structure view keeps required blanks while collapsing performed findings into by-exception rows
+ok 61 - structure view keeps required blanks while collapsing performed findings into by-exception rows
+  ---
+  duration_ms: 10.173
+  type: 'test'
+  ...
+# Subtest: charted findings keep their FindingRow while sibling editors receive distinct empty slots
+ok 62 - charted findings keep their FindingRow while sibling editors receive distinct empty slots
+  ---
+  duration_ms: 0.333834
+  type: 'test'
+  ...
+# Subtest: completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning
+ok 63 - completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning
+  ---
+  duration_ms: 9.800917
+  type: 'test'
+  ...
+# Subtest: unconfigured completeness renders as a neutral state instead of complete or erroneous
+ok 64 - unconfigured completeness renders as a neutral state instead of complete or erroneous
+  ---
+  duration_ms: 8.378875
+  type: 'test'
+  ...
+# Subtest: blackout preserves the open Visit sheet and focused control through keyboard restore
+ok 65 - blackout preserves the open Visit sheet and focused control through keyboard restore
+  ---
+  duration_ms: 10.757667
+  type: 'test'
+  ...
+# Subtest: Visit opens the shared sheet with exact booking coverage and every relocated billing surface
+ok 66 - Visit opens the shared sheet with exact booking coverage and every relocated billing surface
+  ---
+  duration_ms: 9.426709
+  type: 'test'
+  ...
+# Subtest: an open finding sheet visibly requires Finish or Cancel before Visit can open
+ok 67 - an open finding sheet visibly requires Finish or Cancel before Visit can open
+  ---
+  duration_ms: 10.94425
+  type: 'test'
+  ...
+# Subtest: EncounterCharting passes the clinical sheet guard to enabled and disabled header actions
+ok 68 - EncounterCharting passes the clinical sheet guard to enabled and disabled header actions
+  ---
+  duration_ms: 10.487416
+  type: 'test'
+  ...
+# Subtest: unknown encounter keeps both Visit write surfaces locked during load and after fetch failure
+    # Subtest: initial encounter load
+    ok 1 - initial encounter load
+      ---
+      duration_ms: 8.491709
+      type: 'test'
+      ...
+    # Subtest: persistent encounter fetch failure
+    ok 2 - persistent encounter fetch failure
+      ---
+      duration_ms: 12.521459
+      type: 'test'
+      ...
+    1..2
+ok 69 - unknown encounter keeps both Visit write surfaces locked during load and after fetch failure
+  ---
+  duration_ms: 21.27075
+  type: 'test'
+  ...
+# Subtest: switching to the diagnosis view preserves the existing DiagnosisWorkspace branch
+ok 70 - switching to the diagnosis view preserves the existing DiagnosisWorkspace branch
+  ---
+  duration_ms: 11.244833
+  type: 'test'
+  ...
+# Subtest: DXIMAGING both datasets are reachable in distinct tabs
+ok 71 - DXIMAGING both datasets are reachable in distinct tabs
+  ---
+  duration_ms: 12.659541
+  type: 'test'
+  ...
+# Subtest: DXIMAGING ordinary imaging survives a missing projection
+ok 72 - DXIMAGING ordinary imaging survives a missing projection
+  ---
+  duration_ms: 12.950292
+  type: 'test'
+  ...
+# Subtest: DXIMAGING diagnosis owns no imaging strip
+ok 73 - DXIMAGING diagnosis owns no imaging strip
+  ---
+  duration_ms: 9.642458
+  type: 'test'
+  ...
+# Subtest: DXIMAGING imaging preference survives stages with four tabs
+ok 74 - DXIMAGING imaging preference survives stages with four tabs
+  ---
+  duration_ms: 15.519958
+  type: 'test'
+  ...
+# Subtest: C1 tab survives a stage change
+ok 75 - C1 tab survives a stage change
+  ---
+  duration_ms: 11.974167
+  type: 'test'
+  ...
+# Subtest: C1 panel is available off the structure stage
+ok 76 - C1 panel is available off the structure stage
+  ---
+  duration_ms: 9.662833
+  type: 'test'
+  ...
+# Subtest: C1 modal editor still suppresses the panel
+ok 77 - C1 modal editor still suppresses the panel
+  ---
+  duration_ms: 61.144667
+  type: 'test'
+  ...
+# Subtest: C1 dirty-sheet stage transition prompts and retains edits until accepted
+ok 78 - C1 dirty-sheet stage transition prompts and retains edits until accepted
+  ---
+  duration_ms: 21.119916
+  type: 'test'
+  ...
+# Subtest: C1 context survives entering and leaving a full-page board editor
+ok 79 - C1 context survives entering and leaving a full-page board editor
+  ---
+  duration_ms: 60.512416
+  type: 'test'
+  ...
+# Subtest: C1 closing entry for a stage uses its return tab but preserves a selected context tab
+    # Subtest: entry
+    ok 1 - entry
+      ---
+      duration_ms: 13.873583
+      type: 'test'
+      ...
+    # Subtest: images
+    ok 2 - images
+      ---
+      duration_ms: 14.195209
+      type: 'test'
+      ...
+    # Subtest: engage
+    ok 3 - engage
+      ---
+      duration_ms: 12.355458
+      type: 'test'
+      ...
+    1..3
+ok 80 - C1 closing entry for a stage uses its return tab but preserves a selected context tab
+  ---
+  duration_ms: 40.706375
+  type: 'test'
+  ...
+# Subtest: EncounterCharting keeps a dirty mapped sheet mounted until its guarded transition is accepted
+ok 81 - EncounterCharting keeps a dirty mapped sheet mounted until its guarded transition is accepted
+  ---
+  duration_ms: 19.475458
+  type: 'test'
+  ...
+# Subtest: distributed board rows anchor mapped editors and retain full-page fallback for deferred editors
+ok 82 - distributed board rows anchor mapped editors and retain full-page fallback for deferred editors
+  ---
+  duration_ms: 71.667958
+  type: 'test'
+  ...
+# Subtest: each mapped layout wraps its existing section and supports both cancel and saved close paths
+ok 83 - each mapped layout wraps its existing section and supports both cancel and saved close paths
+  ---
+  duration_ms: 169.659541
+  type: 'test'
+  ...
+# Subtest: adding a declaration-backed complaint autosaves History and keeps its sheet open
+ok 84 - adding a declaration-backed complaint autosaves History and keeps its sheet open
+  ---
+  duration_ms: 19.395292
+  type: 'test'
+  ...
+# Subtest: autosaving a declaration-backed complaint refreshes the exam overview to Examined
+ok 85 - autosaving a declaration-backed complaint refreshes the exam overview to Examined
+  ---
+  duration_ms: 19.2875
+  type: 'test'
+  ...
+# Subtest: every measured deferred editor retains its existing full-page route
+ok 86 - every measured deferred editor retains its existing full-page route
+  ---
+  duration_ms: 202.474167
+  type: 'test'
+  ...
+# Subtest: malformed nested finding, section, and completeness rows use the editor fallback
+    # Subtest: finding
+    ok 1 - finding
+      ---
+      duration_ms: 10.455542
+      type: 'test'
+      ...
+    # Subtest: section
+    ok 2 - section
+      ---
+      duration_ms: 11.370542
+      type: 'test'
+      ...
+    # Subtest: completeness trace
+    ok 3 - completeness trace
+      ---
+      duration_ms: 11.312083
+      type: 'test'
+      ...
+    1..3
+ok 87 - malformed nested finding, section, and completeness rows use the editor fallback
+  ---
+  duration_ms: 33.452584
+  type: 'test'
+  ...
+# Subtest: manual refresh replaces the mounted board projection
+ok 88 - manual refresh replaces the mounted board projection
+  ---
+  duration_ms: 12.605916
+  type: 'test'
+  ...
+# Subtest: a mapped editor save closes its sheet while a deferred editor retains the explicit return path
+ok 89 - a mapped editor save closes its sheet while a deferred editor retains the explicit return path
+  ---
+  duration_ms: 65.132291
+  type: 'test'
+  ...
+# Subtest: a referral suspends the underlying Assessment sheet layer without discarding it
+ok 90 - a referral suspends the underlying Assessment sheet layer without discarding it
+  ---
+  duration_ms: 15.004
+  type: 'test'
+  ...
+# Subtest: a section save refreshes the permanent unassigned count
+ok 91 - a section save refreshes the permanent unassigned count
+  ---
+  duration_ms: 14.224041
+  type: 'test'
+  ...
+# Subtest: a diagnosis-led finding mutation refreshes permanent completeness
+ok 92 - a diagnosis-led finding mutation refreshes permanent completeness
+  ---
+  duration_ms: 11.874583
+  type: 'test'
+  ...
+1..92
+# tests 100
+# suites 0
+# pass 100
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2033.231917

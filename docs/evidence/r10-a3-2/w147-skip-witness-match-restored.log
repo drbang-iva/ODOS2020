@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: W147 unchanged signed loaded witness permits Remarks without changing the fact
+ok 1 - W147 unchanged signed loaded witness permits Remarks without changing the fact
+  ---
+  duration_ms: 16.94875
+  type: 'test'
+  ...
+# Subtest: W147 signed deselect remains refused with zero writes
+ok 2 - W147 signed deselect remains refused with zero writes
+  ---
+  duration_ms: 7.772917
+  type: 'test'
+  ...
+# Subtest: W147 signed regrade remains refused with zero writes
+ok 3 - W147 signed regrade remains refused with zero writes
+  ---
+  duration_ms: 6.339542
+  type: 'test'
+  ...
+# Subtest: W147 unchanged signed witness with a moved fresh version refuses stale baseline
+ok 4 - W147 unchanged signed witness with a moved fresh version refuses stale baseline
+  ---
+  duration_ms: 7.031875
+  type: 'test'
+  ...
+# Subtest: W147 inactive option is an unchanged witness while active panel Remarks save
+ok 5 - W147 inactive option is an unchanged witness while active panel Remarks save
+  ---
+  duration_ms: 9.526875
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.585958

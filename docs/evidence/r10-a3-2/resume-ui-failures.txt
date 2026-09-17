@@ -1,0 +1,50 @@
+not ok 252 - the ocular-health renderer exposes segment headers, accelerators, bilateral copy, deferred, priority, nesting, and Other controls
+not ok 254 - ocular-health save derives abnormal from findings and normal after they are cleared
+not ok 256 - deferred and recorded ocular findings cannot coexist at the client-server boundary
+not ok 257 - qualified finding definitions render qualifier controls for legacy presence-only history
+not ok 258 - prior history never seeds current controls or changes the base POST body
+not ok 259 - unsaved ocular edits survive an asynchronously arriving encounter cutoff and prior history
+not ok 260 - a failed optional prior read leaves current-encounter ocular hydration intact
+not ok 261 - prior ocular readings stay in the accessibility tree without renaming or focusing controls
+not ok 262 - ocular priors remain absent without a stable encounter period date
+not ok 263 - every rendered qualifier and ungraded prior carries its own date and stays eye-specific
+not ok 265 - the current encounter is removed before choosing the most recent prior reading
+not ok 266 - ocular-health read-forward preserves stored finding details through an unrelated save
+not ok 267 - reopened history hydrates structures but posts only the one modified structure
+not ok 268 - ocular-health worksheet keeps four described findings in selection order and leaves Zone A stable
+not ok 269 - segmented finding grades replace the value and re-tapping clears the findingDetails entry
+not ok 270 - all four finding qualifier controls write the server-validated value shapes
+not ok 271 - numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+not ok 273 - described finding destruction is guarded from Zone A and the row remove path prunes the next POST
+not ok 274 - undescribed finding deselection is instant without a confirmation dialog
+not ok 275 - removing a parent with selected child codes confirms before destroying the nested details
+not ok 276 - copying an eye confirms before replacing destination finding details
+not ok 277 - copying into an undescribed destination does not ask for confirmation
+not ok 278 - child details fold into the worksheet row and remain selection codes in the POST body
+not ok 280 - a saved normal keeps its captured template snapshot after the live template changes
+not ok 284 - saved ocular-health findings expose real scoped diagnosis suggestions and only explicit taps propose or retract
+not ok 285 - fresh ocular-health history restores scoped diagnosis suggestions without a save
+not ok 287 - posterior seeded history renders honestly and zero-data eyes remain untouched
+not ok 289 - posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot
+not ok 290 - AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine
+not ok 291 - remaining anterior structure grades render blank, persist typed values, and hydrate per eye
+not ok 306 - EXAM-1B partial failure names the structure and All Normal retries only that failure
+not ok 307 - EXAM-1B retry keeps the other segment failure visible until it succeeds
+not ok 308 - EXAM-1B reverted failed edit cannot trap All Normal in an empty retry
+not ok 309 - EXAM-1B re-edit after partial save remains unsaved when another structure is retried
+not ok 310 - EXAM-1B in-flight edit remains unsaved after the older request completes
+not ok 311 - AVFILL-1 unentered normal does not invent an A/V ratio
+not ok 313 - AVFILL-1 Fundus All Normal does not invent an A/V ratio
+not ok 513 - count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+not ok 514 - count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+not ok 651 - EXAM-1B browser names partial failure and retries only the failed structure
+not ok 702 - custom state writer preserves other-only notes for normal and abnormal findings
+not ok 704 - abnormal custom state other-only value leaves the exact unformatted sentinel behind
+not ok 709 - exercised EOM and custom-state writers declare every schema-blind component code
+not ok 1073 - saving Lids with the reader displayed never creates, modifies, or duplicates a dry-eye Observation
+not ok 1092 - SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler
+not ok 1376 - T15 Ocular Health picker accepts a canonical view without one observation id # TODO R10 A3
+not ok 1377 - T16 DiagnosisPicker proposal evidence resolves through finding homes # TODO R10 A3
+not ok 1378 - T17 Ocular Health picks link fact targets # TODO R10 A3
+not ok 1379 - T18 Assessment origin uses finding home sources # TODO R10 A3
+not ok 1611 - close-out ocular: destructive action uses a responsive in-app confirmation

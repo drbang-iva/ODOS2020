@@ -1,0 +1,244 @@
+TAP version 13
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <DiagnosisPicker> component:
+#     at DiagnosisPicker (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/DiagnosisPicker.tsx:52:16)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <RoleProvider> component:
+#     at RoleProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/lib/role-context.tsx:12:32)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# The above error occurred in the <OcularHealthSection> component:
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# Subtest: T15 Ocular Health picker accepts a canonical view without one observation id
+not ok 1 - T15 Ocular Health picker accepts a canonical view without one observation id
+  ---
+  duration_ms: 6.443042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:6678'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T16 DiagnosisPicker proposal evidence resolves through finding homes
+not ok 2 - T16 DiagnosisPicker proposal evidence resolves through finding homes
+  ---
+  duration_ms: 1.002875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:7079'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    DiagnosisPicker (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/DiagnosisPicker.tsx:52:39)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T17 Ocular Health picks link fact targets
+not ok 3 - T17 Ocular Health picks link fact targets
+  ---
+  duration_ms: 0.323542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:7875'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T18 Assessment origin uses finding home sources
+not ok 4 - T18 Assessment origin uses finding home sources
+  ---
+  duration_ms: 0.53875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:8981'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    RoleProvider (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/lib/role-context.tsx:23:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked
+not ok 5 - T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked
+  ---
+  duration_ms: 8.049792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:12855'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye
+not ok 6 - T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye
+  ---
+  duration_ms: 7.105834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:13437'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T6 Ocular Health All Normal skips an eye with a canonical positive
+not ok 7 - T6 Ocular Health All Normal skips an eye with a canonical positive
+  ---
+  duration_ms: 6.334708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:14194'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T21 pre-rebuild Ocular Health is labelled and has no save control
+not ok 8 - T21 pre-rebuild Ocular Health is labelled and has no save control
+  ---
+  duration_ms: 6.541375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:14758'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+# Subtest: T22 Ocular Health UI writes only canonical fact and panel identities
+not ok 9 - T22 Ocular Health UI writes only canonical fact and panel identities
+  ---
+  duration_ms: 6.307375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:15189'
+  failureType: 'testCodeFailure'
+  error: 'React is not defined'
+  code: 'ERR_TEST_FAILURE'
+  name: 'ReferenceError'
+  stack: |-
+    OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:484:3)
+    renderWithHooks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5608:18)
+    mountIndeterminateComponent (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:9884:13)
+    beginWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11351:16)
+    performUnitOfWork (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15850:12)
+    workLoopSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15784:5)
+    renderRootSync (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15756:7)
+    performSyncWorkOnRoot (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15461:20)
+    flushSyncCallbacks (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2597:22)
+    flushActQueue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/node_modules/react/cjs/react.development.js:2667:24)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 278.765542

@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: current-encounter gland data renders as this visit and never as prior
+ok 1 - current-encounter gland data renders as this visit and never as prior
+  ---
+  duration_ms: 39.16725
+  type: 'test'
+  ...
+# Subtest: prior-encounter gland data retains the prior label and recorded date
+ok 2 - prior-encounter gland data retains the prior label and recorded date
+  ---
+  duration_ms: 14.175083
+  type: 'test'
+  ...
+# Subtest: current and prior gland data render together with distinct visit context
+ok 3 - current and prior gland data render together with distinct visit context
+  ---
+  duration_ms: 10.688083
+  type: 'test'
+  ...
+# Subtest: a newer current-encounter save cannot repopulate a gland field it omitted
+ok 4 - a newer current-encounter save cannot repopulate a gland field it omitted
+  ---
+  duration_ms: 11.574917
+  type: 'test'
+  ...
+# Subtest: present dry-eye gland data renders beside an unchecked MGD finding with source and date
+ok 5 - present dry-eye gland data renders beside an unchecked MGD finding with source and date
+  ---
+  duration_ms: 10.656875
+  type: 'test'
+  ...
+# Subtest: absent dry-eye gland data renders no placeholder, empty row, or reserved reader space
+ok 6 - absent dry-eye gland data renders no placeholder, empty row, or reserved reader space
+  ---
+  duration_ms: 10.3
+  type: 'test'
+  ...
+# The above error occurred in the <FactsDiagnosisPicker> component:
+#     at FactsDiagnosisPicker (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/DiagnosisPicker.tsx:450:33)
+#     at DiagnosisPicker (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/DiagnosisPicker.tsx:52:16)
+#     at article
+#     at div
+#     at div
+#     at div
+#     at div
+#     at section
+#     at OcularHealthSection (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/src/components/charting/OcularHealthSection.tsx:111:3)
+# Consider adding an error boundary to your tree to customize error handling behavior.
+# Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+# Subtest: saving Lids with the reader displayed never creates, modifies, or duplicates a dry-eye Observation
+ok 7 - saving Lids with the reader displayed never creates, modifies, or duplicates a dry-eye Observation
+  ---
+  duration_ms: 20.377375
+  type: 'test'
+  ...
+# Subtest: relatedFindingDefinitionKeys is the live switch that selects the reader source
+ok 8 - relatedFindingDefinitionKeys is the live switch that selects the reader source
+  ---
+  duration_ms: 12.659459
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 390.676458

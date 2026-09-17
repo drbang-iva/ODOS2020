@@ -1,0 +1,19 @@
+R10 A3 release BLOCKED
+T4: ui child process failed (1)
+T5: ui child process failed (1)
+T6: ui child process failed (1)
+T15: ui child process failed (1)
+T16: ui child process failed (1)
+T17: ui child process failed (1)
+T18: ui child process failed (1)
+T21: ui child process failed (1)
+T22: ui child process failed (1)
+T4: ui failure remains open
+T5: ui failure remains open
+T6: ui failure remains open
+T15: ui failure remains open
+T16: ui failure remains open
+T17: ui failure remains open
+T18: ui failure remains open
+T21: ui failure remains open
+T22: ui failure remains open

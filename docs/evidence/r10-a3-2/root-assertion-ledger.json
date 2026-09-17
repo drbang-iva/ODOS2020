@@ -1,0 +1,165 @@
+[
+  {
+    "file": "ui/tests/examOverviewBoard.test.tsx",
+    "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+    "row": "V21 / W-k",
+    "before": [
+      {
+        "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+        "line": 1076,
+        "text": "assert.deepEqual({\n    abnormal: abnormal.value,\n    normal: normal.value,\n  }, {\n    abnormal: \"OD Other Reports intermittent shimmer\",\n    normal: \"Stereo present · Other Reliable responses throughout\",\n  })"
+      },
+      {
+        "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+        "line": 1083,
+        "text": "assert.equal(abnormal.formattedValue, \"Other Reports intermittent shimmer\")"
+      }
+    ],
+    "after": [
+      {
+        "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+        "line": 1078,
+        "text": "assert.deepEqual({\n    abnormal: abnormal.value,\n    normal: normal.value,\n  }, {\n    abnormal: \"OD OTHER Reports intermittent shimmer\",\n    normal: \"Stereo present · Other Reliable responses throughout\",\n  })"
+      },
+      {
+        "test": "\"custom state writer preserves other-only notes for normal and abnormal findings\"",
+        "line": 1085,
+        "text": "assert.equal(abnormal.formattedValue, \"OTHER Reports intermittent shimmer\")"
+      }
+    ]
+  },
+  {
+    "file": "ui/tests/examOverviewBoard.test.tsx",
+    "test": "\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\"",
+    "row": "V21 / W-k",
+    "before": [
+      {
+        "test": "\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\"",
+        "line": 1104,
+        "text": "assert.equal(abnormal.formattedValue, \"Other Reports intermittent shimmer\")"
+      }
+    ],
+    "after": [
+      {
+        "test": "\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\"",
+        "line": 1106,
+        "text": "assert.equal(abnormal.formattedValue, \"OTHER Reports intermittent shimmer\")"
+      }
+    ]
+  },
+  {
+    "file": "ui/tests/examOverviewBoard.test.tsx",
+    "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+    "row": "V36 / W144",
+    "before": [
+      {
+        "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+        "line": 2417,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }])"
+      }
+    ],
+    "after": [
+      {
+        "test": "`STAFF-DX-GATE EncounterCharting uses current ledger, undo, and void capabilities: ${canWriteDiagnosis}`",
+        "line": 2425,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }])"
+      }
+    ]
+  },
+  {
+    "file": "ui/tests/examOverviewBoard.test.tsx",
+    "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+    "row": "V36 / W144",
+    "before": [
+      {
+        "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+        "line": 2502,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }])"
+      },
+      {
+        "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+        "line": 2507,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }, { scope: \"encounter\" }])"
+      }
+    ],
+    "after": [
+      {
+        "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+        "line": 2510,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }])"
+      },
+      {
+        "test": "\"fixback P2#3: the ledger loads with the encounter, both placements render from it, and an Undo removes its strip from the response ledger\"",
+        "line": 2515,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }, { scope: \"encounter\", voidActionId: \"visit-void\" }])"
+      }
+    ]
+  },
+  {
+    "file": "ui/tests/examOverviewBoard.test.tsx",
+    "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+    "row": "V36 / W144",
+    "before": [
+      {
+        "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+        "line": 2646,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }], \"accepted: the undo proceeds\")"
+      }
+    ],
+    "after": [
+      {
+        "test": "\"fixback P2#1: Undo on a dirty sheet asks before discarding unsaved edits, and a declined confirm sends nothing\"",
+        "line": 2654,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }], \"accepted: the undo proceeds\")"
+      }
+    ]
+  },
+  {
+    "file": "ui/tests/examOverviewBoard.test.tsx",
+    "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+    "row": "V36 / W144",
+    "before": [
+      {
+        "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+        "line": 2671,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\" }], \"the undo was attempted\")"
+      }
+    ],
+    "after": [
+      {
+        "test": "\"fixback 56ff8d36 P2#B: a failed Undo keeps the dirty-sheet guard armed — the typed edit stays, and leaving still asks\"",
+        "line": 2679,
+        "text": "assert.deepEqual(harness.undoRequests, [{ scope: \"section\", sectionKey: \"va\", voidActionId: \"va-void\" }], \"the undo was attempted\")"
+      }
+    ]
+  },
+  {
+    "file": "ui/tests/ocularSweepValueOnly.test.tsx",
+    "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+    "row": "V21 / V22 / W-k",
+    "before": [
+      {
+        "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+        "line": 73,
+        "text": "assert.ok(post.body.eyes[eye].negativeAct.optionCodes.length > 0)"
+      },
+      {
+        "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+        "line": 75,
+        "text": "assert.equal(writes.filter((resource) => resource.resourceType === \"Observation\").length, 18)"
+      }
+    ],
+    "after": [
+      {
+        "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+        "line": 72,
+        "text": "assert.ok(post.body.eyes[eye].negativeAct.scope.length > 0)"
+      },
+      {
+        "test": "\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\"",
+        "line": 74,
+        "text": "assert.equal(memory.all(\"Observation\").filter((resource) => resource.identifier?.some((id) => id.system === \"urn:odos:negative-act\")).length, 18)"
+      }
+    ]
+  }
+]

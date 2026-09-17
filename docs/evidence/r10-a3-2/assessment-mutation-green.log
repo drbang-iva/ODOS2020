@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: T18 Assessment origin uses finding home sources
+ok 1 - T18 Assessment origin uses finding home sources
+  ---
+  duration_ms: 18.914833
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 249.989209

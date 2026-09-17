@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: W142 partial carry shows steps and Finish carrying resends the identical command body
+not ok 1 - W142 partial carry shows steps and Finish carrying resends the identical command body
+  ---
+  duration_ms: 29.204875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:18505'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"commandId":"e7d47b0b-fe03-476f-aa7c-ca400246ef2d","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+    - '{"commandId":"4dba2ae8-7d15-4b7b-b47d-b579d31ab984","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"commandId":"4dba2ae8-7d15-4b7b-b47d-b579d31ab984","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+  actual: '{"commandId":"e7d47b0b-fe03-476f-aa7c-ca400246ef2d","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:546:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W142 a dropped pull response keeps its request for Finish carrying
+not ok 2 - W142 a dropped pull response keeps its request for Finish carrying
+  ---
+  duration_ms: 3.893833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:1:23031'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + '{"commandId":"765fdde9-2ab7-4e08-93f2-6a03e3fc3f03","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+    - '{"commandId":"20fe27b9-94e8-4ac8-9fa5-4edfff8edd9a","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '{"commandId":"20fe27b9-94e8-4ac8-9fa5-4edfff8edd9a","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+  actual: '{"commandId":"765fdde9-2ab7-4e08-93f2-6a03e3fc3f03","sourceEncounterReference":"Encounter/prior","sourceConditionReference":"Condition/source"}'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/diagnosisCarryForward.test.tsx:607:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.783

@@ -1,0 +1,454 @@
+TAP version 13
+# Subtest: readEncounterUndoLedger fetches the ledger, and answers the empty ledger for a non-ledger body or a failed request
+ok 1 - readEncounterUndoLedger fetches the ledger, and answers the empty ledger for a non-ledger body or a failed request
+  ---
+  duration_ms: 8.60875
+  type: 'test'
+  ...
+# Subtest: undo ledger rejects an entire slot containing an invalid entry before rendering
+ok 2 - undo ledger rejects an entire slot containing an invalid entry before rendering
+  ---
+  duration_ms: 6.313292
+  type: 'test'
+  ...
+# Subtest: undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error
+ok 3 - undoEncounterVoid posts the scope to the undo endpoint, returns the restore, and surfaces the server's error
+  ---
+  duration_ms: 0.507542
+  type: 'test'
+  ...
+# Subtest: undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent
+ok 4 - undoSlotForSection finds the sheet's slot by any of its keys, exact or by prefix, and prefers the most recent
+  ---
+  duration_ms: 4.936833
+  type: 'test'
+  ...
+# Subtest: G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing
+ok 5 - G2: a successful void vouches only for slots whose every ref it actually enumerated — a no-op 200 vouches for nothing
+  ---
+  duration_ms: 0.165209
+  type: 'test'
+  ...
+# Subtest: strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed
+ok 6 - strip copy says Removed for a tier-1 remove and Cleared for a section or the visit, scaled by count — exact only for a slot this page saw confirmed
+  ---
+  duration_ms: 0.095042
+  type: 'test'
+  ...
+# Subtest: F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default
+ok 7 - F2: a slot read back from the server is intent-derived, so its count is an upper bound and the copy says so — by default
+  ---
+  duration_ms: 0.040625
+  type: 'test'
+  ...
+# Subtest: UndoStrip is a polite status row with one Undo verb; Undo calls back and reports a failure inline
+ok 8 - UndoStrip is a polite status row with one Undo verb; Undo calls back and reports a failure inline
+  ---
+  duration_ms: 4.003375
+  type: 'test'
+  ...
+# Subtest: F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title
+ok 9 - F2: a strip for a slot this page saw confirmed renders the exact count and the exact Undo title
+  ---
+  duration_ms: 0.30475
+  type: 'test'
+  ...
+# Subtest: UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed
+ok 10 - UndoStrip renders present-but-disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 0.846542
+  type: 'test'
+  ...
+# Subtest: the entry sheet renders the section's Undo strip directly beneath its heading row, scoped to that section
+ok 11 - the entry sheet renders the section's Undo strip directly beneath its heading row, scoped to that section
+  ---
+  duration_ms: 1.301708
+  type: 'test'
+  ...
+# Subtest: the entry sheet shows no strip when the section has nothing to undo, and a disabled one after sign
+ok 12 - the entry sheet shows no strip when the section has nothing to undo, and a disabled one after sign
+  ---
+  duration_ms: 0.556292
+  type: 'test'
+  ...
+# Subtest: the chart bar carries the visit Undo in its own slot immediately after exam-sections, only while a visit clear is pending
+ok 13 - the chart bar carries the visit Undo in its own slot immediately after exam-sections, only while a visit clear is pending
+  ---
+  duration_ms: 1.184459
+  type: 'test'
+  ...
+# Subtest: CvfSection's tier-1 remove names both of the sheet's section keys so the server files one Undo slot for the sheet
+ok 14 - CvfSection's tier-1 remove names both of the sheet's section keys so the server files one Undo slot for the sheet
+  ---
+  duration_ms: 0.215417
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+ok 15 - STAFF-DX-GATE Undo protects diagnosis slots: true, observation
+  ---
+  duration_ms: 0.519958
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+ok 16 - STAFF-DX-GATE Undo protects diagnosis slots: true, condition
+  ---
+  duration_ms: 0.24175
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+ok 17 - STAFF-DX-GATE Undo protects diagnosis slots: true, diagnosis-row
+  ---
+  duration_ms: 0.30275
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+ok 18 - STAFF-DX-GATE Undo protects diagnosis slots: false, observation
+  ---
+  duration_ms: 0.231584
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+ok 19 - STAFF-DX-GATE Undo protects diagnosis slots: false, condition
+  ---
+  duration_ms: 0.218292
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+ok 20 - STAFF-DX-GATE Undo protects diagnosis slots: false, diagnosis-row
+  ---
+  duration_ms: 0.251625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+ok 21 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, observation
+  ---
+  duration_ms: 0.395917
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+ok 22 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, condition
+  ---
+  duration_ms: 0.284583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+ok 23 - STAFF-DX-GATE Undo protects diagnosis slots: undefined, diagnosis-row
+  ---
+  duration_ms: 0.307417
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+ok 24 - STAFF-DX-GATE ledger and undo capabilities stay outside the persisted ledger
+  ---
+  duration_ms: 0.532291
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+ok 25 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: true
+  ---
+  duration_ms: 0.783625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+ok 26 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: false
+  ---
+  duration_ms: 0.456458
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+ok 27 - STAFF-DX-GATE sheet and chart bar forward current diagnosis capability: undefined
+  ---
+  duration_ms: 0.425791
+  type: 'test'
+  ...
+# Subtest: W144 section Undo sends the action ID retained from void-response and refuses a superseded retry
+ok 28 - W144 section Undo sends the action ID retained from void-response and refuses a superseded retry
+  ---
+  duration_ms: 0.720375
+  type: 'test'
+  ...
+# Subtest: W144 section Undo sends the action ID retained from ledger and refuses a superseded retry
+ok 29 - W144 section Undo sends the action ID retained from ledger and refuses a superseded retry
+  ---
+  duration_ms: 0.786292
+  type: 'test'
+  ...
+# Subtest: W144 encounter Undo sends the action ID retained from void-response and refuses a superseded retry
+ok 30 - W144 encounter Undo sends the action ID retained from void-response and refuses a superseded retry
+  ---
+  duration_ms: 0.598292
+  type: 'test'
+  ...
+# Subtest: W144 encounter Undo sends the action ID retained from ledger and refuses a superseded retry
+ok 31 - W144 encounter Undo sends the action ID retained from ledger and refuses a superseded retry
+  ---
+  duration_ms: 0.633208
+  type: 'test'
+  ...
+# Subtest: W144 legacy slot without an action ID offers no blind Undo
+ok 32 - W144 legacy slot without an action ID offers no blind Undo
+  ---
+  duration_ms: 0.173208
+  type: 'test'
+  ...
+# Subtest: voidEncounterEntries posts the scope to the encounter void endpoint and returns the server's summary
+ok 33 - voidEncounterEntries posts the scope to the encounter void endpoint and returns the server's summary
+  ---
+  duration_ms: 7.423125
+  type: 'test'
+  ...
+# Subtest: previewEncounterVoid sends preview: true and surfaces the server error on failure
+ok 34 - previewEncounterVoid sends preview: true and surfaces the server error on failure
+  ---
+  duration_ms: 0.471125
+  type: 'test'
+  ...
+# Subtest: isClosedEncounterStatus mirrors the server's sign gate
+ok 35 - isClosedEncounterStatus mirrors the server's sign gate
+  ---
+  duration_ms: 0.051125
+  type: 'test'
+  ...
+# Subtest: confirm copy names the count and, for the visit, every section
+ok 36 - confirm copy names the count and, for the visit, every section
+  ---
+  duration_ms: 0.084166
+  type: 'test'
+  ...
+# Subtest: Clear section stays hidden while the section has nothing recorded
+ok 37 - Clear section stays hidden while the section has nothing recorded
+  ---
+  duration_ms: 8.483167
+  type: 'test'
+  ...
+# Subtest: Clear section previews the count, confirms with it, voids, and reports the result
+ok 38 - Clear section previews the count, confirms with it, voids, and reports the result
+  ---
+  duration_ms: 17.876083
+  type: 'test'
+  ...
+# Subtest: Clear section does nothing when the clinician declines the confirm
+ok 39 - Clear section does nothing when the clinician declines the confirm
+  ---
+  duration_ms: 15.643291
+  type: 'test'
+  ...
+# Subtest: a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart
+ok 40 - a failed Clear section keeps the server's error on screen AND tells the encounter to re-read the chart
+  ---
+  duration_ms: 13.537333
+  type: 'test'
+  ...
+# Subtest: a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart
+ok 41 - a failed Clear everything keeps the server's error on screen AND tells the encounter to re-read the chart
+  ---
+  duration_ms: 15.3305
+  type: 'test'
+  ...
+# Subtest: a failed preview reports but does not claim a clear failed — nothing was attempted
+ok 42 - a failed preview reports but does not claim a clear failed — nothing was attempted
+  ---
+  duration_ms: 4.671209
+  type: 'test'
+  ...
+# Subtest: Clear section renders present-but-disabled with the amendment tooltip once the encounter is signed
+ok 43 - Clear section renders present-but-disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 4.208166
+  type: 'test'
+  ...
+# Subtest: Remove confirms only when typed detail would be lost, and is reachable only through Edit
+ok 44 - Remove confirms only when typed detail would be lost, and is reachable only through Edit
+  ---
+  duration_ms: 23.921291
+  type: 'test'
+  ...
+# Subtest: once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip
+ok 45 - once the encounter is signed no Remove is rendered; the Edit door is present-but-disabled with the amendment tooltip
+  ---
+  duration_ms: 4.292334
+  type: 'test'
+  ...
+# Subtest: HPI, IOP, and CVF sheets expose a working Back to exam overview action
+ok 46 - HPI, IOP, and CVF sheets expose a working Back to exam overview action
+  ---
+  duration_ms: 0.646208
+  type: 'test'
+  ...
+# Subtest: the entry sheet chrome carries Clear chart left of Back to exam overview, from any section
+ok 47 - the entry sheet chrome carries Clear chart left of Back to exam overview, from any section
+  ---
+  duration_ms: 12.986208
+  type: 'test'
+  ...
+# Subtest: the visit-level control is disabled with the amendment tooltip after sign and absent from non-clinical sheets
+ok 48 - the visit-level control is disabled with the amendment tooltip after sign and absent from non-clinical sheets
+  ---
+  duration_ms: 8.736792
+  type: 'test'
+  ...
+# Subtest: an empty visit tells the clinician there is nothing to clear instead of confirming
+ok 49 - an empty visit tells the clinician there is nothing to clear instead of confirming
+  ---
+  duration_ms: 5.542041
+  type: 'test'
+  ...
+# Subtest: count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+ok 50 - count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree
+  ---
+  duration_ms: 38.280916
+  type: 'test'
+  ...
+# Subtest: count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+ok 51 - count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree
+  ---
+  duration_ms: 23.883625
+  type: 'test'
+  ...
+# Subtest: guard 4: removing the only refraction block voids its saved Observations on the server
+ok 52 - guard 4: removing the only refraction block voids its saved Observations on the server
+  ---
+  duration_ms: 135.253584
+  type: 'test'
+  ...
+# Subtest: every surface in the design table renders Clear section, and HpiSection no longer carries a dead onClear stub
+ok 53 - every surface in the design table renders Clear section, and HpiSection no longer carries a dead onClear stub
+  ---
+  duration_ms: 1.115084
+  type: 'test'
+  ...
+# Subtest: Wearing Rx offers the standard persisted section clear and resets its editor to blank
+ok 54 - Wearing Rx offers the standard persisted section clear and resets its editor to blank
+  ---
+  duration_ms: 43.622125
+  type: 'test'
+  ...
+# Subtest: fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed
+ok 55 - fixback 5: refraction block Remove is disabled with the amendment tooltip once the encounter is signed
+  ---
+  duration_ms: 48.77925
+  type: 'test'
+  ...
+# Subtest: Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor
+ok 56 - Auto-refraction reopens with the current encounter's stored AR, Auto-K, PD, and remarks in the editor
+  ---
+  duration_ms: 57.163583
+  type: 'test'
+  ...
+# Subtest: Auto-refraction history cannot overwrite an edit made while hydration is in flight
+ok 57 - Auto-refraction history cannot overwrite an edit made while hydration is in flight
+  ---
+  duration_ms: 37.655083
+  type: 'test'
+  ...
+# Subtest: Auto-refraction encounter changes reset fields and replace saved references before new history resolves
+ok 58 - Auto-refraction encounter changes reset fields and replace saved references before new history resolves
+  ---
+  duration_ms: 75.529291
+  type: 'test'
+  ...
+# Subtest: Auto-refraction Remove keeps preview-only references when latest-value history resolves later
+ok 59 - Auto-refraction Remove keeps preview-only references when latest-value history resolves later
+  ---
+  duration_ms: 52.185417
+  type: 'test'
+  ...
+# Subtest: Auto-refraction late persisted preview cannot restore references after Remove succeeds
+ok 60 - Auto-refraction late persisted preview cannot restore references after Remove succeeds
+  ---
+  duration_ms: 55.571708
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove
+ok 61 - fixback 56ff8d36 P2\#A (restraint §5): a signed reopened chart renders Clear section AND the Edit door for VA, IOP, and Auto-refraction present-but-disabled with the amendment tooltip, and no Remove
+  ---
+  duration_ms: 68.716708
+  type: 'test'
+  ...
+# Subtest: fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values
+ok 62 - fixback 4: VA, IOP, and Auto-refraction offer Clear section on reopen when the server holds recorded values
+  ---
+  duration_ms: 181.264083
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 63 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 5.901917
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 64 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 5.244167
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+ok 65 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 3.913583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 66 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 5.067583
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+ok 67 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 4.881792
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 68 - STAFF-DX-GATE section clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 5.114125
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+ok 69 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=true
+  ---
+  duration_ms: 5.0705
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+ok 70 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: true, diagnosis=false
+  ---
+  duration_ms: 3.848709
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+ok 71 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=true
+  ---
+  duration_ms: 3.962875
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+ok 72 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: false, diagnosis=false
+  ---
+  duration_ms: 5.1905
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+ok 73 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=true
+  ---
+  duration_ms: 4.952625
+  type: 'test'
+  ...
+# Subtest: STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+ok 74 - STAFF-DX-GATE encounter clear checks diagnosis impact before confirmation: undefined, diagnosis=false
+  ---
+  duration_ms: 5.138375
+  type: 'test'
+  ...
+1..74
+# tests 74
+# suites 0
+# pass 74
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1379.45275

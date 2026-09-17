@@ -1,0 +1,14 @@
+[
+  {
+    "guard": "W139",
+    "restoredExit": 0
+  },
+  {
+    "guard": "W140-supports",
+    "restoredExit": 0
+  },
+  {
+    "guard": "W140-shared-scope",
+    "restoredExit": 0
+  }
+]

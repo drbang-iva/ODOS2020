@@ -1,0 +1,187 @@
+TAP version 13
+# Subtest: ocular-health read-forward preserves stored finding details through an unrelated save
+not ok 1 - ocular-health read-forward preserves stored finding details through an unrelated save
+  ---
+  duration_ms: 29.241291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:1:58981'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      [
+        {
+          baseline: {
+            kind: 'canonical',
+            reference: 'Observation/OD-synthetic-finding',
+    ...
+          presence: 'present',
+    +     qualifiers: {}
+    -     qualifiers: {
+    -       grade: 'trace'
+    -     }
+        }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      key:
+        v: 1
+        patientId: 'p-qualified-forward'
+        encounterId: 'e-qualified-forward'
+        stableKey: 'ocular-health:anterior:synthetic-qualified'
+        eye: 'OD'
+        fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_01'
+        optionCode: 'synthetic-finding'
+      baseline:
+        kind: 'canonical'
+        reference: 'Observation/OD-synthetic-finding'
+        versionId: '1'
+      presence: 'present'
+      qualifiers:
+        grade: 'trace'
+      homes:
+  actual:
+    0:
+      key:
+        v: 1
+        patientId: 'p-qualified-forward'
+        encounterId: 'e-qualified-forward'
+        stableKey: 'ocular-health:anterior:synthetic-qualified'
+        eye: 'OD'
+        fieldCode: 'CUSTOM_ABNORMAL_FINDINGS_01'
+        optionCode: 'synthetic-finding'
+      baseline:
+        kind: 'canonical'
+        reference: 'Observation/OD-synthetic-finding'
+        versionId: '1'
+      presence: 'present'
+      qualifiers:
+      homes:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:1809:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: segmented finding grades replace the value and re-tapping clears the findingDetails entry
+not ok 2 - segmented finding grades replace the value and re-tapping clears the findingDetails entry
+  ---
+  duration_ms: 9.7055
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:1:67919'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + {}
+    - {
+    -   'synthetic-mgd': {
+    -     grade: 'marked'
+    -   }
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    synthetic-mgd:
+      grade: 'marked'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:2103:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: all four finding qualifier controls write the server-validated value shapes
+not ok 3 - all four finding qualifier controls write the server-validated value shapes
+  ---
+  duration_ms: 11.386542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:1:69688'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + {}
+    - {
+    -   'synthetic-mgd': {
+    -     arc: {
+    -       clockwise: false,
+    -       from: 2,
+    -       to: 5
+    -     },
+    -     grade: 'marked',
+    -     score: 3,
+    -     type: 'seborrheic'
+    -   }
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    synthetic-mgd:
+      grade: 'marked'
+      type: 'seborrheic'
+      score: 3
+      arc:
+        from: 2
+        to: 5
+        clockwise: false
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:2161:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+not ok 4 - numeric finding qualifiers preserve controlled keystrokes and visibly reject invalid values
+  ---
+  duration_ms: 6.583333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:1:72188'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + {}
+    - {
+    -   'synthetic-decimal': {
+    -     score: 1.5
+    -   },
+    -   'synthetic-integer': {
+    -     score: 15
+    -   }
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    synthetic-decimal:
+      score: 1.5
+    synthetic-integer:
+      score: 15
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/customSections.test.tsx:2235:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 587.663708

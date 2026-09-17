@@ -1,0 +1,24 @@
+{
+  "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+  "head": "a211b36887b49139ab29cf2d811a5a30f261034d",
+  "dirty": true,
+  "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049",
+  "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+  "servedAssets": {
+    "/assets/index-CsoQxb44.js": "4b729edfe112897ebad882b487cc20a1ed73019058d13c34e46feecea8b6dd0d",
+    "/assets/index-DF84U2Dz.css": "9ae30a7aac6735d2220cd62fdf6da90190f414fbd6eb303d8882c44c2b5782be"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 28090,
+    "medplum": 28103,
+    "postgres": 25433,
+    "redis": 26380,
+    "mcp": 23334,
+    "proxy": 23335,
+    "control": 23336
+  },
+  "project": "odos-r10-a3-2-served",
+  "mcpPid": 12105,
+  "caddyPid": 12118
+}
