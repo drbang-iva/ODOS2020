@@ -248,3 +248,23 @@ test("W130/W137 inactive recorded-absent fact stays visible, unchecked and locke
   assert.deepEqual(eye.selected,[]);
  } finally { h?.close(); option.active = active; }
 });
+
+for (const presence of ["absent", "present"]) for (const parentSelected of [false, true]) test(`W130/W137 inactive ${presence} child remains visible and locked with parent selected ${parentSelected}`, async () => {
+ const field = definition.customFields[0]!; const original = field.options;
+ field.options = [{code:"parent",display:"Parent",active:parentSelected,priority:true},{code:"child",display:"Historical Child",parentCode:"parent",active:false,priority:true}];
+ const child = fact("OD","child",presence,false);
+ let h: Awaited<ReturnType<typeof mount>> | undefined;
+ try {
+  h = await mount(history([...(parentSelected?[fact("OD","parent")]:[]),child]));
+  const label = `Historical Child${presence === "absent" ? " · Recorded absent" : ""}`;
+  const chip = h.button(label,"OD");
+  assert.ok(chip,"recorded inactive child must render independently of its parent");
+  assert.equal(h.panel().findAllByType("button").filter(n=>text(n).includes("Historical Child")).length,1);
+  assert.equal(chip.props["aria-pressed"],presence === "present");
+  assert.equal(chip.props.disabled,true);
+  await h.remarks("Historical child reviewed");await h.save();
+  const eye = JSON.parse(h.posts[0]!).eyes.OD;
+  assert.deepEqual(eye.loaded.map((f:any)=>f.key.optionCode).sort(),[...(parentSelected?["parent"]:[]),...(presence === "present"?["child"]:[])].sort());
+  assert.deepEqual(eye.selected,eye.loaded);
+ } finally { h?.close(); field.options = original; }
+});

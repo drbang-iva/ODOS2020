@@ -688,13 +688,14 @@ function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, nor
   onCopy(): void;
 }) {
   const options = (field?.options ?? []).filter((option) => option.active || facts?.some(fact => fact.key?.optionCode === option.code && fact.status === "live"));
-  const parents = options.filter((option) => !option.parentCode);
-  const priority = parents.filter((option) => option.priority);
-  const additional = parents.filter((option) => !option.priority);
+  const visibleChips = options.filter((option) => !option.parentCode || !option.active);
+  const worksheetOptionsCatalog = options.filter((option) => !option.parentCode || option.active);
+  const priority = visibleChips.filter((option) => option.priority);
+  const additional = visibleChips.filter((option) => !option.priority);
   const worksheetOptions = capture.selections.flatMap((code) => {
     const option = options.find((candidate) => candidate.code === code);
     if (!option) return [];
-    const hasChildren = options.some((candidate) => candidate.parentCode === option.code);
+    const hasChildren = worksheetOptionsCatalog.some((candidate) => candidate.parentCode === option.code);
     return option.qualifiers?.length || hasChildren ? [option] : [];
   });
   const displayedNormalTemplate = capture.state === "normal" && capture.normalTemplate ? capture.normalTemplate : normalTemplate;
@@ -764,7 +765,7 @@ function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, nor
               {worksheetOptions.map((option) => (
                 <fieldset key={option.code} disabled={capture.state === "deferred" || facts?.some(fact => fact.key?.optionCode === option.code && !fact.editable)}><FindingWorksheetRow
                   option={option}
-                  allOptions={options}
+                  allOptions={worksheetOptionsCatalog}
                   capture={capture}
                   prior={prior}
                   onSelections={onSelections}
