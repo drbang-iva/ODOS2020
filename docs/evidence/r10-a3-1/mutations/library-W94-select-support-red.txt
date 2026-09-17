@@ -9,10 +9,10 @@ not ok 1 - W94 W117 stored select-with-live-fact mapping produces a candidate wi
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false

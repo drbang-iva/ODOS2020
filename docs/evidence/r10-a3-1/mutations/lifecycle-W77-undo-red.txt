@@ -15,9 +15,9 @@ not ok 2 - W77 undo fact repairs real debt before lifecycle and refuses failed r
   failureType: 'testCodeFailure'
   error: |-
     audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -40,9 +40,9 @@ not ok 3 - W77 undo panel repairs real debt before lifecycle and refuses failed 
   failureType: 'testCodeFailure'
   error: |-
     audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

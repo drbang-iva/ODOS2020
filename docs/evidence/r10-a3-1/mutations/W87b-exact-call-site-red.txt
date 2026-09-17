@@ -9,12 +9,12 @@ not ok 1 - W87a W87b W129 exact finding write registry covers every call site in
   error: |-
     T22: unregistered call site ["mcp/src/clinical-graph/current-finding-writer.ts","executeTarget","resource-write",3] at line 242
     + actual - expected
-    
+
     + [
     +   'T22: unregistered call site ["mcp/src/clinical-graph/current-finding-writer.ts","executeTarget","resource-write",3] at line 242'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

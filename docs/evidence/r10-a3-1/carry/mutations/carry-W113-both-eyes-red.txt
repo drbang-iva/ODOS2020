@@ -8,9 +8,9 @@ not ok 1 - W74 W101 W113 carry uses standalone conditional steps and preserves s
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2

@@ -9,9 +9,9 @@ not ok 1 - W66 frozen loaded set preserves concurrent addition
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -32,9 +32,9 @@ not ok 2 - W67 whole request prevalidates stale second eye
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -54,9 +54,9 @@ not ok 3 - W68 selected positive and scoped negative refuse before writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -76,9 +76,9 @@ not ok 4 - W69 fresh read prevents new negative after concurrent positive
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -98,9 +98,9 @@ not ok 5 - W70 deferred preserves fact bytes and version
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -121,9 +121,9 @@ not ok 6 - W72 current and prior projections hide clears as current
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -144,9 +144,9 @@ not ok 7 - W91 finished refuses save
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -166,9 +166,9 @@ not ok 8 - W91 cancelled refuses save
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -188,9 +188,9 @@ not ok 9 - W91 entered-in-error refuses save
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -210,9 +210,9 @@ not ok 10 - W96 TBUT panel typed values round trip
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -234,10 +234,10 @@ not ok 11 - W97 exact resend completes interrupted eye
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -256,9 +256,9 @@ not ok 12 - W98 intervening same target stale; unrelated target replay succeeds
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -279,9 +279,9 @@ not ok 13 - W99 loaded present claim cannot match live absent
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -301,9 +301,9 @@ not ok 14 - W100 negative only audit failure is causal incomplete
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 503
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 503
@@ -324,10 +324,10 @@ not ok 15 - W110 panel debt surfaces and repair clears it
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -346,9 +346,9 @@ not ok 16 - W114 practice option from stored definitions saves and reads
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -370,10 +370,10 @@ not ok 17 - W120 persisted negative repairs original audit despite new positive
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -392,9 +392,9 @@ not ok 18 - W121 same negative id second actor refuses zero writes
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -415,9 +415,9 @@ not ok 19 - W122 absent transition requires explicit flag; omission preserves
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -438,9 +438,9 @@ not ok 20 - missing baseline 428 no-store and pre-rebuild zero write
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 428
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 428

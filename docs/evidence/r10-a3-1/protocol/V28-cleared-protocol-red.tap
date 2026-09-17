@@ -164,9 +164,9 @@ not ok 27 - V28 capture excludes cleared canonical and retains unrelated value
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

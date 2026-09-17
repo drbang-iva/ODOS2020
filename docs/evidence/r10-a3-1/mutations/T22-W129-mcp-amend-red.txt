@@ -9,12 +9,12 @@ not ok 1 - T22 every registered finding write path uses real handlers and emits 
   error: |-
     T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287
     + actual - expected
-    
+
     + [
     +   'T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

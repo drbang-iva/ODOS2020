@@ -170,9 +170,9 @@ not ok 28 - W82 prompt override cannot hide a valued shared proposed item
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     3 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

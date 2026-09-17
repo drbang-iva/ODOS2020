@@ -15,9 +15,9 @@ not ok 2 - W106 void repairs only selected debt
   failureType: 'testCodeFailure'
   error: |-
     outside debt stays pending
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

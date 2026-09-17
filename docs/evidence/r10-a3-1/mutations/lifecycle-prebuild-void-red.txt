@@ -15,9 +15,9 @@ not ok 2 - V23 void prebuild refuses before any repair
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

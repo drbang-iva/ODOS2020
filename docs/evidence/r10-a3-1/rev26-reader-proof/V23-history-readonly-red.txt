@@ -44,9 +44,9 @@ not ok 7 - history preserves legacy rows and exposes shared read-only projection
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -66,9 +66,9 @@ not ok 8 - history preserves legacy rows and exposes shared read-only projection
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -88,9 +88,9 @@ not ok 9 - history preserves legacy rows and exposes shared read-only projection
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -110,9 +110,9 @@ not ok 10 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -132,9 +132,9 @@ not ok 11 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -154,9 +154,9 @@ not ok 12 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -176,9 +176,9 @@ not ok 13 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -198,9 +198,9 @@ not ok 14 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -220,9 +220,9 @@ not ok 15 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -242,9 +242,9 @@ not ok 16 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -264,9 +264,9 @@ not ok 17 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -286,9 +286,9 @@ not ok 18 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -308,9 +308,9 @@ not ok 19 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -330,9 +330,9 @@ not ok 20 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -352,9 +352,9 @@ not ok 21 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -374,9 +374,9 @@ not ok 22 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -396,9 +396,9 @@ not ok 23 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -418,9 +418,9 @@ not ok 24 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -440,9 +440,9 @@ not ok 25 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -462,9 +462,9 @@ not ok 26 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -484,9 +484,9 @@ not ok 27 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -506,9 +506,9 @@ not ok 28 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -528,9 +528,9 @@ not ok 29 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -550,9 +550,9 @@ not ok 30 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -572,9 +572,9 @@ not ok 31 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -594,9 +594,9 @@ not ok 32 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -616,9 +616,9 @@ not ok 33 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -638,9 +638,9 @@ not ok 34 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -660,9 +660,9 @@ not ok 35 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -682,9 +682,9 @@ not ok 36 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -704,9 +704,9 @@ not ok 37 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -726,9 +726,9 @@ not ok 38 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -748,9 +748,9 @@ not ok 39 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -818,9 +818,9 @@ not ok 48 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -846,9 +846,9 @@ not ok 50 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -874,9 +874,9 @@ not ok 52 - history preserves legacy rows and exposes shared read-only projectio
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false

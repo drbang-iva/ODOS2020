@@ -1591,9 +1591,9 @@ not ok 256 - deferred and recorded ocular findings cannot coexist at the client-
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -1781,9 +1781,9 @@ not ok 285 - fresh ocular-health history restores scoped diagnosis suggestions w
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -3227,7 +3227,7 @@ not ok 513 - count honesty: Dilation section preview, confirm, void result, sect
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           canWriteDiagnosis: true,
@@ -3241,7 +3241,7 @@ not ok 513 - count honesty: Dilation section preview, confirm, void result, sect
             'MedicationAdministration/ma1',
             'MedicationAdministration/ma2'
           ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -3346,7 +3346,7 @@ not ok 514 - count honesty: whole-visit preview, confirm, void result, section s
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           canWriteDiagnosis: true,
@@ -3360,7 +3360,7 @@ not ok 514 - count honesty: whole-visit preview, confirm, void result, section s
             'Observation/today',
             'MedicationAdministration/ma1',
             'MedicationAdministration/ma2'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -4669,9 +4669,9 @@ not ok 702 - custom state writer preserves other-only notes for normal and abnor
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -4698,9 +4698,9 @@ not ok 704 - abnormal custom state other-only value leaves the exact unformatted
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -4745,9 +4745,9 @@ not ok 709 - exercised EOM and custom-state writers declare every schema-blind c
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -7137,7 +7137,7 @@ not ok 1092 - SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests
   error: |-
     every posted request must be accepted
     + actual - expected
-    
+
     + [
     +   {
     +     body: {
@@ -7785,7 +7785,7 @@ not ok 1092 - SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests
     +   }
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -9997,9 +9997,9 @@ not ok 1363 - T15 Ocular Health picker accepts a canonical view without one obse
   failureType: 'testCodeFailure'
   error: |-
     The rendered Ocular Health section must offer canonical-view suggestions without an Observation id
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -10021,9 +10021,9 @@ not ok 1364 - T16 DiagnosisPicker proposal evidence resolves through finding hom
   failureType: 'testCodeFailure'
   error: |-
     An unrelated OS fact must remain unproposed despite sharing the diagnosis catalog key
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -10046,7 +10046,7 @@ not ok 1365 - T17 Ocular Health picks link fact targets # TODO R10 A3
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + undefined
     - [
     -   {
@@ -10066,7 +10066,7 @@ not ok 1365 - T17 Ocular Health picks link fact targets # TODO R10 A3
     -     }
     -   }
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

@@ -8,9 +8,9 @@ not ok 1 - W72 current and prior projections hide clears as current
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     'live' !== 'retired'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'retired'

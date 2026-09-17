@@ -42,12 +42,12 @@ not ok 1 - V27 live canonical preliminary credits and overview displays
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -69,12 +69,12 @@ not ok 2 - V27 live canonical final credits and overview displays
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -96,12 +96,12 @@ not ok 3 - V27 live canonical amended credits and overview displays
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -123,10 +123,10 @@ not ok 4 - W80 extension homes supply overview diagnosis
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'Synthetic current diagnosis'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'Synthetic current diagnosis'
@@ -152,12 +152,12 @@ not ok 6 - W81 explicit absent canonical credits
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -197,12 +197,12 @@ not ok 10 - W81 panel context other no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:tear-film'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -224,12 +224,12 @@ not ok 11 - W81 panel context remarks no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:tear-film'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -251,12 +251,12 @@ not ok 12 - W81 panel context deferred no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:tear-film'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -284,12 +284,12 @@ not ok 14 - W114 stored practice option resolves in both consumers
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -329,12 +329,12 @@ not ok 18 - V27 persisted carry reassert evidence
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -356,12 +356,12 @@ not ok 19 - V27 persisted carry clinical-edit evidence
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

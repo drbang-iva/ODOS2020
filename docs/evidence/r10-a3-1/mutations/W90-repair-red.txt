@@ -14,9 +14,9 @@ not ok 2 - W90 door-audit-repair refuses a closed encounter before clinical or a
   failureType: 'testCodeFailure'
   error: |-
     {"result":"command","commandId":"fb9a744e-55a8-4f3d-b1f6-38a26b97586d","complete":true,"executionOrder":[],"outcomes":[],"encounterClosedDuringCommand":true}
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

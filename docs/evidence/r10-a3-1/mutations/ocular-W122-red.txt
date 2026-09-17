@@ -8,9 +8,9 @@ not ok 1 - W122 absent transition requires explicit flag; omission preserves
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400

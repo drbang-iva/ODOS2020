@@ -8,7 +8,7 @@
       "skipped": 52,
       "todo": 16
     },
-    "sha256": "85d4b09e06a3125dc20df4a53b6d9033880afcc1f8d57133274bd20c160bab41"
+    "sha256": "ac01caf3e29b83876aecf1e648a232ce8c42b76d9edd4ad30ac621c44e807807"
   },
   {
     "file": "mcp-npm.txt",
@@ -19,7 +19,7 @@
       "skipped": 53,
       "todo": 0
     },
-    "sha256": "2f9895c6e2c56e047a8baa432d45113ad706d8dabac60e327ae711a608f98a51"
+    "sha256": "313725cea23011bfc4aa8411e9ff96c29c87b299a77e0cb12cb18846dcf54e25"
   },
   {
     "file": "base-live-authz.txt",
@@ -52,6 +52,6 @@
       "skipped": 0,
       "todo": 4
     },
-    "sha256": "0784f9b7c7e42408a64b5d75bb78214cf87278ef90e5b38025a5c42928095896"
+    "sha256": "95e1438dcb2e7681f4ec1793f93cba978255dee71fa13ad05be7727adee10f48"
   }
 ]

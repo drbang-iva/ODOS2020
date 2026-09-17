@@ -44,9 +44,9 @@ not ok 7 - W91 protocol apply pre-rebuild zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -72,9 +72,9 @@ not ok 9 - W108 protocol unapply pre-rebuild zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

@@ -228,14 +228,14 @@ not ok 2 - synced practice policies enforce all repaired clinical writes on runn
   error: |-
     Synthetic live-proof cleanup failures: ProjectMembership/8bfa02d6-583b-4015-bce4-4ee099fa6962: HTTP 403, ProjectMembership/2e965c36-14f1-4422-bde6-13d7c8250818: HTTP 403, ProjectMembership/7cd0ab83-5a63-418e-898d-9e41fdd36216: HTTP 403
     + actual - expected
-    
+
     + [
     +   'ProjectMembership/8bfa02d6-583b-4015-bce4-4ee099fa6962: HTTP 403',
     +   'ProjectMembership/2e965c36-14f1-4422-bde6-13d7c8250818: HTTP 403',
     +   'ProjectMembership/7cd0ab83-5a63-418e-898d-9e41fdd36216: HTTP 403'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

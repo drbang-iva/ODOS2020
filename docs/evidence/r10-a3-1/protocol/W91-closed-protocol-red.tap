@@ -38,9 +38,9 @@ not ok 6 - W91 protocol apply closed zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -66,9 +66,9 @@ not ok 8 - W108 protocol unapply closed zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -186,9 +186,9 @@ not ok 23 - W82 built-in closed reject precedes seeding
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

@@ -8,9 +8,9 @@ not ok 1 - W120 persisted negative repairs original audit despite new positive
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"positive-in-negative-scope"}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

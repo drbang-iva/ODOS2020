@@ -8,9 +8,9 @@ not ok 1 - W114 practice option from stored definitions saves and reads
   failureType: 'testCodeFailure'
   error: |-
     {"result":"command","commandId":"4784083d-64ae-489a-a3f6-b277da1815b6","complete":false,"executionOrder":[0],"outcomes":[{"clinicalWrite":"none","cause":"verify-read","status":"refused","target":"finding:f60656c73fbc3d621fde306cda4560e79b01087d8cc71189dedae00a70720398","reason":"Finding definition is unavailable."}]}
-    
+
     422 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

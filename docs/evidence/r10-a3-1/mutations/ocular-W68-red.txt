@@ -9,10 +9,10 @@ not ok 1 - W68 selected positive and scoped negative refuse before writes
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'positive-in-negative-scope'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'positive-in-negative-scope'

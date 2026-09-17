@@ -8,9 +8,9 @@ not ok 1 - W121 same negative id second actor refuses zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

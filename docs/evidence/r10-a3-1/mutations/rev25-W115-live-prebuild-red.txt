@@ -54,10 +54,10 @@ TAP version 13
       error: |-
         Expected values to be strictly equal:
         + actual - expected
-        
+
         + undefined
         - true
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: true

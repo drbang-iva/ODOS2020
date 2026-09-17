@@ -38,9 +38,9 @@ not ok 6 - standalone plan failure 403 keeps exact persisted state without privi
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -61,9 +61,9 @@ not ok 7 - standalone plan failure 409 keeps exact persisted state without privi
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -84,9 +84,9 @@ not ok 8 - standalone plan failure 412 keeps exact persisted state without privi
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -107,9 +107,9 @@ not ok 9 - standalone plan failure 500 keeps exact persisted state without privi
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -130,9 +130,9 @@ not ok 10 - standalone plan failure 503 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -153,9 +153,9 @@ not ok 11 - standalone link failure 403 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -176,9 +176,9 @@ not ok 12 - standalone link failure 409 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -199,9 +199,9 @@ not ok 13 - standalone link failure 412 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -222,9 +222,9 @@ not ok 14 - standalone link failure 500 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -245,9 +245,9 @@ not ok 15 - standalone link failure 503 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -268,9 +268,9 @@ not ok 16 - standalone fact failure 403 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -291,9 +291,9 @@ not ok 17 - standalone fact failure 409 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -314,9 +314,9 @@ not ok 18 - standalone fact failure 412 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -337,9 +337,9 @@ not ok 19 - standalone fact failure 500 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -360,9 +360,9 @@ not ok 20 - standalone fact failure 503 keeps exact persisted state without priv
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -383,9 +383,9 @@ not ok 21 - standalone audit failure 403 keeps exact persisted state without pri
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -406,9 +406,9 @@ not ok 22 - standalone audit failure 409 keeps exact persisted state without pri
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -429,9 +429,9 @@ not ok 23 - standalone audit failure 412 keeps exact persisted state without pri
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -452,9 +452,9 @@ not ok 24 - standalone audit failure 500 keeps exact persisted state without pri
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -475,9 +475,9 @@ not ok 25 - standalone audit failure 503 keeps exact persisted state without pri
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -498,9 +498,9 @@ not ok 26 - standalone witness failure 403 keeps exact persisted state without p
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -521,9 +521,9 @@ not ok 27 - standalone witness failure 409 keeps exact persisted state without p
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -544,9 +544,9 @@ not ok 28 - standalone witness failure 412 keeps exact persisted state without p
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -567,9 +567,9 @@ not ok 29 - standalone witness failure 500 keeps exact persisted state without p
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -590,9 +590,9 @@ not ok 30 - standalone witness failure 503 keeps exact persisted state without p
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -613,9 +613,9 @@ not ok 31 - W124 resumes persisted Condition with failed plan
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -635,9 +635,9 @@ not ok 32 - W124 resumes persisted Condition with failed link
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

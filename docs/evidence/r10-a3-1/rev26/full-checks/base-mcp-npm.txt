@@ -23896,9 +23896,9 @@ not ok 3838 - T1 previous exams displays canonical finding linked by extension #
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok((result.body as any).encounters.some((e:any)=>e.diagnoses.some((d:any)=>d.findings.some((f:any)=>f.observationReference==="Observation/source-fact"))))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -23918,9 +23918,9 @@ not ok 3839 - T2 carry pull preserves canonical identity typed qualifiers and de
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -23940,9 +23940,9 @@ not ok 3840 - T3 pending mutation marker postdating carry is read as edited # TO
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -23963,12 +23963,12 @@ not ok 3841 - T7 overview shows live canonical facts and excludes cleared facts 
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'Observation/fact'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -23993,9 +23993,9 @@ not ok 3842 - T8 overview evidence includes extension homes without Condition ev
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok((result.body as any).findings.find((f:any)=>f.observationReference==="Observation/linked-fact")?.diagnoses?.length)
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -24014,9 +24014,9 @@ not ok 3843 - T9 completeness credits live canonical facts but not cleared facts
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -24040,9 +24040,9 @@ not ok 3844 - T10 section void selects canonical facts and undo restores exact r
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -24062,9 +24062,9 @@ not ok 3845 - T11 finding void and undo preserve identity qualifiers homes and o
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -24090,9 +24090,9 @@ not ok 3847 - T13 lifecycle mutation repairs owed audit before replacing clinica
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -24112,9 +24112,9 @@ not ok 3848 - T14 lifecycle refuses signed canonical facts without downgrading t
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok([409,422].includes(result.status))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -24134,9 +24134,9 @@ not ok 3849 - T17 supported Ocular Health pick links fact targets without Condit
   failureType: 'testCodeFailure'
   error: |-
     {"result":"pick","commandId":"099adf65-4818-4ec9-b2cc-d53c3578eac7","conditionStep":"unconfirmed","link":"pending","error":"Diagnosis pick FHIR transaction did not return the persisted Condition."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -24156,9 +24156,9 @@ not ok 3850 - T19 protocol capture reads current canonical facts instead of raw 
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -24185,10 +24185,10 @@ not ok 3852 - T21 pre-rebuild Ocular Health history and capture remain read-only
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -24207,9 +24207,9 @@ not ok 3853 - T22 section finding writes emit canonical Observations for every o
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(rows.every(o=>parseCurrentFindingEnvelope(o).status==="valid"))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

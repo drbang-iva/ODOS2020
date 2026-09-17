@@ -8,9 +8,9 @@ not ok 1 - W114 stored practice option carries through effective definitions and
   failureType: 'testCodeFailure'
   error: |-
     {"reason":"pre-rebuild-test-encounter","error":"pre-rebuild-test-encounter"}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

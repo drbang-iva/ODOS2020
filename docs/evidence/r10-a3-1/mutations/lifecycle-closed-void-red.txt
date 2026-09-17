@@ -15,9 +15,9 @@ not ok 2 - V24 void finished closed before repair
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     422 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -37,9 +37,9 @@ not ok 3 - V24 void cancelled closed before repair
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     422 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -59,9 +59,9 @@ not ok 4 - V24 void entered-in-error closed before repair
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     422 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

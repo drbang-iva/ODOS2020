@@ -36,7 +36,7 @@
 @@ -72,7 +79,7 @@
  assert.equal(catalog.find(r=>r.atomicFindingId===nested.atomicFindingId)?.optionCode,nested.optionCode);
  record('nested catalog identity',{option:nested.optionCode,naiveSplit:nested.atomicFindingId.split('::')[2]});
- 
+
 -const f=env();const s=await capture(f,lens,[lensOption]);const a=await atom(f);
 +const f=env();const s=await legacySnapshot(f,lens,[lensOption]);const a=await atom(f);
  assert.equal((await get(f)).length,1);
@@ -45,7 +45,7 @@
 @@ -95,11 +102,11 @@
  const dupe=env();await atom(dupe,'OU','present');await atom(dupe,'OD','absent');
  assert.equal((await get(dupe)).length,2);assert.deepEqual((await get(dupe)).map((r:any)=>[r.eye,r.presence]),[['OD','absent'],['OS','present']]);record('writer stores independent per-eye facts',(await get(dupe)).map((r:any)=>({eye:r.laterality,presence:r.presence})));
- 
+
 -const neg=env();now='2026-09-15T10:00:00.000Z';await capture(neg,lens,[lensOption]);now='2026-09-15T11:00:00.000Z';
 +const neg=env();now='2026-09-15T10:00:00.000Z';await legacySnapshot(neg,lens,[lensOption]);now='2026-09-15T11:00:00.000Z';
  const act={id:'00000000-0000-4000-8000-000000000001',definitionStableKey:lens.stableKey,eye:'OD',optionCodes:[lensOption],exclusions:[],assertedAt:now};
@@ -55,13 +55,13 @@
 +const n=await legacySnapshot(neg,lens,[],{state:'normal',negativeAct:act});
 +assert.equal((await get(neg)).length,0);const nh=(await history(neg,lens)).filter((row:any)=>row.negativeAct?.id===act.id);assert.equal(nh[0].state,'normal');assert.deepEqual(nh[0].negativeAct.optionCodes,[lensOption]);
 +record('historical negative snapshot hides older snapshot',{identifier:n.identifier[0].system,falseCodes:n.component.filter((c:any)=>c.valueBoolean===false).map((c:any)=>c.code.coding[0].code),findingsRows:0,editorHistoryState:nh[0].state});
- 
+
  const retired=copy(s);retired.id='retired-option';retired.component=retired.component.map((c:any)=>c.valueBoolean===true?{...c,code:odosConcept(`OD_${field(lens).localCode}::brunescent`)}:c);
  const tr=translateRetiredFindingRead(retired,lens.stableKey,field(lens),'OD_');assert.deepEqual(tr.value,[lensOption]);assert.ok(tr.findingDetails[lensOption].colour);
 @@ -108,13 +115,13 @@
  assert.equal(translateRetiredFindingRead(oldAtomic,lens.stableKey,field(lens),'OD_').value,undefined);
  record('retired option compatibility is component based',{snapshotTranslated:tr.value,translatedDetails:tr.findingDetails,atomicCatalogMatch:false,atomicHelperValue:null});
- 
+
 -const spk=env();const cs=await capture(spk,cornea,['superficial-punctate-keratitis-spk'],{findingDetails:{'superficial-punctate-keratitis-spk':{grade:'Grade 1'}}});
 +const spk=env();const cs=await legacySnapshot(spk,cornea,['superficial-punctate-keratitis-spk'],{findingDetails:{'superficial-punctate-keratitis-spk':{grade:'Grade 1'}}});
  const csStored=spk.rows.find(r=>r.id===cs.id);const grade=csStored.component.find((c:any)=>c.code.coding.some((c:any)=>c.code.endsWith('::grade')));grade.valueCodeableConcept=odosConcept('Grade 0');
@@ -70,14 +70,14 @@
 -record('retired qualifier incompatible with universal byte equality',{historyGrade:null,rawOverviewGrade:'Grade 0',storedGrade:'Grade 0'});
 +assert.equal(overview([csStored]).findings[0].sheetFindings?.[0].qualifiers[0],undefined);
 +record('retired qualifier incompatible with universal byte equality',{historyGrade:null,currentOverviewGrade:null,storedGrade:'Grade 0'});
- 
+
 -const stale=env();now='2026-09-15T12:00:00.000Z';const old=await capture(stale,lens,[lensOption]);now='2026-09-15T13:00:00.000Z';await capture(stale,lens,['cortical-cataract']);
 +const stale=env();now='2026-09-15T12:00:00.000Z';const old=await legacySnapshot(stale,lens,[lensOption]);now='2026-09-15T13:00:00.000Z';await legacySnapshot(stale,lens,['cortical-cataract']);
  const cr=await handleDiagnosisCandidatesRequest(deps(stale),request);assert.equal(cr.status,200);const cf=(cr.body as any).findings;
  assert.equal(cf.length,1);assert.ok(!cf.some((r:any)=>r.findingInstanceId===old.id));
  assert.equal((await get(stale)).length,1);assert.equal(overview(stale.rows.filter(r=>r.resourceType==='Observation')).findings.length,2);
 @@ -122,8 +129,9 @@
- 
+
  const synthetic=buildOcularHealthDefinitions([{key:'probe',display:'Synthetic probe',priority:[{key:'sample',display:'Sample',qualifiers:[{kind:'numeric',key:'amount',display:'Amount',min:0,max:10,step:1},{kind:'enum',key:'kind',display:'Kind',options:[{code:'x',display:'X'}]},{kind:'extent',key:'extent',display:'Extent'}]}],additional:[],normalTemplate:'Synthetic'}] as any,'ocular-health:anterior:',{source:'manual',recordedAt:now})[0];
  const qf=env();const qdefs=[...defs,synthetic];const details={sample:{amount:3,kind:'x',extent:{from:2,to:5,clockwise:true}}};
 -const qr=await handleCustomSectionCaptureRequest(deps(qf,qdefs),{authHeader:'synthetic',params:{stableKey:synthetic.stableKey},body:{...context,eyes:{OD:{state:'abnormal',customFields:[{code:field(synthetic).localCode,value:['sample']}],findingDetails:details}}}});
@@ -85,11 +85,11 @@
 +const qkey={v:1,patientId:'p1',encounterId:'e1',stableKey:synthetic.stableKey,fieldCode:field(synthetic).localCode,optionCode:'sample',eye:'OD'};
 +const qr=await handleCustomSectionCaptureRequest(deps(qf,qdefs),{authHeader:'synthetic',params:{stableKey:synthetic.stableKey},body:{commandId:randomUUID(),...context,eyes:{OD:{loaded:[],selected:[{key:qkey,baseline:{kind:'absent',key:qkey},presence:'present',qualifiers:details.sample,homes:[]}]}}}});
 +assert.equal(qr.status,200,JSON.stringify(qr.body));const qh=await handleCustomSectionHistoryRequest(deps(qf,qdefs),{authHeader:'synthetic',params:{stableKey:synthetic.stableKey},query:{patient:'Patient/p1',encounter:'Encounter/e1'}});assert.equal(qh.status,200);assert.deepEqual((qh.body as any).eyes.OD.facts.find((r:any)=>r.presence==='present').qualifiers,details.sample);record('typed qualifiers round trip through real writer and history',details);
- 
+
  const stored=env();const override={...copy(lens),sourceStatus:'local-practice',display:'Synthetic stored lens',valueSchema:{...lens.valueSchema,fields:{}}};stored.rows.push({...buildFindingDefinitionResource(override),id:'stored-definition'});
  const effective=(await new FhirFindingDefinitionStore(stored as any,defs).list()).find(d=>d.stableKey===lens.stableKey)!;assert.equal(customFieldEntries(effective).length,0);
 @@ -131,14 +139,16 @@
- 
+
  const comp=env();const compDx={...copy(dx),keyFindings:[{findingKey:lens.stableKey,satisfiedBy:'this-encounter',origin:'practice',active:true}]};
  comp.rows.push({...buildDiagnosisCatalogResource(compDx),id:'stored-dx'});const ca=await atom(comp);
 -let complete=await handleDiagnosisCompletenessRequest(deps(comp),request);assert.equal(complete.status,200);assert.equal((complete.body as any).diagnoses.length,1);

@@ -16,13 +16,13 @@ not ok 2 - W76 canonical section and finding identity include panels and preserv
   error: |-
     canonical identity selects expected owners
     + actual - expected
-    
+
       [
         'Observation/observation-1',
     -   'Observation/od',
     -   'Observation/os'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

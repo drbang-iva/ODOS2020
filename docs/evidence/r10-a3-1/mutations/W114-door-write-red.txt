@@ -8,9 +8,9 @@ not ok 1 - W114 write resolves a practice-only option through its real store dep
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","error":"catalog-key","reason":"catalog-key","targetIndex":0}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

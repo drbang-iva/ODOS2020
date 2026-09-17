@@ -51,12 +51,12 @@ not ok 8 - W118 present TBUT 8 credits
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:tear-film'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -78,12 +78,12 @@ not ok 9 - W118 present TBUT 0 credits
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:tear-film'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -171,10 +171,10 @@ not ok 21 - W81 overview completeness panel-value
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'incomplete'
     - 'complete'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'complete'

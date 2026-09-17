@@ -20,9 +20,9 @@ not ok 3 - W90 pick refuses a closed encounter before Condition or Encounter wri
   failureType: 'testCodeFailure'
   error: |-
     {"result":"pick","conditionStep":"unconfirmed","link":"not-applicable","error":"Diagnosis pick FHIR transaction did not return the persisted Condition."}
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

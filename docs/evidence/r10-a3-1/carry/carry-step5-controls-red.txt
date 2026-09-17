@@ -45,12 +45,12 @@ not ok 3 - completed own command restores a missing Encounter link without chang
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'Condition/1155159a-10ec-45c4-b779-d0b3d9fdd72a'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

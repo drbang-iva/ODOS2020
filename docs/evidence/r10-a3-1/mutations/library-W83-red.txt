@@ -9,10 +9,10 @@ not ok 1 - W83 W109 rejects audit agent
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -32,10 +32,10 @@ not ok 2 - W83 W109 rejects audit activity
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -55,10 +55,10 @@ not ok 3 - W83 W109 rejects audit system
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -78,10 +78,10 @@ not ok 4 - W83 W109 rejects audit instant
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -101,10 +101,10 @@ not ok 5 - W83 W109 rejects audit targets
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -124,10 +124,10 @@ not ok 6 - W83 W109 rejects audit mixed
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

@@ -140,9 +140,9 @@ not ok 23 - W82 built-in closed reject precedes seeding
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     3 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -162,9 +162,9 @@ not ok 24 - W82 built-in valued reject precedes seeding
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     3 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

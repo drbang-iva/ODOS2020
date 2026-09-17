@@ -9,12 +9,12 @@ not ok 1 - T22 every registered finding write path uses real handlers and emits 
   error: |-
     T22: unregistered call site ["mcp/src/clinical-graph/current-finding-writer.ts","executeTarget","resource-write",3] at line 242
     + actual - expected
-    
+
     + [
     +   'T22: unregistered call site ["mcp/src/clinical-graph/current-finding-writer.ts","executeTarget","resource-write",3] at line 242'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

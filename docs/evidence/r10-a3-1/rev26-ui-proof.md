@@ -439,7 +439,7 @@ Saved failure: `docs/evidence/r10-a3-1/full-checks/ui-test.txt:7131`. Common evi
 
 `ui/tests/examOverviewBoard.test.tsx:2142–2177`
 ```text
-2142: 
+2142:
 2143: async function renderedWriterStateSectionValue(
 2144:   stableKey: "entrance:pupils" | "entrance:stereo" | "ocular-health:anterior:conjunctiva",
 2145:   state: "normal" | "abnormal" | "deferred",
@@ -510,7 +510,7 @@ Saved failure: `docs/evidence/r10-a3-1/full-checks/ui-test.txt:7131`. Common evi
 `mcp/src/clinical-graph/encounter-void-endpoint.ts:431–433`
 ```text
 431:   const response: EncounterVoidResponse = { canWriteDiagnosis, voided, count: voided.length, sections, entries, preview, ledger: nextLedger, voidActionId };
-432: 
+432:
 433:   // --- One transaction ------------------------------------------------------------------
 ```
 

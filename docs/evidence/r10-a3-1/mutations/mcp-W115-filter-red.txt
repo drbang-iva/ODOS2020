@@ -308,9 +308,9 @@ not ok 51 - W115 clinician_attest_observation repairs only selected debt before 
   failureType: 'testCodeFailure'
   error: |-
     only selected debt is repaired
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -336,9 +336,9 @@ not ok 53 - W115 amend_observation repairs only selected debt before lifecycle
   failureType: 'testCodeFailure'
   error: |-
     only selected debt is repaired
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

@@ -75,10 +75,10 @@ not ok 12 - role markers dominate definition matching, conflicting markers are i
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'invalid'
     - 'panel-context'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'panel-context'
@@ -116,7 +116,7 @@ not ok 15 - compiled ocular structure field identities and atomic samples are pi
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           atomicIds: [
@@ -154,7 +154,7 @@ not ok 15 - compiled ocular structure field identities and atomic samples are pi
             'CUSTOM_ABNORMAL_FINDINGS_04',
             'CUSTOM_GRADE_A_V_RATIO'
           ],
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -419,12 +419,12 @@ not ok 17 - pending audit lookup uses one comma-OR tag search, all pages, and fa
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'Observation/one',
         'Observation/two'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -448,12 +448,12 @@ not ok 18 - review regression: an audit for a copied marker covers only its actu
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'Observation/first',
         'Observation/second'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -1273,7 +1273,7 @@ not ok 83 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -1295,7 +1295,7 @@ not ok 83 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewPr
               recordedAt: '2026-08-16T12:00:00.000Z'
             },
             display: 'Lens',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -1469,7 +1469,7 @@ not ok 84 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -1544,7 +1544,7 @@ not ok 84 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewPr
               ],
               recordedAt: '2026-08-16T12:00:00.000Z'
             },
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -1735,7 +1735,7 @@ not ok 85 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -1770,7 +1770,7 @@ not ok 85 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewPr
             },
             display: 'Periphery',
             examination: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -1878,7 +1878,7 @@ not ok 86 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -1913,7 +1913,7 @@ not ok 86 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewPr
             },
             display: 'Periphery',
             examination: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -2021,7 +2021,7 @@ not ok 87 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -2035,7 +2035,7 @@ not ok 87 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewPr
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
                   value: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -2146,7 +2146,7 @@ not ok 88 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -2166,7 +2166,7 @@ not ok 88 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewPr
                     value: true
                   }
                 }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -2264,7 +2264,7 @@ not ok 89 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -2284,7 +2284,7 @@ not ok 89 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewPr
                     value: true
                   }
                 }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -2670,7 +2670,7 @@ not ok 138 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewP
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -2692,7 +2692,7 @@ not ok 138 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewP
                 {
                   code: 'EXAM_STATE',
                   display: 'Exam state',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -3501,11 +3501,11 @@ not ok 249 - E1–E17 reproduce the original writer/read behaviors and assert th
     node:internal/modules/run_main:123
         triggerUncaughtException(
         ^
-    
+
     AssertionError [ERR_ASSERTION]: {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
         at capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
         at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {
       generatedMessage: false,
@@ -3515,9 +3515,9 @@ not ok 249 - E1–E17 reproduce the original writer/read behaviors and assert th
       operator: 'strictEqual',
       diff: 'simple'
     }
-    
+
     Node.js v22.22.3
-    
+
   code: 'ERR_TEST_FAILURE'
   stack: |-
     capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)

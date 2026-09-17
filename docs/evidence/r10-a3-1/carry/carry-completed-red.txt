@@ -8,9 +8,9 @@ not ok 1 - W75 completed command resend preserves original witness after a later
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"not-attempted","conditionReference":"Condition/96874c08-395b-480e-b93b-05c4e833d8a7","findings":{"result":"command","commandId":"efe9e32d-a4d2-4b26-bb60-943d40f0706e","complete":false,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"none","cause":"verify-read","status":"conflict","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/a806bef7-6f00-49be-8a23-3d1f6a5d0766","reason":"Owner changed after command was recorded."},{"clinicalWrite":"none","cause":"halted-by-earlier-target","status":"not-attempted","target":"finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf","reason":"Earlier target did not complete."}]}}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

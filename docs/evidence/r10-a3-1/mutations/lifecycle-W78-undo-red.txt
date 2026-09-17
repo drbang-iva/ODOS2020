@@ -15,9 +15,9 @@ not ok 2 - W78 undo fact final refuses signed canonical owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -37,9 +37,9 @@ not ok 3 - W78 undo panel final refuses signed canonical owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -59,9 +59,9 @@ not ok 4 - W78 undo fact amended refuses signed canonical owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -81,9 +81,9 @@ not ok 5 - W78 undo panel amended refuses signed canonical owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -103,9 +103,9 @@ not ok 6 - W78 undo fact corrected refuses signed canonical owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -125,9 +125,9 @@ not ok 7 - W78 undo panel corrected refuses signed canonical owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422

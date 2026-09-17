@@ -8,9 +8,9 @@ not ok 1 - W99 loaded present claim cannot match live absent
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

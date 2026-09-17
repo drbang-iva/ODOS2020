@@ -8,9 +8,9 @@ not ok 1 - W90 door-put refuses a closed encounter before clinical or audit writ
   failureType: 'testCodeFailure'
   error: |-
     {"result":"command","commandId":"b0f292d0-1548-4b10-9644-775f17569a57","complete":true,"executionOrder":[0],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/d96da10d-34f7-4347-a537-fa9613c66992","versionId":"cb648af6-538a-4ef3-ac60-4f62ec4caf28"}],"encounterClosedDuringCommand":true}
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

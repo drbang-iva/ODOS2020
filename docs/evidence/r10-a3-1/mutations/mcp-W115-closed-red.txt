@@ -213,10 +213,10 @@ not ok 35 - W115 clinician_attest_observation allows closed fact, preserves iden
   error: |-
     {"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}
     + actual - expected
-    
+
     + true
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual: true
@@ -236,10 +236,10 @@ not ok 36 - W115 clinician_attest_observation allows closed panel, preserves ide
   error: |-
     {"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}
     + actual - expected
-    
+
     + true
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual: true
@@ -259,10 +259,10 @@ not ok 37 - W115 amend_observation allows closed fact, preserves identities and 
   error: |-
     {"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}
     + actual - expected
-    
+
     + true
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual: true
@@ -282,10 +282,10 @@ not ok 38 - W115 amend_observation allows closed panel, preserves identities and
   error: |-
     {"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}
     + actual - expected
-    
+
     + true
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual: true
@@ -377,10 +377,10 @@ not ok 51 - W115 clinician_attest_observation repairs only selected debt before 
   error: |-
     {"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}
     + actual - expected
-    
+
     + true
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual: true
@@ -399,9 +399,9 @@ not ok 52 - W115 clinician_attest_observation refuses mismatched audit
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /audit repair failed/. Input:
-    
+
     '{"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -422,10 +422,10 @@ not ok 53 - W115 amend_observation repairs only selected debt before lifecycle
   error: |-
     {"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}
     + actual - expected
-    
+
     + true
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual: true
@@ -444,9 +444,9 @@ not ok 54 - W115 amend_observation refuses mismatched audit
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /audit repair failed/. Input:
-    
+
     '{"content":[{"type":"text","text":"Error: mutant rejects closed"}],"isError":true}'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

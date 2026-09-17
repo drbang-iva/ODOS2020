@@ -147,10 +147,10 @@ not ok 24 - W81 overview completeness inactive
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'complete'
     - 'incomplete'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'incomplete'

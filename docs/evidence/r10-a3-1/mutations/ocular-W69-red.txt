@@ -8,9 +8,9 @@ not ok 1 - W69 fresh read prevents new negative after concurrent positive
   failureType: 'testCodeFailure'
   error: |-
     {"result":"command","commandId":"15d13ffc-51ce-48c7-9c72-aa64598f8601","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"panel:6e2a57ba624df6db312d221549a941bdc88337f88aa016ed1cda023f7e07a4ae","reference":"Observation/9751cc5a-1e1d-40e2-ba24-de7a331cce5a","versionId":"ec03c4f5-fb6b-4c6a-a6dd-68264238ccae"},{"target":"negative:OD","kind":"negative-act","status":"applied","clinicalWrite":"confirmed","reference":"Observation/c6795a0b-0687-4b89-9122-e4723985bbc0"}]}
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

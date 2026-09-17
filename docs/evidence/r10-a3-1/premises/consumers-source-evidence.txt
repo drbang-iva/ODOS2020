@@ -13,7 +13,7 @@ mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:284-425
 293:   if (!sourceObservations) {
 294:     return { status: 409, body: { error: "The source diagnosis evidence does not belong to its patient and encounter." } };
 295:   }
-296: 
+296:
 297:   const currentEncounter = await diagnosisPullRead(() =>
 298:     staff.fhir.read<Encounter>("Encounter", currentEncounterId)
 299:   );
@@ -37,7 +37,7 @@ mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:284-425
 317:   if (alreadyPresent) {
 318:     return { status: 200, body: { conditionReference: alreadyPresent, alreadyPresent: true } };
 319:   }
-320: 
+320:
 321:   const conditionFullUrl = uuidFullUrl();
 322:   const encounterFullUrl = uuidFullUrl();
 323:   const observationRows = sourceObservations.filter((observation) => observation.valueBoolean === true);
@@ -104,7 +104,7 @@ mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:284-425
 384:       },
 385:     ],
 386:   };
-387: 
+387:
 388:   let transaction: Bundle;
 389:   try {
 390:     transaction = await staff.fhir.executeTransaction(transactionBundle, {
@@ -189,7 +189,7 @@ mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:611-689
 631:   }
 632:   return observations;
 633: }
-634: 
+634:
 635: function pulledDiagnosisCondition(
 636:   source: Condition,
 637:   sourceEncounterId: string,
@@ -220,7 +220,7 @@ mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:611-689
 662:     ...(bodySite?.length ? { bodySite: structuredClone(bodySite) } : {}),
 663:   };
 664: }
-665: 
+665:
 666: function pulledFindingObservation(
 667:   source: Observation,
 668:   patientReference: string,
@@ -250,7 +250,7 @@ mcp/src/clinical-graph/diagnosis-carry-provenance.ts:63-114
 63:   const currentCarry = await carryForTarget(fhir, currentReference, provenanceCache);
 64:   if (currentCarry.kind === "none") return empty;
 65:   if (currentCarry.kind === "invalid") return integrityFailure(currentCarry.warning);
-66: 
+66:
 67:   const sourceReference = directSourceConditionReference(currentCarry.provenance);
 68:   if (!sourceReference) {
 69:     return integrityFailure("Diagnosis carry provenance source Condition is missing or ambiguous.");
@@ -260,13 +260,13 @@ mcp/src/clinical-graph/diagnosis-carry-provenance.ts:63-114
 73:   if (!pulledFromDate) {
 74:     return integrityFailure("Diagnosis carry provenance source encounter date is missing.");
 75:   }
-76: 
+76:
 77:   const sourceAbsentSnapshots = await absentSourceSnapshots(fhir, currentCarry.provenance);
 78:   const observationCarried: Record<string, boolean> = {};
 79:   const observationReasserted: Record<string, boolean> = {};
 80:   let integrityWarning: string | undefined;
 81:   let edited = false;
-82: 
+82:
 83:   const conditionTarget = await targetState(
 84:     fhir,
 85:     currentReference,
@@ -276,7 +276,7 @@ mcp/src/clinical-graph/diagnosis-carry-provenance.ts:63-114
 89:   );
 90:   edited ||= conditionTarget.edited;
 91:   integrityWarning = conditionTarget.warning;
-92: 
+92:
 93:   const activeObservationReferences = new Set(observations.flatMap((observation) => {
 94:     const reference = resourceReference(observation);
 95:     return reference ? [reference] : [];
@@ -304,12 +304,12 @@ mcp/src/clinical-graph/diagnosis-carry-provenance.ts:287-340
 287: const encounterReferencePattern = /^Encounter\/([^/]+)$/;
 288: const observationReferencePattern = /^Observation\/([^/]+)$/;
 289: const instantPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/;
-290: 
+290:
 291: type CarryLookup =
 292:   | { kind: "none" }
 293:   | { kind: "invalid"; warning: string }
 294:   | { kind: "carry"; provenance: Provenance; recorded: number };
-295: 
+295:
 296: async function carryForTarget(
 297:   fhir: DiagnosisCarryProvenanceFhirClient,
 298:   targetReference: string,
@@ -332,7 +332,7 @@ mcp/src/clinical-graph/diagnosis-carry-provenance.ts:287-340
 315:   }
 316:   return { kind: "carry", provenance: candidates[0]!, recorded };
 317: }
-318: 
+318:
 319: async function targetState(
 320:   fhir: DiagnosisCarryProvenanceFhirClient,
 321:   targetReference: string,
@@ -385,7 +385,7 @@ mcp/src/clinical-graph/encounter-void-endpoint.ts:217-281
 227:   const encounterReference = `Encounter/${encounterId}`;
 228:   const definitions = (deps.findingDefinitions?.() ?? []).filter((definition) => definition.active);
 229:   const request = parsed.data;
-230: 
+230:
 231:   // --- Candidate resolution -------------------------------------------------------------
 232:   // The encounter boundary: only this encounter's resources are ever candidates.
 233:   const observations = (await searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }))
@@ -396,7 +396,7 @@ mcp/src/clinical-graph/encounter-void-endpoint.ts:217-281
 238:       isLiveObservation(observation)
 239:     )
 240:     .map((observation) => identify(observation, definitions));
-241: 
+241:
 242:   let targetObservations: IdentifiedObservation[] = [];
 243:   let includeComplaints = false;
 244:   let targetComplaintIds: Set<string> | undefined;
@@ -614,7 +614,7 @@ mcp/src/clinical-graph/encounter-undo-endpoint.ts:260-325
 314:     }
 315:   }
 316: }
-317: 
+317:
 318: /** priorStatus "" means the resource saved with no status at all — restore it that way. */
 319: function withStatus<T extends { status?: string }>(resource: T, priorStatus: string): T {
 320:   if (!priorStatus) {
@@ -714,7 +714,7 @@ mcp/src/clinical-graph/exam-overview-endpoint.ts:344-386
 358:     {},
 359:   );
 360: }
-361: 
+361:
 362: function mergeCarryState(
 363:   projection: Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }>,
 364:   carryState: DiagnosisCarryState,
@@ -735,7 +735,7 @@ mcp/src/clinical-graph/exam-overview-endpoint.ts:344-386
 379:   }
 380:   return projection;
 381: }
-382: 
+382:
 383: function conditionObservationReferences(condition: Condition): Set<string> {
 384:   return new Set(condition.evidence?.flatMap((evidence) => evidence.detail ?? [])
 385:     .flatMap((detail) => detail.reference?.startsWith("Observation/") ? [detail.reference] : []) ?? []);
@@ -993,7 +993,7 @@ mcp/src/clinical-graph/protocol-endpoint.ts:942-1010
 958:     },
 959:   }, now);
 960: }
-961: 
+961:
 962: async function updateProjected<T extends Observation | ServiceRequest | CarePlan>(
 963:   fhir: LiveFhir,
 964:   resourceType: T["resourceType"],
@@ -1009,7 +1009,7 @@ mcp/src/clinical-graph/protocol-endpoint.ts:942-1010
 974:   ) => Promise<T>;
 975:   return update(resourceType, id, resource, { "X-ODOS-Source": "protocol-module", ...headers });
 976: }
-977: 
+977:
 978: function projectionRestore<T extends Observation | ServiceRequest | CarePlan>(
 979:   fhir: LiveFhir,
 980:   resourceType: T["resourceType"],
@@ -1026,7 +1026,7 @@ mcp/src/clinical-graph/protocol-endpoint.ts:942-1010
 991:     }
 992:   };
 993: }
-994: 
+994:
 995: export function protocolFindingObservation(finding: ProtocolFindingInstance): Observation {
 996:   if (typeof finding.value === "number" && finding.findingDefKey !== "cup_disc_ratio") {
 997:     throw new Error(`Numeric protocol finding ${finding.findingDefKey} requires an explicit unit mapping.`);
@@ -1048,7 +1048,7 @@ mcp/src/clinical-graph/protocol-fixtures.ts:123-132
 123:   effectivePeriod: { start: "2026-07-18" },
 124:   verificationStatus: "provisional",
 125: }));
-126: 
+126:
 127: const DRY_EYE_PROMPT_FINDINGS = [
 128:   { itemKey: "dry-eye-symptoms", findingDefKey: DRY_EYE_SYMPTOMS_KEY },
 129:   { itemKey: "dry-eye-tear-stability", findingDefKey: "ocular-health:anterior:tear-film" },
@@ -1073,12 +1073,12 @@ ui/src/components/charting/AssessmentSection.tsx:203-224
 216:       return lines.length ? [[condition.id, lines.join(" · ")]] : [];
 217:     })));
 218:   }
-219: 
+219:
 220:   useEffect(() => {
 221:     void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
 222:     return () => { loadGeneration.current += 1; };
 223:   }, [encounterId, encounterReference]);
-224: 
+224:
 
 ui/src/components/charting/DiagnosisPicker.tsx:419-429
 419: function isProposedDiagnosis(
@@ -1094,7 +1094,7 @@ ui/src/components/charting/DiagnosisPicker.tsx:419-429
 429:   );
 
 mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts:130-151
-130: 
+130:
 131:   return {
 132:     status: 200,
 133:     body: {
@@ -1137,7 +1137,7 @@ mcp/src/clinical-graph/diagnosis-pick-endpoint.ts:151-174
 167:       if (!findingDefinitionStableKey) return { status: 422, body: { error: "The finding does not resolve to an active finding definition." } };
 168:     }
 169:   }
-170: 
+170:
 171:   const laterality = supportLaterality ?? normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
 172:   const visualFieldDescriptor = visualFieldDescriptorResolutionFromObservation(
 173:     findingDefinitionStableKey,

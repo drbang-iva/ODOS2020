@@ -94,3 +94,7 @@ Required follow-up: **MCP attest/amend/append write no Provenance under a projec
 ## Container cleanup and comparison checkout
 
 All started test containers belong to odos-r10-a3-1. [Final stop record](rev27/container-stop.txt) records the required docker-stop command and preserved container states. No other project's containers are touched. The clean detached base comparison worktree was removed after its runs; no separate base containers were started. Private operator credentials/cache stay ignored and outside the non-live test environment.
+
+## Evidence text normalization
+
+The full staged branch check found whitespace in172 captured logs. Their exact original bytes are preserved in [this archive](rev27/original-logs.tar.gz), indexed by [original and readable-copy hashes](rev27/log-normalization.json). Readable copies have trailing whitespace/blank EOF lines removed, with no test-result or source changes. Hash references now identify those readable copies. The final check covers the entire A3.1 branch delta, including newly tracked evidence.

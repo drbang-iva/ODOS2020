@@ -9,10 +9,10 @@ not ok 1 - R10 A3 Ocular Health saves and lifecycle enforce stored role policies
   error: |-
     Live authorization seeder and caller must belong to the same Medplum project.
     + actual - expected
-    
+
     + '14e0ec2a-cc7f-4ce6-be82-49d9417f3e95'
     - 'b4bd13e9-a825-4edd-aaca-e1967d59c28c'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'b4bd13e9-a825-4edd-aaca-e1967d59c28c'

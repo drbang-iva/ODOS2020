@@ -66,9 +66,9 @@ not ok 5 - static audit rejects a mistyped dynamic override key
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Contract override referral-service\.encounter-resource has no matching call site/. Input:
-    
+
     'Error: src/clinical-graph/diagnosis-carry-provenance.ts:40 has unresolved search parameters and no search-contract marker'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

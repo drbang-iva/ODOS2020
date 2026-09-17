@@ -63,12 +63,12 @@ not ok 10 - W81 panel context other no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:tear-film'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -90,12 +90,12 @@ not ok 11 - W81 panel context remarks no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:tear-film'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -117,12 +117,12 @@ not ok 12 - W81 panel context deferred no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:tear-film'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -198,10 +198,10 @@ not ok 22 - W81 overview completeness panel-context
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'complete'
     - 'incomplete'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'incomplete'

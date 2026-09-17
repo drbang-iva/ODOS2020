@@ -98,7 +98,7 @@ not ok 16 - W86 rejects escaping suite symlink before execution
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /T4: (wrong ui file|missing ui suite)/. Input:
-    
+
     'R10 A3 release BLOCKED\n' +
       'T4: ui child process failed (1)\n' +
       'T5: ui child process failed (1)\n' +
@@ -118,7 +118,7 @@ not ok 16 - W86 rejects escaping suite symlink before execution
       'T18: ui Nonsequential TAP result\n' +
       'T21: ui Nonsequential TAP result\n' +
       'T22: ui Nonsequential TAP result\n'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -142,7 +142,7 @@ not ok 16 - W86 rejects escaping suite symlink before execution
     T18: ui Nonsequential TAP result
     T21: ui Nonsequential TAP result
     T22: ui Nonsequential TAP result
-    
+
   operator: 'match'
   stack: |-
     <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3ReleaseChecker.test.ts:66:10)

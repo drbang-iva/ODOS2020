@@ -81,12 +81,12 @@ not ok 13 - W107 capture fact OD + committed prompt OS dedupes
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     -   'OD',
         'OS'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

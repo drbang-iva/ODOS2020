@@ -20,9 +20,9 @@ not ok 3 - W79 W91 refuses closed before all writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

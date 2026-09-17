@@ -15,9 +15,9 @@ not ok 2 - W77 void fact repairs real debt before lifecycle and refuses failed r
   failureType: 'testCodeFailure'
   error: |-
     Void transaction indeterminate: the FHIR server did not answer usably; 4 entries were sent. audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_TEST_FAILURE'
   name: 'VoidTransactionError'
   stack: |-
@@ -36,9 +36,9 @@ not ok 3 - W77 void panel repairs real debt before lifecycle and refuses failed 
   failureType: 'testCodeFailure'
   error: |-
     Void transaction indeterminate: the FHIR server did not answer usably; 4 entries were sent. audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_TEST_FAILURE'
   name: 'VoidTransactionError'
   stack: |-

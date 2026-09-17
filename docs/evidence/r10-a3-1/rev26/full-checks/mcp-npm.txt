@@ -632,10 +632,10 @@ not ok 104 - v0.5d preflight pass 4 source-tree canonical-shape lint passes live
     mcp/src/clinical-graph/diagnosis-carry-provenance.ts:20 odos-extension-url-shape
     mcp/src/clinical-graph/diagnosis-carry-provenance.ts:21 odos-extension-url-shape
     + actual - expected
-    
+
     + 'hard-block'
     - 'pass'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'pass'
@@ -15532,7 +15532,7 @@ not ok 2508 - fixture files contain only allowlisted synthetic identity values
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'docs/evidence/r10-a3-1/rev26-reader-fixtures/history-transport-red.txt@19851: non-synthetic 10-digit value',
     +   'docs/evidence/r10-a3-1/rev26-reader-fixtures/history-transport-red.txt@26732: non-synthetic 10-digit value',
@@ -15553,7 +15553,7 @@ not ok 2508 - fixture files contain only allowlisted synthetic identity values
     +   'docs/evidence/r10-a3-1/rev26-reader-fixtures/mutations.json@1250: non-synthetic 10-digit value'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

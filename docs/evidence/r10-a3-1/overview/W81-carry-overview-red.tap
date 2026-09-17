@@ -93,12 +93,12 @@ not ok 15 - V27 persisted carry unchanged evidence
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:lens'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -120,12 +120,12 @@ not ok 16 - V27 persisted carry link-only evidence
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:lens'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -147,12 +147,12 @@ not ok 17 - V27 persisted carry void-undo evidence
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:lens'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

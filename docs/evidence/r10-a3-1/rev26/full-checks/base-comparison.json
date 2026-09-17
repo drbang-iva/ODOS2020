@@ -20,7 +20,7 @@
         "todo": 16
       },
       "log": "base-mcp-npm.txt",
-      "sha256": "85d4b09e06a3125dc20df4a53b6d9033880afcc1f8d57133274bd20c160bab41",
+      "sha256": "ac01caf3e29b83876aecf1e648a232ce8c42b76d9edd4ad30ac621c44e807807",
       "counts": {
         "tests": 5687,
         "pass": 5618,
@@ -54,7 +54,7 @@
         "todo": 0
       },
       "log": "mcp-npm-final.txt",
-      "sha256": "dd47abeae2e5e5b08778904678764dea068c1e8f90112d1d8865f282772057e5",
+      "sha256": "2ca82f2c6ac4ae24272304bf0d81246d100960427a92f7dc692aed1934504d7b",
       "counts": {
         "tests": 5979,
         "pass": 5924,

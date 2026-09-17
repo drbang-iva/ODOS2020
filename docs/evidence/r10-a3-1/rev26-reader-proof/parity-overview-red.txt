@@ -1034,11 +1034,11 @@ not ok 169 - E1–E17 reproduce the original writer/read behaviors and assert th
     node:internal/modules/run_main:123
         triggerUncaughtException(
         ^
-    
+
     AssertionError [ERR_ASSERTION]: {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
         at capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
         at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {
       generatedMessage: false,
@@ -1048,9 +1048,9 @@ not ok 169 - E1–E17 reproduce the original writer/read behaviors and assert th
       operator: 'strictEqual',
       diff: 'simple'
     }
-    
+
     Node.js v22.22.3
-    
+
   code: 'ERR_TEST_FAILURE'
   stack: |-
     capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
