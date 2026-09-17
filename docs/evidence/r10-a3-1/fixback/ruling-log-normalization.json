@@ -1,0 +1,27 @@
+[
+  {
+    "file": "fixback/ruling-ui-test.txt",
+    "original": "9e509d9d9cc85f7192eb4b9c2d911a2e212d3903cbb3a52f6c407dec17a8877d",
+    "readable": "99723053a3696b8458981e33eee3d84f3f5a42d21eefdcd8d197b09decc8e2d8"
+  },
+  {
+    "file": "mutations/fixback-F5-filter-red.txt",
+    "original": "3f1fadfd49b571bdfff7208d46ff72900ac0404db69e6d97958e509a4c8ad75e",
+    "readable": "201ee656c36ac946752c1a74a53c7a8fcf4ff302e2590d8a58aad06788ecc500"
+  },
+  {
+    "file": "fixback/ruling-mcp-test.txt",
+    "original": "d8949f635ca73e306423043a2fc5f90f4c6eb8693b97cb7cc750ccd41c390950",
+    "readable": "680a776a8f3cd1bb27d969bfcfe7beb3a88ef059ea0fdecc1000c04f0a5faaf8"
+  },
+  {
+    "file": "fixback/ruling-base-mcp-test.txt",
+    "original": "b47db126d93209ac5836f3c9c22dd4fc53d66cd68a2f90e35ddb4a899037922b",
+    "readable": "23345fae1c2422d797709acb86e3c6a8d3277bab4a47fc22142a8378fa5346f3"
+  },
+  {
+    "file": "fixback/ruling-base-education-repeat.txt",
+    "original": "ba89443ce9b41bdff1d85a1d2f54b9ed775a6fe12532a049ed96f8885cd889e8",
+    "readable": "f4855edeeb0e9623ecfb94f879a48040e8d658444178fdfd5bab9b57423a566f"
+  }
+]

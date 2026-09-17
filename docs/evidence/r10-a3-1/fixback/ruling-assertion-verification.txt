@@ -1,0 +1,395 @@
+{
+  "base": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "files": [
+    {
+      "file": "mcp/src/__tests__/helpers/plan-authoring-fhir.ts",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/src/__tests__/plan-carried.test.ts",
+      "before": 36,
+      "after": 36,
+      "retained": 36,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+      "before": 29,
+      "after": 30,
+      "retained": 27,
+      "mapped": 2,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/src/__tests__/plan-materialization.test.ts",
+      "before": 9,
+      "after": 9,
+      "retained": 9,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/src/__tests__/plan-offered.test.ts",
+      "before": 23,
+      "after": 23,
+      "retained": 23,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/src/__tests__/protocol-phase5.test.ts",
+      "before": 527,
+      "after": 527,
+      "retained": 527,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/currentFindingIdentity.test.ts",
+      "before": 42,
+      "after": 43,
+      "retained": 41,
+      "mapped": 1,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/currentFindingReader.test.ts",
+      "before": 120,
+      "after": 120,
+      "retained": 120,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": 209,
+      "after": 210,
+      "retained": 202,
+      "mapped": 7,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/customSectionEndpoint.test.ts",
+      "before": 485,
+      "after": 278,
+      "retained": 278,
+      "mapped": 207,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/diagnosisCarryForward.test.ts",
+      "before": 322,
+      "after": 345,
+      "retained": 196,
+      "mapped": 126,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/diagnosisFindingsCommands.test.ts",
+      "before": 124,
+      "after": 124,
+      "retained": 124,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": 367,
+      "after": 388,
+      "retained": 346,
+      "mapped": 21,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/dryEyeInitiationProtocols.test.ts",
+      "before": 69,
+      "after": 69,
+      "retained": 69,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "before": 158,
+      "after": 158,
+      "retained": 152,
+      "mapped": 6,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/encounterUndoLedgerAuthzLive.test.ts",
+      "before": 36,
+      "after": 36,
+      "retained": 36,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+      "before": 159,
+      "after": 159,
+      "retained": 159,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/encounterVoidFixture.ts",
+      "before": 2,
+      "after": 4,
+      "retained": 2,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "before": 74,
+      "after": 74,
+      "retained": 74,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/findingSectionHelpers.test.ts",
+      "before": 2,
+      "after": 12,
+      "retained": 1,
+      "mapped": 1,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/a3-overview-expectations.json",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/carry-harness.ts",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/endpoint-write-path-runtime.ts",
+      "before": 0,
+      "after": 64,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/field-identities.json",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/finding-write-exclusions.json",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/finding-write-paths.json",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/mcp-runtime-transport.ts",
+      "before": 0,
+      "after": 13,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/mcp-write-paths.ts",
+      "before": 0,
+      "after": 54,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/overview-harness.ts",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+      "before": 66,
+      "after": 69,
+      "retained": 61,
+      "mapped": 5,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/protocol-harness.ts",
+      "before": 0,
+      "after": 0,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/protocol-write-paths.ts",
+      "before": 0,
+      "after": 37,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/fixtures/r10/write-path-recorder.ts",
+      "before": 0,
+      "after": 2,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10-parity.test.ts",
+      "before": 17,
+      "after": 17,
+      "retained": 16,
+      "mapped": 1,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3Carry.test.ts",
+      "before": 0,
+      "after": 124,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3CustomCaptureRoute.test.ts",
+      "before": 0,
+      "after": 5,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3DoorGuards.test.ts",
+      "before": 0,
+      "after": 37,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3Library.test.ts",
+      "before": 0,
+      "after": 82,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3McpGuards.test.ts",
+      "before": 0,
+      "after": 67,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3OcularDoor.test.ts",
+      "before": 0,
+      "after": 120,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3Overview.test.ts",
+      "before": 0,
+      "after": 28,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3Protocols.test.ts",
+      "before": 0,
+      "after": 50,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseChecker.test.ts",
+      "before": 8,
+      "after": 16,
+      "retained": 8,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": 47,
+      "after": 65,
+      "retained": 34,
+      "mapped": 13,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3StoredDefinitions.test.ts",
+      "before": 0,
+      "after": 14,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10A3VoidUndo.test.ts",
+      "before": 0,
+      "after": 77,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+      "before": 0,
+      "after": 127,
+      "retained": 0,
+      "mapped": 0,
+      "gaps": 0
+    },
+    {
+      "file": "mcp/tests/searchParamContract.test.ts",
+      "before": 19,
+      "after": 19,
+      "retained": 19,
+      "mapped": 0,
+      "gaps": 0
+    }
+  ],
+  "originalAssertions": 2950,
+  "retained": 2560,
+  "mappedChanges": 390,
+  "explicitRemovals": 1,
+  "gaps": [],
+  "ledgerIssues": []
+}

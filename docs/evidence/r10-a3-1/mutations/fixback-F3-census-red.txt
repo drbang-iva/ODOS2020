@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: W40 F3 Node census finds nested mixed-case exam PDF consumers in every source root
+not ok 1 - W40 F3 Node census finds nested mixed-case exam PDF consumers in every source root
+  ---
+  duration_ms: 6.069292
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseChecker.test.ts:1:5165'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + []
+    - [
+    -   'mcp/src/nested/consumer.ts:1:const renderExamPdf = true;'
+    - ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'mcp/src/nested/consumer.ts:1:const renderExamPdf = true;'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3ReleaseChecker.test.ts:85:11)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 500.877917

@@ -1,10 +1,29 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync, readdirSync } from 'node:fs';
 import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import ts from '../node_modules/typescript/lib/typescript.js';
 
+
+export function examPdfConsumerCensus(root) {
+  const matches = [];
+  function visit(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a,b) => a.name.localeCompare(b.name))) {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile()) {
+        const text = readFileSync(path, 'utf8');
+        if (text.includes('\0')) continue;
+        for (const [index, line] of text.split(/\r?\n/).entries()) {
+          if (/exam.{0,30}pdf|pdf.{0,30}exam/i.test(line)) matches.push(`${relative(root,path)}:${index+1}:${line}`);
+        }
+      }
+    }
+  }
+  for (const directory of ['mcp/src','ui/src','src']) visit(resolve(root,directory));
+  return matches;
+}
 
 export const FINDING_WRITE_PATH_IDS = Object.freeze(["door-put", "door-audit-repair", "pick-condition", "oh-save-fact", "oh-save-panel", "oh-negative-act", "carry-condition", "carry-plan", "carry-link", "carry-facts", "carry-lineage", "void", "undo", "protocol-commit", "protocol-unapply", "protocol-restore", "mcp-attest", "mcp-amend", "mcp-create-observation", "mcp-scribe-write", "mcp-append-context", "mcp-save-section", "mcp-smoking-status", "mcp-dry-eye-questionnaire-score", "mcp-meibography", "mcp-ortho-k-fit", "mcp-eye-growth"]);
 export function findingWriteCensus(root) {

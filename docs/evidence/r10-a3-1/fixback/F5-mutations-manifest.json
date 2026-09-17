@@ -1,0 +1,18 @@
+[
+  {
+    "id": "fixback-F5-filter",
+    "edits": [
+      {
+        "file": ".coderabbit.yaml",
+        "before": "  path_filters: [\"!docs/evidence/**\"]\n",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/F5-check.mjs"
+    ],
+    "failurePattern": "Evidence exclusion must appear exactly once"
+  }
+]

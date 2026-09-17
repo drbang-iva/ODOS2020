@@ -1,0 +1,20 @@
+{
+  "composeProject": "odos-r10-a3-1-ci",
+  "medplum": "5.1.30-9b1bd92",
+  "baseUrl": "http://localhost:18103/",
+  "postgres": "PostgreSQL16-alpine, loopback29142, fresh medplum database",
+  "network": "10.249.144.0/24",
+  "sequence": [
+    "test:live-integration --bootstrap-project (package command)",
+    "operator-identity",
+    "repair-practice-roles, MEDPLUM_CONTRACT_BOOTSTRAP=1 GITHUB_ACTIONS=true",
+    "sync-practice-role-policy-rules --apply --bootstrap-service-identity",
+    "test:live-authz with .odos/operator.env loaded"
+  ],
+  "differencesFromHostedCi": [
+    "Medplum5.1.30 required here versus CI compose5.1.8",
+    "PostgreSQL host port29142 versus CI15432 to avoid another owned project on15432",
+    "Unique compose project, volumes, subnet and randomly generated synthetic administrator password"
+  ],
+  "sharedServicesUntouched": true
+}

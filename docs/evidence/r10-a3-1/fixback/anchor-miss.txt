@@ -1,0 +1,21 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: MUTATION ANCHOR MISS fixback-anchor-miss: mcp/src/clinical-graph/custom-section-endpoint.ts: expected 1, found 0
+
+0 !== 1
+
+    at file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/docs/evidence/r10-a3-1/run-mutations.mjs:27:14
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.3

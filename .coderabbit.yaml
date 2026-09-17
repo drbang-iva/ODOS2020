@@ -1,4 +1,5 @@
 reviews:
+  path_filters: ["!docs/evidence/**"]
   auto_review:
     enabled: true
     auto_incremental_review: true

@@ -1,0 +1,13 @@
+docs/evidence/r10-a3-1/assertion-audit/result.json
+docs/evidence/r10-a3-1/assertion-audit/rev26-normalized-mappings.json
+docs/evidence/r10-a3-1/assertion-audit/source-digests.json
+docs/evidence/r10-a3-1/assertion-audit/verify.cjs
+docs/evidence/r10-a3-1/mutations/results.json
+mcp/scripts/check-r10-a3-release.mjs
+mcp/src/clinical-graph/custom-section-endpoint.ts
+mcp/src/index.ts
+mcp/tests/r10A3McpGuards.test.ts
+mcp/tests/r10A3OcularDoor.test.ts
+mcp/tests/r10A3ReleaseChecker.test.ts
+mcp/tests/r10A3ReleaseScenarios.test.ts
+mcp/tests/r10OcularHealthDoorAuthzLive.test.ts

@@ -1,0 +1,255 @@
+{
+  "ruling-assertion-verification.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-authz.txt": {
+    "counts": [
+      "tests 73",
+      "suites 0",
+      "pass 73",
+      "fail 0",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": []
+  },
+  "ruling-base-education-repeat.txt": {
+    "counts": [
+      "tests 43",
+      "suites 0",
+      "pass 42",
+      "fail 1",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": [
+      "sequence HTTP lifecycle lost 412 race returns typed 409 without retry"
+    ]
+  },
+  "ruling-base-mcp-test.txt": {
+    "counts": [
+      "tests 5687",
+      "suites 0",
+      "pass 5618",
+      "fail 1",
+      "cancelled 0",
+      "skipped 52",
+      "todo 16"
+    ],
+    "failures": [
+      "T1 previous exams displays canonical finding linked by extension # TODO R10 A3",
+      "T2 carry pull preserves canonical identity typed qualifiers and destination home # TODO R10 A3",
+      "T3 pending mutation marker postdating carry is read as edited # TODO R10 A3",
+      "T7 overview shows live canonical facts and excludes cleared facts # TODO R10 A3",
+      "T8 overview evidence includes extension homes without Condition evidence # TODO R10 A3",
+      "T9 completeness credits live canonical facts but not cleared facts # TODO R10 A3",
+      "T10 section void selects canonical facts and undo restores exact records # TODO R10 A3",
+      "T11 finding void and undo preserve identity qualifiers homes and other eye # TODO R10 A3",
+      "T13 lifecycle mutation repairs owed audit before replacing clinical state # TODO R10 A3",
+      "T14 lifecycle refuses signed canonical facts without downgrading them # TODO R10 A3",
+      "T17 supported Ocular Health pick links fact targets without Condition evidence # TODO R10 A3",
+      "T19 protocol capture reads current canonical facts instead of raw exact-code rows # TODO R10 A3",
+      "T21 pre-rebuild Ocular Health history and capture remain read-only # TODO R10 A3",
+      "T22 section finding writes emit canonical Observations for every option # TODO R10 A3",
+      "installed WeasyPrint 69.0 emits a real PDF/A-3u document"
+    ]
+  },
+  "ruling-base-terminal-single-process.txt": {
+    "counts": [
+      "tests 500",
+      "suites 0",
+      "pass 500",
+      "fail 0",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": []
+  },
+  "ruling-bootstrap-ready.txt": {
+    "counts": [
+      "tests 12",
+      "suites 0",
+      "pass 12",
+      "fail 0",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0",
+      "tests 218",
+      "suites 0",
+      "pass 218",
+      "fail 0",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": []
+  },
+  "ruling-bootstrap.txt": {
+    "counts": [
+      "tests 12",
+      "suites 0",
+      "pass 0",
+      "fail 12",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": [
+      "Medplum 5.1.8 accepts ChargeItem occurrence range with sort search",
+      "Medplum 5.1.8 accepts Invoice subject with date sort search",
+      "Medplum 5.1.8 accepts Invoice date range search",
+      "Medplum 5.1.8 accepts PaymentReconciliation active status search",
+      "Medplum 5.1.8 accepts PaymentReconciliation created range search",
+      "Medplum 5.1.8 accepts Claim patient with created sort search",
+      "Medplum 5.1.8 accepts ClaimResponse patient with created sort search",
+      "Medplum 5.1.8 accepts Task code and business status search",
+      "Medplum 5.1.8 accepts Basic code and identifier search",
+      "Medplum 5.1.8 accepts Provenance target with recorded sort search",
+      "Medplum 5.1.8 accepts AuditEvent patient and date search",
+      "real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL"
+    ]
+  },
+  "ruling-education-rerun.txt": {
+    "counts": [
+      "tests 43",
+      "suites 0",
+      "pass 43",
+      "fail 0",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": []
+  },
+  "ruling-files.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-mcp-build.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-mcp-test-confirm.txt": {
+    "counts": [
+      "tests 5992",
+      "suites 0",
+      "pass 5938",
+      "fail 1",
+      "cancelled 0",
+      "skipped 53",
+      "todo 0"
+    ],
+    "failures": [
+      "installed WeasyPrint 69.0 emits a real PDF/A-3u document"
+    ]
+  },
+  "ruling-mcp-test.txt": {
+    "counts": [
+      "tests 5992",
+      "suites 0",
+      "pass 5937",
+      "fail 2",
+      "cancelled 0",
+      "skipped 53",
+      "todo 0"
+    ],
+    "failures": [
+      "precondition HTTP terminal-release lost 412 race returns typed 409",
+      "installed WeasyPrint 69.0 emits a real PDF/A-3u document"
+    ]
+  },
+  "ruling-ocular-green.txt": {
+    "counts": [
+      "tests 4",
+      "suites 0",
+      "pass 4",
+      "fail 0",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": []
+  },
+  "ruling-ocular.txt": {
+    "counts": [
+      "tests 4",
+      "suites 0",
+      "pass 2",
+      "fail 2",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": [
+      "MCP service identity: closed canonical amendment, real session binding and zero-write refusals",
+      "R10 A3 Ocular Health saves and lifecycle enforce stored role policies and real MCP dispatch"
+    ]
+  },
+  "ruling-operator.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-preflight.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-release-checker.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-repair.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-sync.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-task-education-repeat.txt": {
+    "counts": [
+      "tests 43",
+      "suites 0",
+      "pass 42",
+      "fail 1",
+      "cancelled 0",
+      "skipped 0",
+      "todo 0"
+    ],
+    "failures": [
+      "sequence API starts a second activation, stops only one, and atomically cancels the old stage on transition"
+    ]
+  },
+  "ruling-ui-build.txt": {
+    "counts": [],
+    "failures": []
+  },
+  "ruling-ui-test.txt": {
+    "counts": [
+      "tests 1685",
+      "suites 0",
+      "pass 1673",
+      "fail 8",
+      "cancelled 0",
+      "skipped 0",
+      "todo 4"
+    ],
+    "failures": [
+      "deferred and recorded ocular findings cannot coexist at the client-server boundary",
+      "fresh ocular-health history restores scoped diagnosis suggestions without a save",
+      "count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree",
+      "count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree",
+      "custom state writer preserves other-only notes for normal and abnormal findings",
+      "abnormal custom state other-only value leaves the exact unformatted sentinel behind",
+      "exercised EOM and custom-state writers declare every schema-blind component code",
+      "SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler",
+      "T15 Ocular Health picker accepts a canonical view without one observation id # TODO R10 A3",
+      "T16 DiagnosisPicker proposal evidence resolves through finding homes # TODO R10 A3",
+      "T17 Ocular Health picks link fact targets # TODO R10 A3",
+      "T18 Assessment origin uses finding home sources # TODO R10 A3"
+    ]
+  }
+}

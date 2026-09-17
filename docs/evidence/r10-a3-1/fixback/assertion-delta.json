@@ -1,0 +1,221 @@
+{
+  "base": "3c14565e6e9b42241f413bb3af89fce69867bd7c",
+  "results": [
+    {
+      "file": "mcp/tests/r10A3McpGuards.test.ts",
+      "oldCount": 48,
+      "newCount": 67,
+      "retained": 48,
+      "changed": [],
+      "added": 19
+    },
+    {
+      "file": "mcp/tests/r10A3OcularDoor.test.ts",
+      "oldCount": 113,
+      "newCount": 120,
+      "retained": 113,
+      "changed": [],
+      "added": 7
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseChecker.test.ts",
+      "oldCount": 13,
+      "newCount": 16,
+      "retained": 13,
+      "changed": [],
+      "added": 3
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "oldCount": 66,
+      "newCount": 65,
+      "retained": 64,
+      "changed": [
+        {
+          "before": {
+            "line": 185,
+            "text": "assert.ok(census.status===0||census.status===1,census.stderr)",
+            "norm": "assert.ok(census.status === 0 || census.status === 1, census.stderr)"
+          },
+          "after": [
+            {
+              "line": 184,
+              "text": "assert.deepEqual(census,[],`Exam PDF consumer requires an executable canonical-data scenario: ${census.join(\"\\n\")}`)",
+              "norm": "assert.deepEqual(census, [], `Exam PDF consumer requires an executable canonical-data scenario: ${census.join(\"\\n\")}`)"
+            }
+          ],
+          "contracts": [
+            "W40",
+            "F3 explicit evaluation ruling"
+          ],
+          "evidence": "F3-scratch-red.txt / F3-scratch-green.txt"
+        },
+        {
+          "before": {
+            "line": 186,
+            "text": "assert.equal(census.stdout.trim(),\"\",`Exam PDF consumer requires an executable canonical-data scenario: ${census.stdout}`)",
+            "norm": "assert.equal(census.stdout.trim(), \"\", `Exam PDF consumer requires an executable canonical-data scenario: ${census.stdout}`)"
+          },
+          "after": [
+            {
+              "line": 184,
+              "text": "assert.deepEqual(census,[],`Exam PDF consumer requires an executable canonical-data scenario: ${census.join(\"\\n\")}`)",
+              "norm": "assert.deepEqual(census, [], `Exam PDF consumer requires an executable canonical-data scenario: ${census.join(\"\\n\")}`)"
+            }
+          ],
+          "contracts": [
+            "W40",
+            "F3 explicit evaluation ruling"
+          ],
+          "evidence": "F3-scratch-red.txt / F3-scratch-green.txt"
+        }
+      ],
+      "added": 1
+    },
+    {
+      "file": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+      "oldCount": 111,
+      "newCount": 127,
+      "retained": 108,
+      "changed": [
+        {
+          "before": {
+            "line": 208,
+            "text": "assert.ok(session.user?.id,\"Service session exposes its user identity\")",
+            "norm": "assert.ok(session.user?.id, \"Service session exposes its user identity\")"
+          },
+          "after": [
+            {
+              "line": 227,
+              "text": "assert.equal(session.profile?.resourceType,\"ClientApplication\")",
+              "norm": "assert.equal(session.profile?.resourceType, \"ClientApplication\")"
+            },
+            {
+              "line": 228,
+              "text": "assert.equal(session.profile?.id,application.id)",
+              "norm": "assert.equal(session.profile?.id, application.id)"
+            },
+            {
+              "line": 229,
+              "text": "assert.equal(session.user,undefined,\"Client service has no super-admin User identity\")",
+              "norm": "assert.equal(session.user, undefined, \"Client service has no super-admin User identity\")"
+            },
+            {
+              "line": 230,
+              "text": "assert.notEqual(session.profile?.superAdmin,true,\"Never use a super admin for this lifecycle proof\")",
+              "norm": "assert.notEqual(session.profile?.superAdmin, true, \"Never use a super admin for this lifecycle proof\")"
+            },
+            {
+              "line": 247,
+              "text": "assert.notEqual(serviceActor,provisioningPrincipal,\"Service principal differs from lane admin\")",
+              "norm": "assert.notEqual(serviceActor, provisioningPrincipal, \"Service principal differs from lane admin\")"
+            },
+            {
+              "line": 249,
+              "text": "assert.equal(serviceActor,`ClientApplication/${application.id}`)",
+              "norm": "assert.equal(serviceActor, `ClientApplication/${application.id}`)"
+            }
+          ],
+          "contracts": [
+            "V35",
+            "W115",
+            "F4"
+          ],
+          "evidence": "authz.txt / F4 mutation proof"
+        },
+        {
+          "before": {
+            "line": 209,
+            "text": "assert.notEqual(session.user.superAdmin,true,\"Never use a super admin for this lifecycle proof\")",
+            "norm": "assert.notEqual(session.user.superAdmin, true, \"Never use a super admin for this lifecycle proof\")"
+          },
+          "after": [
+            {
+              "line": 227,
+              "text": "assert.equal(session.profile?.resourceType,\"ClientApplication\")",
+              "norm": "assert.equal(session.profile?.resourceType, \"ClientApplication\")"
+            },
+            {
+              "line": 228,
+              "text": "assert.equal(session.profile?.id,application.id)",
+              "norm": "assert.equal(session.profile?.id, application.id)"
+            },
+            {
+              "line": 229,
+              "text": "assert.equal(session.user,undefined,\"Client service has no super-admin User identity\")",
+              "norm": "assert.equal(session.user, undefined, \"Client service has no super-admin User identity\")"
+            },
+            {
+              "line": 230,
+              "text": "assert.notEqual(session.profile?.superAdmin,true,\"Never use a super admin for this lifecycle proof\")",
+              "norm": "assert.notEqual(session.profile?.superAdmin, true, \"Never use a super admin for this lifecycle proof\")"
+            },
+            {
+              "line": 247,
+              "text": "assert.notEqual(serviceActor,provisioningPrincipal,\"Service principal differs from lane admin\")",
+              "norm": "assert.notEqual(serviceActor, provisioningPrincipal, \"Service principal differs from lane admin\")"
+            },
+            {
+              "line": 249,
+              "text": "assert.equal(serviceActor,`ClientApplication/${application.id}`)",
+              "norm": "assert.equal(serviceActor, `ClientApplication/${application.id}`)"
+            }
+          ],
+          "contracts": [
+            "V35",
+            "W115",
+            "F4"
+          ],
+          "evidence": "authz.txt / F4 mutation proof"
+        },
+        {
+          "before": {
+            "line": 218,
+            "text": "assert.equal(serviceActor,await callerFhir.getAuthenticatedProfileReference())",
+            "norm": "assert.equal(serviceActor, await callerFhir.getAuthenticatedProfileReference())"
+          },
+          "after": [
+            {
+              "line": 227,
+              "text": "assert.equal(session.profile?.resourceType,\"ClientApplication\")",
+              "norm": "assert.equal(session.profile?.resourceType, \"ClientApplication\")"
+            },
+            {
+              "line": 228,
+              "text": "assert.equal(session.profile?.id,application.id)",
+              "norm": "assert.equal(session.profile?.id, application.id)"
+            },
+            {
+              "line": 229,
+              "text": "assert.equal(session.user,undefined,\"Client service has no super-admin User identity\")",
+              "norm": "assert.equal(session.user, undefined, \"Client service has no super-admin User identity\")"
+            },
+            {
+              "line": 230,
+              "text": "assert.notEqual(session.profile?.superAdmin,true,\"Never use a super admin for this lifecycle proof\")",
+              "norm": "assert.notEqual(session.profile?.superAdmin, true, \"Never use a super admin for this lifecycle proof\")"
+            },
+            {
+              "line": 247,
+              "text": "assert.notEqual(serviceActor,provisioningPrincipal,\"Service principal differs from lane admin\")",
+              "norm": "assert.notEqual(serviceActor, provisioningPrincipal, \"Service principal differs from lane admin\")"
+            },
+            {
+              "line": 249,
+              "text": "assert.equal(serviceActor,`ClientApplication/${application.id}`)",
+              "norm": "assert.equal(serviceActor, `ClientApplication/${application.id}`)"
+            }
+          ],
+          "contracts": [
+            "V35",
+            "W115",
+            "F4"
+          ],
+          "evidence": "authz.txt / F4 mutation proof"
+        }
+      ],
+      "added": 19
+    }
+  ],
+  "unmapped": 0
+}

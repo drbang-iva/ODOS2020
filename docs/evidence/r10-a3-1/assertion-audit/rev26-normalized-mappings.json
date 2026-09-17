@@ -621,5 +621,43 @@
     ],
     "evidence": "rev26-premise-replay/assertion-ledger.json",
     "note": "UNKNOWN assertion unchanged; strengthens malformed visible row as unresolved/editable false, does not hide it."
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "before": {
+      "line": 155,
+      "text": "assert.ok(census.status===0||census.status===1,census.stderr)"
+    },
+    "after": [
+      {
+        "text": "assert.deepEqual(census,[],`Exam PDF consumer requires an executable canonical-data scenario: ${census.join(\"\\n\")}`)",
+        "context": "\"T20 source census identifies any exam PDF consumer for canonical migration\""
+      }
+    ],
+    "contracts": [
+      "W40",
+      "F3: accepted PR620 NEEDS-WORK ruling, item 3 (Node-only T20 census)"
+    ],
+    "evidence": "fixback/F3-scratch-red.txt",
+    "note": "Two external-process assertions replaced by exact Node census empty-result assertion; direct T20 scratch red/green with external binaries unavailable."
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "before": {
+      "line": 156,
+      "text": "assert.equal(census.stdout.trim(),\"\",`Exam PDF consumer requires an executable canonical-data scenario: ${census.stdout}`)"
+    },
+    "after": [
+      {
+        "text": "assert.deepEqual(census,[],`Exam PDF consumer requires an executable canonical-data scenario: ${census.join(\"\\n\")}`)",
+        "context": "\"T20 source census identifies any exam PDF consumer for canonical migration\""
+      }
+    ],
+    "contracts": [
+      "W40",
+      "F3: accepted PR620 NEEDS-WORK ruling, item 3 (Node-only T20 census)"
+    ],
+    "evidence": "fixback/F3-scratch-red.txt",
+    "note": "Two external-process assertions replaced by exact Node census empty-result assertion; direct T20 scratch red/green with external binaries unavailable."
   }
 ]

@@ -1,0 +1,71 @@
+{
+  "files": [
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/F1-before.txt",
+      "originalSha256": "a60bd2d57494e767366b7cd7fa25e90781823936ebcef3aeb7a725a1b3fafc3d",
+      "readableSha256": "2a61e6f72f461c7dcee809409e19c9dc435a0a7ef6e4a7ca55f68f00a48eecbb"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/F2-before.txt",
+      "originalSha256": "0d7c0802f8fa642a86408a08bc6df24dffcd17a64e6992152154883ce1109484",
+      "readableSha256": "9bddf2cea1b43c67aee3e527c478ac0da344a6979b4acaeda0e4f6c2a07082b8"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/F3-scratch-red.txt",
+      "originalSha256": "a946a8ef587e33ed0eb1813b8d502476e5d3852908d9a97e27c47c996ed8696e",
+      "readableSha256": "6cdfdf0375c1043ed971064b5b3d3069c35a49b028cb83a9032363b4f1584755"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/F4-admin-api-refusal.txt",
+      "originalSha256": "b90ab50548989bb4a8cb8d4650fcf2b90c8bf95fd23aca707aff6850001a6d7d",
+      "readableSha256": "cc5570c927676f3f5abc8404a0b26f08aa6456e855f28c05565c50c4cce2c689"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/authz.txt",
+      "originalSha256": "b90ab50548989bb4a8cb8d4650fcf2b90c8bf95fd23aca707aff6850001a6d7d",
+      "readableSha256": "cc5570c927676f3f5abc8404a0b26f08aa6456e855f28c05565c50c4cce2c689"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/mcp-build.txt",
+      "originalSha256": "79d812332743de9cbe0b1e9272d1388f2cdcf7d56abdac8397b03137a4312914",
+      "readableSha256": "f4a3e7c1853fb7b196a03ff575fbf4d2b86badcac7b13943b03775032c3c4c54"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/fixback/ui-test.txt",
+      "originalSha256": "3bcaeb965ed8ee0a96973993ec113e3f7b69bd1730f479c4faf2c618db2056d3",
+      "readableSha256": "0fbce94673f81323264bf2b8bb230d33f76e17269662399baacb97f3408bc786"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/mutations/fixback-F1-refusal-red.txt",
+      "originalSha256": "67f981b4b8c9864f8f0e89134ff6610c81f36950058ab2801d0f5ff3d5f6905d",
+      "readableSha256": "89b960f22c0bbd31ffc48127f804dcb830e36e4ae9572f59d2fa62a387d24494"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/mutations/fixback-F1-wide-red.txt",
+      "originalSha256": "aefa7e16555dec2827c7197420fc3ea4250e6ee8475f2a87d5fa9b2c8d2bc23b",
+      "readableSha256": "5a41cdc3c1ed97646f3d65fa1bc6b4d3d22a577b7c80d3dc03ff34c863cd0470"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/mutations/fixback-F2-amend_observation-red.txt",
+      "originalSha256": "cc33a7d15151b623c9a18993b5214e88d8bdadcb6254b6451c0e2f1f0803cb39",
+      "readableSha256": "5091f925565f16670696dc7458366b1759e152259f35043063eea792461bb87f"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/mutations/fixback-F2-append_observation_context-red.txt",
+      "originalSha256": "39109879b8e89ca484e9f38d30a07a4be619c13e68d81f7370fae2e2a1241d24",
+      "readableSha256": "068be566265528c68eebb1646b209cd4b40ad4431f596a1276055f88356c4c00"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/mutations/fixback-F2-clinician_attest_observation-red.txt",
+      "originalSha256": "b2839c063865608a5ef62501877a8f7e7b3ff08fea4109c4107985464fede936",
+      "readableSha256": "c1098f3ca032854790387ecddcc61bdbac1f20386d0b8f9b80694c6014fe0d6d"
+    },
+    {
+      "file": "docs/evidence/r10-a3-1/mutations/fixback-F3-census-red.txt",
+      "originalSha256": "2c946074bd493c24ce361c34ed002d8c42f5405190e41f968e0892f281d6276c",
+      "readableSha256": "46e5f03d03d4b0cf99d6318a754476abb1cfc8016fdfecc7340048a4662608ce"
+    }
+  ],
+  "originalBytes": "original-new-logs.tar.gz",
+  "change": "trailing whitespace and blank EOF only"
+}

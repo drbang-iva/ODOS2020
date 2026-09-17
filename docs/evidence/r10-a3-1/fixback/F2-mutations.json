@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fixback-F2-clinician_attest_observation",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ]
+  },
+  {
+    "id": "fixback-F2-amend_observation",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ]
+  },
+  {
+    "id": "fixback-F2-append_observation_context",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ]
+  }
+]

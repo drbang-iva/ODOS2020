@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: T20 source census identifies any exam PDF consumer for canonical migration
+not ok 1 - T20 source census identifies any exam PDF consumer for canonical migration
+  ---
+  duration_ms: 50.136166
+  type: 'test'
+  location: '/private/var/folders/6h/z2xtt68j36x9g9f33tkw11580000gq/T/r10-a3-pdf-proof-AedIeK/mcp/tests/r10A3ReleaseScenarios.test.ts:2:18904'
+  failureType: 'testCodeFailure'
+  error: |-
+    Exam PDF consumer requires an executable canonical-data scenario: src/planted-exam-consumer.ts:1:export const renderExamPdf = true;
+    + actual - expected
+
+    + [
+    +   'src/planted-exam-consumer.ts:1:export const renderExamPdf = true;'
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'src/planted-exam-consumer.ts:1:export const renderExamPdf = true;'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/var/folders/6h/z2xtt68j36x9g9f33tkw11580000gq/T/r10-a3-pdf-proof-AedIeK/mcp/tests/r10A3ReleaseScenarios.test.ts:184:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 821.094666

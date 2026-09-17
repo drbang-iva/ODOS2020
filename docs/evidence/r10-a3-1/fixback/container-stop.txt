@@ -1,0 +1,20 @@
+docker ps -q --filter "name=^odos-r10-a3-1-" | xargs -r docker stop
+
+Running before:
+odos-r10-a3-1-ci-medplum-server-1
+odos-r10-a3-1-ci-postgres-1
+odos-r10-a3-1-ci-redis-1
+
+Stop output:
+c648416ac38c
+b419cefc050a
+519dfa967ea7
+
+Preserved states:
+odos-r10-a3-1-ci-medplum-server-1 Exited (0) Less than a second ago
+odos-r10-a3-1-ci-postgres-1 Exited (0) Less than a second ago
+odos-r10-a3-1-ci-redis-1 Exited (0) Less than a second ago
+odos-r10-a3-1-ci-binary-init-1 Exited (0) 15 minutes ago
+odos-r10-a3-1-postgres-1 Exited (0) About an hour ago
+odos-r10-a3-1-medplum-1 Exited (0) About an hour ago
+odos-r10-a3-1-redis-1 Exited (0) About an hour ago

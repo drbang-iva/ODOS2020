@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { mkdtempSync, mkdirSync, cpSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -73,4 +73,17 @@ test("W87a W87b W129 exact finding write registry covers every call site includi
   const result=checker.checkFindingWriteRegistry(root,read("finding-write-paths"),read("finding-write-exclusions"));
   assert.deepEqual(result.failures,[],result.failures.join("\n"));
   assert.equal(result.sites.filter((site:any)=>site.kind==="observation-json-patch-entry").length,2);
+});
+
+test("W40 F3 Node census finds nested mixed-case exam PDF consumers in every source root",()=>{
+ const root=mkdtempSync(join(tmpdir(),'r10-a3-pdf-'));
+ try {
+  for(const dir of ['mcp/src','ui/src','src'])mkdirSync(join(root,dir,'nested'),{recursive:true});
+  assert.deepEqual(checker.examPdfConsumerCensus(root),[]);
+  for(const dir of ['mcp/src','ui/src','src']) {
+   const path=join(root,dir,'nested','consumer.ts');writeFileSync(path,'const renderExamPdf = true;\n');
+   assert.deepEqual(checker.examPdfConsumerCensus(root),[`${dir}/nested/consumer.ts:1:const renderExamPdf = true;`]);
+   rmSync(path);assert.deepEqual(checker.examPdfConsumerCensus(root),[]);
+  }
+ }finally{rmSync(root,{recursive:true,force:true});}
 });

@@ -1,0 +1,15 @@
+
+> odos2020@0.0.1 repair-practice-roles
+> tsx --env-file-if-exists=.env scripts/repair-practice-roles.ts --email r10-a3-ci-admin@example.invalid --project c16edbe4-6e68-4f43-be03-52684b747b6d
+
+Target: Project/c16edbe4-6e68-4f43-be03-52684b747b6d (source: --project)
+Role policies created: 3 [provider, staff, admin]
+Role policies tagged: 0 []
+Role policies already correct: 0 []
+ProjectMembership/8e353403-1db1-4985-bd05-1e9619f77691 target: r10-a3-ci-admin@example.invalid
+Membership reconciliation: CHANGED
+Roles granted: [staff, admin, provider]
+Membership policy bindings: [AccessPolicy/b0a47714-bad8-4bd9-8251-de011ba76e94]
+Dev login primary role: staff
+.env not found. Continuing without it.
+.env not found. Continuing without it.

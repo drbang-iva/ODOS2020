@@ -28,6 +28,7 @@ function panel(): Observation {
 }
 async function harness(body: Observation, options: { rows?: Resource[]; session?: string; result?: Observation; appendSource?: Observation; memory?: ReturnType<typeof memoryFhir> } = {}) {
   const memory = options.memory ?? memoryFhir([body, encounter(), ...(options.rows ?? [])]);
+  const denied: any[] = [];
   const attempted: Resource[] = []; const transactions: Bundle[] = []; const repairWritesBeforeTransaction: number[] = [];
   const fhir = {...memory.fhir,
     async create(resource: Resource) {attempted.push(resource);return memory.save(resource);},
@@ -50,7 +51,7 @@ async function harness(body: Observation, options: { rows?: Resource[]; session?
   const context:any = {Server,CallToolRequestSchema,ListToolsRequestSchema,tools:[],console,Error,Buffer,
     ...attestation,...policy,...guards,fhir,findingDefinitionStore:{list:async()=>definitions},
     sessionPractitionerId:()=>options.session??"synthetic",
-    auditRuntime:{record:async (_row:unknown,action:()=>unknown)=>action(),recordDenied:async()=>undefined},
+    auditRuntime:{record:async (_row:unknown,action:()=>unknown)=>action(),recordDenied:async(row:unknown)=>{denied.push(row);}},
     patientReference:(id:string)=>`Patient/${id}`,encounterReference:(id:string)=>`Encounter/${id}`,
     auditHeaders:()=>({}),getStringArray:()=>[],normalizeSourceType:()=>"manual",normalizeToolReference:(id:string,type:string)=>`${type}/${id}`,
     buildCreateObservationResource:()=>({resource:body,warnings:[]}),
@@ -68,7 +69,7 @@ async function harness(body: Observation, options: { rows?: Resource[]; session?
   if(options.appendSource) {memory.resources.set("Observation/source",options.appendSource);context.buildAppendObservationTransaction=()=>({observation:options.result??body,provenance:{id:"append-audit"},bundle:{resourceType:"Bundle",type:"transaction",entry:[{resource:options.result??body,request:{method:"POST",url:"Observation"}}]}});}
   const server:Server=runInNewContext(ts.transpileModule(dispatchSource+"\ncreateServer();",{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
   const client=new Client({name:"r10-a3-mcp-guard-proof",version:"1"});const [a,b]=InMemoryTransport.createLinkedPair();await server.connect(a);await client.connect(b);
-  return {memory,attempted,transactions,repairWritesBeforeTransaction,call:(name:string,args:Record<string,unknown>)=>client.callTool({name,arguments:args}),close:async()=>{await client.close();await server.close();}};
+  return {memory,denied,attempted,transactions,repairWritesBeforeTransaction,call:(name:string,args:Record<string,unknown>)=>client.callTool({name,arguments:args}),close:async()=>{await client.close();await server.close();}};
 }
 // Inject builder outputs to exercise the real dispatch write boundary, including fixed-shape specialty builders.
 const generic = ["create_observation","scribe_write_observation","save_section_observations","create_smoking_status_observation","create_dry_eye_questionnaire_response","create_meibography_observation","record_ortho_k_fit_observation","record_eye_growth_axial_length_measurement"];
@@ -128,7 +129,29 @@ for(const tool of ["clinician_attest_observation","amend_observation"]) for(cons
  const h=await harness(target,{memory});try{
  const args=tool==="amend_observation"?{...input,observation_id:target.id}:{observation_id:target.id,clinician_id:"synthetic",signature_data_base64:"c3ludGhldGlj"};
  const result=await h.call(tool,args);
- if(mismatch){assert.equal(result.isError,true,JSON.stringify(result));assert.match(JSON.stringify(result),/audit repair failed/);assert.equal(h.transactions.length,0);assert.equal(memory.writes.length,0);assert.equal(h.attempted.length,0);}
+ if(mismatch){assert.equal(result.isError,true,JSON.stringify(result));assert.match(JSON.stringify(result),/audit repair failed/);assert.equal(h.transactions.length,0);assert.equal(memory.writes.length,0);assert.equal(h.attempted.length,0);assert.equal(h.denied.length,1);assert.match(JSON.stringify(h.denied[0]),/audit repair failed/);}
  else {assert.equal(result.isError,undefined,JSON.stringify(result));assert.equal(memory.writes.length,1,"only selected debt is repaired");assert.equal(memory.writes[0].resource.resourceType,"Provenance");assert.ok((memory.writes[0].resource as any).target.some((t:any)=>t.reference===`Observation/${target.id}`));assert.equal(h.transactions.length,1);assert.deepEqual(h.repairWritesBeforeTransaction,[1]);const saved=memory.resources.get(`Observation/${target.id}`) as Observation;assert.deepEqual(saved.identifier,target.identifier);assert.deepEqual(saved.component,target.component);assert.deepEqual(saved.extension,target.extension);}
+ }finally{await h.close();}
+});
+
+for(const tool of ['clinician_attest_observation','amend_observation','append_observation_context'])test(`W115 W116 F2 ${tool} session refusal is audited once`,async()=>{
+ const body={...canonicalFact(),identifier:undefined,component:[],code:{text:'Synthetic unrelated'},status:'final' as const};
+ const h=await harness(body,{session:'another-practitioner'});try{
+ const args=tool==='amend_observation'?input:tool==='clinician_attest_observation'?{observation_id:'canonical',clinician_id:'synthetic',signature_data_base64:input.signature_data_base64}:{source_observation_id:'canonical',patient_id:'p1',encounter_id:'e1',intended_observation_type:'Synthetic',text:'Synthetic',clinician_id:'synthetic',signature_data_base64:input.signature_data_base64};
+ const result=await h.call(tool,args);
+ assert.equal(result.isError,true);assert.match(JSON.stringify(result),/match/i);assert.equal(h.attempted.length,0);assert.equal(h.memory.writes.length,0);assert.equal(h.denied.length,1);assert.match(JSON.stringify(h.denied[0]),/match/i);
+ }finally{await h.close();}
+});
+for(const tool of ['clinician_attest_observation','amend_observation'])for(const kind of ['pre-rebuild','legacy'])test(`W115 F2 ${tool} ${kind} refusal is audited once`,async()=>{
+ const body=kind==='legacy'?snapshot('canonical'):canonicalFact();body.status=tool==='amend_observation'?'final':'preliminary';
+ const h=await harness(body,{rows:kind==='pre-rebuild'?[snapshot('legacy')]:[]});try{
+ const result=await h.call(tool,tool==='amend_observation'?input:{observation_id:'canonical',clinician_id:'synthetic',signature_data_base64:input.signature_data_base64});assert.equal(result.isError,true);const reason=kind==='legacy'?/legacy targets/:/pre-rebuild/;assert.match(JSON.stringify(result),reason);assert.equal(h.attempted.length,0);assert.equal(h.memory.writes.length,0);assert.equal(h.denied.length,1);assert.match(JSON.stringify(h.denied[0]),reason);
+ }finally{await h.close();}
+});
+for(const mode of ['target','result'] as const)test(`W116 F2 append ${mode} shared refusal is audited once`,async()=>{
+ const unrelated={...canonicalFact('source'),identifier:undefined,component:[],code:{text:'Synthetic unrelated'},status:'final' as const};
+ const h=await harness(canonicalFact(),{appendSource:mode==='target'?{...canonicalFact('source'),status:'final'}:unrelated,result:canonicalFact()});try{
+ const result=await h.call('append_observation_context',{source_observation_id:'source',patient_id:'p1',encounter_id:'e1',intended_observation_type:'Synthetic',text:'Synthetic',clinician_id:'synthetic',signature_data_base64:'c3ludGhldGlj'});
+ assert.equal(result.isError,true);assert.equal(h.attempted.length,0);assert.equal(h.memory.writes.length,0);assert.equal(h.denied.length,1);assert.match(JSON.stringify(h.denied[0]),/Shared findings are charted/);
  }finally{await h.close();}
 });

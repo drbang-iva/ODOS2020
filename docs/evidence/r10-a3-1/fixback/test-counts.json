@@ -1,0 +1,201 @@
+{
+  "F1-before": [
+    {
+      "tests": 54,
+      "pass": 53,
+      "fail": 1,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "F1-green": [
+    {
+      "tests": 54,
+      "pass": 54,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "F2-before": [
+    {
+      "tests": 63,
+      "pass": 52,
+      "fail": 11,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "F2-green": [
+    {
+      "tests": 63,
+      "pass": 63,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "F3-green": [
+    {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "F3-scratch-red": [
+    {
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "F3-scratch-green": [
+    {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "bootstrap": [
+    {
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "tests": 218,
+      "pass": 218,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "authz": [
+    {
+      "tests": 73,
+      "pass": 71,
+      "fail": 2,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "ocular-initial": [
+    {
+      "tests": 4,
+      "pass": 2,
+      "fail": 2,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "mcp-test": [
+    {
+      "tests": 5992,
+      "pass": 5938,
+      "fail": 1,
+      "skipped": 53,
+      "todo": 0
+    }
+  ],
+  "ui-test": [
+    {
+      "tests": 1685,
+      "pass": 1673,
+      "fail": 8,
+      "skipped": 0,
+      "todo": 4
+    }
+  ],
+  "fixback-F1-refusal-red": {
+    "tests": 54,
+    "pass": 52,
+    "fail": 2,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F1-refusal-green": {
+    "tests": 54,
+    "pass": 54,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F1-wide-red": {
+    "tests": 54,
+    "pass": 53,
+    "fail": 1,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F1-wide-green": {
+    "tests": 54,
+    "pass": 54,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F2-clinician_attest_observation-red": {
+    "tests": 63,
+    "pass": 59,
+    "fail": 4,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F2-clinician_attest_observation-green": {
+    "tests": 63,
+    "pass": 63,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F2-amend_observation-red": {
+    "tests": 63,
+    "pass": 59,
+    "fail": 4,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F2-amend_observation-green": {
+    "tests": 63,
+    "pass": 63,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F2-append_observation_context-red": {
+    "tests": 63,
+    "pass": 60,
+    "fail": 3,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F2-append_observation_context-green": {
+    "tests": 63,
+    "pass": 63,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F3-census-red": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "skipped": 0,
+    "todo": 0
+  },
+  "fixback-F3-census-green": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+}

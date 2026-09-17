@@ -1,0 +1,111 @@
+[
+  {
+    "id": "fixback-F1-refusal",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "    if (contributing.some(o => o.subject?.reference !== query.patient || !o.encounter?.reference?.match(/^Encounter\\/[A-Za-z0-9.-]+$/))) return ocularError(409, \"foreign-or-unscoped\");",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok.*F1 patient-wide contributing"
+  },
+  {
+    "id": "fixback-F1-wide",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "    const contributing = observations.filter(o => o.code.coding?.some(c => c.code === definition.stableKey || c.code?.startsWith(`${definition.stableKey}::`)));",
+        "after": "    const contributing = observations;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok.*F1 patient-wide priors"
+  },
+  {
+    "id": "fixback-F2-clinician_attest_observation",
+    "edits": [
+      {
+        "file": "mcp/src/index.ts",
+        "before": "        case \"clinician_attest_observation\": {\n          const input = clinicianAttestationSchema.parse(args);\n          const observation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.observation_id, \"Observation\"),\n          );\n          try {\n            assertClinicianSessionMatches({\n              clinicianId: input.clinician_id,\n              sessionPractitionerId: sessionPractitionerId(),\n            });\n            await prepareSharedFindingLifecycle(observation, {\n              fhir, definitions: await findingDefinitionStore.list(),\n              staffReference: `Practitioner/${stripReference(input.clinician_id, \"Practitioner\")}`,\n            });\n            const transaction = buildAttestationTransaction({\n              observation,\n              clinicianId: input.clinician_id,\n              signatureDataBase64: input.signature_data_base64,\n            });\n            const auditRow = buildClinicalWriteAuditRow({\n              eventType: \"update\",\n              actorId: input.clinician_id,\n              actorRole: \"provider\",\n              observation,\n              provenanceId: transaction.provenance.id,\n              policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,\n              actionReason: \"CREATE\",\n            });\n            const responseBundle = await auditRuntime.record(auditRow, () =>\n              fhir.executeTransaction(\n                transaction.bundle,\n                CLINICIAN_ATTEST_OBSERVATION_AUDIT_HEADERS,\n              ),\n            );\n            return toolJson({\n              responseBundle,\n              provenance: transaction.provenance,\n              patchOperations: transaction.patchOperations,\n            });\n          } catch (error) {\n            await auditRuntime\n              .recordDenied(\n                buildRejectedClinicalWriteAuditRow({\n                  actorId: input.clinician_id,\n                  actorRole: \"provider\",\n                  observation,\n                  actionReason: `attestation failed: ${error instanceof Error ? error.message : String(error)}`,\n                  policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,\n                }),\n              )\n              .catch((auditError) => {\n                console.error(\"odos-mcp: failed to audit attestation rejection:\", auditError);\n              });\n            throw error;\n          }\n        }",
+        "after": "        case \"clinician_attest_observation\": {\n          const input = clinicianAttestationSchema.parse(args);\n          const observation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.observation_id, \"Observation\"),\n          );\n          assertClinicianSessionMatches({\n            clinicianId: input.clinician_id,\n            sessionPractitionerId: sessionPractitionerId(),\n          });\n          await prepareSharedFindingLifecycle(observation, {\n            fhir, definitions: await findingDefinitionStore.list(),\n            staffReference: `Practitioner/${stripReference(input.clinician_id, \"Practitioner\")}`,\n          });\n          try {\n            const transaction = buildAttestationTransaction({\n              observation,\n              clinicianId: input.clinician_id,\n              signatureDataBase64: input.signature_data_base64,\n            });\n            const auditRow = buildClinicalWriteAuditRow({\n              eventType: \"update\",\n              actorId: input.clinician_id,\n              actorRole: \"provider\",\n              observation,\n              provenanceId: transaction.provenance.id,\n              policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,\n              actionReason: \"CREATE\",\n            });\n            const responseBundle = await auditRuntime.record(auditRow, () =>\n              fhir.executeTransaction(\n                transaction.bundle,\n                CLINICIAN_ATTEST_OBSERVATION_AUDIT_HEADERS,\n              ),\n            );\n            return toolJson({\n              responseBundle,\n              provenance: transaction.provenance,\n              patchOperations: transaction.patchOperations,\n            });\n          } catch (error) {\n            await auditRuntime\n              .recordDenied(\n                buildRejectedClinicalWriteAuditRow({\n                  actorId: input.clinician_id,\n                  actorRole: \"provider\",\n                  observation,\n                  actionReason: `attestation failed: ${error instanceof Error ? error.message : String(error)}`,\n                  policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,\n                }),\n              )\n              .catch((auditError) => {\n                console.error(\"odos-mcp: failed to audit attestation rejection:\", auditError);\n              });\n            throw error;\n          }\n        }"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok.*F2"
+  },
+  {
+    "id": "fixback-F2-amend_observation",
+    "edits": [
+      {
+        "file": "mcp/src/index.ts",
+        "before": "        case \"amend_observation\": {\n          const input = observationAmendmentSchema.parse(args);\n          const observation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.observation_id, \"Observation\"),\n          );\n          try {\n            assertClinicianSessionMatches({\n              clinicianId: input.clinician_id,\n              sessionPractitionerId: sessionPractitionerId(),\n            });\n            await prepareSharedFindingLifecycle(observation, {\n              fhir, definitions: await findingDefinitionStore.list(),\n              staffReference: `Practitioner/${stripReference(input.clinician_id, \"Practitioner\")}`,\n            });\n            const transaction = buildAmendmentTransaction({\n              observation,\n              clinicianId: input.clinician_id,\n              targetStatus: input.target_status,\n              amendmentText: input.amendment_text,\n              signatureDataBase64: input.signature_data_base64,\n            });\n            const actionReason =\n              transaction.activityCode === \"NULLIFY\"\n                ? `NULLIFY: ${input.amendment_text}`\n                : transaction.activityCode;\n            const auditRow = buildClinicalWriteAuditRow({\n              eventType: \"update\",\n              actorId: input.clinician_id,\n              actorRole: \"provider\",\n              observation,\n              provenanceId: transaction.provenance.id,\n              policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n              actionReason,\n            });\n            const responseBundle = await auditRuntime.record(auditRow, () =>\n              fhir.executeTransaction(transaction.bundle, AMEND_OBSERVATION_AUDIT_HEADERS),\n            );\n            return toolJson({\n              responseBundle,\n              provenance: transaction.provenance,\n              patchOperations: transaction.patchOperations,\n            });\n          } catch (error) {\n            await auditRuntime\n              .recordDenied(\n                buildRejectedClinicalWriteAuditRow({\n                  actorId: input.clinician_id,\n                  actorRole: \"provider\",\n                  observation,\n                  actionReason: `amendment failed: ${error instanceof Error ? error.message : String(error)}`,\n                  policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n                }),\n              )\n              .catch((auditError) => {\n                console.error(\"odos-mcp: failed to audit amendment rejection:\", auditError);\n              });\n            throw error;\n          }\n        }",
+        "after": "        case \"amend_observation\": {\n          const input = observationAmendmentSchema.parse(args);\n          const observation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.observation_id, \"Observation\"),\n          );\n          assertClinicianSessionMatches({\n            clinicianId: input.clinician_id,\n            sessionPractitionerId: sessionPractitionerId(),\n          });\n          await prepareSharedFindingLifecycle(observation, {\n            fhir, definitions: await findingDefinitionStore.list(),\n            staffReference: `Practitioner/${stripReference(input.clinician_id, \"Practitioner\")}`,\n          });\n          try {\n            const transaction = buildAmendmentTransaction({\n              observation,\n              clinicianId: input.clinician_id,\n              targetStatus: input.target_status,\n              amendmentText: input.amendment_text,\n              signatureDataBase64: input.signature_data_base64,\n            });\n            const actionReason =\n              transaction.activityCode === \"NULLIFY\"\n                ? `NULLIFY: ${input.amendment_text}`\n                : transaction.activityCode;\n            const auditRow = buildClinicalWriteAuditRow({\n              eventType: \"update\",\n              actorId: input.clinician_id,\n              actorRole: \"provider\",\n              observation,\n              provenanceId: transaction.provenance.id,\n              policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n              actionReason,\n            });\n            const responseBundle = await auditRuntime.record(auditRow, () =>\n              fhir.executeTransaction(transaction.bundle, AMEND_OBSERVATION_AUDIT_HEADERS),\n            );\n            return toolJson({\n              responseBundle,\n              provenance: transaction.provenance,\n              patchOperations: transaction.patchOperations,\n            });\n          } catch (error) {\n            await auditRuntime\n              .recordDenied(\n                buildRejectedClinicalWriteAuditRow({\n                  actorId: input.clinician_id,\n                  actorRole: \"provider\",\n                  observation,\n                  actionReason: `amendment failed: ${error instanceof Error ? error.message : String(error)}`,\n                  policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n                }),\n              )\n              .catch((auditError) => {\n                console.error(\"odos-mcp: failed to audit amendment rejection:\", auditError);\n              });\n            throw error;\n          }\n        }"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok.*F2"
+  },
+  {
+    "id": "fixback-F2-append_observation_context",
+    "edits": [
+      {
+        "file": "mcp/src/index.ts",
+        "before": "        case \"append_observation_context\": {\n          const input = appendObservationContextSchema.parse(args);\n          const sourceObservation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.source_observation_id, \"Observation\"),\n          );\n          try {\n            const definitions = await findingDefinitionStore.list();\n            assertNotSharedFindingWrite(sourceObservation, definitions);\n            assertClinicianSessionMatches({\n              clinicianId: input.clinician_id,\n              sessionPractitionerId: sessionPractitionerId(),\n            });\n            const transaction = buildAppendObservationTransaction({\n              sourceObservation,\n              appendInput: input,\n            });\n            assertNotSharedFindingWrite(transaction.observation, definitions);\n            const auditRow = buildClinicalWriteAuditRow({\n              eventType: \"update\",\n              actorId: input.clinician_id,\n              actorRole: \"provider\",\n              observation: transaction.observation,\n              provenanceId: transaction.provenance.id,\n              policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n              actionReason: \"APPEND\",\n            });\n            const responseBundle = await auditRuntime.record(auditRow, () =>\n              fhir.executeTransaction(\n                transaction.bundle,\n                APPEND_OBSERVATION_CONTEXT_AUDIT_HEADERS,\n              ),\n            );\n            return toolJson({\n              responseBundle,\n              observation: transaction.observation,\n              provenance: transaction.provenance,\n            });\n          } catch (error) {\n            await auditRuntime\n              .recordDenied(\n                buildRejectedClinicalWriteAuditRow({\n                  actorId: input.clinician_id,\n                  actorRole: \"provider\",\n                  observation: sourceObservation,\n                  actionReason: `append failed: ${error instanceof Error ? error.message : String(error)}`,\n                  policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n                }),\n              )\n              .catch((auditError) => {\n                console.error(\"odos-mcp: failed to audit append rejection:\", auditError);\n              });\n            throw error;\n          }\n        }",
+        "after": "        case \"append_observation_context\": {\n          const input = appendObservationContextSchema.parse(args);\n          const sourceObservation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.source_observation_id, \"Observation\"),\n          );\n          const definitions = await findingDefinitionStore.list();\n          assertNotSharedFindingWrite(sourceObservation, definitions);\n          assertClinicianSessionMatches({\n            clinicianId: input.clinician_id,\n            sessionPractitionerId: sessionPractitionerId(),\n          });\n          const transaction = buildAppendObservationTransaction({\n            sourceObservation,\n            appendInput: input,\n          });\n          assertNotSharedFindingWrite(transaction.observation, definitions);\n          try {\n            const auditRow = buildClinicalWriteAuditRow({\n              eventType: \"update\",\n              actorId: input.clinician_id,\n              actorRole: \"provider\",\n              observation: transaction.observation,\n              provenanceId: transaction.provenance.id,\n              policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n              actionReason: \"APPEND\",\n            });\n            const responseBundle = await auditRuntime.record(auditRow, () =>\n              fhir.executeTransaction(\n                transaction.bundle,\n                APPEND_OBSERVATION_CONTEXT_AUDIT_HEADERS,\n              ),\n            );\n            return toolJson({\n              responseBundle,\n              observation: transaction.observation,\n              provenance: transaction.provenance,\n            });\n          } catch (error) {\n            await auditRuntime\n              .recordDenied(\n                buildRejectedClinicalWriteAuditRow({\n                  actorId: input.clinician_id,\n                  actorRole: \"provider\",\n                  observation: sourceObservation,\n                  actionReason: `append failed: ${error instanceof Error ? error.message : String(error)}`,\n                  policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,\n                }),\n              )\n              .catch((auditError) => {\n                console.error(\"odos-mcp: failed to audit append rejection:\", auditError);\n              });\n            throw error;\n          }\n        }"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok.*F2"
+  },
+  {
+    "id": "fixback-F3-census",
+    "edits": [
+      {
+        "file": "mcp/scripts/check-r10-a3-release.mjs",
+        "before": "  for (const directory of ['mcp/src','ui/src','src']) visit(resolve(root,directory));",
+        "after": "  for (const directory of []) visit(resolve(root,directory));"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=F3",
+      "mcp/tests/r10A3ReleaseChecker.test.ts"
+    ],
+    "failurePattern": "not ok.*F3"
+  }
+]
