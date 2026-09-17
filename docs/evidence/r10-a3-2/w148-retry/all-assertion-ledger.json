@@ -1,0 +1,215 @@
+{
+  "base": "3222c6f28835e182c0ae2e329d9e9157df2cb5b7",
+  "head": "working-tree",
+  "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
+  "files": [
+    {
+      "file": "ui/tests/r10A3OcularEditor.test.tsx",
+      "assertionCountBefore": 57,
+      "assertionCountAfter": 88,
+      "changedGroups": [
+        {
+          "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+          "mapping": "W133",
+          "before": [
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 130,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id)"
+            }
+          ],
+          "after": [
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 130,
+              "text": "assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 132,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id)"
+            }
+          ]
+        },
+        {
+          "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+          "mapping": "W148",
+          "before": [],
+          "after": [
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 158,
+              "text": "assert.match(text(h.panel(eye)), /All Normal cleared for this eye because a finding was recorded/)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 159,
+              "text": "assert.doesNotMatch(text(h.panel(eye === \"OD\" ? \"OS\" : \"OD\")), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 161,
+              "text": "assert.match(text(h.panel(eye)), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 164,
+              "text": "assert.equal(request.negativeAct, undefined)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 165,
+              "text": "assert.equal(request.selected[0].key.optionCode, \"scar\")"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 166,
+              "text": "assert.equal(h.saved(), 1)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 167,
+              "text": "assert.doesNotMatch(text(h.panel(eye)), /All Normal cleared for this eye/)"
+            }
+          ]
+        },
+        {
+          "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+          "mapping": "W148",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 177,
+              "text": "assert.equal(h.saved(), 0)"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 178,
+              "text": "assert.match(text(h.panel()), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 180,
+              "text": "assert.equal(h.posts[0], h.posts[1])"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 181,
+              "text": "assert.equal(h.saved(), 1)"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 182,
+              "text": "assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/)"
+            }
+          ]
+        },
+        {
+          "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+          "mapping": "W131 / W148",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 194,
+              "text": "assert.equal(h.panel().props.disabled, false)"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 196,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Unsent edit\")"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 198,
+              "text": "assert.equal(h.button(\"Anterior All Normal\").props.disabled, true)"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 200,
+              "text": "assert.equal(h.panel().findAll(node => Boolean(node.props[\"data-negative-act\"])).length,0)"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 202,
+              "text": "assert.equal(h.posts[0],h.posts[1])"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 203,
+              "text": "assert.equal(h.saved(),0)"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 204,
+              "text": "assert.equal(h.panel().findByProps({\"aria-label\":\"OD Remarks\"}).props.value,\"Unsent edit\")"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 205,
+              "text": "assert.match(text(h.renderer.root), /Unsaved changes/)"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 207,
+              "text": "assert.notEqual(JSON.parse(h.posts[2]!).commandId,JSON.parse(h.posts[0]!).commandId)"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 208,
+              "text": "assert.equal(JSON.parse(h.posts[2]!).eyes.OD.panel.state.remarks,\"Unsent edit\")"
+            },
+            {
+              "test": "\"W131/W148 identical Retry retains its original capture and leaves later edits unsaved\"",
+              "line": 209,
+              "text": "assert.equal(h.saved(),1)"
+            }
+          ]
+        },
+        {
+          "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+          "mapping": "W148",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 223,
+              "text": "assert.match(text(h.panel()), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 226,
+              "text": "assert.equal(h.posts[0],h.posts[1])"
+            },
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 227,
+              "text": "assert.ok(JSON.parse(h.posts[1]!).eyes.OD.negativeAct)"
+            },
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 228,
+              "text": "assert.deepEqual(JSON.parse(h.posts[1]!).eyes.OD.selected,[])"
+            },
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 229,
+              "text": "assert.equal(h.saved(),0)"
+            },
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 230,
+              "text": "assert.match(text(h.renderer.root), /Unsaved changes/)"
+            },
+            {
+              "test": "\"W148 retrying an older All Normal request retains a later replacement notice as unsaved\"",
+              "line": 231,
+              "text": "assert.match(text(h.panel()), /All Normal cleared for this eye/)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

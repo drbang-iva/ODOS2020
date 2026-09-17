@@ -1,4 +1,6 @@
-# Final-head review follow-up: in-flight editing
+# Historical candidate: in-flight editing lock (superseded)
+
+The full UI suite at 9adf0396 rejected this approach: EXAM-1B requires edits during a request to remain possible and unsaved. The final fix preserves the original capture and notice ids with the frozen request instead. See ../w148-retry/README.md. The candidate evidence below is retained, not final behavior.
 
 CodeRabbit at 95a8582f raised two findings. The inline encounter-navigation claim is rejected for the served route: ui/src/App.tsx:581 returns EncounterCharting keyed by encounterId. Changing visits unmounts the old chart/editor and its state; old callbacks retain the old chart closure. The editor's notice reset also covers definition identity changes within a visit. No general reset of live retry state is added from the incorrect assumption that the chart instance survives visit navigation.
 

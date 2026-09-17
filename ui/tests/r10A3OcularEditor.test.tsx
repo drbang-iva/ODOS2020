@@ -183,7 +183,7 @@ test("W148 replacement notice survives an unconfirmed save and clears after iden
  } finally { h.close(); }
 });
 
-test("W131/W148 in-flight save locks edits so identical Retry cannot mark unsent edits saved", async () => {
+test("W131/W148 identical Retry retains its original capture and leaves later edits unsaved", async () => {
  let release!: () => void;
  const gate = new Promise<void>(resolve => { release = resolve; });
  const h = await mount(history(), [{status:502,body:{result:"command",complete:false,executionOrder:[0],outcomes:[{target:"panel",status:"unconfirmed",clinicalWrite:"unknown"}]}}], 0, async count => { if (count === 1) await gate; });
@@ -191,16 +191,43 @@ test("W131/W148 in-flight save locks edits so identical Retry cannot mark unsent
  try {
   await h.remarks("Submitted remark");
   await act(async () => { pending = h.button("Save Ocular Health").props.onClick(); });
-  assert.equal(h.panel().props.disabled, true);
+  assert.equal(h.panel().props.disabled, false);
   await h.remarks("Unsent edit");
-  assert.equal(h.panel().findByProps({"aria-label":"OD Remarks"}).props.value,"Submitted remark");
+  assert.equal(h.panel().findByProps({"aria-label":"OD Remarks"}).props.value,"Unsent edit");
   await act(async () => { release(); await pending; });
   assert.equal(h.button("Anterior All Normal").props.disabled, true);
   await act(async () => h.button("Anterior All Normal").props.onClick());
   assert.equal(h.panel().findAll(node => Boolean(node.props["data-negative-act"])).length,0);
   await act(async () => h.button("Retry").props.onClick());
   assert.equal(h.posts[0],h.posts[1]);
+  assert.equal(h.saved(),0);
+  assert.equal(h.panel().findByProps({"aria-label":"OD Remarks"}).props.value,"Unsent edit");
+  assert.match(text(h.renderer.root), /Unsaved changes/);
+  await h.save();
+  assert.notEqual(JSON.parse(h.posts[2]!).commandId,JSON.parse(h.posts[0]!).commandId);
+  assert.equal(JSON.parse(h.posts[2]!).eyes.OD.panel.state.remarks,"Unsent edit");
   assert.equal(h.saved(),1);
-  assert.equal(h.panel().findByProps({"aria-label":"OD Remarks"}).props.value,"Submitted remark");
+ } finally { release(); await pending; h.close(); }
+});
+
+test("W148 retrying an older All Normal request retains a later replacement notice as unsaved", async () => {
+ let release!: () => void;
+ const gate = new Promise<void>(resolve => { release = resolve; });
+ const offered = {...fact("OD","scar"),status:"absent",presence:undefined,baseline:{kind:"absent",key:key("OD","scar")}};
+ const h = await mount(history([offered]), [{status:502,body:{result:"command",complete:false,executionOrder:[0],outcomes:[{target:"panel",status:"unconfirmed",clinicalWrite:"unknown"}]}}], 0, async count => { if (count === 1) await gate; });
+ let pending: Promise<void> | undefined;
+ try {
+  await act(async () => h.button("Anterior All Normal").props.onClick());
+  await act(async () => { pending = h.button("Save Ocular Health").props.onClick(); });
+  await act(async () => h.button("Scar","OD").props.onClick());
+  assert.match(text(h.panel()), /All Normal cleared for this eye/);
+  await act(async () => { release(); await pending; });
+  await act(async () => h.button("Retry").props.onClick());
+  assert.equal(h.posts[0],h.posts[1]);
+  assert.ok(JSON.parse(h.posts[1]!).eyes.OD.negativeAct);
+  assert.deepEqual(JSON.parse(h.posts[1]!).eyes.OD.selected,[]);
+  assert.equal(h.saved(),0);
+  assert.match(text(h.renderer.root), /Unsaved changes/);
+  assert.match(text(h.panel()), /All Normal cleared for this eye/);
  } finally { release(); await pending; h.close(); }
 });
