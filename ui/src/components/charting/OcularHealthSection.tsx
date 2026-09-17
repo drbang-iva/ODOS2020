@@ -545,7 +545,7 @@ export function OcularHealthSection({
                     field={field}
                     gradeFields={grades}
                     normalTemplate={definition.normalTemplate}
-                    allowDeferred={definition.allowDeferred === true}
+                    allowDeferred
                     onDeferred={() => toggleDeferred(definition, eye)}
                     onSelections={(selections) => setSelections(definition, eye, selections)}
                     onFindingDetail={(optionCode, qualifierKey, value) => setFindingDetail(definition, eye, optionCode, qualifierKey, value)}
