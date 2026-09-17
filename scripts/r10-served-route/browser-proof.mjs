@@ -65,12 +65,14 @@ try {
  const html=await (await fetch(base)).text();
  const asset=html.match(/src="([^\"]+\.js)"/)?.[1];
  if(asset){const bytes=Buffer.from(await (await fetch(new URL(asset,base))).arrayBuffer());result.servedBundle={path:asset,sha256:createHash('sha256').update(bytes).digest('hex')};}
- if(mode==='final') {
+ if(mode==='final'||mode==='g-only') {
+  const state=read('proof-state.json');let reply;
   const path=`/clinical-graph/encounters/${fixture.current.slice(10)}/findings`;
   const nucleus=async()=>{
     const payload=await api(page,path);assert.equal(payload.status,200,JSON.stringify(payload.body));
     return payload.body.searchIndex.filter(row=>row.key?.stableKey==='ocular-health:anterior:lens'&&row.key?.optionCode==='nuclear-sclerosis');
   };
+  if(mode==='final'){
   await page.reload();await page.waitForLoadState('networkidle');await openOcular(page);
   const lens=page.locator('#structure-ocular-health-anterior-lens');
   for(const eye of ['OD','OS'])assert.equal(await lens.locator(`[data-eye-panel="${eye}"]`).getByRole('button',{name:'Nuclear Sclerosis',exact:true}).getAttribute('aria-pressed'),'true');
@@ -80,12 +82,11 @@ try {
   const od=lens.locator('[data-eye-panel="OD"]');
   const changedGrade=baseline.find(row=>row.eye==='OD').qualifiers?.grade==='2+'?'3+':'2+';
   await od.locator('[data-finding-row="nuclear-sclerosis"]').getByRole('group',{name:'Grade',exact:true}).getByRole('button',{name:changedGrade,exact:true}).click();
-  let [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000}),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);
+  [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='POST'&&response.url().includes('/custom/ocular-health%3Aanterior%3Alens'),{timeout:30000}),page.getByRole('button',{name:'Save Ocular Health',exact:true}).click()]);
   assert.equal((await reply).status(),200);
   const graded=await nucleus();assert.equal(graded.find(row=>row.eye==='OD').qualifiers.grade,changedGrade);
   assert.deepEqual(graded.find(row=>row.eye==='OS').baseline,baseline.find(row=>row.eye==='OS').baseline);
   await page.getByRole('button',{name:'By diagnosis',exact:true}).click();
-  const state=read('proof-state.json');
   await page.locator('.odos-diagnosis-visit-row').first().click();
   const rows=page.locator('tr').filter({has:page.getByRole('button',{name:'Clear present nuclear sclerosis',exact:true})});
   await rows.nth(1).waitFor();assert.equal(await rows.count(),2);
@@ -147,9 +148,17 @@ try {
   await route(page);await page.getByRole('button',{name:'By diagnosis',exact:true}).click();await page.locator('.odos-diagnosis-visit-row').first().click();
   await page.getByPlaceholder('Search findings').fill('nuclear sclerosis');
   [reply]=await Promise.all([page.waitForResponse(response=>response.request().method()==='PUT'&&response.url().endsWith('/findings')),page.locator('.odos-diagnosis-finding-search-results button').filter({hasText:/OD$/}).click()]);assert.equal((await reply).status(),200);
+  }
   const sourceFacts=await nucleus();assert.equal(sourceFacts.filter(row=>row.presence==='present'&&row.homes.includes(state.conditionReference)).length,2);
   await route(page,fixture.destination);await page.getByRole('button',{name:'By diagnosis',exact:true}).click();
-  for(let older=0;!await page.locator(`[data-source-condition-reference="${state.conditionReference}"]`).count()&&older<20;older++){const load=page.getByRole('button',{name:'Load older encounters',exact:true});assert.ok(await load.count(),'Source diagnosis must be reachable in actual Previous Exams paging');await load.click();await page.waitForLoadState('networkidle');}
+  const sourceRow=page.locator(`[data-source-condition-reference="${state.conditionReference}"]`);
+  for(let older=0;!await sourceRow.count()&&older<20;older++){
+    const more=page.getByRole('button',{name:'Load older encounters',exact:true});
+    assert.ok(await more.count(),'Source is missing after Previous Exams exhausted its pages');
+    await more.evaluate(element=>element.scrollIntoView({block:'center'}));
+    await page.waitForLoadState('networkidle');
+  }
+  await sourceRow.waitFor({state:'visible',timeout:30000});
   const pullPath=`/clinical-graph/encounters/${fixture.destination.slice(10)}/previous-exams`;
   const pullRequests=[];const trackPull=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname===pullPath)pullRequests.push(request.postData());};page.on('request',trackPull);
   const armed=await fetch(`http://127.0.0.1:${manifest.ports.control}/drop-next`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'POST',path:pullPath})});assert.equal(armed.status,204);
