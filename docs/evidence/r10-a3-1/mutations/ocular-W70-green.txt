@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W70 deferred preserves fact bytes and version
+ok 1 - W70 deferred preserves fact bytes and version
+  ---
+  duration_ms: 14.285167
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 199.153917

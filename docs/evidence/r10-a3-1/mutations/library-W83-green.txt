@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: W83 W109 rejects audit agent
+ok 1 - W83 W109 rejects audit agent
+  ---
+  duration_ms: 6.391334
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit activity
+ok 2 - W83 W109 rejects audit activity
+  ---
+  duration_ms: 1.130958
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit system
+ok 3 - W83 W109 rejects audit system
+  ---
+  duration_ms: 1.434708
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit instant
+ok 4 - W83 W109 rejects audit instant
+  ---
+  duration_ms: 0.878166
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit targets
+ok 5 - W83 W109 rejects audit targets
+  ---
+  duration_ms: 0.951375
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit mixed
+ok 6 - W83 W109 rejects audit mixed
+  ---
+  duration_ms: 0.778959
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.269541

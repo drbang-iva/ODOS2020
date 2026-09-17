@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: live FHIR read grant check covers all four chart resources through compiled role policies
+not ok 1 - live FHIR read grant check covers all four chart resources through compiled role policies
+  ---
+  duration_ms: 1239.598875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:7617'
+  failureType: 'testCodeFailure'
+  error: 'Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription — MCP process service client.. Remove or update the entry explicitly.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429:13)
+    Array.map (<anonymous>)
+    matchExactWriteInventory (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:426:29)
+    runFhirReadGrantCheck (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:333:41)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:289:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree and fails salted fixture
+not ok 2 - v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree and fails salted fixture
+  ---
+  duration_ms: 1111.824708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/preflight-lint.test.ts:1:3788'
+  failureType: 'testCodeFailure'
+  error: |-
+    mcp/src/clinical-graph/diagnosis-carry-provenance.ts:20 odos-extension-url-shape
+    mcp/src/clinical-graph/diagnosis-carry-provenance.ts:21 odos-extension-url-shape
+    + actual - expected
+    
+    + 'hard-block'
+    - 'pass'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'pass'
+  actual: 'hard-block'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/preflight-lint.test.ts:102:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1362.776167

@@ -10,6 +10,7 @@ import type { ProtocolDefinition } from "../clinical-graph/protocol-types.js";
 
 async function setup(active: boolean) {
   const fhir = new PlanAuthoringFhir();
+  fhir.rows.push({ resourceType: "Encounter", id: "e", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p" } });
   const store = new FhirProcedureDefinitionStore(fhir);
   const definition = (await store.list()).find(row => row.stableKey === DRY_EYE_PROCEDURE_STABLE_KEYS.ipl)!;
   await store.save({ ...definition, active });

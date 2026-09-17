@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { createWriteRecorder, classifyWriteTrace } from '../../../../mcp/tests/fixtures/r10/write-path-recorder.js';
+import { runEndpointWritePaths } from '../../../../mcp/tests/fixtures/r10/endpoint-write-path-runtime.js';
+import { definitions, snapshot } from '../../../../mcp/tests/fixtures/r10/factories.js';
+import { writeFileSync } from 'node:fs';
+async function main(){
+ let resources:any[]=[];
+ const lost=createWriteRecorder({scenarioId:'recorder-lost-response',snapshot:()=>resources});
+ const fail=lost.wrap({createWithOutcome:async(resource:any)=>{resources.push({...resource,id:'persisted',meta:{versionId:'1'}});throw Error('lost response');}});
+ await assert.rejects(fail.createWithOutcome({resourceType:'Observation',status:'preliminary',code:{text:'Synthetic'}}),/lost response/);
+ assert.equal(lost.attempted.length,1);assert.equal(lost.persisted.length,1);assert.equal(lost.persisted[0].reference,'Observation/persisted');
+ resources=[];
+ const multi=createWriteRecorder({scenarioId:'recorder-multi',snapshot:()=>resources});
+ const transaction=multi.wrap({executeTransaction:async(bundle:any)=>{resources=bundle.entry.map((entry:any,index:number)=>({...entry.resource,id:`created-${index}`,meta:{versionId:'1'}}));return {resourceType:'Bundle',type:'transaction-response',entry:resources.map(r=>({response:{status:'201',location:`${r.resourceType}/${r.id}/_history/1`}}))};}});
+ await transaction.executeTransaction({resourceType:'Bundle',type:'transaction',entry:[0,1].map(()=>({resource:{resourceType:'Observation',status:'preliminary',code:{text:'Identical body'}},request:{method:'POST',url:'Observation'}}))});
+ assert.equal(new Set(multi.persisted.map(w=>w.writeId)).size,2);assert.equal(multi.persisted[0].writeId,multi.attempted[0].writeId);assert.equal(multi.persisted[1].writeId,multi.attempted[1].writeId);
+ resources=[];
+ const ambiguous=createWriteRecorder({snapshot:()=>resources});
+ await assert.rejects(ambiguous.capture([0,1].map(()=>({method:'POST',url:'Observation',resource:{resourceType:'Observation',status:'preliminary',code:{text:'same'}}} as any)),async()=>{resources=[0,1].map(i=>({resourceType:'Observation',id:`ambiguous-${i}`,status:'preliminary',code:{text:'same'}}));return undefined;}),/Unattributed persisted resource/);
+ resources=[{resourceType:'Observation',id:'patched',status:'preliminary',code:{text:'Synthetic'},meta:{versionId:'1'}}];
+ const patch=createWriteRecorder({scenarioId:'recorder-binary',snapshot:()=>resources});
+ const patchClient=patch.wrap({executeTransaction:async()=>{resources=[{...resources[0],status:'amended',meta:{versionId:'2'}}];return {resourceType:'Bundle',type:'transaction-response',entry:[{response:{status:'200',location:'Observation/patched/_history/2'}}]};}});
+ await patchClient.executeTransaction({resourceType:'Bundle',type:'transaction',entry:[{resource:{resourceType:'Binary',contentType:'application/json-patch+json',data:'synthetic'},request:{method:'PATCH',url:'Observation/patched'}}]} as any);
+ assert.equal(patch.attempted[0].resource.resourceType,'Binary');assert.equal(patch.persisted[0].resource.resourceType,'Observation');assert.equal(patch.persisted[0].resource.meta?.versionId,'2');
+ assert.throws(()=>classifyWriteTrace({attempted:[{writeId:'bad',method:'POST',url:'Observation',resource:snapshot()}],persisted:[]},definitions,'synthetic-legacy-path'),/synthetic-legacy-path.*legacy-/);
+ const rows=await runEndpointWritePaths();assert.equal(rows.length,13);
+ const summary=rows.map(r=>({id:r.id,scenarioId:r.scenarioId,attempted:r.attempted.length,persisted:r.persisted.length,observationKinds:[...new Set(r.observations.map(o=>o.kind))],rejectionStatus:r.rejection.responseStatus,rejectionReason:r.rejection.reason,rejectionAttempted:r.rejection.attempted.length,rejectionPersisted:r.rejection.persisted.length}));
+ writeFileSync('docs/evidence/r10-a3-1/t22-endpoints/runtime-summary.json',JSON.stringify({recorderProbes:5,paths:summary},null,2)+'\n');console.log(JSON.stringify({recorderProbes:5,endpointPaths:rows.length,attempted:rows.reduce((s,r)=>s+r.attempted.length,0),persisted:rows.reduce((s,r)=>s+r.persisted.length,0),zeroWriteRejections:rows.filter(r=>!r.rejection.attempted.length&&!r.rejection.persisted.length).length}));
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "mcp-W116-generic",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/shared-finding-write-guard.ts",
+        "before": "if (classification(observation, definitions).kind !== \"unrelated\")",
+        "after": "if (false)"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W116"
+  },
+  {
+    "id": "mcp-W115-prebuild",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/shared-finding-write-guard.ts",
+        "before": "if (projectCurrentFindings(state).preRebuild)",
+        "after": "if (false)"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W115"
+  },
+  {
+    "id": "mcp-W115-audit",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/shared-finding-write-guard.ts",
+        "before": "const repaired = await repairPendingAudits({...deps, catalog}, {commandId: randomUUID(), patientReference, encounterReference}, {targets: [`Observation/${observation.id}`]});",
+        "after": "const repaired = {complete:true};"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W115"
+  },
+  {
+    "id": "mcp-W115-filter",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/shared-finding-write-guard.ts",
+        "before": "{targets: [`Observation/${observation.id}`]}",
+        "after": "{}"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W115"
+  },
+  {
+    "id": "mcp-W115-closed",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/shared-finding-write-guard.ts",
+        "before": "if (encounter.subject?.reference !== patientReference)",
+        "after": "if (encounter.status === \"finished\") throw new Error(\"mutant rejects closed\");\n  if (encounter.subject?.reference !== patientReference)"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "mcp/tests/r10A3McpGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W115"
+  }
+]

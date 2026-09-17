@@ -1,3 +1,5 @@
+import { isClosedEncounter } from "./encounter-sign-gate.js";
+import { ownsFact } from "./current-finding-identity.js";
 import type { Bundle, Condition, Encounter, Resource } from '@medplum/fhirtypes';
 import { z } from 'zod';
 import { staffHasBusinessAction, type PracticeRoleId } from '../authz/roles.js';
@@ -131,7 +133,7 @@ const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a
 const eyesSchema = z.array(z.enum(['OD', 'OS'])).min(1).max(2).refine(v => new Set(v).size === v.length);
 const mutationSchema = z.object({ commandId: uuid, patientReference: patientReferenceSchema, operation: z.enum(['assert', 'clear', 'grade', 'eye-change', 'move', 'standalone', 'link', 'reassert']), context: z.object({ selectedConditionReference: conditionReferenceSchema }).strict().optional(), targets: z.array(targetSchema).min(1), eyes: z.object({ from: eyesSchema, to: eyesSchema }).strict().optional() }).strict();
 type Mutation = z.infer<typeof mutationSchema>;
-const invalid = (reason: string, targetIndex?: number): Response => ({ status: reason === 'signed-or-cancelled' ? 422 : ['destination-differs', 'command-reused', 'pre-rebuild-test-encounter'].includes(reason) ? 409 : 400, body: { result: 'invalid', error: reason, reason, ...(targetIndex !== undefined ? { targetIndex } : {}) } });
+const invalid = (reason: string, targetIndex?: number): Response => ({ status: reason === 'signed-or-cancelled' ? 422 : ['destination-differs', 'command-reused', 'pre-rebuild-test-encounter', 'encounter-closed'].includes(reason) ? 409 : 400, body: { result: 'invalid', error: reason, reason, ...(targetIndex !== undefined ? { targetIndex } : {}) } });
 const unavailable = (state: Incomplete): Response => ({ status: loadStatus(state.kind), body: { result: 'unavailable', kind: state.kind, error: state.reason } });
 const loadStatus = (kind: Incomplete['kind']) => kind === 'refused' ? 403 : kind === 'missing' ? 404 : 502;
 function dependencyState(error: unknown): Incomplete { const status = (error as {
@@ -159,6 +161,7 @@ function owner(context: DiagnosisFindingContext, key: CurrentFindingKey) { const
 const domain = (context: DiagnosisFindingContext) => new Set(context.state.conditions.map(c => `Condition/${c.id}`));
 const liveHomes = (context: DiagnosisFindingContext, fact: CurrentFindingFact | FindingConflict) => fact.status === 'live' ? fact.homes.filter(h => context.state.conditions.some(c => `Condition/${c.id}` === h && isCurrentVisitDiagnosis(c))) : [];
 export function findingTargetReadOnlyReason(context: DiagnosisFindingContext, key: CurrentFindingKey): string | undefined {
+    if (isClosedEncounter(context.encounter)) return 'encounter-closed';
     if (context.projection.preRebuild)
         return 'pre-rebuild-test-encounter';
     if (context.projection.conflicts.some(f => f.projectionKey === targetId(key)))
@@ -167,19 +170,26 @@ export function findingTargetReadOnlyReason(context: DiagnosisFindingContext, ke
     if (record && !['preliminary', 'entered-in-error'].includes(record.status))
         return 'signed-or-cancelled';
     const fact = context.projection.currentFacts.find(f => f.projectionKey === targetId(key));
+    if (fact?.readOnlyReason) return fact.readOnlyReason;
     if (fact?.homes.some(h => !domain(context).has(h)))
         return 'home-outside-encounter';
     return undefined;
 }
-function projectRow(context: DiagnosisFindingContext, fact: CurrentFindingFact | FindingConflict, kind: 'fact' | 'conflict'): EncounterFindingRow {
-    const catalog = context.catalog.find(row => row.atomicFindingId === catalogId(fact.key))!;
+export function projectRow(context: DiagnosisFindingContext, fact: CurrentFindingFact | FindingConflict, kind: 'fact' | 'conflict'): EncounterFindingRow {
+    const definition = context.state.definitions.find(d => d.stableKey === fact.key.stableKey);
+    const option = definition && customFieldEntries(definition, true).find(f => f.localCode === fact.key.fieldCode)?.options?.find(o => o.code === fact.key.optionCode);
+    const catalog = context.catalog.find(row => row.atomicFindingId === catalogId(fact.key)) ?? {
+        atomicFindingId: catalogId(fact.key), findingDefinitionId: definition?.id ?? '',
+        findingDefinitionKey: fact.key.stableKey, fieldCode: fact.key.fieldCode, optionCode: fact.key.optionCode,
+        display: option?.display ?? fact.key.optionCode, sectionKey: definition?.sectionKey ?? fact.key.stableKey, gradeScale: [], diagnosisKeys: [], origin: 'custom' as const,
+    };
     const homes = liveHomes(context, fact), reason = findingTargetReadOnlyReason(context, fact.key);
     return { ...catalog, rowKey: fact.projectionKey, kind, key: fact.key, eye: fact.eye, laterality: fact.eye, presence: fact.presence, qualifiers: fact.qualifiers ?? {},
         ...(typeof fact.qualifiers?.grade === 'string' ? { grade: fact.qualifiers.grade } : {}), status: fact.status, editable: !reason, ...(reason ? { readOnlyReason: reason } : {}),
         homes: fact.homes, homeSources: fact.homeSources, ...(homes.length === 1 ? { conditionReference: homes[0] } : {}), baseline: fact.baseline, contributors: fact.contributors,
-        ...(fact.contributors.some(c => c.carried !== undefined) ? { carried: fact.contributors.every(c => c.carried === true) } : {}), ...(fact.auditPending ? { auditPending: true } : {}) };
+        ...(fact.contributors.some(c => c.carried !== undefined) ? { carried: fact.contributors.every(c => c.carried === true) } : {}), ...(fact.auditPending ? { auditPending: true } : {}), ...('auditIntegrity' in fact && fact.auditIntegrity ? { auditIntegrity: fact.auditIntegrity } : {}) };
 }
-function offeredRow(context: DiagnosisFindingContext, row: AtomicFindingCatalogRow, eye: 'OD' | 'OS' | 'UNKNOWN'): EncounterFindingRow {
+export function offeredRow(context: DiagnosisFindingContext, row: AtomicFindingCatalogRow, eye: 'OD' | 'OS' | 'UNKNOWN'): EncounterFindingRow {
     const key: CurrentFindingKey | undefined = eye === 'UNKNOWN' ? undefined : { v: 1, patientId: context.state.patientReference.slice(8), encounterId: context.state.encounterReference.slice(10), stableKey: row.findingDefinitionKey, fieldCode: row.fieldCode, optionCode: row.optionCode, eye };
     const fact = key ? context.projection.currentFacts.find(f => f.projectionKey === targetId(key)) : undefined;
     const reason = key ? findingTargetReadOnlyReason(context, key) : context.projection.preRebuild ? 'pre-rebuild-test-encounter' : undefined;
@@ -213,7 +223,7 @@ export async function handleDiagnosisFindingsReadRequest(deps: DiagnosisFindings
         let carryProvenance: DiagnosisFindingsPayload['carryProvenance'];
         let priorAbsent: Awaited<ReturnType<typeof readDiagnosisCarryState>>['sourceAbsentSnapshots'] = [];
         for (const visit of visits) {
-            const carry = await readDiagnosisCarryState(staff.fhir, visit.condition, context.state.observations);
+            const carry = await readDiagnosisCarryState(staff.fhir, visit.condition, context.state.observations, { preRebuild: context.projection.preRebuild });
             Object.assign(carried, carry.observationCarried);
             if (visit === selected) {
                 priorAbsent = carry.sourceAbsentSnapshots;
@@ -247,7 +257,7 @@ export async function handleDiagnosisFindingsReadRequest(deps: DiagnosisFindings
                     }
                 }
         const searchIndex = context.catalog.flatMap(row => (['OD', 'OS'] as const).map(eye => rows.find(f => f.atomicFindingId === row.atomicFindingId && f.eye === eye) ?? offeredRow(context, row, eye)));
-        const payload: DiagnosisFindingsPayload = { encounterEditable: !context.projection.preRebuild, ...(context.projection.preRebuild ? { readOnlyReason: 'pre-rebuild-test-encounter' } : {}), canWrite: staffHasBusinessAction(staff, 'chart.write'), canWriteDiagnosis: staffHasBusinessAction(staff, 'chart.diagnosis.write'), ...(diagnosis ? { diagnosis } : {}), ...(carryProvenance ? { carryProvenance } : {}), findings, catalog: context.catalog, searchIndex, unassigned: rows.filter(r => r.kind === 'fact' && r.status === 'live' && liveHomes(context, context.projection.currentFacts.find(f => f.projectionKey === r.rowKey)!).length === 0), bySection, auditDebt: context.projection.currentFacts.filter(f => f.auditPending).map(f => projectRow(context, f, 'fact')), visitDiagnoses: visits.map(({ condition, ...visit }) => visit) };
+        const payload: DiagnosisFindingsPayload = { encounterEditable: !context.projection.preRebuild && !isClosedEncounter(context.encounter), ...(isClosedEncounter(context.encounter) ? { readOnlyReason: 'encounter-closed' } : context.projection.preRebuild ? { readOnlyReason: 'pre-rebuild-test-encounter' } : {}), canWrite: staffHasBusinessAction(staff, 'chart.write'), canWriteDiagnosis: staffHasBusinessAction(staff, 'chart.diagnosis.write'), ...(diagnosis ? { diagnosis } : {}), ...(carryProvenance ? { carryProvenance } : {}), findings, catalog: context.catalog, searchIndex, unassigned: rows.filter(r => r.kind === 'fact' && r.status === 'live' && liveHomes(context, context.projection.currentFacts.find(f => f.projectionKey === r.rowKey)!).length === 0), bySection, auditDebt: context.projection.currentFacts.filter(f => f.auditPending).map(f => projectRow(context, f, 'fact')), visitDiagnoses: visits.map(({ condition, ...visit }) => visit) };
         return { status: 200, body: payload };
     }
     catch (error) {
@@ -294,7 +304,7 @@ export function findingCommandResponse(result: FindingCommandResult): Response {
 export function materializeAtomicFindingCatalog(definitions: readonly ClinicalFindingDefinition[]): AtomicFindingCatalogRow[] {
     return definitions
         .filter((definition) => definition.active)
-        .flatMap((definition) => customFieldEntries(definition).flatMap((field) => field.options?.filter((option) => option.active).map((option): AtomicFindingCatalogRow => ({
+        .flatMap((definition) => customFieldEntries(definition).filter(field => ownsFact(definition, field)).flatMap((field) => field.options?.filter((option) => option.active).map((option): AtomicFindingCatalogRow => ({
         atomicFindingId: `${definition.stableKey}::${field.localCode}::${option.code}`,
         findingDefinitionId: definition.id,
         findingDefinitionKey: definition.stableKey,
@@ -391,6 +401,7 @@ export async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFind
         const context = await loadDiagnosisFindingContext(staff.fhir, params.data.encounterId, definitions);
         if (context.incomplete)
             return unavailable(context);
+        if (isClosedEncounter(context.encounter)) return invalid('encounter-closed');
         if (body.patientReference !== context.state.patientReference)
             return invalid('patient-mismatch');
         if (context.projection.preRebuild)
@@ -405,6 +416,9 @@ export async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFind
             if (ids.has(targetId(target.key)))
                 return invalid('duplicate-target', index);
             ids.add(targetId(target.key));
+            const definition = definitions.find(d => d.stableKey === target.key.stableKey);
+            const field = definition && customFieldEntries(definition, true).find(f => f.localCode === target.key.fieldCode);
+            if (!definition || !field || !ownsFact(definition, field)) return invalid('not-a-shared-finding', index);
             if (!context.catalog.some(row => row.atomicFindingId === catalogId(target.key)))
                 return invalid('catalog-key', index);
             if (target.baseline?.kind === 'absent' && !equal(target.baseline.key, target.key))
@@ -420,7 +434,7 @@ export async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFind
             }
             let classification;
             try {
-                classification = await classifyReplay({ ...context.state, fhir: writerDeps.fhir }, command, target);
+                classification = await classifyReplay({ ...context.state, fhir: writerDeps.fhir, staffReference: staff.staffReference }, command, target);
             }
             catch (error) {
                 if (!(error instanceof FindingReplayLookupError))
@@ -447,7 +461,7 @@ export async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFind
         if (body.operation === 'reassert' && replay.some(v => !v)) {
             const observationCarried: Record<string, boolean> = {};
             for (const condition of context.state.conditions.filter(isCurrentVisitDiagnosis)) {
-                const carry = await readDiagnosisCarryState(staff.fhir, condition, context.state.observations);
+                const carry = await readDiagnosisCarryState(staff.fhir, condition, context.state.observations, { preRebuild: context.projection.preRebuild });
                 Object.assign(observationCarried, carry.observationCarried);
             }
             context.state.observationCarried = observationCarried;
@@ -496,7 +510,9 @@ export async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFind
                     return invalid('operation-homes', index);
             }
         }
-        return findingCommandResponse(await executeFindingCommand(writerDeps, command));
+        const response = findingCommandResponse(await executeFindingCommand(writerDeps, command));
+        const after = await staff.fhir.read<Encounter>('Encounter', params.data.encounterId);
+        return { ...response, body: { ...(response.body as object), ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}) } };
     }
     catch (error) {
         return unavailable(dependencyState(error));
@@ -565,11 +581,14 @@ export async function handleDiagnosisFindingsAuditRepairRequest(deps: DiagnosisF
         const context = await loadDiagnosisFindingContext(staff.fhir, params.data.encounterId, definitions);
         if (context.incomplete)
             return unavailable(context);
+        if (isClosedEncounter(context.encounter)) return invalid('encounter-closed');
         if (context.state.patientReference !== body.data.patientReference)
             return invalid('patient-mismatch');
         if (context.projection.preRebuild)
             return invalid('pre-rebuild-test-encounter');
-        return findingCommandResponse(await repairPendingAudits(commandDependencies(staff, context, deps), { ...body.data, encounterReference: context.state.encounterReference }));
+        const response = findingCommandResponse(await repairPendingAudits(commandDependencies(staff, context, deps), { ...body.data, encounterReference: context.state.encounterReference }));
+        const after = await staff.fhir.read<Encounter>('Encounter', params.data.encounterId);
+        return { ...response, body: { ...(response.body as object), ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}) } };
     }
     catch (error) {
         return unavailable(dependencyState(error));

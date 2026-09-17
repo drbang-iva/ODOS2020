@@ -1,0 +1,897 @@
+TAP version 13
+# Subtest: A: a charge retaining another confirmed diagnosis is unaffected and remains in the claim draft
+ok 1 - A: a charge retaining another confirmed diagnosis is unaffected and remains in the claim draft
+  ---
+  duration_ms: 8.810584
+  type: 'test'
+  ...
+# Subtest: B: possible reports a sole-pointer charge as stranded without changing it or hiding the successful pick
+ok 2 - B: possible reports a sole-pointer charge as stranded without changing it or hiding the successful pick
+  ---
+  duration_ms: 2.309666
+  type: 'test'
+  ...
+# Subtest: C: demoting a diagnosis with no linked charge returns the complete empty impact shape
+ok 3 - C: demoting a diagnosis with no linked charge returns the complete empty impact shape
+  ---
+  duration_ms: 2.519542
+  type: 'test'
+  ...
+# Subtest: a sole-pointer charge on a later search page is still reported as stranded
+ok 4 - a sole-pointer charge on a later search page is still reported as stranded
+  ---
+  duration_ms: 2.015667
+  type: 'test'
+  ...
+# Subtest: a confirmed diagnosis on a later search page keeps a multi-pointer charge unaffected
+ok 5 - a confirmed diagnosis on a later search page keeps a multi-pointer charge unaffected
+  ---
+  duration_ms: 1.691417
+  type: 'test'
+  ...
+# Subtest: D: discard reports a sole-pointer charge as stranded under the same contract
+ok 6 - D: discard reports a sole-pointer charge as stranded under the same contract
+  ---
+  duration_ms: 1.559959
+  type: 'test'
+  ...
+# Subtest: E: re-confirming a demoted diagnosis returns the unchanged charge to the claim draft
+ok 7 - E: re-confirming a demoted diagnosis returns the unchanged charge to the claim draft
+  ---
+  duration_ms: 2.44375
+  type: 'test'
+  ...
+# Subtest: a failed post-transaction charge read preserves pick success and marks impact unavailable
+ok 8 - a failed post-transaction charge read preserves pick success and marks impact unavailable
+  ---
+  duration_ms: 1.376167
+  type: 'test'
+  ...
+# Subtest: staff diagnosis pick refuses all actions with zero writes
+    # Subtest: possible
+    ok 1 - possible
+      ---
+      duration_ms: 1.116792
+      type: 'test'
+      ...
+    # Subtest: confirm
+    ok 2 - confirm
+      ---
+      duration_ms: 0.242209
+      type: 'test'
+      ...
+    # Subtest: discard
+    ok 3 - discard
+      ---
+      duration_ms: 0.075209
+      type: 'test'
+      ...
+    1..3
+ok 9 - staff diagnosis pick refuses all actions with zero writes
+  ---
+  duration_ms: 1.802459
+  type: 'test'
+  ...
+# Subtest: condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+ok 10 - condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+  ---
+  duration_ms: 0.446084
+  type: 'test'
+  ...
+# Subtest: staged POAG picks persist the chosen member code and keep different per-eye stages separate
+ok 11 - staged POAG picks persist the chosen member code and keep different per-eye stages separate
+  ---
+  duration_ms: 3.088542
+  type: 'test'
+  ...
+# Subtest: Stage later persists a staged family Condition with no ICD-10-CM coding
+ok 12 - Stage later persists a staged family Condition with no ICD-10-CM coding
+  ---
+  duration_ms: 0.947333
+  type: 'test'
+  ...
+# Subtest: Stage later cannot duplicate an existing same-eye staged member Condition
+ok 13 - Stage later cannot duplicate an existing same-eye staged member Condition
+  ---
+  duration_ms: 1.351916
+  type: 'test'
+  ...
+# Subtest: a member pick completes the same-eye pending family Condition instead of creating a duplicate
+ok 14 - a member pick completes the same-eye pending family Condition instead of creating a duplicate
+  ---
+  duration_ms: 1.843666
+  type: 'test'
+  ...
+# Subtest: discarding an absent staged member cannot refute a same-eye pending family Condition
+ok 15 - discarding an absent staged member cannot refute a same-eye pending family Condition
+  ---
+  duration_ms: 1.445167
+  type: 'test'
+  ...
+# Subtest: all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+ok 16 - all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+  ---
+  duration_ms: 5.276833
+  type: 'test'
+  ...
+# Subtest: allOf mapping triggers require every nested option trigger
+ok 17 - allOf mapping triggers require every nested option trigger
+  ---
+  duration_ms: 1.267417
+  type: 'test'
+  ...
+# Subtest: EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+ok 18 - EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+  ---
+  duration_ms: 23.04075
+  type: 'test'
+  ...
+# Subtest: real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+ok 19 - real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+  ---
+  duration_ms: 95.548208
+  type: 'test'
+  ...
+# Subtest: OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+ok 20 - OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+  ---
+  duration_ms: 46.878625
+  type: 'test'
+  ...
+# Subtest: I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+ok 21 - I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+  ---
+  duration_ms: 296.568208
+  type: 'test'
+  ...
+# Subtest: I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+ok 22 - I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+  ---
+  duration_ms: 27.894417
+  type: 'test'
+  ...
+# Subtest: I3 qualifier triggers are scoped to the option that recorded the shared key
+ok 23 - I3 qualifier triggers are scoped to the option that recorded the shared key
+  ---
+  duration_ms: 0.223
+  type: 'test'
+  ...
+# Subtest: I4 ocular records without findingDetails retain specific candidate lists
+ok 24 - I4 ocular records without findingDetails retain specific candidate lists
+  ---
+  duration_ms: 37.809084
+  type: 'test'
+  ...
+# Subtest: anterior-chamber ruled findings propose only their seeded diagnoses
+ok 25 - anterior-chamber ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 45.812083
+  type: 'test'
+  ...
+# Subtest: iris ruled findings propose only their seeded diagnoses
+ok 26 - iris ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 35.213083
+  type: 'test'
+  ...
+# Subtest: vitreous ruled findings propose only their seeded diagnoses
+ok 27 - vitreous ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 22.176375
+  type: 'test'
+  ...
+# Subtest: vessels ruled findings propose only their seeded diagnoses
+ok 28 - vessels ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 46.174
+  type: 'test'
+  ...
+# Subtest: palpebral conjunctiva GPC proposes its seeded diagnosis
+ok 29 - palpebral conjunctiva GPC proposes its seeded diagnosis
+  ---
+  duration_ms: 11.55575
+  type: 'test'
+  ...
+# Subtest: vessels A/V ratio codes follow the field::option delimiter convention
+ok 30 - vessels A/V ratio codes follow the field::option delimiter convention
+  ---
+  duration_ms: 5.365209
+  type: 'test'
+  ...
+# Subtest: active ocular-health diagnosis mappings name active options on their declared fields
+ok 31 - active ocular-health diagnosis mappings name active options on their declared fields
+  ---
+  duration_ms: 5.371666
+  type: 'test'
+  ...
+# Subtest: diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+ok 32 - diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+  ---
+  duration_ms: 50.543875
+  type: 'test'
+  ...
+# Subtest: ocular-health ledger diagnoses never become more globally unreachable
+ok 33 - ocular-health ledger diagnoses never become more globally unreachable
+  ---
+  duration_ms: 6.05
+  type: 'test'
+  ...
+# Subtest: unspecified ocular diagnosis keys never surface with qualifiers unset or set
+ok 34 - unspecified ocular diagnosis keys never surface with qualifiers unset or set
+  ---
+  duration_ms: 127.707625
+  type: 'test'
+  ...
+# Subtest: I5 qualifier components cannot diagnose or suppress without an active parent option
+ok 35 - I5 qualifier components cannot diagnose or suppress without an active parent option
+  ---
+  duration_ms: 22.573458
+  type: 'test'
+  ...
+# Subtest: I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+ok 36 - I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+  ---
+  duration_ms: 13.55775
+  type: 'test'
+  ...
+# Subtest: direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+ok 37 - direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+  ---
+  duration_ms: 1.656417
+  type: 'test'
+  ...
+# Subtest: visual-field descriptors derive every approved code while preserving the descriptor through reload
+ok 38 - visual-field descriptors derive every approved code while preserving the descriptor through reload
+  ---
+  duration_ms: 168.652084
+  type: 'test'
+  ...
+# Subtest: staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+ok 39 - staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+  ---
+  duration_ms: 24.285542
+  type: 'test'
+  ...
+# Subtest: prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+ok 40 - prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+  ---
+  duration_ms: 19.654042
+  type: 'test'
+  ...
+# Subtest: posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+ok 41 - posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+  ---
+  duration_ms: 18.245542
+  type: 'test'
+  ...
+# Subtest: homonymous field-side picks never derive field side from eye laterality
+ok 42 - homonymous field-side picks never derive field side from eye laterality
+  ---
+  duration_ms: 1.304417
+  type: 'test'
+  ...
+# Subtest: a concurrent Condition update returns 409 without silently retrying the clinician decision
+ok 43 - a concurrent Condition update returns 409 without silently retrying the clinician decision
+  ---
+  duration_ms: 12.695083
+  type: 'test'
+  ...
+# Subtest: a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+ok 44 - a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+  ---
+  duration_ms: 1.214958
+  type: 'test'
+  ...
+# Subtest: possible, confirm, and discard use atomic transactions with per-resource version preconditions
+ok 45 - possible, confirm, and discard use atomic transactions with per-resource version preconditions
+  ---
+  duration_ms: 1.51375
+  type: 'test'
+  ...
+# Subtest: direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+ok 46 - direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+  ---
+  duration_ms: 0.923625
+  type: 'test'
+  ...
+# Subtest: laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+ok 47 - laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+  ---
+  duration_ms: 26.15325
+  type: 'test'
+  ...
+# Subtest: conditional create makes identical same-eye Possible double-submit idempotent
+ok 48 - conditional create makes identical same-eye Possible double-submit idempotent
+  ---
+  duration_ms: 12.008541
+  type: 'test'
+  ...
+# Subtest: confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+ok 49 - confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+  ---
+  duration_ms: 1.038709
+  type: 'test'
+  ...
+# Subtest: three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+ok 50 - three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+  ---
+  duration_ms: 2.199708
+  type: 'test'
+  ...
+# Subtest: discard unlink is idempotent and confirm after discard relinks through the existing path
+ok 51 - discard unlink is idempotent and confirm after discard relinks through the existing path
+  ---
+  duration_ms: 1.805125
+  type: 'test'
+  ...
+# Subtest: discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+ok 52 - discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+  ---
+  duration_ms: 1.707333
+  type: 'test'
+  ...
+# Subtest: a signed Encounter refuses discard before changing the Condition or Encounter
+not ok 53 - a signed Encounter refuses discard before changing the Condition or Encounter
+  ---
+  duration_ms: 4.028
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisLinkL2.test.ts:2:85924'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /after the encounter is signed/. Input:
+    
+    'Signed or closed encounters cannot be edited.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Signed or closed encounters cannot be edited.'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisLinkL2.test.ts:2363:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: diagnosis pick Provenance targets the patient
+ok 54 - diagnosis pick Provenance targets the patient
+  ---
+  duration_ms: 0.62025
+  type: 'test'
+  ...
+# Subtest: a failed tally side effect never fails a successful explicit diagnosis pick
+ok 55 - a failed tally side effect never fails a successful explicit diagnosis pick
+  ---
+  duration_ms: 6.725375
+  type: 'test'
+  ...
+# Subtest: dedup keeps rule evidence and the higher-priority mapping when no rule exists
+ok 56 - dedup keeps rule evidence and the higher-priority mapping when no rule exists
+  ---
+  duration_ms: 0.060792
+  type: 'test'
+  ...
+# Subtest: W10 supported pick is a Condition-only step and retains its full response
+ok 57 - W10 supported pick is a Condition-only step and retains its full response
+  ---
+  duration_ms: 6.215166
+  type: 'test'
+  ...
+# Subtest: W35 empty stale foreign supports refuse before Condition writes
+    # Subtest: empty
+    ok 1 - empty
+      ---
+      duration_ms: 0.199791
+      type: 'test'
+      ...
+    # Subtest: stale
+    ok 2 - stale
+      ---
+      duration_ms: 6.597792
+      type: 'test'
+      ...
+    # Subtest: foreign
+    ok 3 - foreign
+      ---
+      duration_ms: 5.8445
+      type: 'test'
+      ...
+    1..3
+ok 58 - W35 empty stale foreign supports refuse before Condition writes
+  ---
+  duration_ms: 12.800125
+  type: 'test'
+  ...
+# Subtest: W30 candidates use current projection and omit superseded snapshot suggestions
+ok 59 - W30 candidates use current projection and omit superseded snapshot suggestions
+  ---
+  duration_ms: 6.963875
+  type: 'test'
+  ...
+# Subtest: mixed option definition preserves numeric panel context in current candidates
+not ok 60 - mixed option definition preserves numeric panel context in current candidates
+  ---
+  duration_ms: 14.034875
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisLinkL2.test.ts:2:96750'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'presbyopia'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'presbyopia'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisLinkL2.test.ts:2612:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: supported pick validates every support and explicit eye union before all writes
+    # Subtest: duplicate
+    ok 1 - duplicate
+      ---
+      duration_ms: 6.244208
+      type: 'test'
+      ...
+    # Subtest: missing-command
+    ok 2 - missing-command
+      ---
+      duration_ms: 5.736792
+      type: 'test'
+      ...
+    # Subtest: wrong-command
+    ok 3 - wrong-command
+      ---
+      duration_ms: 0.09325
+      type: 'test'
+      ...
+    # Subtest: eye
+    ok 4 - eye
+      ---
+      duration_ms: 7.599416
+      type: 'test'
+      ...
+    # Subtest: retired
+    ok 5 - retired
+      ---
+      duration_ms: 5.945125
+      type: 'test'
+      ...
+    # Subtest: absent
+    ok 6 - absent
+      ---
+      duration_ms: 6.329541
+      type: 'test'
+      ...
+    # Subtest: signed
+    ok 7 - signed
+      ---
+      duration_ms: 6.141625
+      type: 'test'
+      ...
+    # Subtest: cancelled
+    ok 8 - cancelled
+      ---
+      duration_ms: 6.12225
+      type: 'test'
+      ...
+    # Subtest: conflict
+    ok 9 - conflict
+      ---
+      duration_ms: 6.171958
+      type: 'test'
+      ...
+    # Subtest: legacy
+    ok 10 - legacy
+      ---
+      duration_ms: 5.771625
+      type: 'test'
+      ...
+    # Subtest: foreign-home
+    ok 11 - foreign-home
+      ---
+      duration_ms: 6.265083
+      type: 'test'
+      ...
+    # Subtest: wrong-view
+    ok 12 - wrong-view
+      ---
+      duration_ms: 5.9995
+      type: 'test'
+      ...
+    1..12
+ok 61 - supported pick validates every support and explicit eye union before all writes
+  ---
+  duration_ms: 68.956917
+  type: 'test'
+  ...
+# Subtest: supported bilateral pick unions eyes, then discard remains a Condition step without a link
+ok 62 - supported bilateral pick unions eyes, then discard remains a Condition step without a link
+  ---
+  duration_ms: 12.662625
+  type: 'test'
+  ...
+# Subtest: projected no-id pick without supports performs only the Condition step
+ok 63 - projected no-id pick without supports performs only the Condition step
+  ---
+  duration_ms: 13.752875
+  type: 'test'
+  ...
+# Subtest: pick reports failed and unconfirmed Condition steps without pretending load failure
+    # Subtest: 403
+    ok 1 - 403
+      ---
+      duration_ms: 5.946958
+      type: 'test'
+      ...
+    # Subtest: undefined
+    ok 2 - undefined
+      ---
+      duration_ms: 6.4185
+      type: 'test'
+      ...
+    1..2
+ok 64 - pick reports failed and unconfirmed Condition steps without pretending load failure
+  ---
+  duration_ms: 12.521209
+  type: 'test'
+  ...
+# Subtest: W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity
+ok 65 - W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity
+  ---
+  duration_ms: 5.763084
+  type: 'test'
+  ...
+# Subtest: pick finds an existing diagnosis on page two instead of creating another
+ok 66 - pick finds an existing diagnosis on page two instead of creating another
+  ---
+  duration_ms: 1.050334
+  type: 'test'
+  ...
+# Subtest: option candidates recursively collect trigger supports and union duplicate diagnosis supports
+ok 67 - option candidates recursively collect trigger supports and union duplicate diagnosis supports
+  ---
+  duration_ms: 21.323084
+  type: 'test'
+  ...
+# Subtest: §3.7 option-trigger supports exclude unrelated present options without diagnosis deduplication
+ok 68 - §3.7 option-trigger supports exclude unrelated present options without diagnosis deduplication
+  ---
+  duration_ms: 12.499458
+  type: 'test'
+  ...
+# Subtest: mixed panel context uses newest projected context and refuses ambiguous equal-time contexts
+not ok 69 - mixed panel context uses newest projected context and refuses ambiguous equal-time contexts
+  ---
+  duration_ms: 12.369583
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisLinkL2.test.ts:2:108512'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'diagnosisKey')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisLinkL2.test.ts:2753:34)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: applied Condition remains reported when the visit-status side effect fails
+ok 70 - applied Condition remains reported when the visit-status side effect fails
+  ---
+  duration_ms: 0.669125
+  type: 'test'
+  ...
+# Subtest: transaction conflict is a failed pick step with its HTTP cause
+ok 71 - transaction conflict is a failed pick step with its HTTP cause
+  ---
+  duration_ms: 6.074667
+  type: 'test'
+  ...
+# Subtest: candidates consume page-two encounter observations and patient diagnosis history
+ok 72 - candidates consume page-two encounter observations and patient diagnosis history
+  ---
+  duration_ms: 7.407916
+  type: 'test'
+  ...
+# Subtest: candidate history pagination errors are unavailable rather than empty candidates
+ok 73 - candidate history pagination errors are unavailable rather than empty candidates
+  ---
+  duration_ms: 5.65275
+  type: 'test'
+  ...
+# Subtest: confirm freezes the original setter and timestamp when a different clinician changes status
+ok 74 - confirm freezes the original setter and timestamp when a different clinician changes status
+  ---
+  duration_ms: 2.806
+  type: 'test'
+  ...
+# Subtest: missing rows read as unset, signed encounters reject updates, and a later encounter gets a new Condition without copied status
+ok 75 - missing rows read as unset, signed encounters reject updates, and a later encounter gets a new Condition without copied status
+  ---
+  duration_ms: 2.243875
+  type: 'test'
+  ...
+# Subtest: all ten visit statuses agree across clients and pass the update endpoint
+ok 76 - all ten visit statuses agree across clients and pass the update endpoint
+  ---
+  duration_ms: 2.64625
+  type: 'test'
+  ...
+# Subtest: status vocabulary is application-validated and the SQL column remains extensible
+ok 77 - status vocabulary is application-validated and the SQL column remains extensible
+  ---
+  duration_ms: 0.551417
+  type: 'test'
+  ...
+# Subtest: registered diagnosis write routes share a rate limit before service or staff authentication
+ok 78 - registered diagnosis write routes share a rate limit before service or staff authentication
+  ---
+  duration_ms: 133.185042
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse staff before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.1185
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.033584
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.158667
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.080375
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.068208
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.035291
+      type: 'test'
+      ...
+    1..6
+ok 79 - diagnosis entrypoints refuse staff before any dependency call
+  ---
+  duration_ms: 0.868708
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse admin before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.161834
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.10125
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.053125
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.022458
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.017708
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.01475
+      type: 'test'
+      ...
+    1..6
+ok 80 - diagnosis entrypoints refuse admin before any dependency call
+  ---
+  duration_ms: 0.654083
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse provider with diagnosis action revoked before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.023875
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.014875
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.013625
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.013875
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.017125
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.014834
+      type: 'test'
+      ...
+    1..6
+ok 81 - diagnosis entrypoints refuse provider with diagnosis action revoked before any dependency call
+  ---
+  duration_ms: 0.225416
+  type: 'test'
+  ...
+# Subtest: diagnosis entrypoints refuse staff with diagnosis action revoked before any dependency call
+    # Subtest: pick
+    ok 1 - pick
+      ---
+      duration_ms: 0.020125
+      type: 'test'
+      ...
+    # Subtest: order
+    ok 2 - order
+      ---
+      duration_ms: 0.01375
+      type: 'test'
+      ...
+    # Subtest: pull
+    ok 3 - pull
+      ---
+      duration_ms: 0.013916
+      type: 'test'
+      ...
+    # Subtest: status
+    ok 4 - status
+      ---
+      duration_ms: 0.016791
+      type: 'test'
+      ...
+    # Subtest: newness
+    ok 5 - newness
+      ---
+      duration_ms: 0.013875
+      type: 'test'
+      ...
+    # Subtest: complexity
+    ok 6 - complexity
+      ---
+      duration_ms: 0.013375
+      type: 'test'
+      ...
+    1..6
+ok 82 - diagnosis entrypoints refuse staff with diagnosis action revoked before any dependency call
+  ---
+  duration_ms: 0.166959
+  type: 'test'
+  ...
+# Subtest: finding definitions persist as one coded Basic carrying the interface JSON verbatim
+ok 83 - finding definitions persist as one coded Basic carrying the interface JSON verbatim
+  ---
+  duration_ms: 15.637459
+  type: 'test'
+  ...
+# Subtest: E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+ok 84 - E2 seeds ten entrance definitions with canonical Pachymetry and declarative documentation elements
+  ---
+  duration_ms: 6.464208
+  type: 'test'
+  ...
+# Subtest: DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+ok 85 - DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section
+  ---
+  duration_ms: 6.978666
+  type: 'test'
+  ...
+# Subtest: stored rows override compiled seeds by stableKey and survive a store restart
+ok 86 - stored rows override compiled seeds by stableKey and survive a store restart
+  ---
+  duration_ms: 6.645084
+  type: 'test'
+  ...
+# Subtest: a persisted practice option drives capture validation through the runtime dependency
+ok 87 - a persisted practice option drives capture validation through the runtime dependency
+  ---
+  duration_ms: 8.38125
+  type: 'test'
+  ...
+# Subtest: saving again updates the same Basic and deactivation materializes active false
+ok 88 - saving again updates the same Basic and deactivation materializes active false
+  ---
+  duration_ms: 6.3045
+  type: 'test'
+  ...
+# Subtest: save re-searches before create and updates a competing row that appeared
+ok 89 - save re-searches before create and updates a competing row that appeared
+  ---
+  duration_ms: 5.896416
+  type: 'test'
+  ...
+# Subtest: bad rows are skipped and duplicates resolve by lastUpdated then id
+ok 90 - bad rows are skipped and duplicates resolve by lastUpdated then id
+  ---
+  duration_ms: 10.921917
+  type: 'test'
+  ...
+# Subtest: a handler still receives working definitions when one stored row is garbage
+ok 91 - a handler still receives working definitions when one stored row is garbage
+  ---
+  duration_ms: 6.64375
+  type: 'test'
+  ...
+# Subtest: every definition-backed clinical-graph HTTP closure receives the persistent dependency
+ok 92 - every definition-backed clinical-graph HTTP closure receives the persistent dependency
+  ---
+  duration_ms: 2.441542
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 1: dilation permits deferral
+ok 93 - DEFER-1 guard 1: dilation permits deferral
+  ---
+  duration_ms: 6.388375
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+ok 94 - DEFER-1 guard 2: the complete seed has exactly one deferrable definition
+  ---
+  duration_ms: 5.954292
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+ok 95 - DEFER-1 guard 3: stateDefinition factory output does not grant deferral
+  ---
+  duration_ms: 5.525834
+  type: 'test'
+  ...
+1..95
+# tests 139
+# suites 0
+# pass 136
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2104.528625

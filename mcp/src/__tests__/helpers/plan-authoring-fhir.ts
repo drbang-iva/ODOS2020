@@ -1,4 +1,4 @@
-import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Reference, Resource } from "@medplum/fhirtypes";
 import type { ProtocolEndpointDeps } from "../../clinical-graph/protocol-endpoint.js";
 
 export class PlanAuthoringFhir {
@@ -12,6 +12,8 @@ export class PlanAuthoringFhir {
     const [system, value] = params?.identifier?.split("|") ?? [];
     const code = params?.code?.split("|").at(-1);
     const rows = this.rows.filter(row => row.resourceType === type &&
+      (!params?.patient || ("subject" in row && (row.subject as Reference | undefined)?.reference === (params.patient.startsWith("Patient/") ? params.patient : `Patient/${params.patient}`))) &&
+      (!params?.encounter || ("encounter" in row && row.encounter?.reference === params.encounter)) &&
       (!code || (row as Basic).code?.coding?.some(c => c.code === code)) &&
       (!value || (row as Basic).identifier?.some(i => i.system === system && i.value === value)));
     const result: Bundle<T> = { resourceType: "Bundle", type: "searchset", entry: rows.map(resource => ({ resource: structuredClone(resource) as T })) };

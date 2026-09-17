@@ -1,0 +1,958 @@
+TAP version 13
+# Subtest: captured suites match the suiteHashes provenance keys
+ok 1 - captured suites match the suiteHashes provenance keys
+  ---
+  duration_ms: 0.739666
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 1: customSectionEndpoint.test.ts
+ok 2 - history preserves legacy rows and exposes shared read-only projection 1: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.978292
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 2: customSectionEndpoint.test.ts
+ok 3 - history preserves legacy rows and exposes shared read-only projection 2: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.138916
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 3: customSectionEndpoint.test.ts
+ok 4 - history preserves legacy rows and exposes shared read-only projection 3: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.146792
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 4: customSectionEndpoint.test.ts
+ok 5 - history preserves legacy rows and exposes shared read-only projection 4: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.225083
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 5: customSectionEndpoint.test.ts
+ok 6 - history preserves legacy rows and exposes shared read-only projection 5: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.407125
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 6: customSectionEndpoint.test.ts
+not ok 7 - history preserves legacy rows and exposes shared read-only projection 6: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 8.086667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 7: customSectionEndpoint.test.ts
+not ok 8 - history preserves legacy rows and exposes shared read-only projection 7: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.63175
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 8: customSectionEndpoint.test.ts
+not ok 9 - history preserves legacy rows and exposes shared read-only projection 8: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.751167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 9: customSectionEndpoint.test.ts
+not ok 10 - history preserves legacy rows and exposes shared read-only projection 9: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.581583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 10: customSectionEndpoint.test.ts
+not ok 11 - history preserves legacy rows and exposes shared read-only projection 10: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.023833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 11: customSectionEndpoint.test.ts
+not ok 12 - history preserves legacy rows and exposes shared read-only projection 11: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.9805
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 12: customSectionEndpoint.test.ts
+not ok 13 - history preserves legacy rows and exposes shared read-only projection 12: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.823208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 13: customSectionEndpoint.test.ts
+not ok 14 - history preserves legacy rows and exposes shared read-only projection 13: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.81
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 14: customSectionEndpoint.test.ts
+not ok 15 - history preserves legacy rows and exposes shared read-only projection 14: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.599459
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 15: customSectionEndpoint.test.ts
+not ok 16 - history preserves legacy rows and exposes shared read-only projection 15: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.52925
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 16: customSectionEndpoint.test.ts
+not ok 17 - history preserves legacy rows and exposes shared read-only projection 16: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.265917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 17: customSectionEndpoint.test.ts
+not ok 18 - history preserves legacy rows and exposes shared read-only projection 17: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.5595
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 18: customSectionEndpoint.test.ts
+not ok 19 - history preserves legacy rows and exposes shared read-only projection 18: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.868875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 19: customSectionEndpoint.test.ts
+not ok 20 - history preserves legacy rows and exposes shared read-only projection 19: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.535958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 20: customSectionEndpoint.test.ts
+not ok 21 - history preserves legacy rows and exposes shared read-only projection 20: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.287208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 21: customSectionEndpoint.test.ts
+not ok 22 - history preserves legacy rows and exposes shared read-only projection 21: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.251833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 22: customSectionEndpoint.test.ts
+not ok 23 - history preserves legacy rows and exposes shared read-only projection 22: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.448209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 23: customSectionEndpoint.test.ts
+not ok 24 - history preserves legacy rows and exposes shared read-only projection 23: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.381708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 24: customSectionEndpoint.test.ts
+not ok 25 - history preserves legacy rows and exposes shared read-only projection 24: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.402375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 25: customSectionEndpoint.test.ts
+not ok 26 - history preserves legacy rows and exposes shared read-only projection 25: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.333666
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 26: customSectionEndpoint.test.ts
+not ok 27 - history preserves legacy rows and exposes shared read-only projection 26: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.3185
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 27: customSectionEndpoint.test.ts
+not ok 28 - history preserves legacy rows and exposes shared read-only projection 27: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.260834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 28: customSectionEndpoint.test.ts
+not ok 29 - history preserves legacy rows and exposes shared read-only projection 28: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.421375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 29: customSectionEndpoint.test.ts
+not ok 30 - history preserves legacy rows and exposes shared read-only projection 29: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.425958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 30: customSectionEndpoint.test.ts
+not ok 31 - history preserves legacy rows and exposes shared read-only projection 30: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.440541
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 31: customSectionEndpoint.test.ts
+not ok 32 - history preserves legacy rows and exposes shared read-only projection 31: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.4125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 32: customSectionEndpoint.test.ts
+not ok 33 - history preserves legacy rows and exposes shared read-only projection 32: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.425
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 33: customSectionEndpoint.test.ts
+not ok 34 - history preserves legacy rows and exposes shared read-only projection 33: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.339375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 34: customSectionEndpoint.test.ts
+not ok 35 - history preserves legacy rows and exposes shared read-only projection 34: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.4445
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 35: customSectionEndpoint.test.ts
+not ok 36 - history preserves legacy rows and exposes shared read-only projection 35: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.335333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 36: customSectionEndpoint.test.ts
+not ok 37 - history preserves legacy rows and exposes shared read-only projection 36: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.331709
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 37: customSectionEndpoint.test.ts
+not ok 38 - history preserves legacy rows and exposes shared read-only projection 37: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.227834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 38: customSectionEndpoint.test.ts
+not ok 39 - history preserves legacy rows and exposes shared read-only projection 38: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.201625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 39: customSectionEndpoint.test.ts
+ok 40 - history preserves legacy rows and exposes shared read-only projection 39: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.199625
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 40: customSectionEndpoint.test.ts
+ok 41 - history preserves legacy rows and exposes shared read-only projection 40: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.08475
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 41: customSectionEndpoint.test.ts
+ok 42 - history preserves legacy rows and exposes shared read-only projection 41: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.133208
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 42: customSectionEndpoint.test.ts
+ok 43 - history preserves legacy rows and exposes shared read-only projection 42: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.083834
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 43: customSectionEndpoint.test.ts
+ok 44 - history preserves legacy rows and exposes shared read-only projection 43: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.093167
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 44: customSectionEndpoint.test.ts
+ok 45 - history preserves legacy rows and exposes shared read-only projection 44: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.086625
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 45: customSectionEndpoint.test.ts
+ok 46 - history preserves legacy rows and exposes shared read-only projection 45: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.102375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 46: customSectionEndpoint.test.ts
+ok 47 - history preserves legacy rows and exposes shared read-only projection 46: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.149208
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 47: customSectionEndpoint.test.ts
+not ok 48 - history preserves legacy rows and exposes shared read-only projection 47: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.4025
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 48: customSectionEndpoint.test.ts
+ok 49 - history preserves legacy rows and exposes shared read-only projection 48: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.065709
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 49: customSectionEndpoint.test.ts
+not ok 50 - history preserves legacy rows and exposes shared read-only projection 49: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.592584
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 50: customSectionEndpoint.test.ts
+ok 51 - history preserves legacy rows and exposes shared read-only projection 50: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.094333
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 51: customSectionEndpoint.test.ts
+not ok 52 - history preserves legacy rows and exposes shared read-only projection 51: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.113458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:27:14)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 52: diagnosisLinkL2.test.ts
+ok 53 - history preserves legacy rows and exposes shared read-only projection 52: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.095167
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 53: diagnosisLinkL2.test.ts
+ok 54 - history preserves legacy rows and exposes shared read-only projection 53: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.058916
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 54: diagnosisLinkL2.test.ts
+ok 55 - history preserves legacy rows and exposes shared read-only projection 54: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.050333
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 55: diagnosisLinkL2.test.ts
+ok 56 - history preserves legacy rows and exposes shared read-only projection 55: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.046375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 56: diagnosisLinkL2.test.ts
+ok 57 - history preserves legacy rows and exposes shared read-only projection 56: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.04675
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 57: diagnosisLinkL2.test.ts
+ok 58 - history preserves legacy rows and exposes shared read-only projection 57: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044125
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 58: diagnosisLinkL2.test.ts
+ok 59 - history preserves legacy rows and exposes shared read-only projection 58: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.045834
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 59: diagnosisLinkL2.test.ts
+ok 60 - history preserves legacy rows and exposes shared read-only projection 59: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.043542
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 60: diagnosisLinkL2.test.ts
+ok 61 - history preserves legacy rows and exposes shared read-only projection 60: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.042125
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 61: diagnosisLinkL2.test.ts
+ok 62 - history preserves legacy rows and exposes shared read-only projection 61: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.040875
+  type: 'test'
+  ...
+1..62
+# tests 62
+# suites 0
+# pass 26
+# fail 36
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 344.614708

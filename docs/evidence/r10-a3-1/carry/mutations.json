@@ -1,0 +1,333 @@
+[
+  {
+    "id": "carry-W73-homes",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "findings: context.projection.preRebuild",
+        "after": "findings: true"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W73|T1 previous",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W74-canonical",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "            const response = findingCommandResponse(findings);",
+        "after": "            for (const outcome of findings.outcomes) { if (outcome.reference) { const row = await staff.fhir.read<Observation>(\"Observation\", outcome.reference.slice(12)); await staff.fhir.update(\"Observation\", row.id!, { ...row, identifier: undefined, component: row.component?.filter(c => !c.code.coding?.some(v => v.code === \"R10_CURRENT_META\")) }, {\"If-Match\": `W/\"${row.meta?.versionId}\"`}); } }\n            const response = findingCommandResponse(findings);"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W74|T2 carry|pull standalone steps preserve|pull excludes an entered-in-error",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "mcp/tests/diagnosisCarryForward.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W75-version",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+        "before": "const changed = current.meta?.versionId !== version;",
+        "after": "const changed = false;"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W75|T3 later",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W79-prebuild",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (sourceContext.projection.preRebuild || destinationContext.projection.preRebuild)",
+        "after": "if (false)"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W79",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W91-closed",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (isClosedEncounter(initialCurrentEncounter))",
+        "after": "if (false)"
+      },
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (isClosedEncounter(scopedDestination))",
+        "after": "if (false)"
+      },
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (isClosedEncounter(destinationContext.encounter))",
+        "after": "if (false)"
+      },
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (isClosedEncounter(currentEncounter))",
+        "after": "if (false)"
+      },
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (isClosedEncounter(freshEncounter))",
+        "after": "if (false)"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W91",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W101-conditional",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "\"If-None-Exist\": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}`,",
+        "after": ""
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W101|W123",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W102-fingerprint",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "commandPlan.plan.fingerprint !== fingerprint || commandPlan.plan.actor !== staff.staffReference",
+        "after": "commandPlan.plan.actor !== staff.staffReference"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W102",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W103-frozen",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "baseline: target.destinationBaseline,",
+        "after": "baseline: destinationContext.projection.currentFacts.find(f => currentFindingIdentifier(f.key).value === currentFindingIdentifier(target.key).value)?.baseline ?? {kind:\"absent\",key:target.key},"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W103",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W104-partial-witness",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "const versions = carryOutcomeVersions(plan, findings);",
+        "after": "const versions = carryOutcomeVersions(plan, findings) ?? Object.fromEntries(findings.outcomes.filter(o => o.reference).map(o => [o.reference!, o.versionId!]));"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W104 frozen|W103 W104",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W113-both-eyes",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "sourceContext.projection.currentFacts.filter(f => f.status === \"live\" && f.homes.includes(request.sourceConditionReference))",
+        "after": "sourceContext.projection.currentFacts.filter(f => f.eye === \"OD\" && f.status === \"live\" && f.homes.includes(request.sourceConditionReference))"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W74 W101 W113",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W114-stored",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "const definitions = await new FhirFindingDefinitionStore(staff.fhir as unknown as ConstructorParameters<typeof FhirFindingDefinitionStore>[0]).list();",
+        "after": "const definitions = await new FhirFindingDefinitionStore({ ...staff.fhir, search: async () => ({resourceType:\"Bundle\",type:\"searchset\",entry:[]}) } as any).list();"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W114",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W123-command-independent",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "carryHash([1, currentEncounterId, identityKey(identity)])",
+        "after": "carryHash([1, currentEncounterId, identityKey(identity), request.commandId])"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W123",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W124-resume",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (condition) {\n            const resolved = await inspectOtherPlans();",
+        "after": "if (condition) return {status:200,body:{conditionReference:`Condition/${condition.id}`,alreadyPresent:true}};\n        if (condition) {\n            const resolved = await inspectOtherPlans();"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W124|standalone .* failure .* keeps exact persisted",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/diagnosisCarryForward.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W125-replan",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "if (other && !commandPlan && !request.replan)",
+        "after": "if (other && !commandPlan)"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 replan accepts",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W125-unchanged",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+        "before": "[\"applied\", \"already-applied\", \"unchanged\"].includes(outcome.status)",
+        "after": "[\"applied\", \"already-applied\"].includes(outcome.status)"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 replan accepts",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W125-audit",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+        "before": "|| !outcome.versionId || outcome.auditPending ||",
+        "after": "|| !outcome.versionId ||"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 unchanged auditPending",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W125-missing-version",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+        "before": "|| !outcome.versionId || outcome.auditPending ||",
+        "after": "|| outcome.auditPending ||"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 unchanged missing-version",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "carry-W126-writer-version",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "const resource = carryProvenance(plan, \"findings\", Object.keys(versions), CARRY_VERSIONS_URL, versions);",
+        "after": "for (const ref of Object.keys(versions)) versions[ref] = (await staff.fhir.read<Observation>(\"Observation\", ref.slice(12))).meta!.versionId!;\n            const resource = carryProvenance(plan, \"findings\", Object.keys(versions), CARRY_VERSIONS_URL, versions);"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W75 W126",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "failurePattern": "not ok"
+  }
+]

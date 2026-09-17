@@ -1,0 +1,18 @@
+docker ps -q --filter "name=^odos-r10-a3-1-" | xargs -r docker stop
+
+Before:
+eb7415f56212 odos-r10-a3-1-postgres-1
+ced5b6a337d4 odos-r10-a3-1-medplum-1
+2f75e860834c odos-r10-a3-1-redis-1
+
+Stop output:
+eb7415f56212
+ced5b6a337d4
+2f75e860834c
+
+After:
+odos-r10-a3-1-postgres-1 Exited (0) Less than a second ago
+odos-r10-a3-1-medplum-1 Exited (0) Less than a second ago
+odos-r10-a3-1-redis-1 Exited (0) Less than a second ago
+
+Exit: 0

@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: pull standalone steps preserve source clinical state, typed facts and rank gaps
+ok 1 - pull standalone steps preserve source clinical state, typed facts and rank gaps
+  ---
+  duration_ms: 43.764208
+  type: 'test'
+  ...
+# Subtest: pull excludes an entered-in-error source Observation
+ok 2 - pull excludes an entered-in-error source Observation
+  ---
+  duration_ms: 15.39625
+  type: 'test'
+  ...
+# Subtest: W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+ok 3 - W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+  ---
+  duration_ms: 19.316917
+  type: 'test'
+  ...
+# Subtest: T2 carry pull preserves canonical identity typed qualifiers and destination home
+ok 4 - T2 carry pull preserves canonical identity typed qualifiers and destination home
+  ---
+  duration_ms: 17.381333
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 372.661625

@@ -1,0 +1,206 @@
+[
+  {
+    "id": "ocular-W66",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W66",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W67",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W67",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W68",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W68",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W69",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W69",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W70",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W70",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W72",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W72 current",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W91",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W91",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W96",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W96 TBUT",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W97",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W97 exact",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W98",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W98",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W99",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W99",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W100",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W100",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W110",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W110",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W114",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W114",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W120",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W120",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W121",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W121",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "ocular-W122",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W122",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  }
+]

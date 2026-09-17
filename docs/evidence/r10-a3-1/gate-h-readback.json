@@ -1,0 +1,167 @@
+{
+  "server": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "projectId": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+  "observations": [
+    {
+      "role": "provider",
+      "path": "Observation/b280ae02-bb61-433d-a31e-3fc24d9b4ba1",
+      "status": 200,
+      "body": {
+        "resourceType": "Observation",
+        "meta": {
+          "versionId": "25351705-4673-420c-a679-1dd52b8f48b1",
+          "lastUpdated": "2026-09-17T01:05:50.108Z"
+        },
+        "status": "amended",
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "2d5c15ad84554cc9bbc93283a969402ca2e8b1585b0a188ead912185dad9d2cb"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/c52a7cee-75a0-4f58-b68a-a67f33a15fc9"
+        },
+        "valueBoolean": true,
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"c52a7cee-75a0-4f58-b68a-a67f33a15fc9\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_OPERATION",
+                  "display": "R10_OPERATION"
+                }
+              ],
+              "text": "R10_OPERATION"
+            },
+            "valueString": "{\"commandId\":\"8d81c3e3-dcc6-4934-be67-530fd55852cb\",\"target\":\"synthetic\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:05:50.081Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "synthetic-detail",
+                  "display": "synthetic-detail"
+                }
+              ],
+              "text": "synthetic-detail"
+            },
+            "valueString": "unchanged"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "id": "b280ae02-bb61-433d-a31e-3fc24d9b4ba1",
+        "note": [
+          {
+            "time": "2026-09-17T01:05:50.099Z",
+            "authorReference": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            },
+            "text": "Synthetic gate amendment"
+          }
+        ]
+      }
+    },
+    {
+      "role": "seeder",
+      "path": "Provenance/a109f56b-67e1-4273-bd2e-e1a7904be237",
+      "status": 404,
+      "body": {
+        "resourceType": "OperationOutcome",
+        "id": "not-found",
+        "issue": [
+          {
+            "severity": "error",
+            "code": "not-found",
+            "details": {
+              "text": "Not found"
+            }
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://medplum.com/fhir/StructureDefinition/tracing",
+            "extension": [
+              {
+                "url": "requestId",
+                "valueId": "f9d53e7d-92d9-4a22-bcf9-12e3a3cd7226"
+              },
+              {
+                "url": "traceId",
+                "valueId": "6632d4c2-db4b-4f4c-9ea0-2bcf348cd1e3"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "observationReadStatus": 200,
+    "beforeStatus": "final",
+    "afterStatus": "amended",
+    "versionAdvanced": true,
+    "preserved": {
+      "identifier": true,
+      "component": true,
+      "extension": true
+    },
+    "provenanceReadStatus": 404,
+    "transactionEntryStatuses": [
+      "200",
+      "403"
+    ]
+  }
+}

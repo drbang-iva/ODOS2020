@@ -1,0 +1,35 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 167.570708
+  type: 'test'
+  ...
+# Subtest: V24 void finished closed before repair
+ok 2 - V24 void finished closed before repair
+  ---
+  duration_ms: 27.747916
+  type: 'test'
+  ...
+# Subtest: V24 void cancelled closed before repair
+ok 3 - V24 void cancelled closed before repair
+  ---
+  duration_ms: 13.923958
+  type: 'test'
+  ...
+# Subtest: V24 void entered-in-error closed before repair
+ok 4 - V24 void entered-in-error closed before repair
+  ---
+  duration_ms: 13.641167
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 226.263042

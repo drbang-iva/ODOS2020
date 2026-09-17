@@ -1,0 +1,991 @@
+{
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "service/G-h",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T01:21:20.673Z",
+      "method": "POST",
+      "path": "/fhir/R4/Encounter",
+      "requestHeaders": {},
+      "end": "2026-09-17T01:21:20.703Z",
+      "status": 201,
+      "etag": "W/\"8cbe98aa-9ec5-4bd7-a3dc-e133a1d074e5\"",
+      "location": "http://127.0.0.1:29131/fhir/R4/Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14",
+      "request": {
+        "resourceType": "Encounter",
+        "status": "in-progress",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        }
+      },
+      "response": {
+        "resourceType": "Encounter",
+        "status": "in-progress",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "d7edc348-80f6-4874-8bf1-6430a1aa6a14",
+        "meta": {
+          "versionId": "8cbe98aa-9ec5-4bd7-a3dc-e133a1d074e5",
+          "lastUpdated": "2026-09-17T01:21:20.679Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "service/G-h",
+      "role": "seeder",
+      "login": "r10-a3-1-seeder@example.invalid",
+      "start": "2026-09-17T01:21:20.703Z",
+      "method": "POST",
+      "path": "/fhir/R4/Observation",
+      "requestHeaders": {},
+      "end": "2026-09-17T01:21:20.723Z",
+      "status": 201,
+      "etag": "W/\"1bb4c717-33b2-437a-8b8e-1caaa117cfff\"",
+      "location": "http://127.0.0.1:29131/fhir/R4/Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+      "request": {
+        "resourceType": "Observation",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+        },
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14"
+        },
+        "valueBoolean": true,
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"d7edc348-80f6-4874-8bf1-6430a1aa6a14\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_OPERATION",
+                  "display": "R10_OPERATION"
+                }
+              ],
+              "text": "R10_OPERATION"
+            },
+            "valueString": "{\"commandId\":\"47b1d825-2837-402b-9702-2fc7f33e5d79\",\"target\":\"finding:997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:21:20.703Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "synthetic-detail",
+                  "display": "synthetic-detail"
+                }
+              ],
+              "text": "synthetic-detail"
+            },
+            "valueString": "unchanged"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Observation",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "1bb4c717-33b2-437a-8b8e-1caaa117cfff",
+          "lastUpdated": "2026-09-17T01:21:20.708Z",
+          "author": {
+            "reference": "Practitioner/46f92fa0-7944-420e-8dc8-ab2448c2dca7",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14"
+        },
+        "valueBoolean": true,
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"d7edc348-80f6-4874-8bf1-6430a1aa6a14\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_OPERATION",
+                  "display": "R10_OPERATION"
+                }
+              ],
+              "text": "R10_OPERATION"
+            },
+            "valueString": "{\"commandId\":\"47b1d825-2837-402b-9702-2fc7f33e5d79\",\"target\":\"finding:997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:21:20.703Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "synthetic-detail",
+                  "display": "synthetic-detail"
+                }
+              ],
+              "text": "synthetic-detail"
+            },
+            "valueString": "unchanged"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "id": "aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "service/G-h",
+      "role": "seeder",
+      "login": "r10-a3-1-seeder@example.invalid",
+      "start": "2026-09-17T01:21:20.723Z",
+      "method": "PUT",
+      "path": "/fhir/R4/Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+      "requestHeaders": {
+        "If-Match": "W/\"1bb4c717-33b2-437a-8b8e-1caaa117cfff\""
+      },
+      "end": "2026-09-17T01:21:20.737Z",
+      "status": 200,
+      "etag": "W/\"30df3d85-497d-4f3a-8a1a-ca30bbd19939\"",
+      "location": null,
+      "request": {
+        "resourceType": "Observation",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "1bb4c717-33b2-437a-8b8e-1caaa117cfff",
+          "lastUpdated": "2026-09-17T01:21:20.708Z",
+          "author": {
+            "reference": "Practitioner/46f92fa0-7944-420e-8dc8-ab2448c2dca7",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "final",
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14"
+        },
+        "valueBoolean": true,
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"d7edc348-80f6-4874-8bf1-6430a1aa6a14\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_OPERATION",
+                  "display": "R10_OPERATION"
+                }
+              ],
+              "text": "R10_OPERATION"
+            },
+            "valueString": "{\"commandId\":\"47b1d825-2837-402b-9702-2fc7f33e5d79\",\"target\":\"finding:997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:21:20.703Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "synthetic-detail",
+                  "display": "synthetic-detail"
+                }
+              ],
+              "text": "synthetic-detail"
+            },
+            "valueString": "unchanged"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "id": "aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+      },
+      "response": {
+        "resourceType": "Observation",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "30df3d85-497d-4f3a-8a1a-ca30bbd19939",
+          "lastUpdated": "2026-09-17T01:21:20.730Z",
+          "author": {
+            "reference": "Practitioner/46f92fa0-7944-420e-8dc8-ab2448c2dca7",
+            "display": "Medplum Admin"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "final",
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14"
+        },
+        "valueBoolean": true,
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"d7edc348-80f6-4874-8bf1-6430a1aa6a14\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_OPERATION",
+                  "display": "R10_OPERATION"
+                }
+              ],
+              "text": "R10_OPERATION"
+            },
+            "valueString": "{\"commandId\":\"47b1d825-2837-402b-9702-2fc7f33e5d79\",\"target\":\"finding:997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:21:20.703Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "synthetic-detail",
+                  "display": "synthetic-detail"
+                }
+              ],
+              "text": "synthetic-detail"
+            },
+            "valueString": "unchanged"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "id": "aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "service/G-h",
+      "role": "service",
+      "login": "r10-a3-1-seeder@example.invalid",
+      "principalReference": "Practitioner/46f92fa0-7944-420e-8dc8-ab2448c2dca7",
+      "method": "POST",
+      "path": "/fhir/R4",
+      "status": 200,
+      "request": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+          {
+            "resource": {
+              "resourceType": "Binary",
+              "contentType": "application/json-patch+json",
+              "data": "W3sib3AiOiJ0ZXN0IiwicGF0aCI6Ii9zdGF0dXMiLCJ2YWx1ZSI6ImZpbmFsIn0seyJvcCI6InJlcGxhY2UiLCJwYXRoIjoiL3N0YXR1cyIsInZhbHVlIjoiYW1lbmRlZCJ9LHsib3AiOiJhZGQiLCJwYXRoIjoiL25vdGUiLCJ2YWx1ZSI6W3sidGltZSI6IjIwMjYtMDktMTdUMDE6MjE6MjAuNzM4WiIsImF1dGhvclJlZmVyZW5jZSI6eyJyZWZlcmVuY2UiOiJQcmFjdGl0aW9uZXIvNDk5NGViNjYtZDdmNC00ODRjLThkZTUtYWU4NmMxZTVjMjgyIn0sInRleHQiOiJTeW50aGV0aWMgZ2F0ZSBhbWVuZG1lbnQifV19XQ=="
+            },
+            "request": {
+              "method": "PATCH",
+              "url": "Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+              "ifMatch": "W/\"30df3d85-497d-4f3a-8a1a-ca30bbd19939\""
+            }
+          },
+          {
+            "resource": {
+              "resourceType": "Provenance",
+              "target": [
+                {
+                  "reference": "Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+                },
+                {
+                  "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                }
+              ],
+              "recorded": "2026-09-17T01:21:20.738Z",
+              "policy": [
+                "https://odos2020.com/fhir/Policy/clinical-amendment"
+              ],
+              "activity": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+                    "code": "UPDATE",
+                    "display": "Update"
+                  }
+                ],
+                "text": "Update"
+              },
+              "agent": [
+                {
+                  "type": {
+                    "coding": [
+                      {
+                        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                        "code": "author",
+                        "display": "Author"
+                      }
+                    ],
+                    "text": "Author"
+                  },
+                  "role": [
+                    {
+                      "text": "clinician",
+                      "coding": [
+                        {
+                          "system": "https://odos2020.com/fhir/CodeSystem/role",
+                          "code": "clinician",
+                          "display": "clinician"
+                        }
+                      ]
+                    }
+                  ],
+                  "who": {
+                    "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+                  }
+                }
+              ],
+              "signature": [
+                {
+                  "type": [
+                    {
+                      "system": "urn:iso-astm:E1762-95:2013",
+                      "code": "1.2.840.10065.1.12.1.1",
+                      "display": "Author's Signature"
+                    }
+                  ],
+                  "when": "2026-09-17T01:21:20.738Z",
+                  "who": {
+                    "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+                  },
+                  "sigFormat": "application/jose",
+                  "data": "c3ludGhldGljLXNpZ25hdHVyZQ=="
+                }
+              ],
+              "id": "0b00be2b-26ba-4a92-a8e5-ab0f404c808b"
+            },
+            "request": {
+              "method": "PUT",
+              "url": "Provenance/0b00be2b-26ba-4a92-a8e5-ab0f404c808b"
+            }
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Bundle",
+        "type": "transaction-response",
+        "entry": [
+          {
+            "response": {
+              "outcome": {
+                "resourceType": "OperationOutcome",
+                "id": "ok",
+                "issue": [
+                  {
+                    "severity": "information",
+                    "code": "informational",
+                    "details": {
+                      "text": "All OK"
+                    }
+                  }
+                ]
+              },
+              "status": "200",
+              "location": "Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+            },
+            "resource": {
+              "resourceType": "Observation",
+              "meta": {
+                "versionId": "8316dc7e-0d26-4b8c-8aec-c528df808945",
+                "lastUpdated": "2026-09-17T01:21:20.764Z"
+              },
+              "status": "amended",
+              "identifier": [
+                {
+                  "system": "urn:odos:current-finding:v1",
+                  "value": "997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6"
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                    "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+                    "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+                  }
+                ],
+                "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+              },
+              "subject": {
+                "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+              },
+              "encounter": {
+                "reference": "Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14"
+              },
+              "valueBoolean": true,
+              "component": [
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "R10_CURRENT_META",
+                        "display": "R10_CURRENT_META"
+                      }
+                    ],
+                    "text": "R10_CURRENT_META"
+                  },
+                  "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"d7edc348-80f6-4874-8bf1-6430a1aa6a14\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+                },
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "R10_OPERATION",
+                        "display": "R10_OPERATION"
+                      }
+                    ],
+                    "text": "R10_OPERATION"
+                  },
+                  "valueString": "{\"commandId\":\"47b1d825-2837-402b-9702-2fc7f33e5d79\",\"target\":\"finding:997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:21:20.703Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+                },
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "synthetic-detail",
+                        "display": "synthetic-detail"
+                      }
+                    ],
+                    "text": "synthetic-detail"
+                  },
+                  "valueString": "unchanged"
+                }
+              ],
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+                  "valueCodeableConcept": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OD",
+                        "display": "Right eye"
+                      }
+                    ],
+                    "text": "Right eye"
+                  }
+                }
+              ],
+              "id": "aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+              "note": [
+                {
+                  "time": "2026-09-17T01:21:20.738Z",
+                  "authorReference": {
+                    "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+                  },
+                  "text": "Synthetic gate amendment"
+                }
+              ]
+            }
+          },
+          {
+            "response": {
+              "outcome": {
+                "resourceType": "OperationOutcome",
+                "id": "ok",
+                "issue": [
+                  {
+                    "severity": "information",
+                    "code": "informational",
+                    "details": {
+                      "text": "All OK"
+                    }
+                  }
+                ]
+              },
+              "status": "200",
+              "location": "Provenance/0b00be2b-26ba-4a92-a8e5-ab0f404c808b"
+            },
+            "resource": {
+              "resourceType": "Provenance",
+              "target": [
+                {
+                  "reference": "Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+                },
+                {
+                  "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                }
+              ],
+              "recorded": "2026-09-17T01:21:20.738Z",
+              "policy": [
+                "https://odos2020.com/fhir/Policy/clinical-amendment"
+              ],
+              "activity": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+                    "code": "UPDATE",
+                    "display": "Update"
+                  }
+                ],
+                "text": "Update"
+              },
+              "agent": [
+                {
+                  "type": {
+                    "coding": [
+                      {
+                        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                        "code": "author",
+                        "display": "Author"
+                      }
+                    ],
+                    "text": "Author"
+                  },
+                  "role": [
+                    {
+                      "text": "clinician",
+                      "coding": [
+                        {
+                          "system": "https://odos2020.com/fhir/CodeSystem/role",
+                          "code": "clinician",
+                          "display": "clinician"
+                        }
+                      ]
+                    }
+                  ],
+                  "who": {
+                    "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+                  }
+                }
+              ],
+              "signature": [
+                {
+                  "type": [
+                    {
+                      "system": "urn:iso-astm:E1762-95:2013",
+                      "code": "1.2.840.10065.1.12.1.1",
+                      "display": "Author's Signature"
+                    }
+                  ],
+                  "when": "2026-09-17T01:21:20.738Z",
+                  "who": {
+                    "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+                  },
+                  "sigFormat": "application/jose",
+                  "data": "c3ludGhldGljLXNpZ25hdHVyZQ=="
+                }
+              ],
+              "id": "0b00be2b-26ba-4a92-a8e5-ab0f404c808b",
+              "meta": {
+                "versionId": "5fb161ae-215c-400c-8a97-daf95536e176",
+                "lastUpdated": "2026-09-17T01:21:20.755Z"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "service/G-h",
+      "role": "service",
+      "login": "r10-a3-1-seeder@example.invalid",
+      "principalReference": "Practitioner/46f92fa0-7944-420e-8dc8-ab2448c2dca7",
+      "method": "GET",
+      "path": "/fhir/R4/Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+      "status": 200,
+      "response": {
+        "resourceType": "Observation",
+        "meta": {
+          "versionId": "8316dc7e-0d26-4b8c-8aec-c528df808945",
+          "lastUpdated": "2026-09-17T01:21:20.764Z"
+        },
+        "status": "amended",
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/d7edc348-80f6-4874-8bf1-6430a1aa6a14"
+        },
+        "valueBoolean": true,
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"8cb9b257-b787-4005-95f7-155422d4127d\",\"encounterId\":\"d7edc348-80f6-4874-8bf1-6430a1aa6a14\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_OPERATION",
+                  "display": "R10_OPERATION"
+                }
+              ],
+              "text": "R10_OPERATION"
+            },
+            "valueString": "{\"commandId\":\"47b1d825-2837-402b-9702-2fc7f33e5d79\",\"target\":\"finding:997cfd79e48efa6a96cca4de4120490f57df89c05b784a9941c9f30ea9d038b6\",\"digest\":\"b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282\",\"recorded\":\"2026-09-17T01:21:20.703Z\",\"activity\":\"CREATE\",\"targetReferences\":[\"self\",\"Patient/8cb9b257-b787-4005-95f7-155422d4127d\"]}}"
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "synthetic-detail",
+                  "display": "synthetic-detail"
+                }
+              ],
+              "text": "synthetic-detail"
+            },
+            "valueString": "unchanged"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "id": "aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+        "note": [
+          {
+            "time": "2026-09-17T01:21:20.738Z",
+            "authorReference": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            },
+            "text": "Synthetic gate amendment"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "service/G-h",
+      "role": "service",
+      "login": "r10-a3-1-seeder@example.invalid",
+      "principalReference": "Practitioner/46f92fa0-7944-420e-8dc8-ab2448c2dca7",
+      "method": "GET",
+      "path": "/fhir/R4/Provenance/0b00be2b-26ba-4a92-a8e5-ab0f404c808b",
+      "status": 200,
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4"
+          },
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          }
+        ],
+        "recorded": "2026-09-17T01:21:20.738Z",
+        "policy": [
+          "https://odos2020.com/fhir/Policy/clinical-amendment"
+        ],
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "UPDATE",
+              "display": "Update"
+            }
+          ],
+          "text": "Update"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "role": [
+              {
+                "text": "clinician",
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/role",
+                    "code": "clinician",
+                    "display": "clinician"
+                  }
+                ]
+              }
+            ],
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "signature": [
+          {
+            "type": [
+              {
+                "system": "urn:iso-astm:E1762-95:2013",
+                "code": "1.2.840.10065.1.12.1.1",
+                "display": "Author's Signature"
+              }
+            ],
+            "when": "2026-09-17T01:21:20.738Z",
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            },
+            "sigFormat": "application/jose",
+            "data": "c3ludGhldGljLXNpZ25hdHVyZQ=="
+          }
+        ],
+        "id": "0b00be2b-26ba-4a92-a8e5-ab0f404c808b",
+        "meta": {
+          "versionId": "5fb161ae-215c-400c-8a97-daf95536e176",
+          "lastUpdated": "2026-09-17T01:21:20.755Z"
+        }
+      }
+    }
+  ]
+}

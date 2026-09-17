@@ -1,0 +1,20 @@
+
+> odos2020@0.0.1 preflight
+> tsx scripts/shipped-cpt-guard.ts && tsx scripts/fhir-read-grant-check.ts && tsx scripts/preflight-lint.ts
+
+Shipped CPT literal guard: clean.
+/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429
+      throw new Error(
+            ^
+
+Error: Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription — MCP process service client.. Remove or update the entry explicitly.
+    at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429:13)
+    at Array.map (<anonymous>)
+    at matchExactWriteInventory (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:426:29)
+    at runFhirReadGrantCheck (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:333:41)
+    at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:743:18)
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.22.3

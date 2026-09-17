@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W103 W104 frozen retry stays stale and partial carry has no findings witness
+not ok 1 - W103 W104 frozen retry stays stale and partial carry has no findings witness
+  ---
+  duration_ms: 31.0705
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:84:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"applied","conditionReference":"Condition/20ee8d18-48b7-4c06-8cd8-d2b4c0fb1760","findings":{"result":"command","commandId":"e5c0f1d6-f754-4c7a-8586-bcdc37e56534","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"confirmed","status":"already-applied","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/f4c7a932-887a-42d4-9154-89d363259ed1","versionId":"bde51956-2d35-483c-abf6-977ca0120042"},{"clinicalWrite":"confirmed","status":"applied","target":"finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf","reference":"Observation/competing","versionId":"9ca5ec7c-858c-4c17-be5b-62abe1cdcc12"}]}}
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:99:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 206.778125

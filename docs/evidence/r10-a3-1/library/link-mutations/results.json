@@ -1,0 +1,13 @@
+[
+  {
+    "id": "link-l2-V30-supports",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=OH-3|posterior plain drusen",
+      "mcp/tests/diagnosisLinkL2.test.ts"
+    ]
+  }
+]

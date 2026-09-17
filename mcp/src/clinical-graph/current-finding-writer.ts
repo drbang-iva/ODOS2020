@@ -10,8 +10,9 @@ import { DIAGNOSIS_FINDING_REASSERTION_CODE, ODOS_PROVENANCE_ACTIVITY_CODE_SYSTE
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
 import { buildFindingReadAliases } from "./finding-read-aliases.js";
 import { classifyFindingObservation, currentFindingIdentifier, currentFindingKeySchema, findPendingAudits, findingAuditKey, findingQualifiers, matchesFindingAudit,
-  FINDING_OPERATION_AUDIT_SYSTEM, observationLaterality, parseCurrentFindingEnvelope, parseFindingOperation, SUPPORTS_DIAGNOSIS_URL,
-  type CurrentFindingKey, type FindingOperation } from "./current-finding-identity.js";
+  FINDING_PANEL_SYSTEM, FINDING_OPERATION_AUDIT_SYSTEM, observationLaterality, parseCurrentFindingEnvelope, parseFindingOperation, SUPPORTS_DIAGNOSIS_URL,
+  ownsFact, findingPanelIdentifier, findingPanelTargetId, currentFindingPanelKeySchema, parseFindingPanelEnvelope, normalizeFindingPanelState, findingPanelComponents, readFindingPanelState, matchesFindingAuditContent,
+  type FindingPanelKey, type FindingPanelState, type CurrentFindingKey, type FindingOperation } from "./current-finding-identity.js";
 import { loadEncounterFindingState, projectCurrentFindings, type EncounterFindingState, type FindingBaseline, type CurrentFindingProjection } from "./current-finding-reader.js";
 import { isLiveObservation } from "./observation-liveness.js";
 
@@ -20,6 +21,7 @@ export { findPendingAudits } from "./current-finding-identity.js";
 export type FindingCommandTarget =
   | { kind: "fact"; key: CurrentFindingKey; baseline?: FindingBaseline | { kind: "absent"; key: CurrentFindingKey };
       state: { status: "live" | "retired"; presence: "present" | "absent"; qualifiers: Record<string, FindingQualifierValue>; homes: string[] } }
+  | { kind: "panel"; key: FindingPanelKey; baseline?: Extract<FindingBaseline,{kind:"canonical"}> | {kind:"absent";key:FindingPanelKey}; state: FindingPanelState }
   | { kind: "reassert"; key: CurrentFindingKey; baseline?: FindingBaseline }
   | { kind: "legacy-retire"; sourceReference: string; baseline?: { versionId: string } };
 export interface FindingCommand { commandId: string; patientReference: string; encounterReference: string; surface: string; targets: FindingCommandTarget[] }
@@ -47,6 +49,13 @@ const homePattern = /^Condition\/[A-Za-z0-9.-]+$/;
 
 export async function executeFindingCommand(deps: FindingCommandDeps, command: FindingCommand): Promise<FindingCommandResult> {
   validateCommand(command);
+  for (const target of command.targets) {
+    if(target.kind === "legacy-retire") continue;
+    const definition=deps.definitions.find(d=>d.stableKey===target.key.stableKey);
+    if(target.kind === "panel") { normalizeFindingPanelState(target.state,definition!); continue; }
+    const field=definition && customFieldEntries(definition,true).find(f=>f.localCode===target.key.fieldCode);
+    if(!definition || !field || !ownsFact(definition,field)) throw Object.assign(new Error("not-a-shared-finding"),{status:400,code:"not-a-shared-finding"});
+  }
   const outcomes: FindingOutcome[] = Array(command.targets.length);
   const ordered = command.targets.map((target,index)=>({target,index})).sort((a,b)=>
     Number(a.target.kind==="legacy-retire")-Number(b.target.kind==="legacy-retire") || a.index-b.index);
@@ -75,7 +84,7 @@ export class FindingReplayLookupError extends Error {
   constructor() { super("Reassertion replay audit state could not be verified."); }
 }
 export type FindingReplayClassification = "exact-replay" | "not-replay" | "reused-with-different-content";
-export async function classifyReplay(state: Complete & { fhir?: FindingCommandDeps["fhir"] }, command: FindingCommand,
+export async function classifyReplay(state: Complete & { fhir?: FindingCommandDeps["fhir"]; staffReference?: string }, command: FindingCommand,
   target: FindingCommandTarget): Promise<FindingReplayClassification> {
   const id=targetId(target);
   if(target.kind==="reassert") {
@@ -87,17 +96,16 @@ export async function classifyReplay(state: Complete & { fhir?: FindingCommandDe
     const key=findingAuditKey(command.commandId,id,"reassertion",digest);
     try {
       const witnesses=await findAuditsByTag({fhir:state.fhir},REASSERT_COMMAND_SYSTEM,reassertCommandWitness(command.commandId,id));
-      if(witnesses.length)return witnesses.some(audit=>matchesFindingAudit(audit,key,reference))?"exact-replay":"reused-with-different-content";
-      if(!await auditExists({fhir:state.fhir},key,reference))return "not-replay";
+      const audits=await findAuditsByTag({fhir:state.fhir},FINDING_OPERATION_AUDIT_SYSTEM,key);
+      const candidates=[...witnesses,...audits];
+      if(candidates.length) return candidates.every(a=>matchesReassertAudit(a,command,id,reference,key,state.staffReference ?? "")) ? "exact-replay" : "reused-with-different-content";
+      return "not-replay";
     }
     catch { throw new FindingReplayLookupError(); }
-    const observation=state.observations.find(o=>`Observation/${o.id}`===reference);
-    const fact=projectCurrentFindings(state).currentFacts.find(f=>f.projectionKey===id);
-    return observation?.meta?.versionId===baseline.versionId && !!fact && matchesBaseline(baseline,target.key,
-      baseline.kind==="canonical"?observation:undefined,fact,state)?"exact-replay":"not-replay";
+
   }
   const owners=state.observations.filter(o=>target.kind==="legacy-retire"?`Observation/${o.id}`===target.sourceReference:
-    o.identifier?.some(i=>i.system===currentFindingIdentifier(target.key).system && i.value===currentFindingIdentifier(target.key).value));
+    o.identifier?.some(i=>i.system===targetIdentifier(target.key).system && i.value===targetIdentifier(target.key).value));
   if(owners.length!==1)return "not-replay";
   const owner=owners[0],marker=parseFindingOperation(owner);
   if(marker?.commandId!==command.commandId)return "not-replay";
@@ -105,6 +113,13 @@ export async function classifyReplay(state: Complete & { fhir?: FindingCommandDe
   if(target.kind==="legacy-retire") {
     if(marker.digest!==sha({sourceReference:target.sourceReference,status:"entered-in-error"}))return "reused-with-different-content";
     return owner.status==="entered-in-error"?"exact-replay":"not-replay";
+  }
+  if(target.kind==="panel") {
+    const definition=state.definitions.find(d=>d.stableKey===target.key.stableKey);
+    if(!definition)return "not-replay";
+    const digest=sha(normalizeFindingPanelState(target.state,definition));
+    if(marker.digest!==digest)return "reused-with-different-content";
+    return parseFindingPanelEnvelope(owner).status==="valid" && owner.status==="preliminary" && sha(readFindingPanelState(owner,definition))===digest ? "exact-replay" : "not-replay";
   }
   const row=state.catalog.find(r=>r.atomicFindingId===`${target.key.stableKey}::${target.key.fieldCode}::${target.key.optionCode}`);
   const definition=state.definitions.find(d=>d.stableKey===target.key.stableKey);
@@ -115,13 +130,13 @@ export async function classifyReplay(state: Complete & { fhir?: FindingCommandDe
 }
 
 export async function repairPendingAudits(deps: FindingCommandDeps,
-  request: Pick<FindingCommand,"commandId"|"patientReference"|"encounterReference">): Promise<FindingCommandResult> {
+  request: Pick<FindingCommand,"commandId"|"patientReference"|"encounterReference">, options?: {targets?: readonly string[]}): Promise<FindingCommandResult> {
   const command:FindingCommand={...request,surface:"audit-repair",targets:[]};
   validateCommand(command,true);
   const state=await load(deps,command);
   if(state.incomplete)return {commandId:command.commandId,complete:false,executionOrder:[0],outcomes:[{
     status:"not-attempted",target:command.encounterReference,clinicalWrite:"none",cause:"load",fresh:state,reason:state.reason}]};
-  const debt=state.observations.filter(o=>state.pendingAudits?.has(`Observation/${o.id}`));
+  const debt=state.observations.filter(o=>state.pendingAudits?.has(`Observation/${o.id}`) && (!options?.targets || options.targets.includes(`Observation/${o.id}`)));
   const outcomes:FindingOutcome[]=[];
   let stopped=false;
   for(const observation of debt) {
@@ -138,8 +153,8 @@ async function load(deps: FindingCommandDeps, command: FindingCommand): Promise<
   return loadEncounterFindingState(deps.fhir,{patientReference:command.patientReference,encounterReference:command.encounterReference,
     definitions:deps.definitions,catalog:deps.catalog,includeAuditState:true});
 }
-async function findOwners(deps:FindingCommandDeps,command:FindingCommand,key:CurrentFindingKey):Promise<Observation[]> {
-  const identifier=currentFindingIdentifier(key);
+async function findOwners(deps:FindingCommandDeps,command:FindingCommand,key:CurrentFindingKey | FindingPanelKey):Promise<Observation[]> {
+  const identifier=targetIdentifier(key);
   const checked=<T extends Resource>(page:Bundle<T>):Bundle<T>=>{
     if(page.resourceType!=="Bundle" || page.type!=="searchset" || page.link?.some(l=>l.relation==="next" && !l.url) ||
       page.entry?.some(e=>!e.resource || e.resource.resourceType!=="Observation" || !e.resource.id))throw new Error("Invalid owner search page.");
@@ -159,6 +174,7 @@ async function freshProjection(deps:FindingCommandDeps,command:FindingCommand):P
 }
 async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, target: FindingCommandTarget, state: Complete): Promise<FindingOutcome> {
   const id=targetId(target);
+  if (target.kind==="panel") return executePanel(deps,command,target,state);
   if (target.kind==="reassert") return executeReassert(deps,command,target,state);
   if (target.kind==="legacy-retire") return executeRetire(deps,command,target,state);
   const projection=projectCurrentFindings(state);
@@ -168,6 +184,8 @@ async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, 
   catch { return {clinicalWrite:"none",cause:"owner-search",status:"not-attempted",target:id,reason:"Finding identity search could not be verified."}; }
   if (ownerRows.length>1 || ownerRows.some(o=>parseCurrentFindingEnvelope(o).status!=="valid")) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Canonical owner is ambiguous.",fresh:projection};
   const owner=ownerRows[0];
+  if(owner && !["preliminary","entered-in-error"].includes(owner.status))return {clinicalWrite:"none",status:"refused",target:id,reason:"signed-observation"};
+  if(!owner && target.baseline?.kind==="canonical") return deletedOutcome(id);
   const row=deps.catalog.find(r=>r.atomicFindingId===`${target.key.stableKey}::${target.key.fieldCode}::${target.key.optionCode}`);
   const definition=deps.definitions.find(d=>d.stableKey===target.key.stableKey);
   if (!row || !definition) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Finding definition is unavailable."};
@@ -175,6 +193,11 @@ async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, 
   if (!validIntendedState(target.state,definition,target.key,state)) return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Intended qualifier or home is outside the effective catalog/encounter."};
   const components=qualifierComponents(target.key,target.state.qualifiers);
   const digest=factDigest(target.state,components);
+  if(!owner) {
+    try { if((await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,findingAuditKey(command.commandId,id,"mutation",digest))).length) return deletedOutcome(id); }
+    catch { return upstreamOutcome(id,"audit-lookup"); }
+  }
+  if(owner) { const verified=await verifyTargetExists(deps,owner,id); if(verified)return verified; }
   if (owner) {
     let marker:FindingOperation|undefined;
     try { marker=parseFindingOperation(owner); } catch { return {clinicalWrite:"none",cause:"verify-read",status:"refused",target:id,reason:"Owner operation marker is invalid."}; }
@@ -206,7 +229,7 @@ async function executeTarget(deps: FindingCommandDeps, command: FindingCommand, 
   }
   const update=!!owner || (baseline.kind==="legacy" && baseline.mode==="adopt");
   const prior=owner ?? (update ? source : undefined);
-  if (prior && !(await repairPrior(deps,prior))) return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
+  if(prior) { const repaired=await repairPrior(deps,prior);if(repaired!==true)return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:repaired}; }
   const recorded=(deps.now??(()=>new Date().toISOString()))();
   const operation:FindingOperation={commandId:command.commandId,target:id,digest,audit:{kind:"mutation",actor:deps.staffReference,
     recorded,activity:update?"UPDATE":"CREATE",targetReferences:["self",command.patientReference]}};
@@ -273,7 +296,7 @@ function recordFactDigest(observation:Observation,definition:ClinicalFindingDefi
 function validIntendedState(state:TargetState,definition:ClinicalFindingDefinition,key:CurrentFindingKey,loaded:Complete):boolean {
   const field=customFieldEntries(definition,true).find(f=>f.localCode===key.fieldCode);
   const option=field?.options?.find(o=>o.code===key.optionCode);
-  if(!option || state.homes.some(h=>!loaded.conditions.some(c=>`Condition/${c.id}`===h)))return false;
+  if(!definition.active || !field?.active || !option?.active || state.homes.some(h=>!loaded.conditions.some(c=>`Condition/${c.id}`===h)))return false;
   for(const [name,value] of Object.entries(state.qualifiers)) {
     const qualifier=option.qualifiers?.find(q=>q.key===name);
     if(!qualifier)return false;
@@ -308,7 +331,7 @@ async function executeRetire(deps:FindingCommandDeps,command:FindingCommand,targ
   if (source.meta?.versionId!==target.baseline.versionId || observationLaterality(source)!=="UNKNOWN" ||
     classifyFindingObservation(source,deps.definitions,deps.catalog,alias).kind!=="legacy-atomic" || !isLiveObservation(source))
     return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"UNKNOWN source baseline changed.",fresh:projectCurrentFindings(state)};
-  if (!(await repairPrior(deps,source))) return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
+  if ((await repairPrior(deps,source))!==true) return {clinicalWrite:"none",cause:"audit-repair",status:"not-attempted",target:id,reason:"prior-audit-unrepaired"};
   const operation:FindingOperation={commandId:command.commandId,target:id,digest,audit:{kind:"mutation",actor:deps.staffReference,
     recorded:(deps.now??(()=>new Date().toISOString()))(),activity:"UPDATE",targetReferences:["self",command.patientReference]}};
   const next:Observation={...source,status:"entered-in-error",component:[...(source.component??[]).filter(c=>!c.code.coding?.some(v=>v.code==="R10_OPERATION")),
@@ -325,14 +348,24 @@ async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,ta
   const reference=baseline.kind==="canonical"?baseline.reference:baseline.sourceReference;
   const digest=sha({reference,versionId:baseline.versionId});
   const key=findingAuditKey(command.commandId,id,"reassertion",digest);
-  try { if (await auditExists(deps,key,reference)) return {clinicalWrite:"none",status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
-  catch { return {clinicalWrite:"none",cause:"audit-lookup",status:"not-attempted",target:id,reason:"Audit state could not be verified."}; }
+  let existing:Provenance[];
+  try { existing=[...await findAuditsByTag(deps,REASSERT_COMMAND_SYSTEM,reassertCommandWitness(command.commandId,id)),...await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,key)]; }
+  catch { return upstreamOutcome(id,"audit-lookup"); }
+  if(existing.length) {
+    if(!existing.every(a=>matchesReassertAudit(a,command,id,reference,key,deps.staffReference))) return {clinicalWrite:"none",cause:"audit-lookup",status:"conflict",target:id,reason:"command-reused"};
+    let latest:Observation;
+    try { latest=await deps.fhir.read<Observation>("Observation",reference.slice(12)); }
+    catch(error) { return isDeleted(error) ? deletedOutcome(id) : upstreamOutcome(id,"verify-read"); }
+    if(latest.subject?.reference!==command.patientReference || latest.encounter?.reference!==command.encounterReference) return {clinicalWrite:"none",status:"conflict",target:id,reason:"Reassertion source changed."};
+    return {clinicalWrite:"none",status:"already-applied",target:id,reference,versionId:latest.meta?.versionId};
+  }
   const projection=projectCurrentFindings(state),fact=projection.currentFacts.find(f=>f.projectionKey===id);
+  if(!state.observations.some(o=>`Observation/${o.id}`===reference) && baseline.kind==="canonical")return deletedOutcome(id);
   if (!fact || !matchesBaseline(baseline,target.key,state.observations.find(o=>`Observation/${o.id}`===reference && baseline.kind==="canonical"),fact,state))
     return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Reassertion baseline changed.",fresh:projection};
   let latest:Observation;
   try { latest=await deps.fhir.read<Observation>("Observation",reference.slice("Observation/".length)); }
-  catch(error) { return (error as {status?:number})?.status===404 ? {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Reassertion source is missing.",fresh:await freshProjection(deps,command)} :
+  catch(error) { return isDeleted(error) ? deletedOutcome(id) :
     {clinicalWrite:"none",cause:"verify-read",status:"not-attempted",target:id,reason:"Reassertion source could not be verified."}; }
   if(latest.id!==reference.slice("Observation/".length) || latest.subject?.reference!==command.patientReference ||
     latest.encounter?.reference!==command.encounterReference || latest.meta?.versionId!==baseline.versionId ||
@@ -347,55 +380,73 @@ async function executeReassert(deps:FindingCommandDeps,command:FindingCommand,ta
   audit.meta={...audit.meta,tag:[...(audit.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key},
     {system:REASSERT_COMMAND_SYSTEM,code:reassertCommandWitness(command.commandId,id)}]};
   try { const saved=await deps.fhir.createWithOutcome<Provenance>(audit,auditHeaders(key));
-    if (!matchesFindingAudit(saved.resource,key,reference)) throw new FindingAuditMismatch("Reassertion audit target does not match.");
+    if (!matchesReassertAudit(saved.resource,command,id,reference,key,deps.staffReference)) throw new FindingAuditMismatch("Reassertion audit target does not match.");
+    await reassertAuditExists(deps,command,id,reference,key);
     return {clinicalWrite:"none",status:saved.created?"applied":"already-applied",target:id,reference,versionId:baseline.versionId}; }
   catch(error) {
+    if(error instanceof FindingAuditMismatch)return {clinicalWrite:"none",cause:"audit-lookup",status:"conflict",target:id,reason:"command-reused"};
     if(definitivelyRefused(error))return {clinicalWrite:"none",cause:"audit-repair",status:"refused",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was refused."};
-    try { if(await auditExists(deps,key,reference)) return {clinicalWrite:"none",status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
-    catch { return {clinicalWrite:"none",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit response and lookup were lost."}; }
+    try { if(await reassertAuditExists(deps,command,id,reference,key)) return {clinicalWrite:"none",status:"already-applied",target:id,reference,versionId:baseline.versionId}; }
+    catch(lookupError) { if(lookupError instanceof FindingAuditMismatch)return {clinicalWrite:"none",cause:"audit-lookup",status:"conflict",target:id,reason:"command-reused"};
+      return {clinicalWrite:"none",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit response and lookup were lost."}; }
     return {clinicalWrite:"none",cause:"audit-repair",status:"unconfirmed",target:id,reference,versionId:baseline.versionId,reason:"Reassertion audit was not confirmed."}; }
 }
 
-async function finishMutationAudit(deps:FindingCommandDeps,id:string,saved:Observation,operation:FindingOperation):Promise<FindingOutcome> {
+async function finishMutationAudit(deps:FindingCommandDeps,id:string,saved:Observation,operation:FindingOperation,writeConfirmed=true):Promise<FindingOutcome> {
   const reference=saved.id?`Observation/${saved.id}`:undefined;
   if (!reference) return {clinicalWrite:"confirmed",cause:"audit-repair",status:"unconfirmed",target:id,reason:"Saved finding lacks an id."};
+  const verified=await verifyTargetExists(deps,saved,id,writeConfirmed); if(verified)return writeConfirmed ? verified : {...verified,status:"unconfirmed",clinicalWrite:"unknown",reason:"Finding write was not confirmed."};
   try { await createAudit(deps,operation,reference);return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
   catch(error) {
+    if(error instanceof FindingAuditMismatch)return auditMismatchOutcome(id,"confirmed");
     if (definitivelyRefused(error)) return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId,auditPending:true,cause:"audit-repair"};
-    try { if (!(await findPendingAudits(deps.fhir,[saved])).has(reference)) return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
+    try { const pending=await findPendingAudits(deps.fhir,[saved]);if(pending.mismatches.has(reference))return auditMismatchOutcome(id,"confirmed"); if (!pending.has(reference)) return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId}; }
     catch { return {clinicalWrite:"confirmed",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId:saved.meta?.versionId,reason:"Audit response and lookup were lost."}; }
     return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId:saved.meta?.versionId,auditPending:true,cause:"audit-repair"}; }
 }
 async function ensureReplayAudit(deps:FindingCommandDeps,id:string,observation:Observation,operation:FindingOperation):Promise<FindingOutcome> {
   const reference=`Observation/${observation.id}`, versionId=observation.meta?.versionId;
+  const verified=await verifyTargetExists(deps,observation,id);if(verified)return verified;
   try { await createAudit(deps,operation,reference);
     return {clinicalWrite:"confirmed",status:"already-applied",target:id,reference,versionId}; }
   catch(error) {
+    if(error instanceof FindingAuditMismatch)return auditMismatchOutcome(id,"none");
     if(definitivelyRefused(error))return {clinicalWrite:"confirmed",status:"applied",target:id,reference,versionId,auditPending:true,cause:"audit-repair"};
-    try { if(!(await findPendingAudits(deps.fhir,[observation])).has(reference))return {clinicalWrite:"confirmed",status:"already-applied",target:id,reference,versionId}; }
+    try { const pending=await findPendingAudits(deps.fhir,[observation]);if(pending.mismatches.has(reference))return auditMismatchOutcome(id,"none"); if(!pending.has(reference))return {clinicalWrite:"confirmed",status:"already-applied",target:id,reference,versionId}; }
     catch { return {clinicalWrite:"confirmed",cause:"audit-lookup",status:"unconfirmed",target:id,reference,versionId,reason:"Audit response and lookup were lost."}; }
     return {clinicalWrite:"confirmed",cause:"audit-repair",status:"unconfirmed",target:id,reference,versionId,reason:"Audit write was not confirmed."};
   }
 }
-async function repairPrior(deps:FindingCommandDeps,observation:Observation):Promise<boolean> {
+async function repairPrior(deps:FindingCommandDeps,observation:Observation):Promise<true | string> {
   try { const marker=parseFindingOperation(observation); if (!marker) return true;
     const reference=`Observation/${observation.id}`;
     if ((await findPendingAudits(deps.fhir,[observation])).has(reference)) await createAudit(deps,marker,reference);
     return true;
-  } catch { return false; }
+  } catch(error) { return error instanceof FindingAuditMismatch ? "audit-mismatch" : "prior-audit-unrepaired"; }
 }
 async function createAudit(deps:FindingCommandDeps,operation:FindingOperation,self:string):Promise<void> {
   const {audit}=operation;
   const targets=audit.targetReferences.map(r=>r==="self"?self:r);
   const key=findingAuditKey(operation.commandId,operation.target,audit.kind,operation.digest);
+  const existing=await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,key);
+  if(existing.some(a=>!matchesFindingAudit(a,key,self,operation)))throw new FindingAuditMismatch("audit-mismatch");
+  if(existing.length)return;
   const provenance=buildProvenance({targetReferences:targets,recorded:audit.recorded,activityCode:audit.activity,
     activityDisplay:audit.activity==="CREATE"?"Create":"Update",agents:[{whoReference:audit.actor,typeCode:"author"}]}) as Provenance;
   provenance.meta={...provenance.meta,tag:[...(provenance.meta?.tag??[]),{system:FINDING_OPERATION_AUDIT_SYSTEM,code:key}]};
   const saved=await deps.fhir.createWithOutcome<Provenance>(provenance,auditHeaders(key));
-  if (!matchesFindingAudit(saved.resource,key,self)) throw new FindingAuditMismatch("Mutation audit target does not match.");
+  if (!matchesFindingAudit(saved.resource,key,self,operation)) throw new FindingAuditMismatch("Mutation audit target does not match.");
+  const after=await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,key);
+  if(after.some(a=>!matchesFindingAudit(a,key,self,operation)))throw new FindingAuditMismatch("audit-mismatch");
 }
-async function auditExists(deps:Pick<FindingCommandDeps,"fhir">,key:string,reference:string):Promise<boolean> {
-  return (await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,key)).some(p=>matchesFindingAudit(p,key,reference));
+function matchesReassertAudit(audit:Provenance,command:FindingCommand,id:string,reference:string,key:string,actor:string):boolean {
+  return !!audit.meta?.tag?.some(t=>t.system===REASSERT_COMMAND_SYSTEM && t.code===reassertCommandWitness(command.commandId,id)) &&
+    matchesFindingAuditContent(audit,key,actor,ODOS_PROVENANCE_ACTIVITY_CODE_SYSTEM,DIAGNOSIS_FINDING_REASSERTION_CODE,[reference,command.patientReference]);
+}
+async function reassertAuditExists(deps:FindingCommandDeps,command:FindingCommand,id:string,reference:string,key:string):Promise<boolean> {
+  const audits=[...await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,key),...await findAuditsByTag(deps,REASSERT_COMMAND_SYSTEM,reassertCommandWitness(command.commandId,id))];
+  if(audits.some(a=>!matchesReassertAudit(a,command,id,reference,key,deps.staffReference)))throw new FindingAuditMismatch("command-reused");
+  return audits.length>0;
 }
 async function findAuditsByTag(deps:Pick<FindingCommandDeps,"fhir">,system:string,key:string):Promise<Provenance[]> {
   const checked=<T extends Resource>(page:Bundle<T>):Bundle<T>=>{
@@ -424,7 +475,7 @@ async function recoverFactWrite(deps:FindingCommandDeps,command:FindingCommand,t
     const owner=owners[0];
     const marker=owner&&parseFindingOperation(owner);
     if (owner && marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && recordFactDigest(owner,definition,row)===digest)
-      return finishMutationAudit(deps,id,owner,marker);
+      return finishMutationAudit(deps,id,owner,marker,false);
     if (owner && marker?.commandId===command.commandId && marker.digest===digest) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Owner changed after command was recorded.",fresh:projectCurrentFindings(state)};
   } catch { return {clinicalWrite:"unknown",cause:"verify-read",status:"unconfirmed",target:id,reference:prior?.id?`Observation/${prior.id}`:undefined,
     versionId:prior?.meta?.versionId,reason:"Finding write response and reload were lost."}; }
@@ -440,7 +491,7 @@ async function recoverRetireWrite(deps:FindingCommandDeps,command:FindingCommand
   try { const source=await deps.fhir.read<Observation>("Observation",prior.id!);
     const marker=parseFindingOperation(source);
     if(marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && source.status==="entered-in-error")
-      return finishMutationAudit(deps,id,source,marker);
+      return finishMutationAudit(deps,id,source,marker,false);
     if(marker?.commandId===command.commandId && marker.digest===digest) return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reference:target.sourceReference,reason:"Retired source changed."};
   } catch { return {clinicalWrite:"unknown",cause:"verify-read",status:"unconfirmed",target:id,reference:target.sourceReference,versionId:prior.meta?.versionId,
     reason:"Retirement response and reload were lost."}; }
@@ -470,7 +521,7 @@ function sameKey(a:CurrentFindingKey|undefined,b:CurrentFindingKey):boolean {
   return !!a && a.v===b.v && a.patientId===b.patientId && a.encounterId===b.encounterId && a.stableKey===b.stableKey &&
     a.fieldCode===b.fieldCode && a.optionCode===b.optionCode && a.eye===b.eye;
 }
-function targetId(target:FindingCommandTarget):string {return target.kind==="legacy-retire"?target.sourceReference:`finding:${currentFindingIdentifier(target.key).value}`;}
+function targetId(target:FindingCommandTarget):string {return target.kind==="legacy-retire"?target.sourceReference:target.kind==="panel"?findingPanelTargetId(target.key):`finding:${currentFindingIdentifier(target.key).value}`;}
 function canonical(value:unknown):unknown {
   if(Array.isArray(value))return value.map(canonical);
   if(value!==null && typeof value==="object")return Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,canonical(v)]));
@@ -490,11 +541,11 @@ function validateCommand(command:FindingCommand,allowEmpty=false):void {
     typeof command?.surface!=="string" || !command.surface.trim() || !Array.isArray(command?.targets) || (!allowEmpty && !command.targets.length)) invalid();
   const keys=new Set<string>();
   for(const t of command.targets){
-    if(!t || !["fact","reassert","legacy-retire"].includes(t.kind))invalid();
+    if(!t || !["fact","panel","reassert","legacy-retire"].includes(t.kind))invalid();
     if(t.kind!=="legacy-retire"){
-      if(!currentFindingKeySchema.safeParse(t.key).success ||
+      if(!(t.kind==="panel"?currentFindingPanelKeySchema:currentFindingKeySchema).safeParse(t.key).success ||
         t.key.patientId!==command.patientReference.slice(8) || t.key.encounterId!==command.encounterReference.slice(10) ||
-        !t.key.stableKey || !t.key.fieldCode || !t.key.optionCode)invalid();
+        !t.key.stableKey || (t.kind!=="panel" && (!t.key.fieldCode || !t.key.optionCode)))invalid();
       if(t.kind==="fact" && (!t.state || !["live","retired"].includes(t.state.status) || !["present","absent"].includes(t.state.presence) ||
         !t.state.qualifiers || typeof t.state.qualifiers!=="object" || Array.isArray(t.state.qualifiers) ||
         Object.values(t.state.qualifiers).some(v=>!(typeof v==="string" || (typeof v==="number" && Number.isFinite(v)) ||
@@ -504,4 +555,70 @@ function validateCommand(command:FindingCommand,allowEmpty=false):void {
     } else if(!refPattern.test(t.sourceReference))invalid();
     const id=targetId(t);if(keys.has(id))invalid();keys.add(id);
   }
+}
+
+function targetIdentifier(key:CurrentFindingKey | FindingPanelKey) { return "fieldCode" in key ? currentFindingIdentifier(key) : findingPanelIdentifier(key); }
+function isDeleted(error:unknown):boolean {return [404,410].includes((error as {status?:number})?.status ?? 0);}
+function deletedOutcome(target:string,confirmed=false):FindingOutcome {return {target,status:"conflict",clinicalWrite:confirmed?"confirmed":"none",cause:"verify-read",reason:confirmed?"target-deleted-after-write":"target-deleted"};}
+function upstreamOutcome(target:string,cause:FindingOutcomeCause):FindingOutcome {return {target,status:"not-attempted",clinicalWrite:"none",cause,reason:"upstream"};}
+function auditMismatchOutcome(target:string,clinicalWrite:FindingOutcome["clinicalWrite"]):FindingOutcome {return {target,status:"not-attempted",clinicalWrite,cause:"audit-repair",auditPending:true,reason:"audit-mismatch"};}
+async function verifyTargetExists(deps:FindingCommandDeps,owner:Observation,id:string,confirmed=false):Promise<FindingOutcome | undefined> {
+  try {const fresh=await deps.fhir.read<Observation>("Observation",owner.id!);
+    if(fresh.id!==owner.id || fresh.subject?.reference!==owner.subject?.reference || fresh.encounter?.reference!==owner.encounter?.reference || fresh.meta?.versionId!==owner.meta?.versionId)
+      return {clinicalWrite:confirmed?"confirmed":"none",cause:"verify-read",status:"conflict",target:id,reason:"stale-baseline"};
+  } catch(error) {return isDeleted(error)?deletedOutcome(id,confirmed):{...upstreamOutcome(id,"verify-read"),clinicalWrite:confirmed?"confirmed":"none"};}
+}
+async function executePanel(deps:FindingCommandDeps,command:FindingCommand,target:Extract<FindingCommandTarget,{kind:"panel"}>,state:Complete):Promise<FindingOutcome> {
+  const id=targetId(target),definition=deps.definitions.find(d=>d.stableKey===target.key.stableKey)!;
+  const normalized=normalizeFindingPanelState(target.state,definition),digest=sha(normalized);
+  let owners:Observation[];
+  try {owners=await findOwners(deps,command,target.key);} catch {return upstreamOutcome(id,"owner-search");}
+  if(owners.length>1 || owners.some(o=>parseFindingPanelEnvelope(o).status!=="valid"))return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Panel owner is ambiguous."};
+  const owner=owners[0],baseline=target.baseline;
+  if(owner && !["preliminary","entered-in-error"].includes(owner.status))return {clinicalWrite:"none",status:"refused",target:id,reason:"signed-observation"};
+  if(!owner && baseline?.kind==="canonical")return deletedOutcome(id);
+  if(!owner) {try {if((await findAuditsByTag(deps,FINDING_OPERATION_AUDIT_SYSTEM,findingAuditKey(command.commandId,id,"mutation",digest))).length)return deletedOutcome(id);}catch{return upstreamOutcome(id,"audit-lookup");}}
+  if(owner) {
+    const verified=await verifyTargetExists(deps,owner,id);if(verified)return verified;
+    let operation:FindingOperation | undefined;
+    try {operation=parseFindingOperation(owner);readFindingPanelState(owner,definition);}catch{return {clinicalWrite:"none",status:"refused",target:id,reason:"Invalid panel owner."};}
+    if(operation?.commandId===command.commandId) {
+      if(operation.target!==id || operation.digest!==digest)return {clinicalWrite:"none",status:"conflict",target:id,reason:"command-reused"};
+      if(owner.status!=="preliminary" || sha(readFindingPanelState(owner,definition))!==digest)return {clinicalWrite:"none",status:"conflict",target:id,reason:"stale-baseline"};
+      return ensureReplayAudit(deps,id,owner,operation);
+    }
+  }
+  if(!baseline || (baseline.kind==="canonical" ? !owner || baseline.reference!==`Observation/${owner.id}` || baseline.versionId!==owner.meta?.versionId :
+    baseline.kind!=="absent" || !!owner || !currentFindingPanelKeySchema.safeParse(baseline.key).success || findingPanelIdentifier(baseline.key).value!==findingPanelIdentifier(target.key).value))
+    return {clinicalWrite:"none",status:"conflict",target:id,reason:"stale-baseline"};
+  if(owner) {
+    const repaired=await repairPrior(deps,owner);if(repaired!==true)return {clinicalWrite:"none",status:"not-attempted",cause:"audit-repair",target:id,reason:repaired};
+    if(owner.status==="preliminary" && sha(readFindingPanelState(owner,definition))===digest)return {clinicalWrite:"none",status:"unchanged",target:id,reference:`Observation/${owner.id}`,versionId:owner.meta?.versionId};
+  }
+  const operation:FindingOperation={commandId:command.commandId,target:id,digest,audit:{kind:"mutation",actor:deps.staffReference,
+    recorded:(deps.now??(()=>new Date().toISOString()))(),activity:owner?"UPDATE":"CREATE",targetReferences:["self",command.patientReference]}};
+  const next:Observation={...(owner ?? {}),resourceType:"Observation",status:"preliminary",code:odosConcept(target.key.stableKey),
+    subject:{reference:command.patientReference},encounter:{reference:command.encounterReference},identifier:[findingPanelIdentifier(target.key)],
+    extension:[{url:ODOS_EXTENSION_URLS.eyeLaterality,valueCodeableConcept:lateralityConcept(target.key.eye)}],
+    component:[{code:odosConcept("R10_PANEL_META"),valueString:JSON.stringify(target.key)},...findingPanelComponents(normalized,definition),
+      {code:odosConcept("R10_OPERATION"),valueString:JSON.stringify(operation)}]};
+  let saved:Observation;
+  try {
+    if(owner)saved=await deps.fhir.update<Observation>("Observation",owner.id!,next,{...WRITE_HEADERS,"If-Match":etag(owner.meta!.versionId!)});
+    else {const result=await deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,"If-None-Exist":`identifier=${FINDING_PANEL_SYSTEM}|${findingPanelIdentifier(target.key).value}`});saved=result.resource;
+      if(!result.created) {const marker=parseFindingOperation(saved);if(marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && parseFindingPanelEnvelope(saved).status==="valid" &&
+        saved.status==="preliminary" && sha(readFindingPanelState(saved,definition))===digest)return ensureReplayAudit(deps,id,saved,marker);
+        return {clinicalWrite:"none",status:"conflict",target:id,reason:"Another command owns this panel."};}}
+  } catch(error) {
+    const status=(error as {status?:number})?.status;
+    if(status===409 || status===412)return {clinicalWrite:"none",status:"conflict",target:id,reason:"Conditional panel write conflicted."};
+    if(status===400 || status===401 || status===403)return {clinicalWrite:"none",status:"refused",target:id,reason:"Panel write refused."};
+    try {const recovered=await findOwners(deps,command,target.key);const found=recovered.length===1?recovered[0]:undefined;const marker=found && parseFindingOperation(found);
+      if(found && marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && parseFindingPanelEnvelope(found).status==="valid" && found.status==="preliminary" &&
+        sha(readFindingPanelState(found,definition))===digest)return finishMutationAudit(deps,id,found,marker,false);
+    } catch { /* write outcome remains unknown */ }
+    return {clinicalWrite:"unknown",status:"unconfirmed",cause:"verify-read",target:id,reason:"Panel write was not confirmed."};
+  }
+  if(!saved.id || !saved.meta?.versionId)return {clinicalWrite:"confirmed",status:"unconfirmed",cause:"verify-read",target:id,reason:"Saved panel lacks an id or version."};
+  return finishMutationAudit(deps,id,saved,operation);
 }

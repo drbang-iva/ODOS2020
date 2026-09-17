@@ -1,0 +1,26 @@
+[
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "line": 512,
+      "text": "definition(\"ocular-health:anterior:cornea\", \"ocular-health:anterior:cornea\")"
+    },
+    "after": {
+      "line": 514,
+      "text": "canonicalLens"
+    },
+    "row": "V27/W81"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "line": 524,
+      "text": "observation(\"ocular-health\", \"ocular-health:anterior:cornea\", { component: [stringComponent(\"EXAM_STATE\", \"normal\")] })"
+    },
+    "after": {
+      "line": 526,
+      "text": "{...canonicalFact(\"ocular-health\"),valueBoolean:false}"
+    },
+    "row": "V27/W81"
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "release-lifecycle-W76",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T1[0-4] ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok .*T1[01]",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  const key = lifecycleFindingKey(observation);",
+        "after": "  const key = undefined;"
+      }
+    ]
+  },
+  {
+    "id": "release-lifecycle-W77-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T1[0-4] ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok .*T13",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "    if (!pending.size) return undefined;",
+        "after": "    return undefined;"
+      }
+    ]
+  },
+  {
+    "id": "release-lifecycle-W78-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T1[0-4] ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok .*T14",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  if (targetObservations.some(({ observation }) => isSignedCanonical(observation))) {",
+        "after": "  if (false) {"
+      }
+    ]
+  }
+]

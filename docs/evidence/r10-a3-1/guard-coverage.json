@@ -1,0 +1,4193 @@
+{
+  "complete": true,
+  "w114McpVariantsComplete": true,
+  "namedT22CensusVariantsComplete": true,
+  "requiredRowCount": 64,
+  "rowsWithValidatedPair": 64,
+  "validatedPairCount": 128,
+  "missingRows": [],
+  "invalidPairs": [],
+  "pendingVariantAudit": [],
+  "method": "Recursive recipe/result inventory; TAP summary counts, real failing test names, assertion errors, same tests passing after restoration, and SHA256 of paired logs. Standalone MCP probes retain null TAP test counts and separately parsed assertion failures and verified runtime-path totals. A filename alone never grants coverage. Test names with multiple subcases do not imply each subcase independently killed the mutation.",
+  "rows": [
+    {
+      "row": "W65",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "marker-less classification for all multi-select definitions",
+        "requiredAssertion": "practice checkbox list on CVF: snapshot `unrelated`, encounter editable, and the door refuses the same option (`not-a-shared-finding`)"
+      },
+      "variants": [
+        {
+          "id": "library-W65",
+          "redLog": "mutations/library-W65-red.txt",
+          "greenLog": "mutations/library-W65-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W65 ownership restricts catalog and section classification"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W66",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "save diffs S against the fresh projection",
+        "requiredAssertion": "loaded a, concurrent b, deselect a \u2192 b's id/version/content unchanged"
+      },
+      "variants": [
+        {
+          "id": "ocular-W66",
+          "redLog": "mutations/ocular-W66-red.txt",
+          "greenLog": "mutations/ocular-W66-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W66 frozen loaded set preserves concurrent addition"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W67",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "skip baseline prevalidation",
+        "requiredAssertion": "stale unapplied target \u2192 409 zero writes"
+      },
+      "variants": [
+        {
+          "id": "ocular-W67",
+          "redLog": "mutations/ocular-W67-red.txt",
+          "greenLog": "mutations/ocular-W67-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W67 whole request prevalidates stale second eye"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W68",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "negative act without the end-state check",
+        "requiredAssertion": "S adds a with an act negating a \u2192 409 zero writes"
+      },
+      "variants": [
+        {
+          "id": "ocular-W68",
+          "redLog": "mutations/ocular-W68-red.txt",
+          "greenLog": "mutations/ocular-W68-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W68 selected positive and scoped negative refuse before writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W69",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "skip the pre-create fresh read",
+        "requiredAssertion": "positive added after prevalidation \u2192 act not written, outcome `conflict`"
+      },
+      "variants": [
+        {
+          "id": "ocular-W69",
+          "redLog": "mutations/ocular-W69-red.txt",
+          "greenLog": "mutations/ocular-W69-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W69 fresh read prevents new negative after concurrent positive"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W70",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "deferred clears facts",
+        "requiredAssertion": "fact id/version unchanged after deferring"
+      },
+      "variants": [
+        {
+          "id": "ocular-W70",
+          "redLog": "mutations/ocular-W70-red.txt",
+          "greenLog": "mutations/ocular-W70-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W70 deferred preserves fact bytes and version"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W71",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "panel classification without envelope checks",
+        "requiredAssertion": "malformed / mismatched hash / mixed markers / duplicate owners \u2192 `invalid` or conflict"
+      },
+      "variants": [
+        {
+          "id": "library-W71",
+          "redLog": "mutations/library-W71-red.txt",
+          "greenLog": "mutations/library-W71-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W71 strict panel identity rejects hash envelope mixed markers and duplicate owners"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W72",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "history GET returns cleared facts as current",
+        "requiredAssertion": "server history test (encounter and priors)"
+      },
+      "variants": [
+        {
+          "id": "ocular-W72",
+          "redLog": "mutations/ocular-W72-red.txt",
+          "greenLog": "mutations/ocular-W72-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W72 current and prior projections hide clears as current"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W73",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "previous exams read only `Condition.evidence`",
+        "requiredAssertion": "T1 (both eyes, qualifiers, cleared hidden)"
+      },
+      "variants": [
+        {
+          "id": "carry-W73-homes",
+          "redLog": "carry/mutations/carry-W73-homes-red.txt",
+          "greenLog": "carry/mutations/carry-W73-homes-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 0,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared",
+            "T1 previous exams displays canonical finding linked by extension"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W74",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "pull writes `pulledFindingObservation`",
+        "requiredAssertion": "T2 + T22"
+      },
+      "variants": [
+        {
+          "id": "carry-W74-canonical",
+          "redLog": "carry/mutations/carry-W74-canonical-red.txt",
+          "greenLog": "carry/mutations/carry-W74-canonical-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 0,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "pull standalone steps preserve source clinical state, typed facts and rank gaps",
+            "pull excludes an entered-in-error source Observation",
+            "W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes",
+            "T2 carry pull preserves canonical identity typed qualifiers and destination home"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W75",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "lineage ignores the carried version",
+        "requiredAssertion": "T3 (a later writer change reads edited) + an untouched-carry control reads not edited + W126"
+      },
+      "variants": [
+        {
+          "id": "carry-W75-version",
+          "redLog": "carry/mutations/carry-W75-version-red.txt",
+          "greenLog": "carry/mutations/carry-W75-version-green.txt",
+          "redCounts": {
+            "tests": 6,
+            "suites": 0,
+            "pass": 2,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 6,
+            "suites": 0,
+            "pass": 6,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W75 W126 void between facts and witness remains edited",
+            "W75 W126 void-undo between facts and witness remains edited",
+            "W75 completed command resend preserves original witness after a later edit",
+            "T3 later writer version after carry is read as edited"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W76",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "`identify()` bare-code only",
+        "requiredAssertion": "T10/T11 counts, siblings untouched"
+      },
+      "variants": [
+        {
+          "id": "lifecycle-W76",
+          "redLog": "mutations/lifecycle-W76-red.txt",
+          "greenLog": "mutations/lifecycle-W76-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W76 canonical section and finding identity include panels and preserve siblings"
+          ]
+        },
+        {
+          "id": "release-lifecycle-W76",
+          "redLog": "mutations/release-lifecycle-W76-red.txt",
+          "greenLog": "mutations/release-lifecycle-W76-green.txt",
+          "redCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 3,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 5,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T10 section void selects canonical facts and undo restores exact records",
+            "T11 finding void and undo preserve identity qualifiers homes and other eye"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W77",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "no audit repair before void/undo",
+        "requiredAssertion": "T13 real debt; repair failure \u2192 503 zero lifecycle writes; preview writes nothing"
+      },
+      "variants": [
+        {
+          "id": "lifecycle-W77-preview",
+          "redLog": "mutations/lifecycle-W77-preview-red.txt",
+          "greenLog": "mutations/lifecycle-W77-preview-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W77 preview never repairs actual debt"
+          ]
+        },
+        {
+          "id": "lifecycle-W77-undo",
+          "redLog": "mutations/lifecycle-W77-undo-red.txt",
+          "greenLog": "mutations/lifecycle-W77-undo-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 1,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W77 undo fact repairs real debt before lifecycle and refuses failed repair",
+            "W77 undo panel repairs real debt before lifecycle and refuses failed repair"
+          ]
+        },
+        {
+          "id": "lifecycle-W77-void",
+          "redLog": "mutations/lifecycle-W77-void-red.txt",
+          "greenLog": "mutations/lifecycle-W77-void-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 1,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W77 void fact repairs real debt before lifecycle and refuses failed repair",
+            "W77 void panel repairs real debt before lifecycle and refuses failed repair"
+          ]
+        },
+        {
+          "id": "release-lifecycle-W77-void",
+          "redLog": "mutations/release-lifecycle-W77-void-red.txt",
+          "greenLog": "mutations/release-lifecycle-W77-void-green.txt",
+          "redCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 4,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 5,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T13 lifecycle mutation repairs owed audit before replacing clinical state"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W78",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "signed canonical voidable",
+        "requiredAssertion": "T14 422 zero transactions; guard 10 green"
+      },
+      "variants": [
+        {
+          "id": "lifecycle-W78-undo",
+          "redLog": "mutations/lifecycle-W78-undo-red.txt",
+          "greenLog": "mutations/lifecycle-W78-undo-green.txt",
+          "redCounts": {
+            "tests": 7,
+            "suites": 0,
+            "pass": 1,
+            "fail": 6,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 7,
+            "suites": 0,
+            "pass": 7,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W78 undo fact final refuses signed canonical owner",
+            "W78 undo panel final refuses signed canonical owner",
+            "W78 undo fact amended refuses signed canonical owner",
+            "W78 undo panel amended refuses signed canonical owner",
+            "W78 undo fact corrected refuses signed canonical owner",
+            "W78 undo panel corrected refuses signed canonical owner"
+          ]
+        },
+        {
+          "id": "lifecycle-W78-void",
+          "redLog": "mutations/lifecycle-W78-void-red.txt",
+          "greenLog": "mutations/lifecycle-W78-void-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W78 fact final signed refusal"
+          ]
+        },
+        {
+          "id": "release-lifecycle-W78-void",
+          "redLog": "mutations/release-lifecycle-W78-void-red.txt",
+          "greenLog": "mutations/release-lifecycle-W78-void-green.txt",
+          "redCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 4,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 5,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T14 lifecycle refuses signed canonical facts without downgrading them"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W79",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "pull from/into pre-rebuild",
+        "requiredAssertion": "409 zero writes (both)"
+      },
+      "variants": [
+        {
+          "id": "carry-W79-prebuild",
+          "redLog": "carry/mutations/carry-W79-prebuild-red.txt",
+          "greenLog": "carry/mutations/carry-W79-prebuild-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 1,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W79 W91 refuses source before all writes",
+            "W79 W91 refuses destination before all writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W80",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "overview links from `Condition.evidence` only",
+        "requiredAssertion": "T8 extension-only homes"
+      },
+      "variants": [
+        {
+          "id": "W80-homes-overview",
+          "redLog": "overview/W80-homes-overview-red.tap",
+          "greenLog": "overview/W80-homes-overview-green.tap",
+          "redCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 25,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 26,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W80 extension homes supply overview diagnosis"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W81",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "completeness credits panel context or a cleared fact",
+        "requiredAssertion": "not complete; a present required panel value credits (W118); IOP/refraction/history evidence keeps its credit"
+      },
+      "variants": [
+        {
+          "id": "W81-carry-overview",
+          "redLog": "overview/W81-carry-overview-red.tap",
+          "greenLog": "overview/W81-carry-overview-green.tap",
+          "redCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 23,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 26,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "V27 persisted carry unchanged evidence",
+            "V27 persisted carry link-only evidence",
+            "V27 persisted carry void-undo evidence"
+          ]
+        },
+        {
+          "id": "W81-context-overview",
+          "redLog": "overview/W81-context-overview-red.tap",
+          "greenLog": "overview/W81-context-overview-green.tap",
+          "redCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 22,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 26,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W81 panel context other no credit",
+            "W81 panel context remarks no credit",
+            "W81 panel context deferred no credit",
+            "W81 overview completeness panel-context"
+          ]
+        },
+        {
+          "id": "W81-inactive-overview",
+          "redLog": "overview/W81-inactive-overview-red.tap",
+          "greenLog": "overview/W81-inactive-overview-green.tap",
+          "redCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 25,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 26,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W81 overview completeness inactive"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W82",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "protocol valued shared item not prevalidated",
+        "requiredAssertion": "422 and zero application/item writes; prompt-only application succeeds (control)"
+      },
+      "variants": [
+        {
+          "id": "W82-original-payload-protocol",
+          "redLog": "protocol/W82-original-payload-protocol-red.tap",
+          "greenLog": "protocol/W82-original-payload-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 28,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W82 prompt override cannot hide a valued shared proposed item"
+          ]
+        },
+        {
+          "id": "W82-preseed-protocol",
+          "redLog": "protocol/W82-preseed-protocol-red.tap",
+          "greenLog": "protocol/W82-preseed-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 27,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W82 built-in closed reject precedes seeding",
+            "W82 built-in valued reject precedes seeding"
+          ]
+        },
+        {
+          "id": "W82-valued-protocol",
+          "redLog": "protocol/W82-valued-protocol-red.tap",
+          "greenLog": "protocol/W82-valued-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 22,
+            "fail": 7,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W82 selected valued shared default refuses before all writes",
+            "W82 selected valued shared override refuses before all writes",
+            "W82 selected valued shared per-eye refuses before all writes",
+            "W82 payload definition override cannot value a shared proposed row",
+            "W82 built-in valued reject precedes seeding",
+            "W114 stored local shared valued item refuses",
+            "W82 prompt override cannot hide a valued shared proposed item"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W83",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "audit accepted on tag + target",
+        "requiredAssertion": "wrong agent / activity / instant / target set each \u2192 `audit-mismatch`; `.000Z` vs `Z` accepted"
+      },
+      "variants": [
+        {
+          "id": "library-W83",
+          "redLog": "mutations/library-W83-red.txt",
+          "greenLog": "mutations/library-W83-green.txt",
+          "redCounts": {
+            "tests": 6,
+            "suites": 0,
+            "pass": 0,
+            "fail": 6,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 6,
+            "suites": 0,
+            "pass": 6,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W83 W109 rejects audit agent",
+            "W83 W109 rejects audit activity",
+            "W83 W109 rejects audit system",
+            "W83 W109 rejects audit instant",
+            "W83 W109 rejects audit targets",
+            "W83 W109 rejects audit mixed"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W84",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "reassert audit from another actor accepted",
+        "requiredAssertion": "409 `command-reused`"
+      },
+      "variants": [
+        {
+          "id": "library-W84",
+          "redLog": "mutations/library-W84-red.txt",
+          "greenLog": "mutations/library-W84-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W84 actor-bound reassertion rejects changed actor"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W85",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "deleted-target branches collapsed",
+        "requiredAssertion": "each \u00a73.10 row incl. empty owner searchset vs search failure (`upstream`), and W128"
+      },
+      "variants": [
+        {
+          "id": "library-W85",
+          "redLog": "mutations/library-W85-red.txt",
+          "greenLog": "mutations/library-W85-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W85 fact baseline read 410 and empty owner"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W86",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "lexical checker containment",
+        "requiredAssertion": "symlink and broken-link cases \u2192 strict exit 1 naming the id"
+      },
+      "variants": [
+        {
+          "id": "W86-checker-containment",
+          "redLog": "release/checker-red.txt",
+          "greenLog": "release/checker-green.txt",
+          "redCounts": {
+            "tests": 17,
+            "suites": 0,
+            "pass": 16,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 17,
+            "suites": 0,
+            "pass": 17,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W86 rejects escaping suite symlink before execution"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W87a",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "drop a path id from the registry",
+        "requiredAssertion": "T22 fails naming the id"
+      },
+      "variants": [
+        {
+          "id": "T22-W87a-registry-id",
+          "redLog": "mutations/T22-W87a-registry-id-red.txt",
+          "greenLog": "mutations/T22-W87a-registry-id-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T22 every registered finding write path uses real handlers and emits permitted Observations"
+          ]
+        },
+        {
+          "id": "W87a-registry-id",
+          "redLog": "mutations/W87a-registry-id-red.txt",
+          "greenLog": "mutations/W87a-registry-id-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W87a W87b W129 exact finding write registry covers every call site including Binary patches"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W87b",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "add a legacy Observation write inside a listed file",
+        "requiredAssertion": "static census fails naming the call site"
+      },
+      "variants": [
+        {
+          "id": "T22-W87b-exact-call-site",
+          "redLog": "mutations/T22-W87b-exact-call-site-red.txt",
+          "greenLog": "mutations/T22-W87b-exact-call-site-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T22 every registered finding write path uses real handlers and emits permitted Observations"
+          ]
+        },
+        {
+          "id": "W87b-exact-call-site",
+          "redLog": "mutations/W87b-exact-call-site-red.txt",
+          "greenLog": "mutations/W87b-exact-call-site-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W87a W87b W129 exact finding write registry covers every call site including Binary patches"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W90",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "lock missing on door PUT / pick / audit repair",
+        "requiredAssertion": "`finished` encounter \u2192 409 zero writes (each)"
+      },
+      "variants": [
+        {
+          "id": "W90-pick",
+          "redLog": "mutations/W90-pick-red.txt",
+          "greenLog": "mutations/W90-pick-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W90 pick refuses a closed encounter before Condition or Encounter writes"
+          ]
+        },
+        {
+          "id": "W90-put",
+          "redLog": "mutations/W90-put-red.txt",
+          "greenLog": "mutations/W90-put-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W90 door-put refuses a closed encounter before clinical or audit writes"
+          ]
+        },
+        {
+          "id": "W90-repair",
+          "redLog": "mutations/W90-repair-red.txt",
+          "greenLog": "mutations/W90-repair-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W90 door-audit-repair refuses a closed encounter before clinical or audit writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W91",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "lock missing on save / pull / protocol",
+        "requiredAssertion": "same (each)"
+      },
+      "variants": [
+        {
+          "id": "W91-closed-protocol",
+          "redLog": "protocol/W91-closed-protocol-red.tap",
+          "greenLog": "protocol/W91-closed-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 25,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W91 protocol apply closed zero writes",
+            "W108 protocol unapply closed zero writes",
+            "W108 actual unapply rollback closed refuses Observation restore",
+            "W82 built-in closed reject precedes seeding"
+          ]
+        },
+        {
+          "id": "carry-W91-closed",
+          "redLog": "carry/mutations/carry-W91-closed-red.txt",
+          "greenLog": "carry/mutations/carry-W91-closed-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 2,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W79 W91 refuses closed before all writes"
+          ]
+        },
+        {
+          "id": "ocular-W91",
+          "redLog": "mutations/ocular-W91-red.txt",
+          "greenLog": "mutations/ocular-W91-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 0,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W91 finished refuses save",
+            "W91 cancelled refuses save",
+            "W91 entered-in-error refuses save"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W92",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "inactive definition/option/field classified unresolved",
+        "requiredAssertion": "each case: fact read-only, encounter not pre-rebuild"
+      },
+      "variants": [
+        {
+          "id": "library-W92",
+          "redLog": "mutations/library-W92-red.txt",
+          "greenLog": "mutations/library-W92-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 0,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W92 inactive definition remains canonical read-only",
+            "W92 inactive field remains canonical read-only",
+            "W92 inactive option remains canonical read-only"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W93",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "catalog offers non-owned options",
+        "requiredAssertion": "search index excludes select/number/non-shared rows"
+      },
+      "variants": [
+        {
+          "id": "library-W93-search-index",
+          "redLog": "mutations/library-W93-search-index-red.txt",
+          "greenLog": "mutations/library-W93-search-index-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W93 finding GET searchIndex excludes shared select number and non-shared checkbox fields"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W94",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "candidates support a non-owned field",
+        "requiredAssertion": "supports empty for a select trigger"
+      },
+      "variants": [
+        {
+          "id": "library-W94-select-support",
+          "redLog": "mutations/library-W94-select-support-red.txt",
+          "greenLog": "mutations/library-W94-select-support-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W94 W117 stored select-with-live-fact mapping produces a candidate without finding supports or evidence reference"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W95",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "panel `values` accepts an owned or unknown field",
+        "requiredAssertion": "400"
+      },
+      "variants": [
+        {
+          "id": "library-W95",
+          "redLog": "mutations/library-W95-red.txt",
+          "greenLog": "mutations/library-W95-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W95 panel rejects unknown owned inactive select and invalid typed values without writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W96",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "panel value dropped on save",
+        "requiredAssertion": "TBUT round-trips through save \u2192 history"
+      },
+      "variants": [
+        {
+          "id": "ocular-W96",
+          "redLog": "mutations/ocular-W96-red.txt",
+          "greenLog": "mutations/ocular-W96-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W96 TBUT panel typed values round trip"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W97",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "exact-replay target re-checked against fresh baseline",
+        "requiredAssertion": "identical resend after partial apply completes"
+      },
+      "variants": [
+        {
+          "id": "ocular-W97",
+          "redLog": "mutations/ocular-W97-red.txt",
+          "greenLog": "mutations/ocular-W97-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W97 exact resend completes interrupted eye"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W98",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "resend rebased onto fresh state",
+        "requiredAssertion": "(a) intervening same-target link \u2192 409 `stale-baseline`, request digest unchanged, zero writes; (b) intervening change to an unrelated target \u2192 completed targets `exact-replay`, the rest applied"
+      },
+      "variants": [
+        {
+          "id": "ocular-W98",
+          "redLog": "mutations/ocular-W98-red.txt",
+          "greenLog": "mutations/ocular-W98-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W98 intervening same target stale; unrelated target replay succeeds"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W99",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "B accepts a key whose fresh presence is absent",
+        "requiredAssertion": "B claiming `present` for a live-absent owner \u2192 409, zero writes; W122"
+      },
+      "variants": [
+        {
+          "id": "ocular-W99",
+          "redLog": "mutations/ocular-W99-red.txt",
+          "greenLog": "mutations/ocular-W99-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W99 loaded present claim cannot match live absent"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W100",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "negative act outside `complete`",
+        "requiredAssertion": "negative-only failure \u2192 non-200, `complete: false`, causal outcome; W120"
+      },
+      "variants": [
+        {
+          "id": "ocular-W100",
+          "redLog": "mutations/ocular-W100-red.txt",
+          "greenLog": "mutations/ocular-W100-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W100 negative only audit failure is causal incomplete"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W101",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "Condition create without the carry identifier conditional",
+        "requiredAssertion": "lost-response replay \u2192 one Condition; W123"
+      },
+      "variants": [
+        {
+          "id": "carry-W101-conditional",
+          "redLog": "carry/mutations/carry-W101-conditional-red.txt",
+          "greenLog": "carry/mutations/carry-W101-conditional-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 1,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes",
+            "W123 two different commands race one conditional Condition owner"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W102",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "request fingerprint not compared to the stored plan",
+        "requiredAssertion": "changed-payload resend with the same `commandId` \u2192 409 `command-reused`"
+      },
+      "variants": [
+        {
+          "id": "carry-W102-fingerprint",
+          "redLog": "carry/mutations/carry-W102-fingerprint-red.txt",
+          "greenLog": "carry/mutations/carry-W102-fingerprint-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W102 same command changed source fingerprint refuses zero further writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W103",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "failed fact target rebased on resend",
+        "requiredAssertion": "stale target stays `conflict`; W125 replan completes on the same Condition"
+      },
+      "variants": [
+        {
+          "id": "carry-W103-frozen",
+          "redLog": "carry/mutations/carry-W103-frozen-red.txt",
+          "greenLog": "carry/mutations/carry-W103-frozen-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W103 W104 frozen retry stays stale and partial carry has no findings witness"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W104",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "carry-findings Provenance written on partial facts",
+        "requiredAssertion": "not written; `lineageStep: not-attempted`"
+      },
+      "variants": [
+        {
+          "id": "carry-W104-partial-witness",
+          "redLog": "carry/mutations/carry-W104-partial-witness-red.txt",
+          "greenLog": "carry/mutations/carry-W104-partial-witness-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W103 W104 frozen retry stays stale and partial carry has no findings witness"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W105",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "undo ignores `markerCommandId`",
+        "requiredAssertion": "void \u2192 revive \u2192 clear \u2192 undo \u2192 409 `undo-superseded`, zero writes"
+      },
+      "variants": [
+        {
+          "id": "lifecycle-W105",
+          "redLog": "mutations/lifecycle-W105-red.txt",
+          "greenLog": "mutations/lifecycle-W105-green.txt",
+          "redCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 1,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 5,
+            "suites": 0,
+            "pass": 5,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W105 fact writer supersession refuses whole undo",
+            "W105 panel writer supersession refuses whole undo",
+            "W105 marker absence transitions refuse without touching unrelated owners",
+            "W105 forged audit or malformed operation cannot trigger undo repair before supersession"
+          ]
+        },
+        {
+          "id": "lifecycle-W105-ledger",
+          "redLog": "mutations/lifecycle-W105-ledger-red.txt",
+          "greenLog": "mutations/lifecycle-W105-ledger-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W105 fact writer supersession refuses whole undo"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W106",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "repair not filtered to selected targets",
+        "requiredAssertion": "debt outside the void selection unchanged"
+      },
+      "variants": [
+        {
+          "id": "library-W106",
+          "redLog": "mutations/library-W106-red.txt",
+          "greenLog": "mutations/library-W106-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W106 W110 selected panel audit repair leaves other debt unchanged"
+          ]
+        },
+        {
+          "id": "lifecycle-W106-undo",
+          "redLog": "mutations/lifecycle-W106-undo-red.txt",
+          "greenLog": "mutations/lifecycle-W106-undo-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W106 undo repairs only selected debt"
+          ]
+        },
+        {
+          "id": "lifecycle-W106-void",
+          "redLog": "mutations/lifecycle-W106-void-red.txt",
+          "greenLog": "mutations/lifecycle-W106-void-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W106 void repairs only selected debt"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W107",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "protocol capture without dedupe / eyes",
+        "requiredAssertion": "tear-film fact + committed prompt \u2192 one seed with OD/OS"
+      },
+      "variants": [
+        {
+          "id": "W107-eyes-protocol",
+          "redLog": "protocol/W107-eyes-protocol-red.tap",
+          "greenLog": "protocol/W107-eyes-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 28,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W107 capture fact OD + committed prompt OS dedupes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W108",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "protocol unapply on pre-rebuild",
+        "requiredAssertion": "409 zero writes"
+      },
+      "variants": [
+        {
+          "id": "W108-prebuild-protocol",
+          "redLog": "protocol/W108-prebuild-protocol-red.tap",
+          "greenLog": "protocol/W108-prebuild-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 26,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W91 protocol apply pre-rebuild zero writes",
+            "W108 protocol unapply pre-rebuild zero writes",
+            "W108 actual unapply rollback pre-rebuild refuses Observation restore"
+          ]
+        },
+        {
+          "id": "W108-restore-protocol",
+          "redLog": "protocol/W108-restore-protocol-red.tap",
+          "greenLog": "protocol/W108-restore-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 26,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W108 actual unapply rollback closed refuses Observation restore",
+            "W108 actual unapply rollback pre-rebuild refuses Observation restore",
+            "W108 actual unapply rollback shared refuses Observation restore"
+          ]
+        },
+        {
+          "id": "W108-unapply-preflight-protocol",
+          "redLog": "protocol/W108-unapply-preflight-protocol-red.tap",
+          "greenLog": "protocol/W108-unapply-preflight-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 26,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W108 protocol unapply closed zero writes",
+            "W108 protocol unapply pre-rebuild zero writes",
+            "V28 unapply shared target rejects before unrelated removals"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W109",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "mixed valid + forged audits accepted",
+        "requiredAssertion": "`audit-mismatch`"
+      },
+      "variants": [
+        {
+          "id": "library-W109",
+          "redLog": "mutations/library-W109-red.txt",
+          "greenLog": "mutations/library-W109-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W83 W109 rejects audit mixed"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W110",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "panel debt not surfaced",
+        "requiredAssertion": "history `panel.auditPending`; repair route clears it"
+      },
+      "variants": [
+        {
+          "id": "library-W110",
+          "redLog": "mutations/library-W110-red.txt",
+          "greenLog": "mutations/library-W110-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W106 W110 selected panel audit repair leaves other debt unchanged"
+          ]
+        },
+        {
+          "id": "ocular-W110",
+          "redLog": "mutations/ocular-W110-red.txt",
+          "greenLog": "mutations/ocular-W110-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W110 panel debt surfaces and repair clears it"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W111",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "`encounterClosedDuringCommand` never set",
+        "requiredAssertion": "closing between execution and re-read sets it"
+      },
+      "variants": [
+        {
+          "id": "W111-door",
+          "redLog": "mutations/W111-door-red.txt",
+          "greenLog": "mutations/W111-door-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 3,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W111 door returns closure observed after a confirmed command"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W112",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "retired panel owner recreated",
+        "requiredAssertion": "void panel \u2192 save \u2192 same id revived"
+      },
+      "variants": [
+        {
+          "id": "library-W112",
+          "redLog": "mutations/library-W112-red.txt",
+          "greenLog": "mutations/library-W112-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W112 W117 panel writer roundtrip replay conflict and revive retain identity"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W113",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "carry of an OU fact loses an eye",
+        "requiredAssertion": "both eyes carried, one Condition"
+      },
+      "variants": [
+        {
+          "id": "carry-W113-both-eyes",
+          "redLog": "carry/mutations/carry-W113-both-eyes-red.txt",
+          "greenLog": "carry/mutations/carry-W113-both-eyes-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W114",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "reader receives seeds instead of stored definitions",
+        "requiredAssertion": "practice-added option on a shared definition resolves through each consumer's real dependency path"
+      },
+      "variants": [
+        {
+          "id": "W114-door-candidates",
+          "redLog": "mutations/W114-door-candidates-red.txt",
+          "greenLog": "mutations/W114-door-candidates-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 candidates resolves a practice-only option through its real store dependency"
+          ]
+        },
+        {
+          "id": "W114-door-pick",
+          "redLog": "mutations/W114-door-pick-red.txt",
+          "greenLog": "mutations/W114-door-pick-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 pick resolves a practice-only option through its real store dependency"
+          ]
+        },
+        {
+          "id": "W114-door-read",
+          "redLog": "mutations/W114-door-read-red.txt",
+          "greenLog": "mutations/W114-door-read-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 read resolves a practice-only option through its real store dependency"
+          ]
+        },
+        {
+          "id": "W114-door-repair",
+          "redLog": "mutations/W114-door-repair-red.txt",
+          "greenLog": "mutations/W114-door-repair-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 repair resolves a practice-only option through its real store dependency"
+          ]
+        },
+        {
+          "id": "W114-door-write",
+          "redLog": "mutations/W114-door-write-red.txt",
+          "greenLog": "mutations/W114-door-write-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 write resolves a practice-only option through its real store dependency"
+          ]
+        },
+        {
+          "id": "W114-mcp-amend",
+          "redLog": "mcp-runtime/mutations/W114-mcp-amend-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-amend-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-amend",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-append-context",
+          "redLog": "mcp-runtime/mutations/W114-mcp-append-context-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-append-context-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-append-context",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-attest",
+          "redLog": "mcp-runtime/mutations/W114-mcp-attest-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-attest-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-attest",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-create-observation",
+          "redLog": "mcp-runtime/mutations/W114-mcp-create-observation-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-create-observation-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-create-observation",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-dry-eye-questionnaire-score",
+          "redLog": "mcp-runtime/mutations/W114-mcp-dry-eye-questionnaire-score-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-dry-eye-questionnaire-score-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-dry-eye-questionnaire-score",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-eye-growth",
+          "redLog": "mcp-runtime/mutations/W114-mcp-eye-growth-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-eye-growth-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-eye-growth",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-meibography",
+          "redLog": "mcp-runtime/mutations/W114-mcp-meibography-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-meibography-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-meibography",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-ortho-k-fit",
+          "redLog": "mcp-runtime/mutations/W114-mcp-ortho-k-fit-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-ortho-k-fit-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-ortho-k-fit",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-save-section",
+          "redLog": "mcp-runtime/mutations/W114-mcp-save-section-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-save-section-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-save-section",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-scribe-write",
+          "redLog": "mcp-runtime/mutations/W114-mcp-scribe-write-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-scribe-write-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-scribe-write",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-mcp-smoking-status",
+          "redLog": "mcp-runtime/mutations/W114-mcp-smoking-status-red.txt",
+          "greenLog": "mcp-runtime/mutations/W114-mcp-smoking-status-green.txt",
+          "redCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "greenCounts": {
+            "tests": null,
+            "suites": null,
+            "pass": null,
+            "fail": null,
+            "cancelled": null,
+            "skipped": null,
+            "todo": null
+          },
+          "failedThenPassed": [],
+          "restoredRuntimePath": "mcp-smoking-status",
+          "redAssertionFailures": 1,
+          "greenVerifiedRuntimePaths": 11
+        },
+        {
+          "id": "W114-ocular-history-dependency",
+          "redLog": "ocular/W114-ocular-history-dependency-red.tap",
+          "greenLog": "ocular/W114-ocular-history-dependency-green.tap",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 practice option from stored definitions saves and reads"
+          ]
+        },
+        {
+          "id": "W114-overview-dependency",
+          "redLog": "overview/W114-overview-dependency-red.tap",
+          "greenLog": "overview/W114-overview-dependency-green.tap",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 overview stored definition dependency resolves practice option label and clinical credit"
+          ]
+        },
+        {
+          "id": "W114-previous-exams-dependency",
+          "redLog": "carry/W114-previous-exams-dependency-red.tap",
+          "greenLog": "carry/W114-previous-exams-dependency-green.tap",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 stored practice option carries through effective definitions and historical read"
+          ]
+        },
+        {
+          "id": "W114-stored-overview",
+          "redLog": "overview/W114-stored-overview-red.tap",
+          "greenLog": "overview/W114-stored-overview-green.tap",
+          "redCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 24,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 26,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W81 inactive canonical no credit",
+            "W114 stored practice option resolves in both consumers"
+          ]
+        },
+        {
+          "id": "W114-stored-protocol",
+          "redLog": "protocol/W114-stored-protocol-red.tap",
+          "greenLog": "protocol/W114-stored-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 26,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 capture respects stored shared definition",
+            "W114 stored local shared valued item refuses",
+            "V28 inactive shared capture cannot seed"
+          ]
+        },
+        {
+          "id": "W114-undo-dependency",
+          "redLog": "void-undo/W114-undo-dependency-red.tap",
+          "greenLog": "void-undo/W114-undo-dependency-green.tap",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 effective stored practice definition resolves lifecycle identity"
+          ]
+        },
+        {
+          "id": "carry-W114-stored",
+          "redLog": "carry/mutations/carry-W114-stored-red.txt",
+          "greenLog": "carry/mutations/carry-W114-stored-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 stored practice option carries through effective definitions and historical read"
+          ]
+        },
+        {
+          "id": "lifecycle-W114",
+          "redLog": "mutations/lifecycle-W114-red.txt",
+          "greenLog": "mutations/lifecycle-W114-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 effective stored practice definition resolves lifecycle identity"
+          ]
+        },
+        {
+          "id": "ocular-W114",
+          "redLog": "mutations/ocular-W114-red.txt",
+          "greenLog": "mutations/ocular-W114-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W114 practice option from stored definitions saves and reads"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W115",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "attest/amend without the \u00a73.13 rules",
+        "requiredAssertion": "canonical target: pre-rebuild refused, closed allowed, owed audit repaired first, identity/marker/homes byte-identical"
+      },
+      "variants": [
+        {
+          "id": "library-W115",
+          "redLog": "mutations/library-W115-red.txt",
+          "greenLog": "mutations/library-W115-green.txt",
+          "redCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 0,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 3,
+            "suites": 0,
+            "pass": 3,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W115 signed final panels and facts retain identity with zero ordinary writes",
+            "W115 signed amended panels and facts retain identity with zero ordinary writes",
+            "W115 signed corrected panels and facts retain identity with zero ordinary writes"
+          ]
+        },
+        {
+          "id": "mcp-W115-audit",
+          "redLog": "mutations/mcp-W115-audit-red.txt",
+          "greenLog": "mutations/mcp-W115-audit-green.txt",
+          "redCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 50,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 54,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W115 clinician_attest_observation repairs only selected debt before lifecycle",
+            "W115 clinician_attest_observation refuses mismatched audit",
+            "W115 amend_observation repairs only selected debt before lifecycle",
+            "W115 amend_observation refuses mismatched audit"
+          ]
+        },
+        {
+          "id": "mcp-W115-closed",
+          "redLog": "mutations/mcp-W115-closed-red.txt",
+          "greenLog": "mutations/mcp-W115-closed-green.txt",
+          "redCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 46,
+            "fail": 8,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 54,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild",
+            "W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild",
+            "W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild",
+            "W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild",
+            "W115 clinician_attest_observation repairs only selected debt before lifecycle",
+            "W115 clinician_attest_observation refuses mismatched audit",
+            "W115 amend_observation repairs only selected debt before lifecycle",
+            "W115 amend_observation refuses mismatched audit"
+          ]
+        },
+        {
+          "id": "mcp-W115-filter",
+          "redLog": "mutations/mcp-W115-filter-red.txt",
+          "greenLog": "mutations/mcp-W115-filter-green.txt",
+          "redCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 52,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 54,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W115 clinician_attest_observation repairs only selected debt before lifecycle",
+            "W115 amend_observation repairs only selected debt before lifecycle"
+          ]
+        },
+        {
+          "id": "mcp-W115-prebuild",
+          "redLog": "mutations/mcp-W115-prebuild-red.txt",
+          "greenLog": "mutations/mcp-W115-prebuild-green.txt",
+          "redCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 50,
+            "fail": 4,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 54,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild",
+            "W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild",
+            "W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild",
+            "W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild"
+          ]
+        },
+        {
+          "id": "rev25-W115-live-identity",
+          "redLog": "mutations/rev25-W115-live-identity-red.txt",
+          "greenLog": "mutations/rev25-W115-live-identity-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 2,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "R10 A3 Ocular Health saves and lifecycle enforce stored role policies and real MCP dispatch"
+          ]
+        },
+        {
+          "id": "rev25-W115-live-prebuild",
+          "redLog": "mutations/rev25-W115-live-prebuild-red.txt",
+          "greenLog": "mutations/rev25-W115-live-prebuild-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 2,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "R10 A3 Ocular Health saves and lifecycle enforce stored role policies and real MCP dispatch"
+          ]
+        },
+        {
+          "id": "rev25-W115-live-session",
+          "redLog": "mutations/rev25-W115-live-session-red.txt",
+          "greenLog": "mutations/rev25-W115-live-session-green.txt",
+          "redCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 2,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 4,
+            "suites": 0,
+            "pass": 4,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "R10 A3 Ocular Health saves and lifecycle enforce stored role policies and real MCP dispatch"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W116",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "generic MCP tool writes a shared-finding body",
+        "requiredAssertion": "each generic tool refuses a canonical, panel, negative or legacy-shared body with zero writes"
+      },
+      "variants": [
+        {
+          "id": "mcp-W116-generic",
+          "redLog": "mutations/mcp-W116-generic-red.txt",
+          "greenLog": "mutations/mcp-W116-generic-green.txt",
+          "redCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 19,
+            "fail": 35,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 54,
+            "suites": 0,
+            "pass": 54,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W116 create_observation refuses canonical before associated writes through MCP dispatch",
+            "W116 create_observation refuses panel before associated writes through MCP dispatch",
+            "W116 create_observation refuses negative before associated writes through MCP dispatch",
+            "W116 create_observation refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch",
+            "W116 scribe_write_observation refuses panel before associated writes through MCP dispatch",
+            "W116 scribe_write_observation refuses negative before associated writes through MCP dispatch",
+            "W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 save_section_observations refuses canonical before associated writes through MCP dispatch",
+            "W116 save_section_observations refuses panel before associated writes through MCP dispatch",
+            "W116 save_section_observations refuses negative before associated writes through MCP dispatch",
+            "W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch",
+            "W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch",
+            "W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch",
+            "W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch",
+            "W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch",
+            "W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch",
+            "W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch",
+            "W116 create_meibography_observation refuses panel before associated writes through MCP dispatch",
+            "W116 create_meibography_observation refuses negative before associated writes through MCP dispatch",
+            "W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch",
+            "W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch",
+            "W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch",
+            "W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch",
+            "W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch",
+            "W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch",
+            "W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch",
+            "W116 append guards target through MCP dispatch",
+            "W116 append guards result through MCP dispatch",
+            "W116 eye growth validates optional corneal Observation before axial writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W117",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "no panel-only definition view",
+        "requiredAssertion": "TBUT-only panel drives a numeric mapping candidate with no supports, `linkable: false`"
+      },
+      "variants": [
+        {
+          "id": "library-W117",
+          "redLog": "mutations/library-W117-red.txt",
+          "greenLog": "mutations/library-W117-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W112 W117 panel writer roundtrip replay conflict and revive retain identity"
+          ]
+        },
+        {
+          "id": "library-W117-numeric-candidate",
+          "redLog": "mutations/library-W117-numeric-candidate-red.txt",
+          "greenLog": "mutations/library-W117-numeric-candidate-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W94 W117 stored numeric-TBUT-panel-only mapping produces a candidate without finding supports or evidence reference"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W118",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "required panel value not credited",
+        "requiredAssertion": "present TBUT satisfies a TBUT key finding; Other/Remarks alone do not"
+      },
+      "variants": [
+        {
+          "id": "W118-values-overview",
+          "redLog": "overview/W118-values-overview-red.tap",
+          "greenLog": "overview/W118-values-overview-green.tap",
+          "redCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 23,
+            "fail": 3,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 26,
+            "suites": 0,
+            "pass": 26,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W118 present TBUT 8 credits",
+            "W118 present TBUT 0 credits",
+            "W81 overview completeness panel-value"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W119",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "capture ignores panel values",
+        "requiredAssertion": "a panel with values seeds one prompt-only item for that eye"
+      },
+      "variants": [
+        {
+          "id": "W119-panel-protocol",
+          "redLog": "protocol/W119-panel-protocol-red.tap",
+          "greenLog": "protocol/W119-panel-protocol-green.tap",
+          "redCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 28,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 29,
+            "suites": 0,
+            "pass": 29,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W119 panel value capture"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W120",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "existing negative act re-preflighted",
+        "requiredAssertion": "act persisted, Provenance failed, positive added, identical resend \u2192 Provenance repaired, still one act, no 409"
+      },
+      "variants": [
+        {
+          "id": "ocular-W120",
+          "redLog": "mutations/ocular-W120-red.txt",
+          "greenLog": "mutations/ocular-W120-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W120 persisted negative repairs original audit despite new positive"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W121",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "same act id from another actor accepted",
+        "requiredAssertion": "409 `command-reused`, zero writes"
+      },
+      "variants": [
+        {
+          "id": "ocular-W121",
+          "redLog": "mutations/ocular-W121-red.txt",
+          "greenLog": "mutations/ocular-W121-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W121 same negative id second actor refuses zero writes"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W122",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "explicit absent \u2192 present without the flag",
+        "requiredAssertion": "S entry on a live-absent owner without `fromPresence` \u2192 400; with it \u2192 present; omission leaves it absent"
+      },
+      "variants": [
+        {
+          "id": "ocular-W122",
+          "redLog": "mutations/ocular-W122-red.txt",
+          "greenLog": "mutations/ocular-W122-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W122 absent transition requires explicit flag; omission preserves"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W123",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "carry identity per command",
+        "requiredAssertion": "two different commands racing one diagnosis \u2192 one Condition, no duplicate facts; the loser gets `carry-incomplete` or `conflict`"
+      },
+      "variants": [
+        {
+          "id": "carry-W123-command-independent",
+          "redLog": "carry/mutations/carry-W123-command-independent-red.txt",
+          "greenLog": "carry/mutations/carry-W123-command-independent-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W123 two different commands race one conditional Condition owner"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W124",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "resume states not handled",
+        "requiredAssertion": "Condition present/plan missing \u2192 plan created and carry continues; plan present/link missing \u2192 re-linked; each completes once"
+      },
+      "variants": [
+        {
+          "id": "carry-W124-resume",
+          "redLog": "carry/mutations/carry-W124-resume-red.txt",
+          "greenLog": "carry/mutations/carry-W124-resume-green.txt",
+          "redCounts": {
+            "tests": 32,
+            "suites": 0,
+            "pass": 5,
+            "fail": 27,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 32,
+            "suites": 0,
+            "pass": 32,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "standalone plan failure 403 keeps exact persisted state without privileged compensation",
+            "standalone plan failure 409 keeps exact persisted state without privileged compensation",
+            "standalone plan failure 412 keeps exact persisted state without privileged compensation",
+            "standalone plan failure 500 keeps exact persisted state without privileged compensation",
+            "standalone plan failure 503 keeps exact persisted state without privileged compensation",
+            "standalone link failure 403 keeps exact persisted state without privileged compensation",
+            "standalone link failure 409 keeps exact persisted state without privileged compensation",
+            "standalone link failure 412 keeps exact persisted state without privileged compensation",
+            "standalone link failure 500 keeps exact persisted state without privileged compensation",
+            "standalone link failure 503 keeps exact persisted state without privileged compensation",
+            "standalone fact failure 403 keeps exact persisted state without privileged compensation",
+            "standalone fact failure 409 keeps exact persisted state without privileged compensation",
+            "standalone fact failure 412 keeps exact persisted state without privileged compensation",
+            "standalone fact failure 500 keeps exact persisted state without privileged compensation",
+            "standalone fact failure 503 keeps exact persisted state without privileged compensation",
+            "standalone audit failure 403 keeps exact persisted state without privileged compensation",
+            "standalone audit failure 409 keeps exact persisted state without privileged compensation",
+            "standalone audit failure 412 keeps exact persisted state without privileged compensation",
+            "standalone audit failure 500 keeps exact persisted state without privileged compensation",
+            "standalone audit failure 503 keeps exact persisted state without privileged compensation",
+            "standalone witness failure 403 keeps exact persisted state without privileged compensation",
+            "standalone witness failure 409 keeps exact persisted state without privileged compensation",
+            "standalone witness failure 412 keeps exact persisted state without privileged compensation",
+            "standalone witness failure 500 keeps exact persisted state without privileged compensation",
+            "standalone witness failure 503 keeps exact persisted state without privileged compensation",
+            "W124 resumes persisted Condition with failed plan",
+            "W124 resumes persisted Condition with failed link"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W125",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "no replan; *(rev 2.4)* Step 5 refuses `unchanged`",
+        "requiredAssertion": "stale partial carry \u2192 `replan: true` with a new command \u2192 new plan, facts applied, one Condition; a target the first command already applied returns `unchanged` and the findings Provenance is written with its current `versionId` (fact reads not edited); control: an `unchanged` outcome with `auditPending` or no `versionId` \u2192 no witness, `lineageStep: not-attempted`"
+      },
+      "variants": [
+        {
+          "id": "carry-W125-audit",
+          "redLog": "carry/mutations/carry-W125-audit-red.txt",
+          "greenLog": "carry/mutations/carry-W125-audit-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W125 unchanged auditPending refuses witness at the real route"
+          ]
+        },
+        {
+          "id": "carry-W125-missing-version",
+          "redLog": "carry/mutations/carry-W125-missing-version-red.txt",
+          "greenLog": "carry/mutations/carry-W125-missing-version-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W125 unchanged missing-version refuses witness at the real route"
+          ]
+        },
+        {
+          "id": "carry-W125-replan",
+          "redLog": "carry/mutations/carry-W125-replan-red.txt",
+          "greenLog": "carry/mutations/carry-W125-replan-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W125 replan accepts unchanged already-completed target and records exact versions"
+          ]
+        },
+        {
+          "id": "carry-W125-unchanged",
+          "redLog": "carry/mutations/carry-W125-unchanged-red.txt",
+          "greenLog": "carry/mutations/carry-W125-unchanged-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W125 replan accepts unchanged already-completed target and records exact versions"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W126",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "lineage by marker or time",
+        "requiredAssertion": "void (and void \u2192 undo) between Step 4 and Step 5 \u2192 fact reads edited"
+      },
+      "variants": [
+        {
+          "id": "carry-W126-writer-version",
+          "redLog": "carry/mutations/carry-W126-writer-version-red.txt",
+          "greenLog": "carry/mutations/carry-W126-writer-version-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 0,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W75 W126 void between facts and witness remains edited",
+            "W75 W126 void-undo between facts and witness remains edited"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W127",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "undo without action identity",
+        "requiredAssertion": "void V1 \u2192 undo V1 \u2192 void V2 \u2192 delayed undo V1 \u2192 409 `undo-superseded`, zero writes; missing `voidActionId` \u2192 400"
+      },
+      "variants": [
+        {
+          "id": "lifecycle-W127-action",
+          "redLog": "mutations/lifecycle-W127-action-red.txt",
+          "greenLog": "mutations/lifecycle-W127-action-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W127 void action UUID is persisted and delayed or consumed undo refuses"
+          ]
+        },
+        {
+          "id": "lifecycle-W127-missing",
+          "redLog": "mutations/lifecycle-W127-missing-red.txt",
+          "greenLog": "mutations/lifecycle-W127-missing-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W127 missing void action is 400 zero writes"
+          ]
+        },
+        {
+          "id": "lifecycle-W127-response",
+          "redLog": "mutations/lifecycle-W127-response-red.txt",
+          "greenLog": "mutations/lifecycle-W127-response-green.txt",
+          "redCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 1,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 2,
+            "suites": 0,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W127 void action UUID is persisted and delayed or consumed undo refuses"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W128",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "replay success before target read",
+        "requiredAssertion": "reassert and fact exact-replay after target deletion \u2192 `conflict` `target-deleted`, one historical audit, zero writes"
+      },
+      "variants": [
+        {
+          "id": "library-W128",
+          "redLog": "mutations/library-W128-red.txt",
+          "greenLog": "mutations/library-W128-green.txt",
+          "redCounts": {
+            "tests": 9,
+            "suites": 0,
+            "pass": 2,
+            "fail": 7,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 9,
+            "suites": 0,
+            "pass": 9,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W85 W128 fact 404 deletion conflicts before write or replay",
+            "W85 W128 fact 410 deletion conflicts before write or replay",
+            "W85 W128 panel 404 deletion conflicts before write or replay",
+            "W85 W128 panel 410 deletion conflicts before write or replay",
+            "W85 W128 reassert empty deletion conflicts before write or replay",
+            "W85 W128 reassert 404 deletion conflicts before write or replay",
+            "W85 W128 reassert 410 deletion conflicts before write or replay"
+          ]
+        }
+      ]
+    },
+    {
+      "row": "W129",
+      "status": "red-green-recorded",
+      "requirement": {
+        "mutation": "census ignores JSON Patch",
+        "requiredAssertion": "attestation/amendment call sites registered; removing one registry entry, or adding a Binary JSON Patch write in a registered function, fails the census"
+      },
+      "variants": [
+        {
+          "id": "T22-W129-mcp-amend",
+          "redLog": "mutations/T22-W129-mcp-amend-red.txt",
+          "greenLog": "mutations/T22-W129-mcp-amend-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T22 every registered finding write path uses real handlers and emits permitted Observations"
+          ]
+        },
+        {
+          "id": "T22-W129-mcp-attest",
+          "redLog": "mutations/T22-W129-mcp-attest-red.txt",
+          "greenLog": "mutations/T22-W129-mcp-attest-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T22 every registered finding write path uses real handlers and emits permitted Observations"
+          ]
+        },
+        {
+          "id": "T22-W129-new-binary-entry",
+          "redLog": "mutations/T22-W129-new-binary-entry-red.txt",
+          "greenLog": "mutations/T22-W129-new-binary-entry-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "T22 every registered finding write path uses real handlers and emits permitted Observations"
+          ]
+        },
+        {
+          "id": "W129-mcp-amend",
+          "redLog": "mutations/W129-mcp-amend-red.txt",
+          "greenLog": "mutations/W129-mcp-amend-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W87a W87b W129 exact finding write registry covers every call site including Binary patches"
+          ]
+        },
+        {
+          "id": "W129-mcp-attest",
+          "redLog": "mutations/W129-mcp-attest-red.txt",
+          "greenLog": "mutations/W129-mcp-attest-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W87a W87b W129 exact finding write registry covers every call site including Binary patches"
+          ]
+        },
+        {
+          "id": "W129-new-binary-entry",
+          "redLog": "mutations/W129-new-binary-entry-red.txt",
+          "greenLog": "mutations/W129-new-binary-entry-green.txt",
+          "redCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 0,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "greenCounts": {
+            "tests": 1,
+            "suites": 0,
+            "pass": 1,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "failedThenPassed": [
+            "W87a W87b W129 exact finding write registry covers every call site including Binary patches"
+          ]
+        }
+      ]
+    }
+  ],
+  "supplementalRecipesExcluded": [
+    {
+      "id": "T22-real-restore-protocol",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "V27-chart-change-overview",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "V27-legacy-view-overview",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "V27-reassert-overview",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "V28-cleared-protocol",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "V28-inactive-protocol",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "V28-shared-removal-protocol",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "lifecycle-closed-undo",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "lifecycle-closed-void",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "lifecycle-lookup-undo",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "lifecycle-lookup-void",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "lifecycle-prebuild-undo",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "lifecycle-prebuild-void",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "release-V23-prebuild-save",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    },
+    {
+      "id": "release-V30-supported-pick",
+      "reason": "Supplemental V/T guard; not one of the 64 required W rows."
+    }
+  ]
+}

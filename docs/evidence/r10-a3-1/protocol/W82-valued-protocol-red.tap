@@ -1,0 +1,294 @@
+TAP version 13
+# Subtest: W82 selected valued shared default refuses before all writes
+not ok 1 - W82 selected valued shared default refuses before all writes
+  ---
+  duration_ms: 39.796292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:614'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"application":{"id":"f842dffd-262b-44aa-8877-ee40aca46dd1","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"e13354e8-fede-4714-b6f8-8d632e33a159","encounterId":"e1","patientId":"p1","protocolApplicationId":"f842dffd-262b-44aa-8877-ee40aca46dd1","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/7c211119-a6e2-4a1d-8269-a9e5f2eab999"},{"id":"30f7d717-dd90-4770-96bf-ebd08987398a","encounterId":"e1","patientId":"p1","protocolApplicationId":"f842dffd-262b-44aa-8877-ee40aca46dd1","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","value":"abnormal","editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/83cdcb09-394f-4ed7-9c3e-dc6b38f1580a"}],"actions":[],"charges":[]}
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:9:585)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W82 selected valued shared override refuses before all writes
+not ok 2 - W82 selected valued shared override refuses before all writes
+  ---
+  duration_ms: 32.399958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:614'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"application":{"id":"ffee66f8-1c00-4832-b31c-4da4a2d787e0","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-modified"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"91704a59-6ee1-48b4-a023-64a779e4f411","encounterId":"e1","patientId":"p1","protocolApplicationId":"ffee66f8-1c00-4832-b31c-4da4a2d787e0","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/e3690611-eb75-4e8b-8707-15552638fb00"},{"id":"25366c6c-f0d8-4a61-a580-f50994b26422","encounterId":"e1","patientId":"p1","protocolApplicationId":"ffee66f8-1c00-4832-b31c-4da4a2d787e0","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","editedBeforeCommit":true,"provenance":{"source":"clinician-entered","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"value":"abnormal","observationReference":"Observation/95acc074-5b0a-4a1b-962f-90aac807bab2"}],"actions":[],"charges":[]}
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:9:585)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W82 selected valued shared per-eye refuses before all writes
+not ok 3 - W82 selected valued shared per-eye refuses before all writes
+  ---
+  duration_ms: 30.509917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:614'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"application":{"id":"de15b242-2f86-4550-93ee-641fee7cd728","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"145f5c4b-7d54-4aee-b8c2-13259425767f","encounterId":"e1","patientId":"p1","protocolApplicationId":"de15b242-2f86-4550-93ee-641fee7cd728","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/21c19f09-7437-49bd-8876-c00b984b0f4a"},{"id":"57c9ab91-1536-41e2-9293-1fbd5ebebc12","encounterId":"e1","patientId":"p1","protocolApplicationId":"de15b242-2f86-4550-93ee-641fee7cd728","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","value":"abnormal","editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/2c1be029-d413-4d67-b5ba-487a22ab90d4"}],"actions":[],"charges":[]}
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:9:585)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W82 shared prompt applies with no Observation
+ok 4 - W82 shared prompt applies with no Observation
+  ---
+  duration_ms: 18.070042
+  type: 'test'
+  ...
+# Subtest: W82 opted-out valued shared is allowed
+ok 5 - W82 opted-out valued shared is allowed
+  ---
+  duration_ms: 17.423791
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply closed zero writes
+ok 6 - W91 protocol apply closed zero writes
+  ---
+  duration_ms: 0.955708
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply pre-rebuild zero writes
+ok 7 - W91 protocol apply pre-rebuild zero writes
+  ---
+  duration_ms: 7.806708
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply closed zero writes
+ok 8 - W108 protocol unapply closed zero writes
+  ---
+  duration_ms: 19.310792
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply pre-rebuild zero writes
+ok 9 - W108 protocol unapply pre-rebuild zero writes
+  ---
+  duration_ms: 23.007542
+  type: 'test'
+  ...
+# Subtest: V28 capture preliminary canonical prompt
+ok 10 - V28 capture preliminary canonical prompt
+  ---
+  duration_ms: 7.990584
+  type: 'test'
+  ...
+# Subtest: V28 capture final canonical prompt
+ok 11 - V28 capture final canonical prompt
+  ---
+  duration_ms: 6.294458
+  type: 'test'
+  ...
+# Subtest: V28 capture amended canonical prompt
+ok 12 - V28 capture amended canonical prompt
+  ---
+  duration_ms: 6.556125
+  type: 'test'
+  ...
+# Subtest: W107 capture fact OD + committed prompt OS dedupes
+ok 13 - W107 capture fact OD + committed prompt OS dedupes
+  ---
+  duration_ms: 22.992917
+  type: 'test'
+  ...
+# Subtest: W119 panel value capture
+ok 14 - W119 panel value capture
+  ---
+  duration_ms: 8.27475
+  type: 'test'
+  ...
+# Subtest: W119 panel context-only capture
+ok 15 - W119 panel context-only capture
+  ---
+  duration_ms: 6.631625
+  type: 'test'
+  ...
+# Subtest: W114 capture respects stored shared definition
+ok 16 - W114 capture respects stored shared definition
+  ---
+  duration_ms: 23.079208
+  type: 'test'
+  ...
+# Subtest: V28 unapply shared target rejects before unrelated removals
+ok 17 - V28 unapply shared target rejects before unrelated removals
+  ---
+  duration_ms: 33.977083
+  type: 'test'
+  ...
+# Subtest: T22 control actual failed unapply restores unrelated Observation
+ok 18 - T22 control actual failed unapply restores unrelated Observation
+  ---
+  duration_ms: 45.543208
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback closed refuses Observation restore
+ok 19 - W108 actual unapply rollback closed refuses Observation restore
+  ---
+  duration_ms: 39.652958
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback pre-rebuild refuses Observation restore
+ok 20 - W108 actual unapply rollback pre-rebuild refuses Observation restore
+  ---
+  duration_ms: 45.491292
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback shared refuses Observation restore
+ok 21 - W108 actual unapply rollback shared refuses Observation restore
+  ---
+  duration_ms: 46.918041
+  type: 'test'
+  ...
+# Subtest: W82 payload definition override cannot value a shared proposed row
+not ok 22 - W82 payload definition override cannot value a shared proposed row
+  ---
+  duration_ms: 22.6445
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:6132'
+  failureType: 'testCodeFailure'
+  error: 'Numeric protocol finding ocular-health:anterior:lens requires an explicit unit mapping.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    protocolFindingObservation (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/protocol-endpoint.ts:1023:11)
+    Object.commitFinding (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/protocol-endpoint.ts:917:11)
+    async ProtocolService.applySelectedItem (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/protocol-service.ts:1061:13)
+    async ProtocolService.commitLocked (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/protocol-service.ts:627:9)
+    async InProcessProtocolItemAddLock.run (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/protocol-service.ts:78:14)
+    async handleProtocolApplyRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/protocol-endpoint.ts:422:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:22:125)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W82 built-in closed reject precedes seeding
+ok 23 - W82 built-in closed reject precedes seeding
+  ---
+  duration_ms: 0.642583
+  type: 'test'
+  ...
+# Subtest: W82 built-in valued reject precedes seeding
+not ok 24 - W82 built-in valued reject precedes seeding
+  ---
+  duration_ms: 34.786041
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:6594'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    409 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:24:484)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W114 stored local shared valued item refuses
+not ok 25 - W114 stored local shared valued item refuses
+  ---
+  duration_ms: 23.006291
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:7101'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:25:306)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+ok 26 - W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+  ---
+  duration_ms: 22.534167
+  type: 'test'
+  ...
+# Subtest: V28 capture excludes cleared canonical and retains unrelated value
+ok 27 - V28 capture excludes cleared canonical and retains unrelated value
+  ---
+  duration_ms: 28.089916
+  type: 'test'
+  ...
+# Subtest: W82 prompt override cannot hide a valued shared proposed item
+not ok 28 - W82 prompt override cannot hide a valued shared proposed item
+  ---
+  duration_ms: 22.330667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:8275'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:28:307)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V28 inactive shared capture cannot seed
+ok 29 - V28 inactive shared capture cannot seed
+  ---
+  duration_ms: 11.193292
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 22
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 858.08275

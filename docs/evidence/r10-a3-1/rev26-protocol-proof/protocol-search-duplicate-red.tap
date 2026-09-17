@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: fixback warm tap seeds only its built-in and rules
+ok 1 - fixback warm tap seeds only its built-in and rules
+  ---
+  duration_ms: 35.942916
+  type: 'test'
+  ...
+# Subtest: fixback warm whole seeds only its built-in and rules
+not ok 2 - fixback warm whole seeds only its built-in and rules
+  ---
+  duration_ms: 70.797541
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:5017'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    6 !== 5
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:92:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 317.696709

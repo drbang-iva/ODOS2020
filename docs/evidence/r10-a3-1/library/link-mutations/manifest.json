@@ -1,0 +1,19 @@
+[
+  {
+    "id": "link-l2-V30-supports",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts",
+        "before": "return facts.length ? { supportingFacts: facts } : {};",
+        "after": "return {};"
+      }
+    ],
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=OH-3|posterior plain drusen",
+      "mcp/tests/diagnosisLinkL2.test.ts"
+    ],
+    "failurePattern": "supportingFacts|actual - expected"
+  }
+]

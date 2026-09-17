@@ -1,0 +1,47 @@
+[
+  {
+    "mutation": "W80-homes",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W81-inactive",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W81-context",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W81-carry",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W118-values",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W114-stored",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "V27-chart-change",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "V27-reassert",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "V27-legacy-view",
+    "red": 1,
+    "restored": 0
+  }
+]

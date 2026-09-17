@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { assertNotSharedFindingWrite, prepareSharedFindingLifecycle } from "./clinical-graph/shared-finding-write-guard.js";
 import { handleDiagnosisNewnessReadRequest, handleDiagnosisNewnessUpdateRequest } from "./clinical-graph/diagnosis-newness-endpoint.js";
 import { registerHistoryItemRoutes } from "./clinical-graph/history-item-routes.js";
 /**
@@ -2906,6 +2907,7 @@ function createServer(): Server {
         case "create_observation": {
           const input = createObservationSchema.parse(args);
           const observationResult = buildCreateObservationResource(input);
+          assertNotSharedFindingWrite(observationResult.resource, await findingDefinitionStore.list());
           const observationBodySiteResult = await persistObservationBodyStructures(
             observationResult.resource,
           );
@@ -2975,6 +2977,7 @@ function createServer(): Server {
           }
 
           const observation = buildScribeDraftObservation(input, encounter);
+          assertNotSharedFindingWrite(observation, await findingDefinitionStore.list());
           const auditRow = buildClinicalWriteAuditRow({
             eventType: "create",
             actorId: input.scribe_id,
@@ -2999,11 +3002,15 @@ function createServer(): Server {
             "Observation",
             stripReference(input.observation_id, "Observation"),
           );
+          assertClinicianSessionMatches({
+            clinicianId: input.clinician_id,
+            sessionPractitionerId: sessionPractitionerId(),
+          });
+          await prepareSharedFindingLifecycle(observation, {
+            fhir, definitions: await findingDefinitionStore.list(),
+            staffReference: `Practitioner/${stripReference(input.clinician_id, "Practitioner")}`,
+          });
           try {
-            assertClinicianSessionMatches({
-              clinicianId: input.clinician_id,
-              sessionPractitionerId: sessionPractitionerId(),
-            });
             const transaction = buildAttestationTransaction({
               observation,
               clinicianId: input.clinician_id,
@@ -3052,11 +3059,15 @@ function createServer(): Server {
             "Observation",
             stripReference(input.observation_id, "Observation"),
           );
+          assertClinicianSessionMatches({
+            clinicianId: input.clinician_id,
+            sessionPractitionerId: sessionPractitionerId(),
+          });
+          await prepareSharedFindingLifecycle(observation, {
+            fhir, definitions: await findingDefinitionStore.list(),
+            staffReference: `Practitioner/${stripReference(input.clinician_id, "Practitioner")}`,
+          });
           try {
-            assertClinicianSessionMatches({
-              clinicianId: input.clinician_id,
-              sessionPractitionerId: sessionPractitionerId(),
-            });
             const transaction = buildAmendmentTransaction({
               observation,
               clinicianId: input.clinician_id,
@@ -3108,15 +3119,18 @@ function createServer(): Server {
             "Observation",
             stripReference(input.source_observation_id, "Observation"),
           );
+          const definitions = await findingDefinitionStore.list();
+          assertNotSharedFindingWrite(sourceObservation, definitions);
+          assertClinicianSessionMatches({
+            clinicianId: input.clinician_id,
+            sessionPractitionerId: sessionPractitionerId(),
+          });
+          const transaction = buildAppendObservationTransaction({
+            sourceObservation,
+            appendInput: input,
+          });
+          assertNotSharedFindingWrite(transaction.observation, definitions);
           try {
-            assertClinicianSessionMatches({
-              clinicianId: input.clinician_id,
-              sessionPractitionerId: sessionPractitionerId(),
-            });
-            const transaction = buildAppendObservationTransaction({
-              sourceObservation,
-              appendInput: input,
-            });
             const auditRow = buildClinicalWriteAuditRow({
               eventType: "update",
               actorId: input.clinician_id,
@@ -3226,6 +3240,10 @@ function createServer(): Server {
             operatorDisplay:
               input.operator_display ?? "ODOS MCP save_section_observations",
           });
+          const definitions = await findingDefinitionStore.list();
+          for (const entry of bundle.entry ?? []) {
+            if (entry.resource?.resourceType === "Observation") assertNotSharedFindingWrite(entry.resource, definitions);
+          }
           const responseBundle = await fhir.executeTransaction(
             bundle,
             CREATE_SECTION_OBSERVATIONS_AUDIT_HEADERS,
@@ -3652,6 +3670,7 @@ function createServer(): Server {
             effectiveDateTime: input.effective_date_time ?? new Date().toISOString(),
             performerReferences: getStringArray(input.performer_reference),
           });
+          assertNotSharedFindingWrite(observation, await findingDefinitionStore.list());
           const created = await fhir.create<Observation>(
             observation,
             auditHeaders("create_smoking_status_observation"),
@@ -3908,18 +3927,20 @@ function createServer(): Server {
             sourceReference: input.source_reference,
             totalScore: input.score,
           });
-          const createdQuestionnaireResponse = await fhir.create<QuestionnaireResponse>(
-            questionnaireResponse,
-            auditHeaders("create_dry_eye_questionnaire_response"),
-          );
           const scoreObservation = buildDryEyeQuestionnaireScoreObservation({
             instrument: input.instrument,
             patientReference: patientReference(input.patient_id),
-            questionnaireResponseReference: `QuestionnaireResponse/${createdQuestionnaireResponse.id}`,
+            questionnaireResponseReference: "QuestionnaireResponse/pending",
             encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
             effectiveDateTime: input.authored,
             score: input.score,
           });
+          assertNotSharedFindingWrite(scoreObservation, await findingDefinitionStore.list());
+          const createdQuestionnaireResponse = await fhir.create<QuestionnaireResponse>(
+            questionnaireResponse,
+            auditHeaders("create_dry_eye_questionnaire_response"),
+          );
+          scoreObservation.derivedFrom = [{ reference: `QuestionnaireResponse/${createdQuestionnaireResponse.id}` }];
           const createdScoreObservation = await fhir.create<Observation>(
             scoreObservation,
             auditHeaders("create_dry_eye_questionnaire_response"),
@@ -3947,6 +3968,18 @@ function createServer(): Server {
           let documentReference = input.document_reference_id
             ? `DocumentReference/${stripReference(input.document_reference_id, "DocumentReference")}`
             : undefined;
+          const observation = buildMeibographyObservation({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            documentReference: documentReference ?? "DocumentReference/pending",
+            eye: input.eye.toUpperCase() as "OD" | "OS" | "OU",
+            lid: input.lid,
+            scoringSystem: input.scoring_system,
+            totalScore: input.total_score,
+            glandScores: input.gland_scores,
+            effectiveDateTime: input.effective_date_time,
+          });
+          assertNotSharedFindingWrite(observation, await findingDefinitionStore.list());
           let createdDocumentReference: DocumentReference | undefined;
           if (!documentReference) {
             if (!input.content_type || (!input.url && !input.data)) {
@@ -3973,17 +4006,7 @@ function createServer(): Server {
             );
             documentReference = `DocumentReference/${createdDocumentReference.id}`;
           }
-          const observation = buildMeibographyObservation({
-            patientReference: patientReference(input.patient_id),
-            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
-            documentReference,
-            eye: input.eye.toUpperCase() as "OD" | "OS" | "OU",
-            lid: input.lid,
-            scoringSystem: input.scoring_system,
-            totalScore: input.total_score,
-            glandScores: input.gland_scores,
-            effectiveDateTime: input.effective_date_time,
-          });
+          observation.derivedFrom = [{ reference: documentReference }];
           const createdObservation = await fhir.create<Observation>(
             observation,
             auditHeaders("create_meibography_observation"),
@@ -4290,6 +4313,7 @@ function createServer(): Server {
             valueDisplay: input.value_display,
             wearTimeMs: input.wear_time_ms,
           });
+          assertNotSharedFindingWrite(observation, await findingDefinitionStore.list());
           const created = await fhir.create<Observation>(observation, auditHeaders("record_ortho_k_fit_observation"));
           const provenance = await createV04Provenance(
             "record_ortho_k_fit_observation",
@@ -4472,7 +4496,8 @@ function createServer(): Server {
         }
         case "record_eye_growth_axial_length_measurement": {
           const input = recordEyeGrowthAxialLengthMeasurementSchema.parse(args);
-          const definitions = resolveMyopiaDefinitions(await findingDefinitionStore.list());
+          const effectiveDefinitions = await findingDefinitionStore.list();
+          const definitions = resolveMyopiaDefinitions(effectiveDefinitions);
           const measuredAt = input.measured_at ?? new Date().toISOString();
           const graphs = buildMyopiaEyeCapture({
             definitions,
@@ -4486,6 +4511,8 @@ function createServer(): Server {
             instrument: input.instrument,
             staffReference: input.provenance_agent_reference ?? "Practitioner/odos-mcp",
           });
+          assertNotSharedFindingWrite(graphs.axialLength.observation, effectiveDefinitions);
+          if (graphs.cornealRadius) assertNotSharedFindingWrite(graphs.cornealRadius.observation, effectiveDefinitions);
           const created = await fhir.create<Observation>(
             graphs.axialLength.observation,
             auditHeaders("record_eye_growth_axial_length_measurement"),
@@ -6589,6 +6616,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
             await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
+          if (result.headers) res.set(result.headers);
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/custom/:stableKey failed:", error);

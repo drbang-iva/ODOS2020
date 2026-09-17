@@ -1,3 +1,9 @@
+import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
+import { loadEncounterFindingState, projectCurrentFindings } from "./current-finding-reader.js";
+import { materializeAtomicFindingCatalog } from "./diagnosis-findings-endpoint.js";
+import { isClosedEncounter } from "./encounter-sign-gate.js";
+import { assertNotSharedFindingWrite } from "./shared-finding-write-guard.js";
+import { ProtocolFindingWriteRefusal, selectedProtocolItems, assertProtocolFindingSelections } from "./protocol-service.js";
 import { loadDefaultEducationCatalogReader, type EducationCatalogReader } from "../comms/education-catalog.js";
 import { ensureBuiltInProtocols } from "./protocol-seeding.js";
 import { isPlanItemOffered, unofferedSelectedItems } from "./plan-item-offered.js";
@@ -309,6 +315,7 @@ export async function handleProtocolCaptureRequest(
     confirmedDiagnoses,
     observations,
     findingKeys: protocolCatalogs(deps).findingKeys,
+    ...await protocolCaptureFindings(staff,encounter),
   });
   return {
     status: 201,
@@ -361,10 +368,14 @@ export async function handleProtocolApplyRequest(
   const parsed = applySchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol application." } };
   const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
-  await ensureBuiltInProtocol(service, parsed.data.protocolId);
-  const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
+  const definition = await service.definitions.get(parsed.data.protocolId) ?? BUILTIN_PROTOCOLS.find(p=>p.id === parsed.data.protocolId);
+  const validation = await validateProtocolDiagnosis(staff, service, parsed.data, definition);
   if ("response" in validation) return validation.response;
   const { protocol } = validation;
+  try {
+    await assertProtocolMutation(staff,parsed.data,selectedProtocolItems(protocol.items,parsed.data.selections ?? []));
+  } catch(error) { if(error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}}; throw error; }
+  await ensureBuiltInProtocol(service, parsed.data.protocolId);
   if ((await service.applications.list()).some((application) =>
     application.encounterId === parsed.data.encounterId &&
     application.protocolId === parsed.data.protocolId &&
@@ -399,19 +410,22 @@ export async function handleProtocolApplyRequest(
   }) ?? [];
   const offeredSelections = canonicalSelections.filter(selection => !blockedItems.has(selection.itemKey));
   offeredSelections.push(...[...blockedItems].map(itemKey => ({ itemKey, selected: false, skipReason: "not-offered" as const })));
-  const opened = await service.open(parsed.data.protocolId, {
+  let opened: Awaited<ReturnType<ProtocolService["open"]>>;
+  try {
+    opened = await service.open(parsed.data.protocolId, {
     encounterId: parsed.data.encounterId,
     patientId: parsed.data.patientId,
     diagnosis: parsed.data.diagnosis,
     actor: staff.staffReference,
+    selections: offeredSelections,
   });
-  try {
     await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog).commit(
       opened.application.id,
       offeredSelections,
       [parsed.data.diagnosis.reference],
     );
   } catch (error) {
+    if (error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}};
     if (error instanceof ProtocolItemAddConflictError) {
       return { status: 409, body: { error: error.message } };
     }
@@ -444,6 +458,8 @@ export async function handleProtocolItemAddRequest(
   const parsed = itemAddSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol item add." } };
   const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
+  try { await assertProtocolMutation(staff,parsed.data); }
+  catch(error) { if(error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}}; throw error; }
   await ensureBuiltInProtocol(service, parsed.data.protocolId);
   const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
   if ("response" in validation) return validation.response;
@@ -467,6 +483,7 @@ export async function handleProtocolItemAddRequest(
       actor: staff.staffReference,
     });
   } catch (error) {
+    if (error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}};
     if (error instanceof ProtocolItemAddConflictError) {
       return { status: 409, body: { error: error.message } };
     }
@@ -493,6 +510,7 @@ async function validateProtocolDiagnosis(
     patientId: string;
     diagnosis: { reference: string; code: string; confirmed: true };
   },
+  providedProtocol?: ProtocolDefinition,
 ): Promise<
   | { protocol: ProtocolDefinition }
   | { response: { status: number; body: { error: string } } }
@@ -505,7 +523,7 @@ async function validateProtocolDiagnosis(
     return { response: { status: 400, body: { error: "Submitted Condition does not exist." } } };
   }
   const submittedCoding = condition.code?.coding?.find((coding) => coding.code === input.diagnosis.code);
-  const protocol = await service.definitions.get(input.protocolId);
+  const protocol = providedProtocol ?? await service.definitions.get(input.protocolId);
   if (!condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")) {
     return { response: { status: 400, body: { error: "Condition must be confirmed before applying a protocol." } } };
   }
@@ -834,6 +852,7 @@ export async function handleProtocolUnapplyRequest(
   try {
     return { status: 200, body: await liveService(staff, deps.now, undefined, deps.educationCatalog).unapply(parsed.data.applicationId) };
   } catch (error) {
+    if (error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}};
     if (error instanceof AcceptedChargeUnapplyError || error instanceof ProtocolItemAddConflictError) {
       return { status: 409, body: { error: error.message } };
     }
@@ -890,8 +909,10 @@ function liveService(
   educationCatalog?: EducationCatalogReader,
 ): ProtocolService {
   return new ProtocolService(staff.fhir, {
+    validateMutation: (scope,items,references)=>assertProtocolMutation(staff,scope,items,references),
     async commitFinding(finding) {
       if (finding.value === undefined) return undefined;
+      await assertProtocolMutation(staff,finding,[{item:{itemKey:finding.sourceItemKey,itemType:"finding-seed",defaultSelected:true,lateralityMode:"inherit-dx",payload:{}},payload:{findingDefKey:finding.findingDefKey,defaultValue:finding.value}}]);
       const observation = finding.findingDefKey === "gonio_angle_structures"
         ? protocolFindingToGonioObservation(finding)
         : protocolFindingObservation(finding);
@@ -899,6 +920,7 @@ function liveService(
       return saved.id ? `Observation/${saved.id}` : undefined;
     },
     async materializeAction(action) {
+      await assertProtocolMutation(staff,action);
       if (action.actionType === "series-prescription") {
         const seriesProtocolId = String(action.payload.seriesProtocolId ?? "");
         const protocol = seriesProtocols.get(seriesProtocolId);
@@ -939,21 +961,24 @@ function liveService(
       const saved = await staff.fhir.create(resource, { "X-ODOS-Source": "protocol-module" });
       return saved.id ? `${saved.resourceType}/${saved.id}` : undefined;
     },
-    async removeMaterialized(reference) {
+    async removeMaterialized(reference, scope) {
       const [resourceType, id] = reference.split("/");
       if (!id || !["Observation", "ServiceRequest", "CarePlan"].includes(resourceType ?? "")) return;
+      if (scope) await assertProtocolMutation(staff,scope,[],[reference]);
       if (resourceType === "Observation") {
         const resource = await staff.fhir.read<Observation>("Observation", id);
+        const findingScope = scope ?? {encounterId:resource.encounter?.reference?.slice(10) ?? "",patientId:resource.subject?.reference?.slice(8) ?? ""};
+        await assertProtocolMutation(staff,findingScope,[],[reference]);
         const revoked = await updateProjected(staff.fhir, "Observation", id, { ...resource, status: "entered-in-error" });
-        return projectionRestore(staff.fhir, "Observation", id, resource, revoked.meta?.versionId);
+        return projectionRestore(staff.fhir, "Observation", id, resource, revoked.meta?.versionId,()=>assertProtocolMutation(staff,findingScope,[],[reference]));
       } else if (resourceType === "ServiceRequest") {
         const resource = await staff.fhir.read<ServiceRequest>("ServiceRequest", id);
         const revoked = await updateProjected(staff.fhir, "ServiceRequest", id, { ...resource, status: "revoked" });
-        return projectionRestore(staff.fhir, "ServiceRequest", id, resource, revoked.meta?.versionId);
+        return projectionRestore(staff.fhir, "ServiceRequest", id, resource, revoked.meta?.versionId,scope ? ()=>assertProtocolMutation(staff,scope,[],[reference]) : undefined);
       } else {
         const resource = await staff.fhir.read<CarePlan>("CarePlan", id);
         const revoked = await updateProjected(staff.fhir, "CarePlan", id, { ...resource, status: "revoked" });
-        return projectionRestore(staff.fhir, "CarePlan", id, resource, revoked.meta?.versionId);
+        return projectionRestore(staff.fhir, "CarePlan", id, resource, revoked.meta?.versionId,scope ? ()=>assertProtocolMutation(staff,scope,[],[reference]) : undefined);
       }
     },
   }, now);
@@ -981,8 +1006,10 @@ function projectionRestore<T extends Observation | ServiceRequest | CarePlan>(
   id: string,
   resource: T,
   revokedVersion: string | undefined,
+  validate?: ()=>Promise<void>,
 ): () => Promise<void> {
   return async () => {
+    await validate?.();
     if (!revokedVersion) throw new Error(`Projection rollback refused for ${resourceType}/${id}: revoke returned no versionId.`);
     try {
       await updateProjected(fhir, resourceType, id, resource, { "If-Match": `W/"${revokedVersion}"` });
@@ -1144,5 +1171,29 @@ async function searchAll<T extends Resource>(
     if (visited.has(path)) throw new Error("Protocol capture search returned a repeated next link.");
     visited.add(path);
     bundle = await fhir.searchUrl<T>(path, resourceType);
+  }
+}
+
+async function protocolCaptureFindings(staff: Staff, encounter: Encounter) {
+  const findingDefinitions = await new FhirFindingDefinitionStore(staff.fhir).list();
+  const input = {patientReference:encounter.subject?.reference ?? "",encounterReference:`Encounter/${encounter.id}`,
+    definitions:findingDefinitions,catalog:materializeAtomicFindingCatalog(findingDefinitions)};
+  const state = encounter.subject?.reference
+    ? await loadEncounterFindingState(staff.fhir,input)
+    : {...input,incomplete:false as const,observations:[],conditions:[]};
+  if (state.incomplete) throw new Error(state.reason);
+  return {findingDefinitions,sharedProjection:projectCurrentFindings(state)};
+}
+async function assertProtocolMutation(staff: Staff, scope:{encounterId:string;patientId:string}, items: readonly {item:ProtocolItem;payload:Record<string,unknown>}[] = [], references: readonly string[] = []): Promise<void> {
+  const encounter = await staff.fhir.read<Encounter>("Encounter",scope.encounterId);
+  if (isClosedEncounter(encounter)) throw new ProtocolFindingWriteRefusal(409,"encounter-closed");
+  if (encounter.subject?.reference !== `Patient/${scope.patientId}`) throw new ProtocolFindingWriteRefusal(409,"encounter-patient-mismatch");
+  const {findingDefinitions,sharedProjection} = await protocolCaptureFindings(staff,encounter);
+  if (sharedProjection.preRebuild) throw new ProtocolFindingWriteRefusal(409,"pre-rebuild-test-encounter");
+  assertProtocolFindingSelections(items,findingDefinitions);
+  for (const reference of references) if (reference.startsWith("Observation/")) {
+    const observation = await staff.fhir.read<Observation>("Observation",reference.slice(12));
+    try { assertNotSharedFindingWrite(observation,findingDefinitions); }
+    catch { throw new ProtocolFindingWriteRefusal(422,"shared-finding-charted-in-ocular-health"); }
   }
 }

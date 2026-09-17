@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {executeFindingCommand} from '../../../mcp/src/clinical-graph/current-finding-writer.ts';
+import {memoryFhir,writerContext,command,factTarget,keyFor,factBaseline,httpError} from '../../../mcp/tests/fixtures/r10/writer-harness.ts';
+import {buildEncounterDiagnosisCondition} from '../../../mcp/src/fhir/condition.ts';
+const home={...buildEncounterDiagnosisCondition({patientReference:'Patient/p1',encounterReference:'Encounter/e1',code:{text:'Synthetic carry destination'},verificationStatus:'confirmed'}),id:'carry'};
+const m=memoryFhir([home]);const state={status:'live' as const,presence:'present' as const,qualifiers:{},homes:['Condition/carry']};
+const first=command([factTarget(keyFor('OD'),undefined,state),factTarget(keyFor('OS'),undefined,state)]);first.surface='carry-forward';
+m.hooks.beforeWrite=w=>{if(w.resource.resourceType==='Observation'&&w.resource.identifier?.some(i=>i.value===undefined))throw Error('invalid');if(w.resource.resourceType==='Observation'&&w.resource.extension?.some(e=>e.valueCodeableConcept?.coding?.some(c=>c.code==='OS')))throw httpError(503);};
+const partial=await executeFindingCommand(writerContext(m),first as any);assert.equal(partial.complete,false);assert.equal(partial.outcomes[0].status,'applied');
+m.hooks.beforeWrite=undefined;
+const next=command([factTarget(keyFor('OD'),factBaseline(m.all('Observation'),'OD',[home]),state),factTarget(keyFor('OS'),undefined,state)]);next.surface='carry-forward';
+const replanned=await executeFindingCommand(writerContext(m),next as any);assert.equal(replanned.complete,true);assert.deepEqual(replanned.outcomes.map(o=>o.status),['unchanged','applied']);
+const result={partial,replanned,step5Allowed:replanned.outcomes.every(o=>['applied','already-applied'].includes(o.status)),writerComplete:replanned.complete,observationCount:m.all('Observation').length};
+writeFileSync('docs/evidence/r10-a3-1/carry-unchanged-probe.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));

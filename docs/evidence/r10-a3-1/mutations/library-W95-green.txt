@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W95 panel rejects unknown owned inactive select and invalid typed values without writes
+ok 1 - W95 panel rejects unknown owned inactive select and invalid typed values without writes
+  ---
+  duration_ms: 2.217625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 169.761667

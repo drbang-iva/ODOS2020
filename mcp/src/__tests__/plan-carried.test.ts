@@ -17,6 +17,7 @@ function deferred() {
 }
 async function fixture(itemKey = "rto-6mo") {
   const fhir = new PlanAuthoringFhir();
+  fhir.rows.push({ resourceType: "Encounter", id: "e", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p" } });
   const service = new ProtocolService(fhir, { commitFinding: async () => undefined, materializeAction: async () => undefined });
   const protocol = { ...structuredClone(V1), id: "carried-test", items: V1.items.filter(item => item.itemKey === itemKey) };
   await service.definitions.save(protocol);

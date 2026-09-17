@@ -1,0 +1,72 @@
+[
+  {
+    "mutation": "W82-valued",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W82-preseed",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W82-original-payload",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W91-closed",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W108-prebuild",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W108-unapply-preflight",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W108-restore",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "V28-shared-removal",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "T22-real-restore",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W107-eyes",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W119-panel",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "W114-stored",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "V28-cleared",
+    "red": 1,
+    "restored": 0
+  },
+  {
+    "mutation": "V28-inactive",
+    "red": 1,
+    "restored": 0
+  }
+]

@@ -9,6 +9,7 @@ import type {
   Provenance,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
+import { parseFindingOperation } from "./current-finding-identity.js";
 import { staffHasBusinessAction } from "../authz/roles.js";
 import { clinicalStatusConcept, verificationStatusConcept } from "../fhir/condition.js";
 import { stampPrimaryComplaint } from "./complaint-endpoint.js";
@@ -27,6 +28,9 @@ import {
   assertSuccessfulTransaction,
   chartProvenance,
   ledgerEntry,
+  loadLifecycleFindings,
+  isSignedCanonical,
+  repairLifecycleAudits,
   putEntry,
   readId,
   type EncounterVoidEndpointDeps,
@@ -53,8 +57,8 @@ export const RESTORE_PROVENANCE_NOTE = "Restored by clinician before sign.";
 export const NOTHING_TO_UNDO_ERROR = "Nothing to undo.";
 
 const requestSchema = z.discriminatedUnion("scope", [
-  z.object({ scope: z.literal("encounter") }).strict(),
-  z.object({ scope: z.literal("section"), sectionKey: z.string().trim().min(1).max(200) }).strict(),
+  z.object({ scope: z.literal("encounter"), voidActionId: z.string().uuid() }).strict(),
+  z.object({ scope: z.literal("section"), sectionKey: z.string().trim().min(1).max(200), voidActionId: z.string().uuid() }).strict(),
 ]);
 
 export type EncounterUndoRequest = z.infer<typeof requestSchema>;
@@ -119,13 +123,20 @@ export async function handleEncounterUndoRequest(
   }
   const encounterReference = `Encounter/${encounterId}`;
 
+  const definitions = deps.findingDefinitions?.() ?? [];
+  const findingState = await loadLifecycleFindings(staff.fhir, patientReference, encounterReference, definitions);
+  if (findingState.incomplete) return { status: 503, body: { error: "Finding state could not be loaded.", code: "finding-load-failed" } };
+  if (findingState.preRebuild) {
+    return { status: 409, body: { error: "Pre-rebuild test encounters are read-only.", code: "pre-rebuild-test-encounter" } };
+  }
+
   // --- The slot: one action, the most recent, nothing else -------------------------------
   const ledgerRow = await new FhirEncounterUndoLedgerStore(staff.fhir).readRow(encounterId);
   const slot: UndoLedgerSlot | undefined = request.scope === "encounter"
     ? ledgerRow?.ledger.encounter ?? undefined
     : ledgerRow?.ledger.sections[request.sectionKey];
-  if (!ledgerRow || !slot || slot.voided.length === 0) {
-    return { status: 404, body: { error: NOTHING_TO_UNDO_ERROR, code: "nothing-to-undo" } };
+  if (!ledgerRow || !slot || slot.voided.length === 0 || slot.voidActionId !== request.voidActionId) {
+    return { status: 409, body: { error: "This void action is no longer current.", code: "undo-superseded" } };
   }
   const canWriteDiagnosis = staffHasBusinessAction(staff, "chart.diagnosis.write");
   if (!canWriteDiagnosis && slot.voided.some((entry) => entry.ref.startsWith("Condition/") || entry.diagnosis)) {
@@ -142,6 +153,23 @@ export async function handleEncounterUndoRequest(
     }
     throw error;
   }
+
+  const canonicalObservations = targets.flatMap(target => target.resource.resourceType === "Observation" ? [target.resource] : []);
+  if (canonicalObservations.some(isSignedCanonical)) {
+    return { status: 422, body: { error: "Signed or cancelled findings cannot be restored.", code: "signed-or-cancelled" } };
+  }
+  const superseded = targets.filter(target => {
+    if (target.entry.markerCommandId === undefined) return false;
+    if (target.resource.resourceType !== "Observation") return true;
+    try { return (parseFindingOperation(target.resource)?.commandId ?? null) !== target.entry.markerCommandId; }
+    catch { return true; }
+  }).map(target => target.entry.ref);
+  if (superseded.length) {
+    return { status: 409, body: { error: "A finding changed after this void.", code: "undo-superseded", superseded } };
+  }
+  const repairFailure = await repairLifecycleAudits(staff.fhir, definitions, staff.staffReference, patientReference, encounterReference,
+    canonicalObservations, deps.now);
+  if (repairFailure) return repairFailure;
 
   // --- Build the restore ---------------------------------------------------------------
   const now = deps.now?.() ?? new Date().toISOString();

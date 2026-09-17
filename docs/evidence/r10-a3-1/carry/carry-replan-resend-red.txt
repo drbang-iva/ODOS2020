@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W125 identical interrupted replan resend resumes its stored plan with replan true
+not ok 1 - W125 identical interrupted replan resend resumes its stored plan with replan true
+  ---
+  duration_ms: 37.193125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:94:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"reason":"command-reused","error":"command-reused"}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:98:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 238.026334

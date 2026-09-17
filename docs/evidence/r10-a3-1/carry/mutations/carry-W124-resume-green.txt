@@ -1,0 +1,202 @@
+TAP version 13
+# Subtest: standalone condition failure 403 keeps exact persisted state without privileged compensation
+ok 1 - standalone condition failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 53.222125
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 409 keeps exact persisted state without privileged compensation
+ok 2 - standalone condition failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 24.827
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 412 keeps exact persisted state without privileged compensation
+ok 3 - standalone condition failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 20.753417
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 500 keeps exact persisted state without privileged compensation
+ok 4 - standalone condition failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 20.286125
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 503 keeps exact persisted state without privileged compensation
+ok 5 - standalone condition failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 22.849708
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 403 keeps exact persisted state without privileged compensation
+ok 6 - standalone plan failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.382834
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 409 keeps exact persisted state without privileged compensation
+ok 7 - standalone plan failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.633
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 412 keeps exact persisted state without privileged compensation
+ok 8 - standalone plan failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.592709
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 500 keeps exact persisted state without privileged compensation
+ok 9 - standalone plan failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.231583
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 503 keeps exact persisted state without privileged compensation
+ok 10 - standalone plan failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.35075
+  type: 'test'
+  ...
+# Subtest: standalone link failure 403 keeps exact persisted state without privileged compensation
+ok 11 - standalone link failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.92875
+  type: 'test'
+  ...
+# Subtest: standalone link failure 409 keeps exact persisted state without privileged compensation
+ok 12 - standalone link failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.562542
+  type: 'test'
+  ...
+# Subtest: standalone link failure 412 keeps exact persisted state without privileged compensation
+ok 13 - standalone link failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.745542
+  type: 'test'
+  ...
+# Subtest: standalone link failure 500 keeps exact persisted state without privileged compensation
+ok 14 - standalone link failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.202041
+  type: 'test'
+  ...
+# Subtest: standalone link failure 503 keeps exact persisted state without privileged compensation
+ok 15 - standalone link failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.334333
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 403 keeps exact persisted state without privileged compensation
+ok 16 - standalone fact failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.28675
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 409 keeps exact persisted state without privileged compensation
+ok 17 - standalone fact failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.732791
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 412 keeps exact persisted state without privileged compensation
+ok 18 - standalone fact failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.367667
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 500 keeps exact persisted state without privileged compensation
+ok 19 - standalone fact failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.04425
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 503 keeps exact persisted state without privileged compensation
+ok 20 - standalone fact failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.494125
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 403 keeps exact persisted state without privileged compensation
+ok 21 - standalone audit failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 19.895042
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 409 keeps exact persisted state without privileged compensation
+ok 22 - standalone audit failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.230208
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 412 keeps exact persisted state without privileged compensation
+ok 23 - standalone audit failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.036667
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 500 keeps exact persisted state without privileged compensation
+ok 24 - standalone audit failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.005916
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 503 keeps exact persisted state without privileged compensation
+ok 25 - standalone audit failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.5935
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 403 keeps exact persisted state without privileged compensation
+ok 26 - standalone witness failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.909459
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 409 keeps exact persisted state without privileged compensation
+ok 27 - standalone witness failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.454291
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 412 keeps exact persisted state without privileged compensation
+ok 28 - standalone witness failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.794958
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 500 keeps exact persisted state without privileged compensation
+ok 29 - standalone witness failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.6795
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 503 keeps exact persisted state without privileged compensation
+ok 30 - standalone witness failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.785958
+  type: 'test'
+  ...
+# Subtest: W124 resumes persisted Condition with failed plan
+ok 31 - W124 resumes persisted Condition with failed plan
+  ---
+  duration_ms: 26.9125
+  type: 'test'
+  ...
+# Subtest: W124 resumes persisted Condition with failed link
+ok 32 - W124 resumes persisted Condition with failed link
+  ---
+  duration_ms: 18.883917
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 872.349583

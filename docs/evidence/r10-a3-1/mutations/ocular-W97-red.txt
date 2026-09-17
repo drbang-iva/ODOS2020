@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: W97 exact resend completes interrupted eye
+not ok 1 - W97 exact resend completes interrupted eye
+  ---
+  duration_ms: 15.442083
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:44:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"stale-baseline","fresh":{"preRebuild":false,"currentFacts":[{"key":{"v":1,"patientId":"p1","encounterId":"e1","stableKey":"ocular-health:anterior:lens","fieldCode":"CUSTOM_ABNORMAL_FINDINGS_09","optionCode":"nuclear-sclerosis","eye":"OD"},"projectionKey":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","eye":"OD","status":"live","legacy":false,"contributors":[{"reference":"Observation/cceca25a-3604-43c4-b5bc-358cac63939b","versionId":"c7fba7c6-5341-4e78-b018-54463e08c7c6","effectiveDateTime":"2026-09-16T12:00:00.000Z","kind":"canonical-fact"}],"homes":[],"homeSources":[],"baseline":{"kind":"canonical","reference":"Observation/cceca25a-3604-43c4-b5bc-358cac63939b","versionId":"c7fba7c6-5341-4e78-b018-54463e08c7c6"},"editable":true,"effectiveDateTime":"2026-09-16T12:00:00.000Z","presence":"present","qualifiers":{}}],"panels":[],"definitionViews":[{"resourceType":"Observation","status":"preliminary","effectiveDateTime":"2026-09-16T12:00:00.000Z","code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"ocular-health:anterior:lens","display":"Lens"}],"text":"Lens"},"subject":{"reference":"Patient/p1"},"encounter":{"reference":"Encounter/e1"},"extension":[{"url":"https://odos2020.com/fhir/StructureDefinition/eye-laterality","valueCodeableConcept":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"OD","display":"Right eye"}],"text":"Right eye"}}],"component":[{"code":{"coding":[{"system":"https://odos2020.com/fhir/CodeSystem/ophthalmology","code":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis","display":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"}],"text":"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"},"valueBoolean":true}],"meta":{"versionId":"c7fba7c6-5341-4e78-b018-54463e08c7c6"},"projectionKey":"definition:[\"ocular-health:anterior:lens\",\"OD\"]","contributors":[{"reference":"Observation/cceca25a-3604-43c4-b5bc-358cac63939b","versionId":"c7fba7c6-5341-4e78-b018-54463e08c7c6","effectiveDateTime":"2026-09-16T12:00:00.000Z","kind":"canonical-fact"}],"interpretation":[{"coding":[{"code":"A"}]}]}],"conflicts":[],"unresolved":[]}}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    ok (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:35:27)
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:44:541)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 218.426875

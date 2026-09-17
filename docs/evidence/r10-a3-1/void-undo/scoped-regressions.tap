@@ -1,0 +1,1336 @@
+TAP version 13
+# Subtest: canonical fact dominates legacy, including its retired clear marker
+ok 1 - canonical fact dominates legacy, including its retired clear marker
+  ---
+  duration_ms: 3.729209
+  type: 'test'
+  ...
+# Subtest: duplicate canonical owners conflict even when assertions agree
+ok 2 - duplicate canonical owners conflict even when assertions agree
+  ---
+  duration_ms: 0.512167
+  type: 'test'
+  ...
+# Subtest: retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+ok 3 - retired legacy atomic cannot suppress a live section positive; cancelled is retained but never live
+  ---
+  duration_ms: 2.883333
+  type: 'test'
+  ...
+# Subtest: legacy OU expands to two facts, sharing its real source
+ok 4 - legacy OU expands to two facts, sharing its real source
+  ---
+  duration_ms: 0.529291
+  type: 'test'
+  ...
+# Subtest: OD absent versus OU present conflicts only OD; agreeing overlap coalesces
+ok 5 - OD absent versus OU present conflicts only OD; agreeing overlap coalesces
+  ---
+  duration_ms: 0.877917
+  type: 'test'
+  ...
+# Subtest: latest snapshot omission stays unanswered; older snapshot never revives it
+ok 6 - latest snapshot omission stays unanswered; older snapshot never revives it
+  ---
+  duration_ms: 0.524458
+  type: 'test'
+  ...
+# Subtest: equal-time different snapshots conflict independent of input order
+ok 7 - equal-time different snapshots conflict independent of input order
+  ---
+  duration_ms: 0.944833
+  type: 'test'
+  ...
+# Subtest: atomic plus section agree only with equal typed qualifier maps
+ok 8 - atomic plus section agree only with equal typed qualifier maps
+  ---
+  duration_ms: 1.774833
+  type: 'test'
+  ...
+# Subtest: homes union: extension-only
+ok 9 - homes union: extension-only
+  ---
+  duration_ms: 0.451792
+  type: 'test'
+  ...
+# Subtest: homes union: evidence-only
+ok 10 - homes union: evidence-only
+  ---
+  duration_ms: 0.399083
+  type: 'test'
+  ...
+# Subtest: homes union: both
+ok 11 - homes union: both
+  ---
+  duration_ms: 0.906209
+  type: 'test'
+  ...
+# Subtest: homes union: disagreeing
+ok 12 - homes union: disagreeing
+  ---
+  duration_ms: 0.269417
+  type: 'test'
+  ...
+# Subtest: coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
+ok 13 - coalesced and conflicting sources union homes, canonical homes use only the canonical contributor
+  ---
+  duration_ms: 0.84425
+  type: 'test'
+  ...
+# Subtest: negative act remains raw and never wins latest snapshot
+ok 14 - negative act remains raw and never wins latest snapshot
+  ---
+  duration_ms: 0.653709
+  type: 'test'
+  ...
+# Subtest: UNKNOWN, invalid, missing definition and unknown options remain unresolved with real references
+ok 15 - UNKNOWN, invalid, missing definition and unknown options remain unresolved with real references
+  ---
+  duration_ms: 0.254708
+  type: 'test'
+  ...
+# Subtest: raw sources are immutable, a single untranslated view retains bytes and its actual id
+ok 16 - raw sources are immutable, a single untranslated view retains bytes and its actual id
+  ---
+  duration_ms: 0.369667
+  type: 'test'
+  ...
+# Subtest: retired option translation retains typed replacement semantics without an aggregate id
+ok 17 - retired option translation retains typed replacement semantics without an aggregate id
+  ---
+  duration_ms: 0.193167
+  type: 'test'
+  ...
+# Subtest: mixed carried/current contributors retain attribution and newest clinical date
+ok 18 - mixed carried/current contributors retain attribution and newest clinical date
+  ---
+  duration_ms: 0.307083
+  type: 'test'
+  ...
+# Subtest: loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+ok 19 - loader traverses pages, retains retired and refuses failed, foreign or unscoped pages
+  ---
+  duration_ms: 0.613
+  type: 'test'
+  ...
+# Subtest: nested child selections are options, never mistaken for a parent's missing qualifier
+ok 20 - nested child selections are options, never mistaken for a parent's missing qualifier
+  ---
+  duration_ms: 0.25325
+  type: 'test'
+  ...
+# Subtest: active option plus its retired subtype still requires a translated view
+ok 21 - active option plus its retired subtype still requires a translated view
+  ---
+  duration_ms: 0.283666
+  type: 'test'
+  ...
+# Subtest: inferred homes intersect eye sets and never replace explicit homes on a coalesced fact
+ok 22 - inferred homes intersect eye sets and never replace explicit homes on a coalesced fact
+  ---
+  duration_ms: 1.051875
+  type: 'test'
+  ...
+# Subtest: panel context and negative acts cannot replace a laterally scoped positive snapshot
+ok 23 - panel context and negative acts cannot replace a laterally scoped positive snapshot
+  ---
+  duration_ms: 0.682083
+  type: 'test'
+  ...
+# Subtest: typed qualifiers resolve the addressed field when a definition has multiple option fields
+ok 24 - typed qualifiers resolve the addressed field when a definition has multiple option fields
+  ---
+  duration_ms: 0.406875
+  type: 'test'
+  ...
+# Subtest: canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource
+ok 25 - canonical homes ignore Condition evidence, while legacy homeSources identify each asserting resource
+  ---
+  duration_ms: 0.396625
+  type: 'test'
+  ...
+# Subtest: later scoped negative suppresses only older snapshot positives; equal-time scope conflicts
+ok 26 - later scoped negative suppresses only older snapshot positives; equal-time scope conflicts
+  ---
+  duration_ms: 1.086833
+  type: 'test'
+  ...
+# Subtest: baselines select exact-eye unique live atomic, otherwise materialize or canonical
+ok 27 - baselines select exact-eye unique live atomic, otherwise materialize or canonical
+  ---
+  duration_ms: 0.928375
+  type: 'test'
+  ...
+# Subtest: UNKNOWN legacy retirement requires a live version; retired UNKNOWN is visible but not actionable
+ok 28 - UNKNOWN legacy retirement requires a live version; retired UNKNOWN is visible but not actionable
+  ---
+  duration_ms: 0.178417
+  type: 'test'
+  ...
+# Subtest: loader returns sanitized typed incomplete categories
+ok 29 - loader returns sanitized typed incomplete categories
+  ---
+  duration_ms: 0.38175
+  type: 'test'
+  ...
+# Subtest: audit lookup is opt-in and only current marked fact without matching audit is pending
+ok 30 - audit lookup is opt-in and only current marked fact without matching audit is pending
+  ---
+  duration_ms: 1.21325
+  type: 'test'
+  ...
+# Subtest: W16 full, partial, excluded and equal-time negatives use Observation time and preserve unaffected options
+ok 31 - W16 full, partial, excluded and equal-time negatives use Observation time and preserve unaffected options
+  ---
+  duration_ms: 2.13375
+  type: 'test'
+  ...
+# Subtest: typed incomplete maps transport refusal and missing status without upstream details
+ok 32 - typed incomplete maps transport refusal and missing status without upstream details
+  ---
+  duration_ms: 0.185
+  type: 'test'
+  ...
+# Subtest: review regression: resource search details cannot masquerade as audit lookup failures
+ok 33 - review regression: resource search details cannot masquerade as audit lookup failures
+  ---
+  duration_ms: 0.255166
+  type: 'test'
+  ...
+# Subtest: preRebuild includes retired legacy, snapshots, unresolved and invalid findings
+ok 34 - preRebuild includes retired legacy, snapshots, unresolved and invalid findings
+  ---
+  duration_ms: 1.252
+  type: 'test'
+  ...
+# Subtest: W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+ok 35 - W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+  ---
+  duration_ms: 5.054291
+  type: 'test'
+  ...
+# Subtest: adoption converts legacy GRADE, copies displayed homes, and keeps the resource id
+ok 36 - adoption converts legacy GRADE, copies displayed homes, and keeps the resource id
+  ---
+  duration_ms: 2.906709
+  type: 'test'
+  ...
+# Subtest: W5 materializes only one option, preserving source and sibling, and copies an inferred home
+ok 37 - W5 materializes only one option, preserving source and sibling, and copies an inferred home
+  ---
+  duration_ms: 3.174792
+  type: 'test'
+  ...
+# Subtest: W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+ok 38 - W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+  ---
+  duration_ms: 0.495041
+  type: 'test'
+  ...
+# Subtest: clear then revive keeps one canonical id; an unchanged current state writes nothing
+ok 39 - clear then revive keeps one canonical id; an unchanged current state writes nothing
+  ---
+  duration_ms: 2.517
+  type: 'test'
+  ...
+# Subtest: W21 reassert writes only its activity-discriminated audit and resolves replay after a lost audit response
+ok 40 - W21 reassert writes only its activity-discriminated audit and resolves replay after a lost audit response
+  ---
+  duration_ms: 0.926166
+  type: 'test'
+  ...
+# Subtest: eye change is two facts; an occupied differing destination conflicts without overwriting it
+ok 41 - eye change is two facts; an occupied differing destination conflicts without overwriting it
+  ---
+  duration_ms: 2.486959
+  type: 'test'
+  ...
+# Subtest: UNKNOWN retirement follows OD destinations and replays via the source
+ok 42 - UNKNOWN retirement follows OD destinations and replays via the source
+  ---
+  duration_ms: 1.994167
+  type: 'test'
+  ...
+# Subtest: UNKNOWN retirement follows OD+OS destinations and replays via the source
+ok 43 - UNKNOWN retirement follows OD+OS destinations and replays via the source
+  ---
+  duration_ms: 3.582333
+  type: 'test'
+  ...
+# Subtest: W22 a destination refusal preserves the unresolved UNKNOWN source, even when retirement was submitted first
+ok 44 - W22 a destination refusal preserves the unresolved UNKNOWN source, even when retirement was submitted first
+  ---
+  duration_ms: 0.87
+  type: 'test'
+  ...
+# Subtest: duplicates throw 400; missing baselines refuse; incomplete loads attempt no targets
+ok 45 - duplicates throw 400; missing baselines refuse; incomplete loads attempt no targets
+  ---
+  duration_ms: 0.538625
+  type: 'test'
+  ...
+# Subtest: W13 replay requires marker equality and a current-state rehash
+ok 46 - W13 replay requires marker equality and a current-state rehash
+  ---
+  duration_ms: 0.585709
+  type: 'test'
+  ...
+# Subtest: W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+ok 47 - W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+  ---
+  duration_ms: 1.6145
+  type: 'test'
+  ...
+# Subtest: W15 unlink materializes only the addressed option and never attempts a Condition write
+ok 48 - W15 unlink materializes only the addressed option and never attempts a Condition write
+  ---
+  duration_ms: 1.421292
+  type: 'test'
+  ...
+# Subtest: W19 already-applied replay leaves exactly one mutation audit
+ok 49 - W19 already-applied replay leaves exactly one mutation audit
+  ---
+  duration_ms: 0.642375
+  type: 'test'
+  ...
+# Subtest: W20 repair-before-supersede preserves C1's frozen actor and expands self to the carrying record
+ok 50 - W20 repair-before-supersede preserves C1's frozen actor and expands self to the carrying record
+  ---
+  duration_ms: 1.013791
+  type: 'test'
+  ...
+# Subtest: failed prior-audit repair leaves the old marker and content intact
+ok 51 - failed prior-audit repair leaves the old marker and content intact
+  ---
+  duration_ms: 0.847791
+  type: 'test'
+  ...
+# Subtest: W23 conditional-create loser returns conflict and writes no mutation audit
+ok 52 - W23 conditional-create loser returns conflict and writes no mutation audit
+  ---
+  duration_ms: 1.15625
+  type: 'test'
+  ...
+# Subtest: W24 unchanged replay preserves a second-target version conflict
+ok 53 - W24 unchanged replay preserves a second-target version conflict
+  ---
+  duration_ms: 2.185167
+  type: 'test'
+  ...
+# Subtest: W25 reused command id with different content and a fresh baseline owes a distinct audit
+ok 54 - W25 reused command id with different content and a fresh baseline owes a distinct audit
+  ---
+  duration_ms: 2.449333
+  type: 'test'
+  ...
+# Subtest: invalid qualifiers and foreign or missing homes refuse before any write
+ok 55 - invalid qualifiers and foreign or missing homes refuse before any write
+  ---
+  duration_ms: 0.714792
+  type: 'test'
+  ...
+# Subtest: a retired UNKNOWN without this command marker cannot be retired again
+ok 56 - a retired UNKNOWN without this command marker cannot be retired again
+  ---
+  duration_ms: 0.36125
+  type: 'test'
+  ...
+# Subtest: an adoption replay locates its new canonical owner before rechecking the obsolete legacy locator
+ok 57 - an adoption replay locates its new canonical owner before rechecking the obsolete legacy locator
+  ---
+  duration_ms: 1.255
+  type: 'test'
+  ...
+# Subtest: same key with different property order reuses its operation and audit
+ok 58 - same key with different property order reuses its operation and audit
+  ---
+  duration_ms: 0.690625
+  type: 'test'
+  ...
+# Subtest: absent baseline permits a retired-only legacy record without modifying it
+ok 59 - absent baseline permits a retired-only legacy record without modifying it
+  ---
+  duration_ms: 0.831584
+  type: 'test'
+  ...
+# Subtest: missing baseline is refused even for a matching marker; reassert cannot use an absent baseline
+ok 60 - missing baseline is refused even for a matching marker; reassert cannot use an absent baseline
+  ---
+  duration_ms: 0.918333
+  type: 'test'
+  ...
+# Subtest: canonical key extras are rejected before an invalid identity envelope can be persisted
+ok 61 - canonical key extras are rejected before an invalid identity envelope can be persisted
+  ---
+  duration_ms: 0.2895
+  type: 'test'
+  ...
+# Subtest: extent key order cannot change the persisted digest or duplicate its operation
+ok 62 - extent key order cannot change the persisted digest or duplicate its operation
+  ---
+  duration_ms: 1.295083
+  type: 'test'
+  ...
+# Subtest: a definitive audit refusal remains applied/pending and does not block a different target
+ok 63 - a definitive audit refusal remains applied/pending and does not block a different target
+  ---
+  duration_ms: 0.955084
+  type: 'test'
+  ...
+# Subtest: unchanged is reserved for no audit debt; a new command repairs debt before its planned write
+ok 64 - unchanged is reserved for no audit debt; a new command repairs debt before its planned write
+  ---
+  duration_ms: 1.036958
+  type: 'test'
+  ...
+# Subtest: a definitive reassert audit refusal stops later targets and exposes the known version
+ok 65 - a definitive reassert audit refusal stops later targets and exposes the known version
+  ---
+  duration_ms: 1.060875
+  type: 'test'
+  ...
+# Subtest: lost-response recovery refuses a marker on an owner whose canonical envelope changed
+ok 66 - lost-response recovery refuses a marker on an owner whose canonical envelope changed
+  ---
+  duration_ms: 0.507042
+  type: 'test'
+  ...
+# Subtest: a conditional-create loser includes the winner in its fresh projection
+ok 67 - a conditional-create loser includes the winner in its fresh projection
+  ---
+  duration_ms: 0.733875
+  type: 'test'
+  ...
+# Subtest: review regression: wrong-target audit stays pending and cannot permit marker supersession
+ok 68 - review regression: wrong-target audit stays pending and cannot permit marker supersession
+  ---
+  duration_ms: 1.174792
+  type: 'test'
+  ...
+# Subtest: review regression: a reassertion tag cannot confirm an audit targeting another Observation
+ok 69 - review regression: a reassertion tag cannot confirm an audit targeting another Observation
+  ---
+  duration_ms: 0.615291
+  type: 'test'
+  ...
+# Subtest: W38 executionOrder reports actual library ordering with legacy retirement submitted first
+ok 70 - W38 executionOrder reports actual library ordering with legacy retirement submitted first
+  ---
+  duration_ms: 0.551
+  type: 'test'
+  ...
+# Subtest: W38 fact pair retains submitted execution order when second target conflicts
+ok 71 - W38 fact pair retains submitted execution order when second target conflicts
+  ---
+  duration_ms: 0.720417
+  type: 'test'
+  ...
+# Subtest: W44 refresh failure belongs to first unexecuted target after a confirmed write
+ok 72 - W44 refresh failure belongs to first unexecuted target after a confirmed write
+  ---
+  duration_ms: 0.352167
+  type: 'test'
+  ...
+# Subtest: W-h replay verifier distinguishes exact, new, reused-content and persisted-state mismatch
+ok 73 - W-h replay verifier distinguishes exact, new, reused-content and persisted-state mismatch
+  ---
+  duration_ms: 1.621917
+  type: 'test'
+  ...
+# Subtest: W-h reassert replay uses its new audit witness even after source drift
+ok 74 - W-h reassert replay uses its new audit witness even after source drift
+  ---
+  duration_ms: 0.662833
+  type: 'test'
+  ...
+# Subtest: W-h typed causes distinguish load, owner search, audit lookup and unknown clinical write
+ok 75 - W-h typed causes distinguish load, owner search, audit lookup and unknown clinical write
+  ---
+  duration_ms: 0.77625
+  type: 'test'
+  ...
+# Subtest: W-h successful clinical create remains confirmed when audit create and lookup fail
+ok 76 - W-h successful clinical create remains confirmed when audit create and lookup fail
+  ---
+  duration_ms: 0.328458
+  type: 'test'
+  ...
+# Subtest: W-h repairPendingAudits persists frozen debt and never attempts clinical writes
+ok 77 - W-h repairPendingAudits persists frozen debt and never attempts clinical writes
+  ---
+  duration_ms: 0.611
+  type: 'test'
+  ...
+# Subtest: W-h reassert replay audit lookup failure has a typed cause
+ok 78 - W-h reassert replay audit lookup failure has a typed cause
+  ---
+  duration_ms: 0.238375
+  type: 'test'
+  ...
+# Subtest: W-h repair failure preserves frozen debt and carries audit-repair with no clinical write
+ok 79 - W-h repair failure preserves frozen debt and carries audit-repair with no clinical write
+  ---
+  duration_ms: 0.3745
+  type: 'test'
+  ...
+# Subtest: W-h reassert verified source failure is verify-read and successful reassert writes no clinical data
+ok 80 - W-h reassert verified source failure is verify-read and successful reassert writes no clinical data
+  ---
+  duration_ms: 0.64325
+  type: 'test'
+  ...
+# Subtest: W-h load and refresh preserve typed 403 failure for response selection
+ok 81 - W-h load and refresh preserve typed 403 failure for response selection
+  ---
+  duration_ms: 0.533208
+  type: 'test'
+  ...
+# Subtest: W-h load and refresh preserve typed 404 failure for response selection
+ok 82 - W-h load and refresh preserve typed 404 failure for response selection
+  ---
+  duration_ms: 0.790958
+  type: 'test'
+  ...
+# Subtest: W45 reassert command witness rejects changed-baseline reuse without changing mutation audits
+ok 83 - W45 reassert command witness rejects changed-baseline reuse without changing mutation audits
+  ---
+  duration_ms: 0.993667
+  type: 'test'
+  ...
+# Subtest: W84 old reassert audits without both tags are rejected
+ok 84 - W84 old reassert audits without both tags are rejected
+  ---
+  duration_ms: 0.633458
+  type: 'test'
+  ...
+# Subtest: staff cannot undo a diagnosis clear and can still undo a finding-only clear
+ok 85 - staff cannot undo a diagnosis clear and can still undo a finding-only clear
+  ---
+  duration_ms: 43.264125
+  type: 'test'
+  ...
+# Subtest: guard 9: a section void writes the ledger slot in the SAME transaction, and a GET of the ledger shows it with its count
+ok 86 - guard 9: a section void writes the ledger slot in the SAME transaction, and a GET of the ledger shows it with its count
+  ---
+  duration_ms: 7.515416
+  type: 'test'
+  ...
+# Subtest: a second void updates the one existing ledger Basic version-guarded instead of creating another
+ok 87 - a second void updates the one existing ledger Basic version-guarded instead of creating another
+  ---
+  duration_ms: 14.9485
+  type: 'test'
+  ...
+# Subtest: preview and empty voids never write a ledger
+ok 88 - preview and empty voids never write a ledger
+  ---
+  duration_ms: 13.9855
+  type: 'test'
+  ...
+# Subtest: rule 1: a second visit clear replaces the first's Undo — the visit slot holds only the latest action
+ok 89 - rule 1: a second visit clear replaces the first's Undo — the visit slot holds only the latest action
+  ---
+  duration_ms: 13.876917
+  type: 'test'
+  ...
+# Subtest: rule 2: sections own independent slots — clearing CVF leaves Pupils' Undo alone, and a tier-1 remove inside Pupils replaces only Pupils'
+ok 90 - rule 2: sections own independent slots — clearing CVF leaves Pupils' Undo alone, and a tier-1 remove inside Pupils replaces only Pupils'
+  ---
+  duration_ms: 19.786333
+  type: 'test'
+  ...
+# Subtest: a tier-1 remove may name the sheet's section keys so a two-definition sheet keeps one slot, replacing any slot under either key
+ok 91 - a tier-1 remove may name the sheet's section keys so a two-definition sheet keeps one slot, replacing any slot under either key
+  ---
+  duration_ms: 13.728916
+  type: 'test'
+  ...
+# Subtest: rule 3: a visit clear absorbs every pending section Undo — only the visit slot remains
+ok 92 - rule 3: a visit clear absorbs every pending section Undo — only the visit slot remains
+  ---
+  duration_ms: 12.5195
+  type: 'test'
+  ...
+# Subtest: guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error
+ok 93 - guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error
+  ---
+  duration_ms: 87.417208
+  type: 'test'
+  ...
+# Subtest: guard 8: undo against a finished encounter returns 409 and restores nothing
+ok 94 - guard 8: undo against a finished encounter returns 409 and restores nothing
+  ---
+  duration_ms: 6.169834
+  type: 'test'
+  ...
+# Subtest: guard 8: cancelled and entered-in-error encounters gate undo the same way
+ok 95 - guard 8: cancelled and entered-in-error encounters gate undo the same way
+  ---
+  duration_ms: 12.485375
+  type: 'test'
+  ...
+# Subtest: guard 10: void a preliminary IOP Observation, undo → it is preliminary again
+ok 96 - guard 10: void a preliminary IOP Observation, undo → it is preliminary again
+  ---
+  duration_ms: 12.026083
+  type: 'test'
+  ...
+# Subtest: guard 10: a final Observation comes back final, and a status-less custom Observation comes back with no status
+ok 97 - guard 10: a final Observation comes back final, and a status-less custom Observation comes back with no status
+  ---
+  duration_ms: 12.593875
+  type: 'test'
+  ...
+# Subtest: undo writes one RESTORE Provenance per resource, in one version-guarded transaction that carries the Encounter and clears the slot
+ok 98 - undo writes one RESTORE Provenance per resource, in one version-guarded transaction that carries the Encounter and clears the slot
+  ---
+  duration_ms: 12.38175
+  type: 'test'
+  ...
+# Subtest: undo of a History clear restores the complaint to active, re-stamps the primary complaint, and restores the History Observation
+ok 99 - undo of a History clear restores the complaint to active, re-stamps the primary complaint, and restores the History Observation
+  ---
+  duration_ms: 12.401291
+  type: 'test'
+  ...
+# Subtest: undo of an Assessment clear restores each Condition's verificationStatus and clinicalStatus and puts it back on Encounter.diagnosis
+ok 100 - undo of an Assessment clear restores each Condition's verificationStatus and clinicalStatus and puts it back on Encounter.diagnosis
+  ---
+  duration_ms: 12.14625
+  type: 'test'
+  ...
+# Subtest: undo of a Dilation clear restores the linked MedicationAdministration to its prior status
+ok 101 - undo of a Dilation clear restores the linked MedicationAdministration to its prior status
+  ---
+  duration_ms: 12.135334
+  type: 'test'
+  ...
+# Subtest: undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written
+ok 102 - undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written
+  ---
+  duration_ms: 17.479292
+  type: 'test'
+  ...
+# Subtest: undo with an empty visit slot or an unknown section returns 409 and writes nothing
+ok 103 - undo with an empty visit slot or an unknown section returns 409 and writes nothing
+  ---
+  duration_ms: 17.5465
+  type: 'test'
+  ...
+# Subtest: a concurrent edit during the undo surfaces as a 409 concurrent-edit, not a partial restore
+ok 104 - a concurrent edit during the undo surfaces as a 409 concurrent-edit, not a partial restore
+  ---
+  duration_ms: 11.819666
+  type: 'test'
+  ...
+# Subtest: an entry that cannot be read fails the undo closed — nothing is restored and the reference is named
+ok 105 - an entry that cannot be read fails the undo closed — nothing is restored and the reference is named
+  ---
+  duration_ms: 12.1925
+  type: 'test'
+  ...
+# Subtest: undo requires authentication, chart.write, a valid encounter id, and a known scope
+ok 106 - undo requires authentication, chart.write, a valid encounter id, and a known scope
+  ---
+  duration_ms: 6.282792
+  type: 'test'
+  ...
+# Subtest: the ledger read requires authentication and chart.read, and 404s for an unknown encounter
+ok 107 - the ledger read requires authentication and chart.read, and 404s for an unknown encounter
+  ---
+  duration_ms: 0.144041
+  type: 'test'
+  ...
+# Subtest: partial void: the slot over-names the refused row, but undo restores only the rows that were actually voided and leaves the refused one untouched
+ok 108 - partial void: the slot over-names the refused row, but undo restores only the rows that were actually voided and leaves the refused one untouched
+  ---
+  duration_ms: 12.7925
+  type: 'test'
+  ...
+# Subtest: fixback P2\#2: preview lists every candidate with its section, finding key, and laterality so a reopened sheet can rehydrate its per-item controls
+ok 109 - fixback P2\#2: preview lists every candidate with its section, finding key, and laterality so a reopened sheet can rehydrate its per-item controls
+  ---
+  duration_ms: 12.11375
+  type: 'test'
+  ...
+# Subtest: fixback 56ff8d36 P2\#A: a preview on a signed encounter still resolves its candidates read-only, while the void itself stays 409
+ok 110 - fixback 56ff8d36 P2\#A: a preview on a signed encounter still resolves its candidates read-only, while the void itself stays 409
+  ---
+  duration_ms: 5.923167
+  type: 'test'
+  ...
+# Subtest: the ledger Basic round-trips every slot, entry, and prior status through its JSON extension
+ok 111 - the ledger Basic round-trips every slot, entry, and prior status through its JSON extension
+  ---
+  duration_ms: 0.829375
+  type: 'test'
+  ...
+# Subtest: rebuilding onto an existing Basic keeps its id and meta so the update is version-guarded
+ok 112 - rebuilding onto an existing Basic keeps its id and meta so the update is version-guarded
+  ---
+  duration_ms: 0.178209
+  type: 'test'
+  ...
+# Subtest: parse refuses a Basic that is not an undo ledger or whose subject is not an Encounter
+ok 113 - parse refuses a Basic that is not an undo ledger or whose subject is not an Encounter
+  ---
+  duration_ms: 0.183375
+  type: 'test'
+  ...
+# Subtest: get returns the empty ledger when the encounter has no Basic yet, and the stored one when it does
+ok 114 - get returns the empty ledger when the encounter has no Basic yet, and the stored one when it does
+  ---
+  duration_ms: 0.243375
+  type: 'test'
+  ...
+# Subtest: readRow hands back the stored Basic alongside the ledger so a writer can PUT it version-guarded
+ok 115 - readRow hands back the stored Basic alongside the ledger so a writer can PUT it version-guarded
+  ---
+  duration_ms: 0.2085
+  type: 'test'
+  ...
+# Subtest: staff may preview a diagnosis clear but cannot write it, while finding-only clears remain allowed
+ok 116 - staff may preview a diagnosis clear but cannot write it, while finding-only clears remain allowed
+  ---
+  duration_ms: 37.152875
+  type: 'test'
+  ...
+# Subtest: guard 1: void against a finished encounter returns 409 and writes nothing
+ok 117 - guard 1: void against a finished encounter returns 409 and writes nothing
+  ---
+  duration_ms: 0.340291
+  type: 'test'
+  ...
+# Subtest: guard 1: cancelled and entered-in-error encounters are gated the same way
+ok 118 - guard 1: cancelled and entered-in-error encounters are gated the same way
+  ---
+  duration_ms: 0.370458
+  type: 'test'
+  ...
+# Subtest: guard 5: encounter scope voids this-encounter Observations and leaves the prior-encounter one alone
+ok 119 - guard 5: encounter scope voids this-encounter Observations and leaves the prior-encounter one alone
+  ---
+  duration_ms: 8.193208
+  type: 'test'
+  ...
+# Subtest: guard 6: finding scope voids every Observation for (findingKey, laterality), not just the latest
+ok 120 - guard 6: finding scope voids every Observation for (findingKey, laterality), not just the latest
+  ---
+  duration_ms: 7.144666
+  type: 'test'
+  ...
+# Subtest: observation scope flips one Observation to entered-in-error and writes a VOID Provenance for it
+ok 121 - observation scope flips one Observation to entered-in-error and writes a VOID Provenance for it
+  ---
+  duration_ms: 7.538833
+  type: 'test'
+  ...
+# Subtest: History complaint finding scope voids that complaint's answer Observations and removes only that complaint
+ok 122 - History complaint finding scope voids that complaint's answer Observations and removes only that complaint
+  ---
+  duration_ms: 8.497791
+  type: 'test'
+  ...
+# Subtest: observation scope refuses an Observation that belongs to a different encounter
+ok 123 - observation scope refuses an Observation that belongs to a different encounter
+  ---
+  duration_ms: 6.711042
+  type: 'test'
+  ...
+# Subtest: already-voided Observations are not re-voided and are not counted
+ok 124 - already-voided Observations are not re-voided and are not counted
+  ---
+  duration_ms: 7.438542
+  type: 'test'
+  ...
+# Subtest: section scope matches the section key exactly or as a prefix, and reports per-section labels
+ok 125 - section scope matches the section key exactly or as a prefix, and reports per-section labels
+  ---
+  duration_ms: 35.569
+  type: 'test'
+  ...
+# Subtest: section scope accepts several keys at once so a sheet that owns two definitions clears in one call
+ok 126 - section scope accepts several keys at once so a sheet that owns two definitions clears in one call
+  ---
+  duration_ms: 6.989875
+  type: 'test'
+  ...
+# Subtest: clearing the History section voids the History Observation, removes every active complaint, and clears the primary complaint stamp
+ok 127 - clearing the History section voids the History Observation, removes every active complaint, and clears the primary complaint stamp
+  ---
+  duration_ms: 7.315833
+  type: 'test'
+  ...
+# Subtest: clearing the Assessment section marks each visit Condition entered-in-error and retracts it from the Encounter
+ok 128 - clearing the Assessment section marks each visit Condition entered-in-error and retracts it from the Encounter
+  ---
+  duration_ms: 6.555833
+  type: 'test'
+  ...
+# Subtest: encounter scope clears Observations, History, complaints, and Conditions in one transaction and names every section
+ok 129 - encounter scope clears Observations, History, complaints, and Conditions in one transaction and names every section
+  ---
+  duration_ms: 7.0585
+  type: 'test'
+  ...
+# Subtest: Ocular History section clear voids only this encounter's patient answers and review attestation
+ok 130 - Ocular History section clear voids only this encounter's patient answers and review attestation
+  ---
+  duration_ms: 6.401625
+  type: 'test'
+  ...
+# Subtest: Medical and Social History section clears use the shared VOID path with clinical labels
+ok 131 - Medical and Social History section clears use the shared VOID path with clinical labels
+  ---
+  duration_ms: 12.780125
+  type: 'test'
+  ...
+# Subtest: encounter scope on an empty encounter returns 200 with count 0 and writes nothing
+ok 132 - encounter scope on an empty encounter returns 200 with count 0 and writes nothing
+  ---
+  duration_ms: 6.032625
+  type: 'test'
+  ...
+# Subtest: preview reports what a void would touch without writing anything
+ok 133 - preview reports what a void would touch without writing anything
+  ---
+  duration_ms: 6.547959
+  type: 'test'
+  ...
+# Subtest: void requires authentication, chart.write, a valid encounter id, and a known scope
+ok 134 - void requires authentication, chart.write, a valid encounter id, and a known scope
+  ---
+  duration_ms: 0.351875
+  type: 'test'
+  ...
+# Subtest: a whole-request 412 during the void is reported INDETERMINATE — the rollback a concurrent-edit answer would promise was never verified on this stack
+ok 135 - a whole-request 412 during the void is reported INDETERMINATE — the rollback a concurrent-edit answer would promise was never verified on this stack
+  ---
+  duration_ms: 6.285333
+  type: 'test'
+  ...
+# Subtest: observation scope accepts several references so a two-eye refraction block voids in one transaction
+ok 136 - observation scope accepts several references so a two-eye refraction block voids in one transaction
+  ---
+  duration_ms: 12.507833
+  type: 'test'
+  ...
+# Subtest: fixback 1: an Observation-only void carries the Encounter version, so a concurrent sign makes it fail closed
+ok 137 - fixback 1: an Observation-only void carries the Encounter version, so a concurrent sign makes it fail closed
+  ---
+  duration_ms: 6.264541
+  type: 'test'
+  ...
+# Subtest: fixback 1: every successful void transaction includes the Encounter with its If-Match, even when the Encounter body is unchanged
+ok 138 - fixback 1: every successful void transaction includes the Encounter with its If-Match, even when the Encounter body is unchanged
+  ---
+  duration_ms: 6.621708
+  type: 'test'
+  ...
+# Subtest: fixback 2: a multi-reference void is all-or-nothing — one stale, voided, or foreign reference fails the whole request
+ok 139 - fixback 2: a multi-reference void is all-or-nothing — one stale, voided, or foreign reference fails the whole request
+  ---
+  duration_ms: 17.549875
+  type: 'test'
+  ...
+# Subtest: fixback 3: voiding a dilation Observation also retires the MedicationAdministration rows it is partOf
+ok 140 - fixback 3: voiding a dilation Observation also retires the MedicationAdministration rows it is partOf
+  ---
+  duration_ms: 5.770042
+  type: 'test'
+  ...
+# Subtest: fixback 6: a linked administration that cannot be read fails the void closed — nothing is voided, nothing left active behind a hidden Observation
+ok 141 - fixback 6: a linked administration that cannot be read fails the void closed — nothing is voided, nothing left active behind a hidden Observation
+  ---
+  duration_ms: 6.656875
+  type: 'test'
+  ...
+# Subtest: fixback 6: a dangling partOf reference (404) is not an outage — the Observation voids and the missing link is simply absent
+ok 142 - fixback 6: a dangling partOf reference (404) is not an outage — the Observation voids and the missing link is simply absent
+  ---
+  duration_ms: 5.687042
+  type: 'test'
+  ...
+# Subtest: fixback 7: section subtotals include linked administrations, so they always sum to the overall count
+ok 143 - fixback 7: section subtotals include linked administrations, so they always sum to the overall count
+  ---
+  duration_ms: 12.447709
+  type: 'test'
+  ...
+# Subtest: fixback 8: a linked administration that belongs to another encounter or patient rejects the void before any write
+ok 144 - fixback 8: a linked administration that belongs to another encounter or patient rejects the void before any write
+  ---
+  duration_ms: 12.286625
+  type: 'test'
+  ...
+# Subtest: fixback 8: a linked administration already entered-in-error is not a boundary violation — nothing active remains, the Observation voids
+ok 145 - fixback 8: a linked administration already entered-in-error is not a boundary violation — nothing active remains, the Observation voids
+  ---
+  duration_ms: 5.933541
+  type: 'test'
+  ...
+# Subtest: PHI boundary at the HTTP seam: the serialized response carries no resource id and no outcome text; the log carries both
+ok 146 - PHI boundary at the HTTP seam: the serialized response carries no resource id and no outcome text; the log carries both
+  ---
+  duration_ms: 50.363083
+  type: 'test'
+  ...
+# Subtest: APPLIED-PARTIAL is distinguished from APPLIED-NONE in what the client receives
+ok 147 - APPLIED-PARTIAL is distinguished from APPLIED-NONE in what the client receives
+  ---
+  duration_ms: 22.322459
+  type: 'test'
+  ...
+# Subtest: a per-entry 412 keeps its entry-level detail and is not reported as a plain concurrent-edit retry
+ok 148 - a per-entry 412 keeps its entry-level detail and is not reported as a plain concurrent-edit retry
+  ---
+  duration_ms: 8.830708
+  type: 'test'
+  ...
+# Subtest: a statusless failure is reported as INDETERMINATE, never as a rejection before the server
+ok 149 - a statusless failure is reported as INDETERMINATE, never as a rejection before the server
+  ---
+  duration_ms: 10.2995
+  type: 'test'
+  ...
+# Subtest: an HTTP 5xx from the record server is INDETERMINATE; so is a 4xx that is not the verified preprocessing rejection
+ok 150 - an HTTP 5xx from the record server is INDETERMINATE; so is a 4xx that is not the verified preprocessing rejection
+  ---
+  duration_ms: 18.034417
+  type: 'test'
+  ...
+# Subtest: a whole-request 412 is INDETERMINATE over the wire — the atomic rollback it would imply was never verified on this stack
+ok 151 - a whole-request 412 is INDETERMINATE over the wire — the atomic rollback it would imply was never verified on this stack
+  ---
+  duration_ms: 8.588583
+  type: 'test'
+  ...
+# Subtest: F1 (Codex's probe): the write COMMITS, the answer carries no per-entry statuses — the client must hear INDETERMINATE, never 'Nothing was cleared'
+ok 152 - F1 (Codex's probe): the write COMMITS, the answer carries no per-entry statuses — the client must hear INDETERMINATE, never 'Nothing was cleared'
+  ---
+  duration_ms: 12.525708
+  type: 'test'
+  ...
+# Subtest: F1b: HTTP 400 'Not a bundle' — the one whole-request rejection verified on Medplum 5.1.30 — is APPLIED-NONE; an unverified 400 is INDETERMINATE
+ok 153 - F1b: HTTP 400 'Not a bundle' — the one whole-request rejection verified on Medplum 5.1.30 — is APPLIED-NONE; an unverified 400 is INDETERMINATE
+  ---
+  duration_ms: 17.670792
+  type: 'test'
+  ...
+# Subtest: a clean void passes through the route as 200 with the endpoint's summary
+ok 154 - a clean void passes through the route as 200 with the endpoint's summary
+  ---
+  duration_ms: 7.817
+  type: 'test'
+  ...
+# Subtest: an unexpected route error still answers the generic 500 and logs the error
+ok 155 - an unexpected route error still answers the generic 500 and logs the error
+  ---
+  duration_ms: 1.63125
+  type: 'test'
+  ...
+# Subtest: G1: the write COMMITS and every entry answers "100 Continue" — the client must hear INDETERMINATE, never 'Nothing was cleared'
+ok 156 - G1: the write COMMITS and every entry answers "100 Continue" — the client must hear INDETERMINATE, never 'Nothing was cleared'
+  ---
+  duration_ms: 8.665333
+  type: 'test'
+  ...
+# Subtest: G1: the write COMMITS and every entry answers "500 Internal Server Error" — the client must hear INDETERMINATE, never 'Nothing was cleared'
+ok 157 - G1: the write COMMITS and every entry answers "500 Internal Server Error" — the client must hear INDETERMINATE, never 'Nothing was cleared'
+  ---
+  duration_ms: 7.753209
+  type: 'test'
+  ...
+# Subtest: G1 control: entry-level 4xx answers are still refusals — all refused, nothing written, APPLIED-NONE with retry advice
+ok 158 - G1 control: entry-level 4xx answers are still refusals — all refused, nothing written, APPLIED-NONE with retry advice
+  ---
+  duration_ms: 8.416542
+  type: 'test'
+  ...
+# Subtest: a refused entry is identified by index, request method + url, status, and outcome text, with the failing count
+ok 159 - a refused entry is identified by index, request method + url, status, and outcome text, with the failing count
+  ---
+  duration_ms: 1.192833
+  type: 'test'
+  ...
+# Subtest: all entries refused is APPLIED-NONE; one accepted durable write is APPLIED-PARTIAL
+ok 160 - all entries refused is APPLIED-NONE; one accepted durable write is APPLIED-PARTIAL
+  ---
+  duration_ms: 0.359625
+  type: 'test'
+  ...
+# Subtest: PHI boundary (intermediate value): the client body carries index, resource type, status, counts, and a stable code — never ids or outcome text
+ok 161 - PHI boundary (intermediate value): the client body carries index, resource type, status, counts, and a stable code — never ids or outcome text
+  ---
+  duration_ms: 0.1545
+  type: 'test'
+  ...
+# Subtest: an incomplete transaction response is INDETERMINATE and reports entries sent vs returned and what came back instead
+ok 162 - an incomplete transaction response is INDETERMINATE and reports entries sent vs returned and what came back instead
+  ---
+  duration_ms: 0.094333
+  type: 'test'
+  ...
+# Subtest: a non-Bundle response body is named by its resourceType
+ok 163 - a non-Bundle response body is named by its resourceType
+  ---
+  duration_ms: 0.067166
+  type: 'test'
+  ...
+# Subtest: a clean transaction-response passes
+ok 164 - a clean transaction-response passes
+  ---
+  duration_ms: 0.078416
+  type: 'test'
+  ...
+# Subtest: the endpoint surfaces a refused entry as a VoidTransactionError the route can log and answer from
+ok 165 - the endpoint surfaces a refused entry as a VoidTransactionError the route can log and answer from
+  ---
+  duration_ms: 20.543792
+  type: 'test'
+  ...
+# Subtest: a per-entry 412 inside the transaction-response keeps its detail — it is NOT collapsed into the concurrent-edit 409
+ok 166 - a per-entry 412 inside the transaction-response keeps its detail — it is NOT collapsed into the concurrent-edit 409
+  ---
+  duration_ms: 9.098
+  type: 'test'
+  ...
+# Subtest: a request the FHIR server refuses outright with an unverified 4xx is INDETERMINATE and names what was sent
+ok 167 - a request the FHIR server refuses outright with an unverified 4xx is INDETERMINATE and names what was sent
+  ---
+  duration_ms: 7.010667
+  type: 'test'
+  ...
+# Subtest: a 5xx from the FHIR server is INDETERMINATE: the request may have been applied before it failed
+ok 168 - a 5xx from the FHIR server is INDETERMINATE: the request may have been applied before it failed
+  ---
+  duration_ms: 7.361041
+  type: 'test'
+  ...
+# Subtest: a statusless failure (transport loss, parse failure) is INDETERMINATE — not a rejection before the server
+ok 169 - a statusless failure (transport loss, parse failure) is INDETERMINATE — not a rejection before the server
+  ---
+  duration_ms: 9.334167
+  type: 'test'
+  ...
+# Subtest: a whole-request 412 is NOT verified to roll back on this stack, so it is INDETERMINATE — never the reload-and-reapply answer
+ok 170 - a whole-request 412 is NOT verified to roll back on this stack, so it is INDETERMINATE — never the reload-and-reapply answer
+  ---
+  duration_ms: 9.365083
+  type: 'test'
+  ...
+# Subtest: F1: a same-length transaction-response with NO per-entry statuses is INDETERMINATE — absent status is not absent writes
+ok 171 - F1: a same-length transaction-response with NO per-entry statuses is INDETERMINATE — absent status is not absent writes
+  ---
+  duration_ms: 0.290375
+  type: 'test'
+  ...
+# Subtest: F1: one entry without a status makes the whole answer INDETERMINATE even when the rest are positively refused or accepted
+ok 172 - F1: one entry without a status makes the whole answer INDETERMINATE even when the rest are positively refused or accepted
+  ---
+  duration_ms: 0.133167
+  type: 'test'
+  ...
+# Subtest: F1: a status that is not an HTTP status code is unknown, not a refusal
+ok 173 - F1: a status that is not an HTTP status code is unknown, not a refusal
+  ---
+  duration_ms: 0.141
+  type: 'test'
+  ...
+# Subtest: F1b: only the verified preprocessing rejection — HTTP 400 'Not a bundle' — is APPLIED-NONE; every other whole-request 4xx is INDETERMINATE
+ok 174 - F1b: only the verified preprocessing rejection — HTTP 400 'Not a bundle' — is APPLIED-NONE; every other whole-request 4xx is INDETERMINATE
+  ---
+  duration_ms: 0.339708
+  type: 'test'
+  ...
+# Subtest: G1: a per-entry 1xx is interim, not a refusal — the entry's fate is undecided, so the answer is INDETERMINATE
+ok 175 - G1: a per-entry 1xx is interim, not a refusal — the entry's fate is undecided, so the answer is INDETERMINATE
+  ---
+  duration_ms: 0.108208
+  type: 'test'
+  ...
+# Subtest: G1: a per-entry 5xx is a failure WHILE processing, not a refusal — the write may have landed, so INDETERMINATE
+ok 176 - G1: a per-entry 5xx is a failure WHILE processing, not a refusal — the write may have landed, so INDETERMINATE
+  ---
+  duration_ms: 0.114
+  type: 'test'
+  ...
+# Subtest: G1: only an entry-level 4xx is a refusal — the narrowing must not over-correct
+ok 177 - G1: only an entry-level 4xx is a refusal — the narrowing must not over-correct
+  ---
+  duration_ms: 0.072125
+  type: 'test'
+  ...
+# Subtest: G1 (whole-classifier pass): a 2xx that is not a final success — 202 Accepted — and any 3xx are unknown, not proof of application
+ok 178 - G1 (whole-classifier pass): a 2xx that is not a final success — 202 Accepted — and any 3xx are unknown, not proof of application
+  ---
+  duration_ms: 0.10875
+  type: 'test'
+  ...
+# Subtest: G1 (whole-classifier pass): a 200 whose location names a DIFFERENT resource than the one requested is unknown
+ok 179 - G1 (whole-classifier pass): a 200 whose location names a DIFFERENT resource than the one requested is unknown
+  ---
+  duration_ms: 0.091709
+  type: 'test'
+  ...
+# Subtest: F1b anchor: a 400 that merely MENTIONS 'Not a bundle' somewhere in its detail is not the verified rejection — INDETERMINATE
+ok 180 - F1b anchor: a 400 that merely MENTIONS 'Not a bundle' somewhere in its detail is not the verified rejection — INDETERMINATE
+  ---
+  duration_ms: 0.058208
+  type: 'test'
+  ...
+# Subtest: W76 canonical section and finding identity include panels and preserve siblings
+ok 181 - W76 canonical section and finding identity include panels and preserve siblings
+  ---
+  duration_ms: 128.019209
+  type: 'test'
+  ...
+# Subtest: W77 void fact repairs real debt before lifecycle and refuses failed repair
+ok 182 - W77 void fact repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 39.268208
+  type: 'test'
+  ...
+# Subtest: W77 void panel repairs real debt before lifecycle and refuses failed repair
+ok 183 - W77 void panel repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 37.621541
+  type: 'test'
+  ...
+# Subtest: W77 undo fact repairs real debt before lifecycle and refuses failed repair
+ok 184 - W77 undo fact repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 51.455125
+  type: 'test'
+  ...
+# Subtest: W77 undo panel repairs real debt before lifecycle and refuses failed repair
+ok 185 - W77 undo panel repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 49.596083
+  type: 'test'
+  ...
+# Subtest: W77 preview never repairs actual debt
+ok 186 - W77 preview never repairs actual debt
+  ---
+  duration_ms: 18.755958
+  type: 'test'
+  ...
+# Subtest: W78 fact final signed refusal
+ok 187 - W78 fact final signed refusal
+  ---
+  duration_ms: 17.696208
+  type: 'test'
+  ...
+# Subtest: W78 panel final signed refusal
+ok 188 - W78 panel final signed refusal
+  ---
+  duration_ms: 17.482792
+  type: 'test'
+  ...
+# Subtest: W78 fact amended signed refusal
+ok 189 - W78 fact amended signed refusal
+  ---
+  duration_ms: 18.113
+  type: 'test'
+  ...
+# Subtest: W78 panel amended signed refusal
+ok 190 - W78 panel amended signed refusal
+  ---
+  duration_ms: 17.743
+  type: 'test'
+  ...
+# Subtest: W78 fact corrected signed refusal
+ok 191 - W78 fact corrected signed refusal
+  ---
+  duration_ms: 17.358208
+  type: 'test'
+  ...
+# Subtest: W78 panel corrected signed refusal
+ok 192 - W78 panel corrected signed refusal
+  ---
+  duration_ms: 18.443875
+  type: 'test'
+  ...
+# Subtest: W106 void repairs only selected debt
+ok 193 - W106 void repairs only selected debt
+  ---
+  duration_ms: 30.476917
+  type: 'test'
+  ...
+# Subtest: W106 undo repairs only selected debt
+ok 194 - W106 undo repairs only selected debt
+  ---
+  duration_ms: 36.001542
+  type: 'test'
+  ...
+# Subtest: W105 fact writer supersession refuses whole undo
+ok 195 - W105 fact writer supersession refuses whole undo
+  ---
+  duration_ms: 59.97875
+  type: 'test'
+  ...
+# Subtest: W105 panel writer supersession refuses whole undo
+ok 196 - W105 panel writer supersession refuses whole undo
+  ---
+  duration_ms: 47.584917
+  type: 'test'
+  ...
+# Subtest: W127 void action UUID is persisted and delayed or consumed undo refuses
+ok 197 - W127 void action UUID is persisted and delayed or consumed undo refuses
+  ---
+  duration_ms: 48.03475
+  type: 'test'
+  ...
+# Subtest: W127 missing void action is 400 zero writes
+ok 198 - W127 missing void action is 400 zero writes
+  ---
+  duration_ms: 17.758958
+  type: 'test'
+  ...
+# Subtest: V23 void prebuild refuses before any repair
+ok 199 - V23 void prebuild refuses before any repair
+  ---
+  duration_ms: 17.435333
+  type: 'test'
+  ...
+# Subtest: V23 undo prebuild refuses before any repair
+ok 200 - V23 undo prebuild refuses before any repair
+  ---
+  duration_ms: 23.898041
+  type: 'test'
+  ...
+# Subtest: V24 void finished closed before repair
+ok 201 - V24 void finished closed before repair
+  ---
+  duration_ms: 11.133667
+  type: 'test'
+  ...
+# Subtest: V24 void cancelled closed before repair
+ok 202 - V24 void cancelled closed before repair
+  ---
+  duration_ms: 11.660375
+  type: 'test'
+  ...
+# Subtest: V24 void entered-in-error closed before repair
+ok 203 - V24 void entered-in-error closed before repair
+  ---
+  duration_ms: 11.31525
+  type: 'test'
+  ...
+# Subtest: V24 undo finished closed before repair
+ok 204 - V24 undo finished closed before repair
+  ---
+  duration_ms: 17.458625
+  type: 'test'
+  ...
+# Subtest: V24 undo cancelled closed before repair
+ok 205 - V24 undo cancelled closed before repair
+  ---
+  duration_ms: 18.145291
+  type: 'test'
+  ...
+# Subtest: V24 undo entered-in-error closed before repair
+ok 206 - V24 undo entered-in-error closed before repair
+  ---
+  duration_ms: 17.727125
+  type: 'test'
+  ...
+# Subtest: W114 effective stored practice definition resolves lifecycle identity
+ok 207 - W114 effective stored practice definition resolves lifecycle identity
+  ---
+  duration_ms: 18.9745
+  type: 'test'
+  ...
+# Subtest: canonical marker null and status-only content round trip
+ok 208 - canonical marker null and status-only content round trip
+  ---
+  duration_ms: 24.044958
+  type: 'test'
+  ...
+# Subtest: W105 marker absence transitions refuse without touching unrelated owners
+ok 209 - W105 marker absence transitions refuse without touching unrelated owners
+  ---
+  duration_ms: 58.379792
+  type: 'test'
+  ...
+# Subtest: signed canonical outside selection and unrelated final records keep prior behavior
+ok 210 - signed canonical outside selection and unrelated final records keep prior behavior
+  ---
+  duration_ms: 23.528417
+  type: 'test'
+  ...
+# Subtest: ledger preserves and validates action and marker identities
+ok 211 - ledger preserves and validates action and marker identities
+  ---
+  duration_ms: 0.208666
+  type: 'test'
+  ...
+# Subtest: W78 undo fact final refuses signed canonical owner
+ok 212 - W78 undo fact final refuses signed canonical owner
+  ---
+  duration_ms: 23.903083
+  type: 'test'
+  ...
+# Subtest: W78 undo panel final refuses signed canonical owner
+ok 213 - W78 undo panel final refuses signed canonical owner
+  ---
+  duration_ms: 22.836833
+  type: 'test'
+  ...
+# Subtest: W78 undo fact amended refuses signed canonical owner
+ok 214 - W78 undo fact amended refuses signed canonical owner
+  ---
+  duration_ms: 23.942625
+  type: 'test'
+  ...
+# Subtest: W78 undo panel amended refuses signed canonical owner
+ok 215 - W78 undo panel amended refuses signed canonical owner
+  ---
+  duration_ms: 23.229875
+  type: 'test'
+  ...
+# Subtest: W78 undo fact corrected refuses signed canonical owner
+ok 216 - W78 undo fact corrected refuses signed canonical owner
+  ---
+  duration_ms: 22.9065
+  type: 'test'
+  ...
+# Subtest: W78 undo panel corrected refuses signed canonical owner
+ok 217 - W78 undo panel corrected refuses signed canonical owner
+  ---
+  duration_ms: 23.919417
+  type: 'test'
+  ...
+# Subtest: preview and empty void return no new action identity
+ok 218 - preview and empty void return no new action identity
+  ---
+  duration_ms: 23.321708
+  type: 'test'
+  ...
+# Subtest: W105 forged audit or malformed operation cannot trigger undo repair before supersession
+ok 219 - W105 forged audit or malformed operation cannot trigger undo repair before supersession
+  ---
+  duration_ms: 23.761666
+  type: 'test'
+  ...
+# Subtest: V26 void finding lookup outage is structured 503 zero writes
+ok 220 - V26 void finding lookup outage is structured 503 zero writes
+  ---
+  duration_ms: 17.101667
+  type: 'test'
+  ...
+# Subtest: V26 undo finding lookup outage is structured 503 zero writes
+ok 221 - V26 undo finding lookup outage is structured 503 zero writes
+  ---
+  duration_ms: 23.812709
+  type: 'test'
+  ...
+1..221
+# tests 221
+# suites 0
+# pass 221
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1416.49475

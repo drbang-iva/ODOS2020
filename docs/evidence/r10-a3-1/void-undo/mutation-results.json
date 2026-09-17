@@ -1,0 +1,302 @@
+[
+  {
+    "id": "lifecycle-W76",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W76",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W77-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W77 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W77-undo",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W77 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W77-preview",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W77 preview",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W78-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W78 fact final",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W78-undo",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W78 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W105",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W105",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W105-ledger",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W105 fact",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W106-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W106 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W106-undo",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W106 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W114",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W114",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W127-action",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W127 void action",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W127-missing",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W127 missing",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-W127-response",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W127 void action",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-prebuild-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V23 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-closed-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V24 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-lookup-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V26 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-prebuild-undo",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V23 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-closed-undo",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V24 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  },
+  {
+    "id": "lifecycle-lookup-undo",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V26 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ]
+  }
+]

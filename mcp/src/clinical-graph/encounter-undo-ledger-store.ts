@@ -17,6 +17,7 @@ export const ENCOUNTER_UNDO_LEDGER_CODE_SYSTEM = `${BASE}/CodeSystem/${ENCOUNTER
 export const ENCOUNTER_UNDO_LEDGER_EXTENSION_URL = `${BASE}/StructureDefinition/${ENCOUNTER_UNDO_LEDGER_CODE}-json`;
 
 export interface UndoLedgerEntry {
+  markerCommandId?: string | null;
   /** `ResourceType/id` of the voided resource. */
   ref: string;
   /**
@@ -32,6 +33,7 @@ export interface UndoLedgerEntry {
 }
 
 export interface UndoLedgerSlot {
+  voidActionId?: string;
   voided: UndoLedgerEntry[];
   /** What the strip says was cleared: "Pupils", "Reactivity · OD", "everything charted". */
   label: string;
@@ -159,7 +161,9 @@ function assertSlot(value: unknown, label: string): UndoLedgerSlot {
   requiredId(value.at, `Undo ledger slot ${label} timestamp`);
   const sectionKeys = Array.isArray(value.sectionKeys) ? value.sectionKeys : [];
   for (const key of sectionKeys) requiredId(key, `Undo ledger slot ${label} section key`);
+  if (value.voidActionId !== undefined) requiredUuid(value.voidActionId, `Undo ledger slot ${label} voidActionId`);
   return {
+    ...(typeof value.voidActionId === "string" ? { voidActionId: value.voidActionId } : {}),
     voided,
     label: value.label,
     count: value.count,
@@ -176,6 +180,10 @@ function assertEntry(value: unknown, label: string): UndoLedgerEntry {
   }
   if (typeof value.priorStatus !== "string") throw new Error(`Undo ledger entry ${value.ref} must record priorStatus.`);
   const entry: UndoLedgerEntry = { ref: value.ref, priorStatus: value.priorStatus };
+  if (value.markerCommandId !== undefined) {
+    if (value.markerCommandId !== null) requiredUuid(value.markerCommandId, `Undo ledger entry ${value.ref} markerCommandId`);
+    entry.markerCommandId = value.markerCommandId as string | null;
+  }
   if (typeof value.clinicalStatus === "string") entry.clinicalStatus = value.clinicalStatus;
   if (isRecord(value.diagnosis)) {
     const condition = value.diagnosis.condition;
@@ -185,6 +193,12 @@ function assertEntry(value: unknown, label: string): UndoLedgerEntry {
     entry.diagnosis = value.diagnosis as unknown as EncounterDiagnosis;
   }
   return entry;
+}
+
+function requiredUuid(value: unknown, field: string): asserts value is string {
+  if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    throw new Error(`${field} must be a UUID.`);
+  }
 }
 
 function requiredId(value: unknown, field: string): asserts value is string {

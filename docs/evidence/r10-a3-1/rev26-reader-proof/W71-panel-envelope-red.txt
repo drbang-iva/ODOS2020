@@ -1,0 +1,140 @@
+TAP version 13
+# Subtest: identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+ok 1 - identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+  ---
+  duration_ms: 1.785
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects hash mismatch
+ok 2 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 0.206792
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects patient mismatch
+ok 3 - canonical envelope rejects patient mismatch
+  ---
+  duration_ms: 0.087833
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects encounter mismatch
+ok 4 - canonical envelope rejects encounter mismatch
+  ---
+  duration_ms: 0.165875
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects code mismatch
+ok 5 - canonical envelope rejects code mismatch
+  ---
+  duration_ms: 0.071333
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects eye mismatch
+ok 6 - canonical envelope rejects eye mismatch
+  ---
+  duration_ms: 0.056875
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects schema mismatch
+ok 7 - canonical envelope rejects schema mismatch
+  ---
+  duration_ms: 0.265084
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-envelope mismatch
+ok 8 - canonical envelope rejects duplicate-envelope mismatch
+  ---
+  duration_ms: 0.038208
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-identifier mismatch
+ok 9 - canonical envelope rejects duplicate-identifier mismatch
+  ---
+  duration_ms: 0.221167
+  type: 'test'
+  ...
+# Subtest: exact catalog resolution retains the whole nested option
+ok 10 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.275959
+  type: 'test'
+  ...
+# Subtest: retired atomic aliases use current retirement semantics and never reverse false subtypes
+ok 11 - retired atomic aliases use current retirement semantics and never reverse false subtypes
+  ---
+  duration_ms: 0.243833
+  type: 'test'
+  ...
+# Subtest: role markers dominate definition matching, conflicting markers are invalid
+not ok 12 - role markers dominate definition matching, conflicting markers are invalid
+  ---
+  duration_ms: 1.868125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:3772'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'panel-context'
+    - 'invalid'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'invalid'
+  actual: 'panel-context'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:57:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+ok 13 - one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+  ---
+  duration_ms: 2.248625
+  type: 'test'
+  ...
+# Subtest: malformed stored negative still throws; eye sets never coerce UNKNOWN
+ok 14 - malformed stored negative still throws; eye sets never coerce UNKNOWN
+  ---
+  duration_ms: 0.27375
+  type: 'test'
+  ...
+# Subtest: compiled ocular structure field identities and atomic samples are pinned
+ok 15 - compiled ocular structure field identities and atomic samples are pinned
+  ---
+  duration_ms: 1.562458
+  type: 'test'
+  ...
+# Subtest: operation marker validates audit envelope and hashes exact digest-keyed identity
+ok 16 - operation marker validates audit envelope and hashes exact digest-keyed identity
+  ---
+  duration_ms: 0.555584
+  type: 'test'
+  ...
+# Subtest: pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+ok 17 - pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+  ---
+  duration_ms: 1.000416
+  type: 'test'
+  ...
+# Subtest: review regression: an audit for a copied marker covers only its actual Observation target
+ok 18 - review regression: an audit for a copied marker covers only its actual Observation target
+  ---
+  duration_ms: 0.25575
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 17
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 239.075292

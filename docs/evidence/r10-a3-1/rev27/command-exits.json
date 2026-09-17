@@ -1,0 +1,17 @@
+{
+  "release-checker": {
+    "command": [
+      "node",
+      "mcp/scripts/check-r10-a3-release.mjs"
+    ],
+    "exit": 1
+  },
+  "diff-check": {
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit": 0
+  }
+}

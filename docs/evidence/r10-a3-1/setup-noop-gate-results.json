@@ -1,0 +1,112 @@
+{
+  "sourceHead": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "server": {
+    "ok": true,
+    "version": "5.1.30-9b1bd92",
+    "platform": "linux",
+    "runtime": "v24.18.1",
+    "postgres": true,
+    "redis": true,
+    "redisInstances": {
+      "default": true
+    }
+  },
+  "results": [
+    {
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "policyId": "95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "probe": "G-e",
+      "status": "PASS",
+      "firstEvent": 1,
+      "lastEvent": 4,
+      "detail": {
+        "commands": [
+          "3381f624-dd66-492c-9c8e-2ee69d2fe1eb",
+          "44a75b30-1aff-4add-ad5e-321b875edb4d"
+        ],
+        "concurrent": [
+          {
+            "status": 200,
+            "id": "008e5123-2d0d-47ed-a46e-4928a19d75bc",
+            "created": false
+          },
+          {
+            "status": 201,
+            "id": "008e5123-2d0d-47ed-a46e-4928a19d75bc",
+            "created": true
+          }
+        ],
+        "third": {
+          "status": 200,
+          "id": "008e5123-2d0d-47ed-a46e-4928a19d75bc",
+          "created": false
+        },
+        "persistedCount": 1
+      }
+    },
+    {
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "policyId": "95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "probe": "G-f",
+      "status": "PASS",
+      "firstEvent": 5,
+      "lastEvent": 8,
+      "detail": {
+        "concurrent": [
+          {
+            "status": 200,
+            "id": "3c69099b-d975-48b8-ba8e-b82fe886980b"
+          },
+          {
+            "status": 201,
+            "id": "3c69099b-d975-48b8-ba8e-b82fe886980b"
+          }
+        ],
+        "replayStatus": 200,
+        "persistedCount": 1,
+        "json": "{\"v\":1,\"commandId\":\"51b401a1-fec0-45a2-a340-bafd0bf4c729\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+      }
+    },
+    {
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "policyId": "2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "probe": "G-f",
+      "status": "PASS",
+      "firstEvent": 9,
+      "lastEvent": 12,
+      "detail": {
+        "concurrent": [
+          {
+            "status": 201,
+            "id": "01ff610f-c1d2-4c84-bb11-1aa31e834441"
+          },
+          {
+            "status": 200,
+            "id": "01ff610f-c1d2-4c84-bb11-1aa31e834441"
+          }
+        ],
+        "replayStatus": 200,
+        "persistedCount": 1,
+        "json": "{\"v\":1,\"commandId\":\"47e7c6c9-caef-43dc-9025-3822d40c67b5\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+      }
+    },
+    {
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "policyId": "95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "probe": "G-g",
+      "status": "FAIL",
+      "firstEvent": 13,
+      "lastEvent": 15,
+      "error": "Expected values to be strictly equal:\n\n200 !== 412\n"
+    }
+  ],
+  "stop": true
+}

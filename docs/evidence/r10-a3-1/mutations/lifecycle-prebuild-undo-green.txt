@@ -1,0 +1,23 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 173.746709
+  type: 'test'
+  ...
+# Subtest: V23 undo prebuild refuses before any repair
+ok 2 - V23 undo prebuild refuses before any repair
+  ---
+  duration_ms: 45.484125
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 224.25675

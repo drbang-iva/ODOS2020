@@ -1,0 +1,236 @@
+[
+  {
+    "family": "overview",
+    "mutation": "W80-homes",
+    "redFailures": 1,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "W80 extension homes supply overview diagnosis"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "W81-inactive",
+    "redFailures": 1,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "W81 overview completeness inactive"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "W81-context",
+    "redFailures": 4,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "W81 panel context other no credit",
+      "W81 panel context remarks no credit",
+      "W81 panel context deferred no credit",
+      "W81 overview completeness panel-context"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "W81-carry",
+    "redFailures": 3,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "V27 persisted carry unchanged evidence",
+      "V27 persisted carry link-only evidence",
+      "V27 persisted carry void-undo evidence"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "W118-values",
+    "redFailures": 3,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "W118 present TBUT 8 credits",
+      "W118 present TBUT 0 credits",
+      "W81 overview completeness panel-value"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "W114-stored",
+    "redFailures": 2,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "W81 inactive canonical no credit",
+      "W114 stored practice option resolves in both consumers"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "V27-chart-change",
+    "redFailures": 1,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "V27 persisted carry clinical-edit evidence"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "V27-reassert",
+    "redFailures": 1,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "V27 persisted carry reassert evidence"
+    ]
+  },
+  {
+    "family": "overview",
+    "mutation": "V27-legacy-view",
+    "redFailures": 1,
+    "restoredPass": 26,
+    "redFailingTests": [
+      "V27 pre-rebuild legacy atomic is displayed through reader view without credit"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W82-valued",
+    "redFailures": 7,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W82 selected valued shared default refuses before all writes",
+      "W82 selected valued shared override refuses before all writes",
+      "W82 selected valued shared per-eye refuses before all writes",
+      "W82 payload definition override cannot value a shared proposed row",
+      "W82 built-in valued reject precedes seeding",
+      "W114 stored local shared valued item refuses",
+      "W82 prompt override cannot hide a valued shared proposed item"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W82-preseed",
+    "redFailures": 2,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W82 built-in closed reject precedes seeding",
+      "W82 built-in valued reject precedes seeding"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W82-original-payload",
+    "redFailures": 1,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W82 prompt override cannot hide a valued shared proposed item"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W91-closed",
+    "redFailures": 4,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W91 protocol apply closed zero writes",
+      "W108 protocol unapply closed zero writes",
+      "W108 actual unapply rollback closed refuses Observation restore",
+      "W82 built-in closed reject precedes seeding"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W108-prebuild",
+    "redFailures": 3,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W91 protocol apply pre-rebuild zero writes",
+      "W108 protocol unapply pre-rebuild zero writes",
+      "W108 actual unapply rollback pre-rebuild refuses Observation restore"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W108-unapply-preflight",
+    "redFailures": 3,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W108 protocol unapply closed zero writes",
+      "W108 protocol unapply pre-rebuild zero writes",
+      "V28 unapply shared target rejects before unrelated removals"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W108-restore",
+    "redFailures": 3,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W108 actual unapply rollback closed refuses Observation restore",
+      "W108 actual unapply rollback pre-rebuild refuses Observation restore",
+      "W108 actual unapply rollback shared refuses Observation restore"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "V28-shared-removal",
+    "redFailures": 2,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "V28 unapply shared target rejects before unrelated removals",
+      "W108 actual unapply rollback shared refuses Observation restore"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "T22-real-restore",
+    "redFailures": 1,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "T22 control actual failed unapply restores unrelated Observation"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W107-eyes",
+    "redFailures": 1,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W107 capture fact OD + committed prompt OS dedupes"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W119-panel",
+    "redFailures": 1,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W119 panel value capture"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "W114-stored",
+    "redFailures": 3,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "W114 capture respects stored shared definition",
+      "W114 stored local shared valued item refuses",
+      "V28 inactive shared capture cannot seed"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "V28-cleared",
+    "redFailures": 1,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "V28 capture excludes cleared canonical and retains unrelated value"
+    ]
+  },
+  {
+    "family": "protocol",
+    "mutation": "V28-inactive",
+    "redFailures": 1,
+    "restoredPass": 29,
+    "redFailingTests": [
+      "V28 inactive shared capture cannot seed"
+    ]
+  }
+]

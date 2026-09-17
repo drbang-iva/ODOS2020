@@ -1,0 +1,3 @@
+odos-r10-a3-1-postgres-1
+odos-r10-a3-1-medplum-1
+odos-r10-a3-1-redis-1

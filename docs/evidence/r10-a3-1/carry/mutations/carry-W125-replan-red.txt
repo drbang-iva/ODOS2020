@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W125 replan accepts unchanged already-completed target and records exact versions
+not ok 1 - W125 replan accepts unchanged already-completed target and records exact versions
+  ---
+  duration_ms: 26.761458
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:104:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"reason":"carry-incomplete","error":"Another carry is incomplete.","commandId":"92c73de5-e611-4a26-af89-395737c5c971","conditionReference":"Condition/261c129f-da2a-42f8-b183-f6d5ef67452e"}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:113:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 202.48825

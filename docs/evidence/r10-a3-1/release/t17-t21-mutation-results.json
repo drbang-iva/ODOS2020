@@ -1,0 +1,16 @@
+[
+  {
+    "id": "release-V30-supported-pick",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T(17|21) ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  }
+]

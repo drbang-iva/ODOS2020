@@ -1,0 +1,251 @@
+TAP version 13
+# Subtest: V27 live canonical preliminary credits and overview displays
+ok 1 - V27 live canonical preliminary credits and overview displays
+  ---
+  duration_ms: 22.71225
+  type: 'test'
+  ...
+# Subtest: V27 live canonical final credits and overview displays
+ok 2 - V27 live canonical final credits and overview displays
+  ---
+  duration_ms: 14.381708
+  type: 'test'
+  ...
+# Subtest: V27 live canonical amended credits and overview displays
+ok 3 - V27 live canonical amended credits and overview displays
+  ---
+  duration_ms: 14.602583
+  type: 'test'
+  ...
+# Subtest: W80 extension homes supply overview diagnosis
+ok 4 - W80 extension homes supply overview diagnosis
+  ---
+  duration_ms: 7.502291
+  type: 'test'
+  ...
+# Subtest: W81 cleared canonical cannot credit or display
+ok 5 - W81 cleared canonical cannot credit or display
+  ---
+  duration_ms: 22.089958
+  type: 'test'
+  ...
+# Subtest: W81 explicit absent canonical credits
+ok 6 - W81 explicit absent canonical credits
+  ---
+  duration_ms: 7.638875
+  type: 'test'
+  ...
+# Subtest: W81 explicit negative act credits
+ok 7 - W81 explicit negative act credits
+  ---
+  duration_ms: 7.848834
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 8 credits
+ok 8 - W118 present TBUT 8 credits
+  ---
+  duration_ms: 14.497792
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 0 credits
+ok 9 - W118 present TBUT 0 credits
+  ---
+  duration_ms: 13.63725
+  type: 'test'
+  ...
+# Subtest: W81 panel context other no credit
+not ok 10 - W81 panel context other no credit
+  ---
+  duration_ms: 9.801875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3074'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'ocular-health:anterior:tear-film'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:tear-film'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:20:204)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 panel context remarks no credit
+not ok 11 - W81 panel context remarks no credit
+  ---
+  duration_ms: 6.915375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3074'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'ocular-health:anterior:tear-film'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:tear-film'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:20:204)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 panel context deferred no credit
+not ok 12 - W81 panel context deferred no credit
+  ---
+  duration_ms: 7.094833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3074'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'ocular-health:anterior:tear-film'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:tear-film'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:20:204)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 inactive canonical no credit
+ok 13 - W81 inactive canonical no credit
+  ---
+  duration_ms: 6.498875
+  type: 'test'
+  ...
+# Subtest: W114 stored practice option resolves in both consumers
+ok 14 - W114 stored practice option resolves in both consumers
+  ---
+  duration_ms: 13.345375
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry unchanged evidence
+ok 15 - V27 persisted carry unchanged evidence
+  ---
+  duration_ms: 17.300625
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry link-only evidence
+ok 16 - V27 persisted carry link-only evidence
+  ---
+  duration_ms: 13.943
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry void-undo evidence
+ok 17 - V27 persisted carry void-undo evidence
+  ---
+  duration_ms: 14.42525
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry reassert evidence
+ok 18 - V27 persisted carry reassert evidence
+  ---
+  duration_ms: 14.649792
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry clinical-edit evidence
+ok 19 - V27 persisted carry clinical-edit evidence
+  ---
+  duration_ms: 14.124375
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness fact
+ok 20 - W81 overview completeness fact
+  ---
+  duration_ms: 0.448541
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-value
+ok 21 - W81 overview completeness panel-value
+  ---
+  duration_ms: 0.356
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-context
+not ok 22 - W81 overview completeness panel-context
+  ---
+  duration_ms: 0.284208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:5503'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'complete'
+    - 'incomplete'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'incomplete'
+  actual: 'complete'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:30:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 overview completeness cleared
+ok 23 - W81 overview completeness cleared
+  ---
+  duration_ms: 0.121459
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness inactive
+ok 24 - W81 overview completeness inactive
+  ---
+  duration_ms: 0.130708
+  type: 'test'
+  ...
+# Subtest: W118 retired panel value does not credit or display
+ok 25 - W118 retired panel value does not credit or display
+  ---
+  duration_ms: 12.390125
+  type: 'test'
+  ...
+# Subtest: V27 pre-rebuild legacy atomic is displayed through reader view without credit
+ok 26 - V27 pre-rebuild legacy atomic is displayed through reader view without credit
+  ---
+  duration_ms: 13.313041
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 22
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 466.519917

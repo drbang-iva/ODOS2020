@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: T10 section void selects canonical facts and undo restores exact records
+not ok 1 - T10 section void selects canonical facts and undo restores exact records # TODO R10 A3
+  ---
+  duration_ms: 7.917084
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:1:10525'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"Required"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    voidAndUndo (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:126:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T11 finding void and undo preserve identity qualifiers homes and other eye
+not ok 2 - T11 finding void and undo preserve identity qualifiers homes and other eye # TODO R10 A3
+  ---
+  duration_ms: 2.04825
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:1:10638'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"Required"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    voidAndUndo (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:126:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T12 encounter void and undo include canonical facts with exact counts
+not ok 3 - T12 encounter void and undo include canonical facts with exact counts # TODO R10 A3
+  ---
+  duration_ms: 2.363833
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:1:10753'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"Required"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    voidAndUndo (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:126:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T13 lifecycle mutation repairs owed audit before replacing clinical state
+ok 4 - T13 lifecycle mutation repairs owed audit before replacing clinical state # TODO R10 A3
+  ---
+  duration_ms: 5.134375
+  type: 'test'
+  ...
+# Subtest: T14 lifecycle refuses signed canonical facts without downgrading them
+ok 5 - T14 lifecycle refuses signed canonical facts without downgrading them # TODO R10 A3
+  ---
+  duration_ms: 0.531042
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 0
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 5
+# duration_ms 220.431625

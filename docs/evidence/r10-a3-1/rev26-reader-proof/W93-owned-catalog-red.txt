@@ -1,0 +1,410 @@
+TAP version 13
+# Subtest: identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+ok 1 - identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+  ---
+  duration_ms: 1.59725
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects hash mismatch
+ok 2 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 0.187625
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects patient mismatch
+ok 3 - canonical envelope rejects patient mismatch
+  ---
+  duration_ms: 0.080417
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects encounter mismatch
+ok 4 - canonical envelope rejects encounter mismatch
+  ---
+  duration_ms: 0.158292
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects code mismatch
+ok 5 - canonical envelope rejects code mismatch
+  ---
+  duration_ms: 0.069458
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects eye mismatch
+ok 6 - canonical envelope rejects eye mismatch
+  ---
+  duration_ms: 0.051083
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects schema mismatch
+ok 7 - canonical envelope rejects schema mismatch
+  ---
+  duration_ms: 0.269334
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-envelope mismatch
+ok 8 - canonical envelope rejects duplicate-envelope mismatch
+  ---
+  duration_ms: 0.035916
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-identifier mismatch
+ok 9 - canonical envelope rejects duplicate-identifier mismatch
+  ---
+  duration_ms: 0.220333
+  type: 'test'
+  ...
+# Subtest: exact catalog resolution retains the whole nested option
+ok 10 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.273875
+  type: 'test'
+  ...
+# Subtest: retired atomic aliases use current retirement semantics and never reverse false subtypes
+ok 11 - retired atomic aliases use current retirement semantics and never reverse false subtypes
+  ---
+  duration_ms: 0.233209
+  type: 'test'
+  ...
+# Subtest: role markers dominate definition matching, conflicting markers are invalid
+ok 12 - role markers dominate definition matching, conflicting markers are invalid
+  ---
+  duration_ms: 0.633792
+  type: 'test'
+  ...
+# Subtest: one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+ok 13 - one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+  ---
+  duration_ms: 2.182459
+  type: 'test'
+  ...
+# Subtest: malformed stored negative still throws; eye sets never coerce UNKNOWN
+ok 14 - malformed stored negative still throws; eye sets never coerce UNKNOWN
+  ---
+  duration_ms: 0.3
+  type: 'test'
+  ...
+# Subtest: compiled ocular structure field identities and atomic samples are pinned
+not ok 15 - compiled ocular structure field identities and atomic samples are pinned
+  ---
+  duration_ms: 2.583333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:6295'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          atomicIds: [
+            'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis',
+            'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis',
+    ...
+            'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film',
+    +       'ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein',
+            'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam',
+    -       'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::mucus-strands'
+          ],
+          fields: [
+            'CUSTOM_ABNORMAL_FINDINGS_05',
+            'CUSTOM_GRADE_TBUT',
+            'CUSTOM_GRADE_TBUT_METHOD'
+    ...
+            'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare',
+    +       'ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed'
+    -       'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::hyphema'
+          ],
+          fields: [
+            'CUSTOM_ABNORMAL_FINDINGS_07',
+            'CUSTOM_GRADE_VAN_HERICK'
+          ],
+    ...
+          atomicIds: [
+    +       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2',
+    +       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3',
+    +       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4'
+    -       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::arteriolar-attenuation',
+    -       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-crossing-changes',
+    -       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-nicking'
+          ],
+          fields: [
+            'CUSTOM_ABNORMAL_FINDINGS_04',
+            'CUSTOM_GRADE_A_V_RATIO'
+          ],
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      stableKey: 'ocular-health:anterior:periocular-adnexa'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis'
+        1: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis'
+        2: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatochalasis'
+    1:
+      stableKey: 'ocular-health:anterior:lids-lashes'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::anterior-blepharitis'
+        1: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::chalazion'
+        2: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes'
+    2:
+      stableKey: 'ocular-health:anterior:palpebral-conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::concretions'
+        1: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::follicles'
+        2: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::giant-papillae-gpc'
+    3:
+      stableKey: 'ocular-health:anterior:conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+      atomicIds:
+        0: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::chemosis'
+        1: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::concretion'
+        2: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::conjunctivochalasis'
+    4:
+      stableKey: 'ocular-health:anterior:tear-film'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+        1: 'CUSTOM_GRADE_TBUT'
+        2: 'CUSTOM_GRADE_TBUT_METHOD'
+      atomicIds:
+        0: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film'
+        1: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam'
+        2: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::mucus-strands'
+    5:
+      stableKey: 'ocular-health:anterior:cornea'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_06'
+        1: 'CUSTOM_GRADE_VITAL_DYE'
+      atomicIds:
+        0: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::abrasion'
+        1: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::arcus'
+        2: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::band-keratopathy'
+    6:
+      stableKey: 'ocular-health:anterior:anterior-chamber'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_07'
+        1: 'CUSTOM_GRADE_VAN_HERICK'
+      atomicIds:
+        0: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells'
+        1: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare'
+        2: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::hyphema'
+    7:
+      stableKey: 'ocular-health:anterior:iris'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_08'
+      atomicIds:
+        0: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::atrophy'
+        1: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::coloboma'
+        2: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::heterochromia'
+    8:
+      stableKey: 'ocular-health:anterior:lens'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_09'
+      atomicIds:
+        0: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar'
+        1: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular'
+        2: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia'
+    9:
+      stableKey: 'ocular-health:posterior:vitreous'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::anterior-hyaloid'
+        1: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::asteroid-hyalosis'
+        2: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::floaters'
+    10:
+      stableKey: 'ocular-health:posterior:fundus'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::chorioretinal-scar'
+        1: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-lesion'
+        2: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-nevus'
+    11:
+      stableKey: 'ocular-health:posterior:macula'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cnvm'
+        1: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cystoid-macular-edema-cme'
+        2: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::diabetic-macular-edema'
+    12:
+      stableKey: 'ocular-health:posterior:vessels'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+        1: 'CUSTOM_GRADE_A_V_RATIO'
+      atomicIds:
+        0: 'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::arteriolar-attenuation'
+        1: 'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-crossing-changes'
+        2: 'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-nicking'
+    13:
+      stableKey: 'ocular-health:posterior:periphery'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+      atomicIds:
+        0: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::chorioretinal-scar'
+        1: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cobblestone-paving-stone-degeneration'
+        2: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cystoid-degeneration'
+  actual:
+    0:
+      stableKey: 'ocular-health:anterior:periocular-adnexa'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis'
+        1: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis'
+        2: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatochalasis'
+    1:
+      stableKey: 'ocular-health:anterior:lids-lashes'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::anterior-blepharitis'
+        1: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::chalazion'
+        2: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes'
+    2:
+      stableKey: 'ocular-health:anterior:palpebral-conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::concretions'
+        1: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::follicles'
+        2: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::giant-papillae-gpc'
+    3:
+      stableKey: 'ocular-health:anterior:conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+      atomicIds:
+        0: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::chemosis'
+        1: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::concretion'
+        2: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::conjunctivochalasis'
+    4:
+      stableKey: 'ocular-health:anterior:tear-film'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+        1: 'CUSTOM_GRADE_TBUT'
+        2: 'CUSTOM_GRADE_TBUT_METHOD'
+      atomicIds:
+        0: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film'
+        1: 'ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein'
+        2: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam'
+    5:
+      stableKey: 'ocular-health:anterior:cornea'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_06'
+        1: 'CUSTOM_GRADE_VITAL_DYE'
+      atomicIds:
+        0: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::abrasion'
+        1: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::arcus'
+        2: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::band-keratopathy'
+    6:
+      stableKey: 'ocular-health:anterior:anterior-chamber'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_07'
+        1: 'CUSTOM_GRADE_VAN_HERICK'
+      atomicIds:
+        0: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells'
+        1: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare'
+        2: 'ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed'
+    7:
+      stableKey: 'ocular-health:anterior:iris'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_08'
+      atomicIds:
+        0: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::atrophy'
+        1: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::coloboma'
+        2: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::heterochromia'
+    8:
+      stableKey: 'ocular-health:anterior:lens'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_09'
+      atomicIds:
+        0: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar'
+        1: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular'
+        2: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia'
+    9:
+      stableKey: 'ocular-health:posterior:vitreous'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::anterior-hyaloid'
+        1: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::asteroid-hyalosis'
+        2: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::floaters'
+    10:
+      stableKey: 'ocular-health:posterior:fundus'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::chorioretinal-scar'
+        1: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-lesion'
+        2: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-nevus'
+    11:
+      stableKey: 'ocular-health:posterior:macula'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cnvm'
+        1: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cystoid-macular-edema-cme'
+        2: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::diabetic-macular-edema'
+    12:
+      stableKey: 'ocular-health:posterior:vessels'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+        1: 'CUSTOM_GRADE_A_V_RATIO'
+      atomicIds:
+        0: 'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2'
+        1: 'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3'
+        2: 'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4'
+    13:
+      stableKey: 'ocular-health:posterior:periphery'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+      atomicIds:
+        0: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::chorioretinal-scar'
+        1: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cobblestone-paving-stone-degeneration'
+        2: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cystoid-degeneration'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:85:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: operation marker validates audit envelope and hashes exact digest-keyed identity
+ok 16 - operation marker validates audit envelope and hashes exact digest-keyed identity
+  ---
+  duration_ms: 0.415541
+  type: 'test'
+  ...
+# Subtest: pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+ok 17 - pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+  ---
+  duration_ms: 0.716708
+  type: 'test'
+  ...
+# Subtest: review regression: an audit for a copied marker covers only its actual Observation target
+ok 18 - review regression: an audit for a copied marker covers only its actual Observation target
+  ---
+  duration_ms: 0.178625
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 17
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 217.26725

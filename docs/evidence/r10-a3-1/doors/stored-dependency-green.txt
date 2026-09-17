@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: W114 read resolves a practice-only option through its real store dependency
+ok 1 - W114 read resolves a practice-only option through its real store dependency
+  ---
+  duration_ms: 29.488292
+  type: 'test'
+  ...
+# Subtest: W114 write resolves a practice-only option through its real store dependency
+ok 2 - W114 write resolves a practice-only option through its real store dependency
+  ---
+  duration_ms: 20.293209
+  type: 'test'
+  ...
+# Subtest: W114 repair resolves a practice-only option through its real store dependency
+ok 3 - W114 repair resolves a practice-only option through its real store dependency
+  ---
+  duration_ms: 19.33675
+  type: 'test'
+  ...
+# Subtest: W114 candidates resolves a practice-only option through its real store dependency
+ok 4 - W114 candidates resolves a practice-only option through its real store dependency
+  ---
+  duration_ms: 19.984542
+  type: 'test'
+  ...
+# Subtest: W114 pick resolves a practice-only option through its real store dependency
+ok 5 - W114 pick resolves a practice-only option through its real store dependency
+  ---
+  duration_ms: 20.887833
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 310.773208

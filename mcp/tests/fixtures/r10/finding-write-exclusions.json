@@ -1,0 +1,540 @@
+{
+  "sites": [
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "handleBodyMeasurementsCaptureRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-shared Observation transaction: handleBodyMeasurementsCaptureRequest submits only fixed body-height and body-weight Observations with their Provenance entries; neither builder creates an ocular-health shared fact or panel.",
+      "sourceLine": 211
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "handleBodyMeasurementsCaptureRequest",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Non-shared Observation entry: this ordinal posts the height Observation built by the body-measurements capture; the weight entry is the next ordinal and both use fixed vital-sign builders.",
+      "sourceLine": 215
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "handleBodyMeasurementsCaptureRequest",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "reason": "Non-shared Observation entry: this ordinal posts the weight Observation built by the body-measurements capture; it is a fixed vital-sign measurement, not a shared ocular-health fact or panel.",
+      "sourceLine": 221
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "persistObservation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: persistObservation is called by handleBloodPressureCaptureRequest and handleCarotenoidCaptureRequest for the fixed blood-pressure panel and carotenoid-score builders; it then writes their separate Provenance.",
+      "sourceLine": 340
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-endpoint.ts",
+      "function": "persistCapture",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: persistCapture is called by handleWearingCaptureRequest and handleAutoRefractionCaptureRequest with the wearing_rx, auto_refraction, or auto_keratometry definitions, including their documented/deferred forms; these are pretest captures outside shared ocular-health ownership.",
+      "sourceLine": 870
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHistoryReview",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Non-shared Observation entry: handleHistoryReview updates an existing no-change history-review attestation built by buildHistoryReviewAttestation and scoped by the history-review attestation identifier; this is a history act, not an ocular-health fact, panel, or negative act.",
+      "sourceLine": 490
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHistoryReview",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "reason": "Non-shared Observation entry: handleHistoryReview conditionally creates the history-review attestation by its dedicated identifier; the resource is the no-change history attestation built by buildHistoryReviewAttestation.",
+      "sourceLine": 491
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHistoryReview",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-shared Observation transaction: handleHistoryReview submits the dedicated no-change history-review attestation PUT plus its Provenance, not shared ocular-health resources.",
+      "sourceLine": 495
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "persistHistoryItemAct",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Non-shared Observation entry: persistHistoryItemAct receives only the explicit history-item review or retraction built by buildHistoryItemReview/buildHistoryItemRetraction and conditionally writes that history act by identifier.",
+      "sourceLine": 567
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "persistHistoryItemAct",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-shared Observation transaction: persistHistoryItemAct submits the explicit history-item review/retraction act and its Provenance; its callers do not supply shared ocular-health resources.",
+      "sourceLine": 572
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-shared Observation transaction: the answer-only branch of handleHpiCapture submits prepareHistoryAnswerUpsert entries, scoped history-review retirements, and their Provenance; it does not invoke shared ocular-health capture.",
+      "sourceLine": 771
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Non-shared Observation entry: this handleHpiCapture ordinal retires duplicate HPI aggregate Observations selected by the scoped HPI_STABLE_KEY query and isLiveHistoryObservation, setting entered-in-error.",
+      "sourceLine": 854
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "reason": "Non-shared Observation entry: this handleHpiCapture ordinal updates the existing canonical HPI aggregate Observation by id; the aggregate is built from the HPI definition, not a shared ocular-health definition.",
+      "sourceLine": 865
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "observation-entry",
+      "ordinal": 3,
+      "reason": "Non-shared Observation entry: this handleHpiCapture ordinal conditionally creates the HPI aggregate Observation using HPI_OBSERVATION_IDENTIFIER_SYSTEM; it is distinct from the shared-fact/panel identities.",
+      "sourceLine": 866
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "transaction-submit",
+      "ordinal": 2,
+      "reason": "Non-shared Observation transaction: the aggregate branch of handleHpiCapture submits the HPI aggregate, duplicate HPI retirements, history-answer upserts, scoped history-review retirements, and Provenance entries.",
+      "sourceLine": 888
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "prepareHistoryAnswerUpsert",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Non-shared Observation entry: prepareHistoryAnswerUpsert updates an existing history-answer Observation created by buildHistoryAnswerObservation and matched by the dedicated history-answer identifier.",
+      "sourceLine": 956
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "prepareHistoryAnswerUpsert",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "reason": "Non-shared Observation entry: prepareHistoryAnswerUpsert conditionally creates a history-answer Observation by its dedicated identifier; this is the history-answer builder output, not an ocular-health panel.",
+      "sourceLine": 957
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "prepareHistoryAnswerUpsert",
+      "kind": "observation-entry",
+      "ordinal": 3,
+      "reason": "Non-shared Observation entry: prepareHistoryAnswerUpsert retires history-review attestations only after validating patient, encounter, edited history section, status, and the dedicated HISTORY_REVIEW_ATTESTATION code.",
+      "sourceLine": 967
+    },
+    {
+      "file": "mcp/src/referral/referral-service.ts",
+      "function": "commitReferralSend",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: ReferralService.commitReferralSend submits an active ServiceRequest PUT with its Provenance POST; both entry resource types are explicit.",
+      "sourceLine": 409
+    },
+    {
+      "file": "mcp/src/fhir/opticalOrderComposite.ts",
+      "function": "entry",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Conservative Resource-union candidate: entry is the local optical cash-order bundle helper, whose assembleOpticalCashOrder callers pass only DeviceRequest, Task, ChargeItem entries, and Invoice; its generic Resource parameter does not make it an Observation writer.",
+      "sourceLine": 122
+    },
+    {
+      "file": "mcp/src/optical-order-lifecycle-service.ts",
+      "function": "createOpticalCashOrder",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: createOpticalCashOrder executes assembleOpticalCashOrder, whose entries are DeviceRequest, Task, ChargeItem, and Invoice resources only.",
+      "sourceLine": 26
+    },
+    {
+      "file": "mcp/src/payments/payment-collection-handler.ts",
+      "function": "createCollection",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: createCollection submits a single Invoice POST with conditional collection-request identity; there is no Observation entry.",
+      "sourceLine": 266
+    },
+    {
+      "file": "mcp/src/series-tracker/protocol-definition-store.ts",
+      "function": "save",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: protocol-definition-store.save submits definitionTransaction with active PlanDefinition and ActivityDefinition PUT entries only.",
+      "sourceLine": 90
+    },
+    {
+      "file": "mcp/src/series-tracker/protocol-definition-store.ts",
+      "function": "archive",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: protocol-definition-store.archive submits definitionTransaction with retired PlanDefinition and ActivityDefinition PUT entries only.",
+      "sourceLine": 103
+    },
+    {
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "function": "encounterSeries",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: encounterSeries migrates the legacy series by PUTting its completed Procedures, active Procedure, and CarePlan; the transaction is not a clinical-finding write.",
+      "sourceLine": 299
+    },
+    {
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "function": "signOffSeriesProcedures",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: signOffSeriesProcedures passes changed Procedures and changed CarePlans to updateTransaction; those are the only resources submitted at this site.",
+      "sourceLine": 512
+    },
+    {
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "function": "updateTransaction",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Conservative Resource-union candidate: updateTransaction is called by signOffSeriesProcedures with changed Procedure and CarePlan arrays; the generic Resource map produces no Observation entries for that caller.",
+      "sourceLine": 546
+    },
+    {
+      "file": "mcp/src/comms/suppression-gate.ts",
+      "function": "recordPatientSmsOptOut",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: recordPatientSmsOptOut submits a version-guarded Patient extension update plus Provenance through executeTransactionAsActor.",
+      "sourceLine": 270
+    },
+    {
+      "file": "mcp/src/comms/suppression-gate.ts",
+      "function": "clearPatientSmsOptOut",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: clearPatientSmsOptOut submits a version-guarded Patient extension update plus Provenance through executeTransactionAsActor.",
+      "sourceLine": 356
+    },
+    {
+      "file": "mcp/src/comms/comms-preferences.ts",
+      "function": "writeCommsPreferences",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: writeCommsPreferences submits the Patient preference update, its Provenance, and an optional Consent creation; it does not submit Observations.",
+      "sourceLine": 45
+    },
+    {
+      "file": "mcp/src/comms/comms-preferences.ts",
+      "function": "attachCommsConsentEvidence",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: attachCommsConsentEvidence submits Patient, Consent, and Provenance entries only.",
+      "sourceLine": 138
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-link-operation.ts",
+      "function": "transaction",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "reason": "Conservative Resource-union candidate: guarantor Operation.transaction constructs one generic entry, but record/checkpoint pass Task and Run.write is constrained to Person | RelatedPerson | Task; no caller supplies an Observation.",
+      "sourceLine": 195
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-link-operation.ts",
+      "function": "transaction",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: guarantor Operation.transaction submits only the operation Task or Person/RelatedPerson writes from Run.write; the latter explicitly constrains its resource type to Person | RelatedPerson | Task.",
+      "sourceLine": 201
+    },
+    {
+      "file": "mcp/src/clinic/patient-registration-endpoint.ts",
+      "function": "registerPatientFromDemographics",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: registerPatientFromDemographics executes buildPatientIdentityTransaction, which creates Patient, optional communications Consent, RelatedPerson, optional new Person, and the reserved Account update; no Observation is constructed.",
+      "sourceLine": 158
+    },
+    {
+      "file": "mcp/src/insurance/patient-insurance-handlers.ts",
+      "function": "handlePatientInsuranceWrite",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: handlePatientInsuranceWrite uses validateCoverageBundle, which accepts only Coverage and RelatedPerson entries; this site submits the separated RelatedPerson PUT batch and remaining validated entries.",
+      "sourceLine": 99
+    },
+    {
+      "file": "mcp/src/insurance/patient-insurance-handlers.ts",
+      "function": "handleVisionBenefitsWrite",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: handleVisionBenefitsWrite uses validateBenefitsBundle, which requires exactly one CoverageEligibilityRequest and one CoverageEligibilityResponse POST for the same patient and rejects other resource types.",
+      "sourceLine": 151
+    },
+    {
+      "file": "mcp/src/claims/claimmd-handlers.ts",
+      "function": "recordResubmissionTouch",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: recordResubmissionTouch executes buildClaimTouchTransaction, whose entries are the Claim update, optional Communication, and Provenance.",
+      "sourceLine": 481
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "runStatements",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: runStatements first submits transaction.startBundle, containing the statement-run Task creation.",
+      "sourceLine": 696
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "runStatements",
+      "kind": "transaction-submit",
+      "ordinal": 2,
+      "reason": "Non-Observation transaction: runStatements submits linkedBundles.childBundles, containing statement/rejection child Task creations.",
+      "sourceLine": 709
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "runStatements",
+      "kind": "transaction-submit",
+      "ordinal": 3,
+      "reason": "Non-Observation transaction: runStatements submits transaction.completionBundle, containing the statement-run Task update.",
+      "sourceLine": 725
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "deleteStatementChildren",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: deleteStatementChildren submits DELETE entries for child Task references collected with transactionReference(entry, \"Task\"); this cleanup does not target Observations.",
+      "sourceLine": 770
+    },
+    {
+      "file": "mcp/src/clinic/clinic-routes.ts",
+      "function": "handlePatientInactivationRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: handlePatientInactivationRequest calls patientUpdateTransaction with the updated Patient active state only.",
+      "sourceLine": 68
+    },
+    {
+      "file": "mcp/src/clinic/clinic-routes.ts",
+      "function": "handlePatientMergeRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: handlePatientMergeRequest calls patientUpdateTransaction with the source and target Patient resources only.",
+      "sourceLine": 112
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-search.ts",
+      "function": "createGuarantor",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: createGuarantor submits a single Person POST.",
+      "sourceLine": 57
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-search.ts",
+      "function": "discardUnusedGuarantor",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: discardUnusedGuarantor submits a version-guarded Person PUT setting active false.",
+      "sourceLine": 113
+    },
+    {
+      "file": "mcp/src/inventory/frame-inventory-adjustment.ts",
+      "function": "handleFrameInventoryAdjustmentRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: handleFrameInventoryAdjustmentRequest sends a Binary JSON Patch whose target is Basic/<unitId>, plus AuditEvent and Provenance; Binary here is not an Observation patch.",
+      "sourceLine": 96
+    },
+    {
+      "file": "mcp/src/clinical-graph/cup-disc-endpoint.ts",
+      "function": "handleCupDiscCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: handleCupDiscCaptureRequest resolves the fixed cup_disc_ratio definition and writes the per-eye captureGlaucomaFinding output, a separate measurement outside shared ocular-health ownership.",
+      "sourceLine": 190
+    },
+    {
+      "file": "mcp/src/clinical-graph/gonioscopy-endpoint.ts",
+      "function": "handleGonioscopyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: this handleGonioscopyCaptureRequest ordinal writes buildGonioQuadrantObservation output for a structured angle quadrant.",
+      "sourceLine": 84
+    },
+    {
+      "file": "mcp/src/clinical-graph/gonioscopy-endpoint.ts",
+      "function": "handleGonioscopyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "reason": "Non-shared Observation writer: this handleGonioscopyCaptureRequest ordinal writes the fixed gonio_tm_pigmentation simpleObservation output.",
+      "sourceLine": 95
+    },
+    {
+      "file": "mcp/src/clinical-graph/gonioscopy-endpoint.ts",
+      "function": "handleGonioscopyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 3,
+      "reason": "Non-shared Observation writer: this handleGonioscopyCaptureRequest ordinal writes the fixed gonio_note simpleObservation output.",
+      "sourceLine": 98
+    },
+    {
+      "file": "mcp/src/clinical-graph/imaging-endpoint.ts",
+      "function": "handleImagingStructureRefinementRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: handleImagingStructureRefinementRequest updates a previously read Media bodySite and writes its Provenance; the entry target is Media, not Observation.",
+      "sourceLine": 351
+    },
+    {
+      "file": "mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts",
+      "function": "handleDryEyeMeibographyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: the HTTP handleDryEyeMeibographyCaptureRequest writes buildMeibographyObservation output derived from the saved DocumentReference; this is a fixed measurement. The separate registered MCP creator is mapped independently.",
+      "sourceLine": 136
+    },
+    {
+      "file": "mcp/src/clinical-graph/iop-endpoint.ts",
+      "function": "handleIopCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: this handleIopCaptureRequest ordinal writes item.iop.observation from the resolved intraocular_pressure definition.",
+      "sourceLine": 191
+    },
+    {
+      "file": "mcp/src/clinical-graph/iop-endpoint.ts",
+      "function": "handleIopCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "reason": "Non-shared Observation writer: this handleIopCaptureRequest ordinal writes the optional item.cornealHysteresis.observation from the resolved corneal_hysteresis definition.",
+      "sourceLine": 206
+    },
+    {
+      "file": "mcp/src/clinical-graph/refraction-endpoint.ts",
+      "function": "handleRefractionCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: handleRefractionCaptureRequest writes buildRefractionObservation output for the resolved refraction definition per block/eye; it is outside shared ocular-health ownership.",
+      "sourceLine": 151
+    },
+    {
+      "file": "mcp/src/clinical-graph/contact-lens-endpoint.ts",
+      "function": "persistCapture",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: contact-lens persistCapture is called only by handleSoftContactLensCaptureRequest and handleSpecialtyContactLensCaptureRequest with their fixed soft_contact_lens and specialty_contact_lens definitions.",
+      "sourceLine": 877
+    },
+    {
+      "file": "mcp/src/clinical-graph/eye-growth-endpoint.ts",
+      "function": "persistGraph",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: eye-growth persistGraph is called by handleMyopiaCaptureRequest for buildMyopiaEyeCapture axial-length and optional corneal-radius graphs resolved using AXIAL_LENGTH_KEY/CORNEAL_RADIUS_KEY; the registered MCP creator is mapped separately.",
+      "sourceLine": 757
+    },
+    {
+      "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "function": "persistCapture",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: handleCustomSectionCaptureRequest routes every ocular-health-structure definition to saveOcularHealth before reaching legacy persistCapture. This helper is used only by the remaining non-shared custom-section branch; the canonical shared writes and executeOcularNegative have separate mapped sites.",
+      "sourceLine": 521
+    },
+    {
+      "file": "mcp/src/clinical-graph/dilation-endpoint.ts",
+      "function": "handleDilationCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: handleDilationCaptureRequest writes the fixed DILATION_KEY entrance-exam documentation Observation, including performed/declined state and MedicationAdministration partOf links.",
+      "sourceLine": 153
+    },
+    {
+      "file": "mcp/src/clinical-graph/eom-endpoint.ts",
+      "function": "handleEomCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: handleEomCaptureRequest writes the fixed EOM_KEY entrance-exam definition with OU components and documentation state.",
+      "sourceLine": 108
+    },
+    {
+      "file": "mcp/src/clinical-graph/cover-test-endpoint.ts",
+      "function": "handleCoverTestCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Non-shared Observation writer: handleCoverTestCaptureRequest writes the fixed COVER_TEST_KEY entrance-exam definition with OU deviation components and note.",
+      "sourceLine": 81
+    },
+    {
+      "file": "mcp/src/claims/claim-follow-up-routes.ts",
+      "function": "commitPreparedClaimTouches",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: commitPreparedClaimTouches concatenates prepared buildClaimTouchTransaction entries, which are Claim updates, optional Communications, and Provenance only.",
+      "sourceLine": 377
+    },
+    {
+      "file": "mcp/src/fhir/ophthalmology/save-section-bundle.ts",
+      "function": "buildSectionSaveBundle",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "reason": "Conservative Resource-union candidate: buildSectionSaveBundle observation-entry ordinal 2 is actually the buildCreateProvenance resource with request.url Provenance. The actual Observation POST at ordinal 1 is separately mapped to mcp-save-section.",
+      "sourceLine": 136
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:mark_condition_entered_in_error",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: tool mark_condition_entered_in_error submits a Condition PUT, Encounter diagnosis-reference update, and optional Provenance; it never changes supporting Observations.",
+      "sourceLine": 3562
+    },
+    {
+      "file": "mcp/src/__tests__/procedure-fee-import.test.ts",
+      "function": "createWithOutcome",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Test-only transport: CountingFhir.createWithOutcome delegates to its in-memory generic create within procedure-fee-import.test.ts; its consumers are procedure fee schedule/import tests, not an application writer or MCP dispatch path.",
+      "sourceLine": 68
+    },
+    {
+      "file": "mcp/src/__tests__/procedure-fee-prerequisite.test.ts",
+      "function": "createWithOutcome",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Test-only transport: MemoryFhir.createWithOutcome delegates to its in-memory generic create within procedure-fee-prerequisite.test.ts for fee-definition/charge prerequisite tests; this is not a production Observation write site.",
+      "sourceLine": 69
+    },
+    {
+      "file": "mcp/src/__tests__/visit-billing-codes.test.ts",
+      "function": "createWithOutcome",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "reason": "Test-only transport: MemoryFhir.createWithOutcome delegates to its in-memory generic create within visit-billing-codes.test.ts for fee schedule, visit-charge, and protocol billing tests; it is not an application or MCP writer.",
+      "sourceLine": 84
+    }
+  ]
+}

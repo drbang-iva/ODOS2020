@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: V26 void finding lookup outage is structured 503 zero writes
+not ok 1 - V26 void finding lookup outage is structured 503 zero writes
+  ---
+  duration_ms: 33.152458
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:16600'
+  failureType: 'testCodeFailure'
+  error: 'synthetic lookup outage'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    MemoryFhir.f.fhir.search (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:88:393)
+    searchAll (<worktree>/mcp/src/fhir-search.ts:108:29)
+    loadLifecycleFindings (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:538:31)
+    handleEncounterVoidRequest (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:242:30)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:88:485)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: V26 undo finding lookup outage is structured 503 zero writes
+not ok 2 - V26 undo finding lookup outage is structured 503 zero writes
+  ---
+  duration_ms: 27.367166
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:16600'
+  failureType: 'testCodeFailure'
+  error: 'synthetic lookup outage'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    MemoryFhir.f.fhir.search (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:88:393)
+    searchAll (<worktree>/mcp/src/fhir-search.ts:108:29)
+    loadLifecycleFindings (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:538:31)
+    handleEncounterUndoRequest (<worktree>/mcp/src/clinical-graph/encounter-undo-endpoint.ts:127:30)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:88:526)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250.56125

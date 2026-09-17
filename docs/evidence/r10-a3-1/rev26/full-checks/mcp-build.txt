@@ -1,0 +1,8 @@
+
+> odos-mcp@0.1.0 build
+> tsc
+
+src/__tests__/helpers/plan-authoring-fhir.ts(15,62): error TS2339: Property 'reference' does not exist on type 'Reference<Resource> | Reference<Resource>[] | Reference<Device | HealthcareService | Location | Organization | Patient | Practitioner | PractitionerRole>[] | ... 13 more ... | Reference<...>'.
+  Property 'reference' does not exist on type 'Reference<Resource>[]'.
+src/__tests__/plan-glaucoma-integration.test.ts(89,73): error TS2345: Argument of type 'Record<string, string> | undefined' is not assignable to parameter of type '{ code: string; _count: string; } | { encounter: string; _count: string; }'.
+  Type 'undefined' is not assignable to type '{ code: string; _count: string; } | { encounter: string; _count: string; }'.

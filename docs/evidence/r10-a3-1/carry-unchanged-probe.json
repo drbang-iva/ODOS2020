@@ -1,0 +1,53 @@
+{
+  "partial": {
+    "commandId": "faae1d0b-1320-4cbe-aa73-f43d813bb623",
+    "complete": false,
+    "executionOrder": [
+      0,
+      1
+    ],
+    "outcomes": [
+      {
+        "clinicalWrite": "confirmed",
+        "status": "applied",
+        "target": "finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0",
+        "reference": "Observation/c32e7711-0619-4130-b187-2a487a03a90b",
+        "versionId": "3af6743c-a6b7-458b-ae4d-22302e83b8c2"
+      },
+      {
+        "clinicalWrite": "unknown",
+        "cause": "verify-read",
+        "status": "unconfirmed",
+        "target": "finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf",
+        "reason": "Finding write was not confirmed."
+      }
+    ]
+  },
+  "replanned": {
+    "commandId": "44d2e1ad-33bb-4c86-a041-74e163c997bf",
+    "complete": true,
+    "executionOrder": [
+      0,
+      1
+    ],
+    "outcomes": [
+      {
+        "clinicalWrite": "none",
+        "status": "unchanged",
+        "target": "finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0",
+        "reference": "Observation/c32e7711-0619-4130-b187-2a487a03a90b",
+        "versionId": "3af6743c-a6b7-458b-ae4d-22302e83b8c2"
+      },
+      {
+        "clinicalWrite": "confirmed",
+        "status": "applied",
+        "target": "finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf",
+        "reference": "Observation/904f1cde-facb-47e0-9cd7-ae291b24aa5c",
+        "versionId": "68f64691-1a3c-4095-82bb-6b9d19c106b9"
+      }
+    ]
+  },
+  "step5Allowed": false,
+  "writerComplete": true,
+  "observationCount": 2
+}

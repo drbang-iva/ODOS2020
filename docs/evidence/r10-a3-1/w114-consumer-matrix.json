@@ -1,0 +1,320 @@
+{
+  "complete": true,
+  "rows": [
+    {
+      "consumer": "diagnosis findings read",
+      "pairId": "W114-door-read",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+      "function": "handleDiagnosisFindingsReadRequest",
+      "redLog": "mutations/W114-door-read-red.txt",
+      "greenLog": "mutations/W114-door-read-green.txt",
+      "failureWitness": [
+        "W114 read resolves a practice-only option through its real store dependency"
+      ],
+      "restored": [
+        "W114 read resolves a practice-only option through its real store dependency"
+      ]
+    },
+    {
+      "consumer": "diagnosis findings write",
+      "pairId": "W114-door-write",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+      "function": "handleDiagnosisFindingsMutationRequest",
+      "redLog": "mutations/W114-door-write-red.txt",
+      "greenLog": "mutations/W114-door-write-green.txt",
+      "failureWitness": [
+        "W114 write resolves a practice-only option through its real store dependency"
+      ],
+      "restored": [
+        "W114 write resolves a practice-only option through its real store dependency"
+      ]
+    },
+    {
+      "consumer": "diagnosis findings audit repair",
+      "pairId": "W114-door-repair",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+      "function": "handleDiagnosisFindingsAuditRepairRequest",
+      "redLog": "mutations/W114-door-repair-red.txt",
+      "greenLog": "mutations/W114-door-repair-green.txt",
+      "failureWitness": [
+        "W114 repair resolves a practice-only option through its real store dependency"
+      ],
+      "restored": [
+        "W114 repair resolves a practice-only option through its real store dependency"
+      ]
+    },
+    {
+      "consumer": "diagnosis candidates",
+      "pairId": "W114-door-candidates",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts",
+      "function": "handleDiagnosisCandidatesRequest",
+      "redLog": "mutations/W114-door-candidates-red.txt",
+      "greenLog": "mutations/W114-door-candidates-green.txt",
+      "failureWitness": [
+        "W114 candidates resolves a practice-only option through its real store dependency"
+      ],
+      "restored": [
+        "W114 candidates resolves a practice-only option through its real store dependency"
+      ]
+    },
+    {
+      "consumer": "diagnosis pick",
+      "pairId": "W114-door-pick",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+      "function": "handleDiagnosisPickRequest",
+      "redLog": "mutations/W114-door-pick-red.txt",
+      "greenLog": "mutations/W114-door-pick-green.txt",
+      "failureWitness": [
+        "W114 pick resolves a practice-only option through its real store dependency"
+      ],
+      "restored": [
+        "W114 pick resolves a practice-only option through its real store dependency"
+      ]
+    },
+    {
+      "consumer": "Ocular Health capture",
+      "pairId": "ocular-W114",
+      "productionFile": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "function": "saveOcularHealth",
+      "redLog": "mutations/ocular-W114-red.txt",
+      "greenLog": "mutations/ocular-W114-green.txt",
+      "failureWitness": [
+        "W114 practice option from stored definitions saves and reads"
+      ],
+      "restored": [
+        "W114 practice option from stored definitions saves and reads"
+      ]
+    },
+    {
+      "consumer": "Ocular Health history",
+      "pairId": "W114-ocular-history-dependency",
+      "productionFile": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "function": "readOcularHealth",
+      "redLog": "ocular/W114-ocular-history-dependency-red.tap",
+      "greenLog": "ocular/W114-ocular-history-dependency-green.tap",
+      "failureWitness": [
+        "W114 practice option from stored definitions saves and reads"
+      ],
+      "restored": [
+        "W114 practice option from stored definitions saves and reads"
+      ]
+    },
+    {
+      "consumer": "previous exams",
+      "pairId": "W114-previous-exams-dependency",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+      "function": "previousExamGroup",
+      "redLog": "carry/W114-previous-exams-dependency-red.tap",
+      "greenLog": "carry/W114-previous-exams-dependency-green.tap",
+      "failureWitness": [
+        "W114 stored practice option carries through effective definitions and historical read"
+      ],
+      "restored": [
+        "W114 stored practice option carries through effective definitions and historical read"
+      ]
+    },
+    {
+      "consumer": "carry pull",
+      "pairId": "carry-W114-stored",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+      "function": "handleDiagnosisPullRequest",
+      "redLog": "carry/mutations/carry-W114-stored-red.txt",
+      "greenLog": "carry/mutations/carry-W114-stored-green.txt",
+      "failureWitness": [
+        "W114 stored practice option carries through effective definitions and historical read"
+      ],
+      "restored": [
+        "W114 stored practice option carries through effective definitions and historical read"
+      ]
+    },
+    {
+      "consumer": "void",
+      "pairId": "lifecycle-W114",
+      "productionFile": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+      "function": "handleEncounterVoidRequest",
+      "redLog": "mutations/lifecycle-W114-red.txt",
+      "greenLog": "mutations/lifecycle-W114-green.txt",
+      "failureWitness": [
+        "W114 effective stored practice definition resolves lifecycle identity"
+      ],
+      "restored": [
+        "W114 effective stored practice definition resolves lifecycle identity"
+      ]
+    },
+    {
+      "consumer": "undo",
+      "pairId": "W114-undo-dependency",
+      "productionFile": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+      "function": "handleEncounterUndoRequest",
+      "redLog": "void-undo/W114-undo-dependency-red.tap",
+      "greenLog": "void-undo/W114-undo-dependency-green.tap",
+      "failureWitness": [
+        "W114 effective stored practice definition resolves lifecycle identity"
+      ],
+      "restored": [
+        "W114 effective stored practice definition resolves lifecycle identity"
+      ]
+    },
+    {
+      "consumer": "diagnosis completeness",
+      "pairId": "W114-stored-overview",
+      "productionFile": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+      "function": "handleDiagnosisCompletenessRequest",
+      "redLog": "overview/W114-stored-overview-red.tap",
+      "greenLog": "overview/W114-stored-overview-green.tap",
+      "failureWitness": [
+        "W81 inactive canonical no credit",
+        "W114 stored practice option resolves in both consumers"
+      ],
+      "restored": [
+        "W81 inactive canonical no credit",
+        "W114 stored practice option resolves in both consumers"
+      ]
+    },
+    {
+      "consumer": "exam overview",
+      "pairId": "W114-overview-dependency",
+      "productionFile": "mcp/src/clinical-graph/exam-overview-endpoint.ts",
+      "function": "handleExamOverviewRequest",
+      "redLog": "overview/W114-overview-dependency-red.tap",
+      "greenLog": "overview/W114-overview-dependency-green.tap",
+      "failureWitness": [
+        "W114 overview stored definition dependency resolves practice option label and clinical credit"
+      ],
+      "restored": [
+        "W114 overview stored definition dependency resolves practice option label and clinical credit"
+      ]
+    },
+    {
+      "consumer": "protocol apply and capture",
+      "pairId": "W114-stored-protocol",
+      "productionFile": "mcp/src/clinical-graph/protocol-endpoint.ts",
+      "function": "protocolCaptureFindings",
+      "redLog": "protocol/W114-stored-protocol-red.tap",
+      "greenLog": "protocol/W114-stored-protocol-green.tap",
+      "failureWitness": [
+        "W114 capture respects stored shared definition",
+        "W114 stored local shared valued item refuses",
+        "V28 inactive shared capture cannot seed"
+      ],
+      "restored": [
+        "W114 capture respects stored shared definition",
+        "W114 stored local shared valued item refuses",
+        "V28 inactive shared capture cannot seed"
+      ]
+    },
+    {
+      "consumer": "MCP amend_observation",
+      "pairId": "W114-mcp-amend",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema amend_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-amend-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-amend-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: mcp-amend: {\"content\":[{\"type\":\"text\",\"text\":\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\"}],\"isError\":true}",
+      "restored": "mcp-amend"
+    },
+    {
+      "consumer": "MCP append_observation_context",
+      "pairId": "W114-mcp-append-context",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema append_observation_context case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-append-context-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-append-context-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-append-context:stored-only-shared-shared-source: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"responseBundle\\\": {\\n    \\\"resourceType\\\": \\\"Bundle\\\",\\n    \\\"type\\\": \\\"transaction-response\\\",\\n    \\\"entry\\\": [\\n      {\\n        \\\"resource\\\": {\\n          \\\"resourceType\\\": \\\"Observation\\\",\\n          \\\"id\\\": \\\"82a8bd19-0f89-4d59-a7e6-36edc3a4956f\\\",\\n          \\\"status\\\": \\\"final\\\",\\n          \\\"code\\\": {\\n            \\\"text\\\": \\\"Synthetic appended note\\\"\\n          },\\n          \\\"subject\\\": {\\n            \\\"reference\\\": \\\"Patient/p1\\\"\\n          },\\n          \\\"encounter\\\": {\\n            \\\"reference\\\": \\\"Encounter/e1\\\"\\n          },\\n          \\\"effectiveDateTime\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n          \\\"issued\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n          \\\"performer\\\": [\\n            {\\n              \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n            }\\n          ],\\n          \\\"derivedFrom\\\": [\\n            {\\n              \\\"reference\\\": \\\"Observation/source\\\"\\n            }\\n          ],\\n          \\\"note\\\": [\\n            {\\n              \\\"time\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n              \\\"authorReference\\\": {\\n                \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n              },\\n              \\\"text\\\": \\\"Synthetic text\\\"\\n            }\\n          ],\\n          \\\"meta\\\": {\\n            \\\"versionId\\\": \\\"775a8656-ca4c-4426-bc6a-0d0a726ca803\\\"\\n          }\\n        },\\n        \\\"response\\\": {\\n          \\\"status\\\": \\\"201 Created\\\",\\n          \\\"location\\\": \\\"Observation/82a8bd19-0f89-4d59-a7e6-36edc3a4956f/_history/775a8656-ca4c-4426-bc6a-0d0a726ca803\\\"\\n        }\\n      },\\n      {\\n        \\\"resource\\\": {\\n          \\\"resourceType\\\": \\\"Provenance\\\",\\n          \\\"target\\\": [\\n            {\\n              \\\"reference\\\": \\\"Observation/82a8bd19-0f89-4d59-a7e6-36edc3a4956f\\\"\\n            },\\n            {\\n              \\\"reference\\\": \\\"Patient/p1\\\"\\n            }\\n          ],\\n          \\\"recorded\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n          \\\"policy\\\": [\\n            \\\"https://odos2020.com/fhir/Policy/clinical-amendment\\\"\\n          ],\\n          \\\"activity\\\": {\\n            \\\"coding\\\": [\\n              {\\n                \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n                \\\"code\\\": \\\"APPEND\\\",\\n                \\\"display\\\": \\\"Append\\\"\\n              }\\n            ],\\n            \\\"text\\\": \\\"Append\\\"\\n          },\\n          \\\"agent\\\": [\\n            {\\n              \\\"type\\\": {\\n                \\\"coding\\\": [\\n                  {\\n                    \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n                    \\\"code\\\": \\\"author\\\",\\n                    \\\"display\\\": \\\"Author\\\"\\n                  }\\n                ],\\n                \\\"text\\\": \\\"Author\\\"\\n              },\\n              \\\"role\\\": [\\n                {\\n                  \\\"text\\\": \\\"clinician\\\",\\n                  \\\"coding\\\": [\\n                    {\\n                      \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/role\\\",\\n                      \\\"code\\\": \\\"clinician\\\",\\n                      \\\"display\\\": \\\"clinician\\\"\\n                    }\\n                  ]\\n                }\\n              ],\\n              \\\"who\\\": {\\n                \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n              }\\n            }\\n          ],\\n          \\\"signature\\\": [\\n            {\\n              \\\"type\\\": [\\n                {\\n                  \\\"system\\\": \\\"urn:iso-astm:E1762-95:2013\\\",\\n                  \\\"code\\\": \\\"1.2.840.10065.1.12.1.1\\\",\\n                  \\\"display\\\": \\\"Author's Signature\\\"\\n                }\\n              ],\\n              \\\"when\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n              \\\"who\\\": {\\n                \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n              },\\n              \\\"sigFormat\\\": \\\"application/jose\\\",\\n              \\\"data\\\": \\\"c3ludGhldGlj\\\"\\n            }\\n          ],\\n          \\\"id\\\": \\\"a19d8531-03c1-4c8e-9c52-cb4277483e4d\\\",\\n          \\\"meta\\\": {\\n            \\\"versionId\\\": \\\"9473128b-72eb-45ae-b777-ca7ac12770b4\\\"\\n          }\\n        },\\n        \\\"response\\\": {\\n          \\\"status\\\": \\\"201 Created\\\",\\n          \\\"location\\\": \\\"Provenance/a19d8531-03c1-4c8e-9c52-cb4277483e4d/_history/9473128b-72eb-45ae-b777-ca7ac12770b4\\\"\\n        }\\n      }\\n    ]\\n  },\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"82a8bd19-0f89-4d59-a7e6-36edc3a4956f\\\",\\n    \\\"status\\\": \\\"final\\\",\\n    \\\"code\\\": {\\n      \\\"text\\\": \\\"Synthetic appended note\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n    \\\"issued\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n    \\\"performer\\\": [\\n      {\\n        \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n      }\\n    ],\\n    \\\"derivedFrom\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/source\\\"\\n      }\\n    ],\\n    \\\"note\\\": [\\n      {\\n        \\\"time\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n        \\\"authorReference\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        },\\n        \\\"text\\\": \\\"Synthetic text\\\"\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"resourceType\\\": \\\"Provenance\\\",\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/82a8bd19-0f89-4d59-a7e6-36edc3a4956f\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"recorded\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n    \\\"policy\\\": [\\n      \\\"https://odos2020.com/fhir/Policy/clinical-amendment\\\"\\n    ],\\n    \\\"activity\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n          \\\"code\\\": \\\"APPEND\\\",\\n          \\\"display\\\": \\\"Append\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Append\\\"\\n    },\\n    \\\"agent\\\": [\\n      {\\n        \\\"type\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n              \\\"code\\\": \\\"author\\\",\\n              \\\"display\\\": \\\"Author\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Author\\\"\\n        },\\n        \\\"role\\\": [\\n          {\\n            \\\"text\\\": \\\"clinician\\\",\\n            \\\"coding\\\": [\\n              {\\n                \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/role\\\",\\n                \\\"code\\\": \\\"clinician\\\",\\n                \\\"display\\\": \\\"clinician\\\"\\n              }\\n            ]\\n          }\\n        ],\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        }\\n      }\\n    ],\\n    \\\"signature\\\": [\\n      {\\n        \\\"type\\\": [\\n          {\\n            \\\"system\\\": \\\"urn:iso-astm:E1762-95:2013\\\",\\n            \\\"code\\\": \\\"1.2.840.10065.1.12.1.1\\\",\\n            \\\"display\\\": \\\"Author's Signature\\\"\\n          }\\n        ],\\n        \\\"when\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        },\\n        \\\"sigFormat\\\": \\\"application/jose\\\",\\n        \\\"data\\\": \\\"c3ludGhldGlj\\\"\\n      }\\n    ],\\n    \\\"id\\\": \\\"a19d8531-03c1-4c8e-9c52-cb4277483e4d\\\"\\n  }\\n}\"}]}",
+      "restored": "mcp-append-context"
+    },
+    {
+      "consumer": "MCP clinician_attest_observation",
+      "pairId": "W114-mcp-attest",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema clinician_attest_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-attest-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-attest-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: mcp-attest: {\"content\":[{\"type\":\"text\",\"text\":\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\"}],\"isError\":true}",
+      "restored": "mcp-attest"
+    },
+    {
+      "consumer": "MCP create_observation",
+      "pairId": "W114-mcp-create-observation",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema create_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-create-observation-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-create-observation-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-create-observation:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"5a62e2da-30b1-42b1-a532-c0b50b457b11\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"resourceType\\\": \\\"Provenance\\\",\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"recorded\\\": \\\"2026-09-17T03:39:45.950Z\\\",\\n    \\\"occurredDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"activity\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n          \\\"code\\\": \\\"CREATE\\\",\\n          \\\"display\\\": \\\"Create\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Create\\\"\\n    },\\n    \\\"agent\\\": [\\n      {\\n        \\\"type\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n              \\\"code\\\": \\\"author\\\",\\n              \\\"display\\\": \\\"Author\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Author\\\"\\n        },\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        }\\n      }\\n    ],\\n    \\\"id\\\": \\\"7eb66d8e-3468-4fe7-85a5-57b2411a4e21\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"4a4d5f7f-44fc-4cc2-a4c5-f4e660902ab1\\\"\\n    }\\n  },\\n  \\\"warnings\\\": []\\n}\"}]}",
+      "restored": "mcp-create-observation"
+    },
+    {
+      "consumer": "MCP create_dry_eye_questionnaire_response",
+      "pairId": "W114-mcp-dry-eye-questionnaire-score",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema create_dry_eye_questionnaire_response case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-dry-eye-questionnaire-score-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-dry-eye-questionnaire-score-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-dry-eye-questionnaire-score:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"questionnaireResponse\\\": {\\n    \\\"resourceType\\\": \\\"QuestionnaireResponse\\\",\\n    \\\"questionnaire\\\": \\\"https://odos2020.com/fhir/Questionnaire/dry-eye-osdi|0.4.1\\\",\\n    \\\"status\\\": \\\"completed\\\",\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"authored\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n    \\\"item\\\": [\\n      {\\n        \\\"linkId\\\": \\\"total-score\\\",\\n        \\\"text\\\": \\\"Total score\\\",\\n        \\\"answer\\\": [\\n          {\\n            \\\"valueDecimal\\\": 3\\n          }\\n        ]\\n      }\\n    ],\\n    \\\"id\\\": \\\"01620b84-fd2a-4891-b322-923fdadebe4f\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"1444e5d8-f123-491b-ba8f-2695f2c18817\\\"\\n    }\\n  },\\n  \\\"scoreObservation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"6c6066c0-316e-47b6-b516-c430f0ff9165\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ],\\n    \\\"derivedFrom\\\": [\\n      {\\n        \\\"reference\\\": \\\"QuestionnaireResponse/01620b84-fd2a-4891-b322-923fdadebe4f\\\"\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"resourceType\\\": \\\"Provenance\\\",\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"QuestionnaireResponse/01620b84-fd2a-4891-b322-923fdadebe4f\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"recorded\\\": \\\"2026-09-17T03:40:44.278Z\\\",\\n    \\\"occurredDateTime\\\": \\\"2026-09-16T12:00:00.000Z\\\",\\n    \\\"activity\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n          \\\"code\\\": \\\"CREATE\\\",\\n          \\\"display\\\": \\\"Create\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Create\\\"\\n    },\\n    \\\"agent\\\": [\\n      {\\n        \\\"type\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n              \\\"code\\\": \\\"author\\\",\\n              \\\"display\\\": \\\"Author\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Author\\\"\\n        },\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        }\\n      }\\n    ],\\n    \\\"id\\\": \\\"4e88a6a2-f5a8-4239-835f-72ad2e10f2da\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"48b4ba47-b47b-4626-a003-419e43e9a73d\\\"\\n    }\\n  }\\n}\"}]}",
+      "restored": "mcp-dry-eye-questionnaire-score"
+    },
+    {
+      "consumer": "MCP record_eye_growth_axial_length_measurement",
+      "pairId": "W114-mcp-eye-growth",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema record_eye_growth_axial_length_measurement case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-eye-growth-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-eye-growth-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-eye-growth:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"5dfa2bf3-64dc-46bf-9673-f0ef5d583a56\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"id\\\": \\\"5b86fb9d-c784-4f35-b490-cea073f77c06\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"dc2c11fa-26c5-4c74-af94-28e09cf66890\\\"\\n    }\\n  },\\n  \\\"cornealRadiusObservation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"fa20028c-901f-4be3-9208-8c1fe22a6f9c\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ]\\n  },\\n  \\\"cornealRadiusProvenance\\\": {\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"id\\\": \\\"ab36e582-5b69-41a2-bc22-b8012ad9af2f\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"7a45f3a3-2e20-454c-a04e-83b61614c861\\\"\\n    }\\n  }\\n}\"}]}",
+      "restored": "mcp-eye-growth"
+    },
+    {
+      "consumer": "MCP create_meibography_observation",
+      "pairId": "W114-mcp-meibography",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema create_meibography_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-meibography-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-meibography-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-meibography:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"documentReference\\\": {\\n    \\\"resourceType\\\": \\\"DocumentReference\\\",\\n    \\\"status\\\": \\\"current\\\",\\n    \\\"type\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"MEIBOGRAPHY_IMAGE\\\",\\n          \\\"display\\\": \\\"Ophthalmic raw asset\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Ophthalmic raw asset\\\"\\n    },\\n    \\\"category\\\": [\\n      {\\n        \\\"coding\\\": [\\n          {\\n            \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n            \\\"code\\\": \\\"MEIBOGRAPHY_IMAGE\\\",\\n            \\\"display\\\": \\\"Ophthalmic source document\\\"\\n          }\\n        ],\\n        \\\"text\\\": \\\"Ophthalmic source document\\\"\\n      }\\n    ],\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"date\\\": \\\"2026-09-17T03:40:50.027Z\\\",\\n    \\\"content\\\": [\\n      {\\n        \\\"attachment\\\": {\\n          \\\"contentType\\\": \\\"image/png\\\",\\n          \\\"data\\\": \\\"c3ludGhldGljIGltYWdl\\\",\\n          \\\"title\\\": \\\"Meibography image\\\"\\n        }\\n      }\\n    ],\\n    \\\"context\\\": {\\n      \\\"encounter\\\": [\\n        {\\n          \\\"reference\\\": \\\"Encounter/e1\\\"\\n        }\\n      ]\\n    },\\n    \\\"id\\\": \\\"2add19e8-fe4d-4c28-8000-eee744a1b4be\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"bd00be4e-f9c8-43a2-80ec-1064a238f920\\\"\\n    }\\n  },\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"7ea797eb-d4e8-488b-bff9-3406c074f423\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ],\\n    \\\"derivedFrom\\\": [\\n      {\\n        \\\"reference\\\": \\\"DocumentReference/2add19e8-fe4d-4c28-8000-eee744a1b4be\\\"\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"resourceType\\\": \\\"Provenance\\\",\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"DocumentReference/2add19e8-fe4d-4c28-8000-eee744a1b4be\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"recorded\\\": \\\"2026-09-17T03:40:50.027Z\\\",\\n    \\\"occurredDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"activity\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n          \\\"code\\\": \\\"CREATE\\\",\\n          \\\"display\\\": \\\"Create\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Create\\\"\\n    },\\n    \\\"agent\\\": [\\n      {\\n        \\\"type\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n              \\\"code\\\": \\\"author\\\",\\n              \\\"display\\\": \\\"Author\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Author\\\"\\n        },\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        }\\n      }\\n    ],\\n    \\\"id\\\": \\\"2340a014-afc8-4885-adeb-ab3ea069a240\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"2779c3e4-16bd-488f-85c3-ffc18d371538\\\"\\n    }\\n  }\\n}\"}]}",
+      "restored": "mcp-meibography"
+    },
+    {
+      "consumer": "MCP record_ortho_k_fit_observation",
+      "pairId": "W114-mcp-ortho-k-fit",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema record_ortho_k_fit_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-ortho-k-fit-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-ortho-k-fit-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-ortho-k-fit:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"5c6dbbbf-5213-470b-8143-e958016274e3\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"resourceType\\\": \\\"Provenance\\\",\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"recorded\\\": \\\"2026-09-17T03:40:56.028Z\\\",\\n    \\\"occurredDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"activity\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n          \\\"code\\\": \\\"CREATE\\\",\\n          \\\"display\\\": \\\"Create\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Create\\\"\\n    },\\n    \\\"agent\\\": [\\n      {\\n        \\\"type\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n              \\\"code\\\": \\\"author\\\",\\n              \\\"display\\\": \\\"Author\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Author\\\"\\n        },\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        }\\n      }\\n    ],\\n    \\\"id\\\": \\\"d5817bae-90d1-4aea-add2-ec81eb87544d\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"bcc9bed2-f73a-48dd-9a66-fbf635455e15\\\"\\n    }\\n  }\\n}\"}]}",
+      "restored": "mcp-ortho-k-fit"
+    },
+    {
+      "consumer": "MCP save_section_observations",
+      "pairId": "W114-mcp-save-section",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema save_section_observations case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-save-section-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-save-section-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-save-section:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"resourceType\\\": \\\"Bundle\\\",\\n  \\\"type\\\": \\\"transaction-response\\\",\\n  \\\"entry\\\": [\\n    {\\n      \\\"resource\\\": {\\n        \\\"resourceType\\\": \\\"Observation\\\",\\n        \\\"id\\\": \\\"shared\\\",\\n        \\\"meta\\\": {\\n          \\\"versionId\\\": \\\"a9edd2f6-4e17-43dc-979a-30d3d74e2a02\\\"\\n        },\\n        \\\"status\\\": \\\"preliminary\\\",\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n              \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n        },\\n        \\\"subject\\\": {\\n          \\\"reference\\\": \\\"Patient/p1\\\"\\n        },\\n        \\\"encounter\\\": {\\n          \\\"reference\\\": \\\"Encounter/e1\\\"\\n        },\\n        \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n        \\\"extension\\\": [\\n          {\\n            \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n            \\\"valueCodeableConcept\\\": {\\n              \\\"coding\\\": [\\n                {\\n                  \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n                  \\\"code\\\": \\\"OD\\\",\\n                  \\\"display\\\": \\\"Right eye\\\"\\n                }\\n              ],\\n              \\\"text\\\": \\\"Right eye\\\"\\n            }\\n          }\\n        ],\\n        \\\"component\\\": [\\n          {\\n            \\\"code\\\": {\\n              \\\"coding\\\": [\\n                {\\n                  \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n                  \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n                  \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n                }\\n              ],\\n              \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            },\\n            \\\"valueBoolean\\\": true\\n          }\\n        ]\\n      },\\n      \\\"response\\\": {\\n        \\\"status\\\": \\\"201 Created\\\",\\n        \\\"location\\\": \\\"Observation/shared/_history/a9edd2f6-4e17-43dc-979a-30d3d74e2a02\\\"\\n      }\\n    }\\n  ]\\n}\"}]}",
+      "restored": "mcp-save-section"
+    },
+    {
+      "consumer": "MCP scribe_write_observation",
+      "pairId": "W114-mcp-scribe-write",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema scribe_write_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-scribe-write-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-scribe-write-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-scribe-write:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"2e9dae59-9772-4c93-b27e-609756e9717a\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ]\\n  }\\n}\"}]}",
+      "restored": "mcp-scribe-write"
+    },
+    {
+      "consumer": "MCP create_smoking_status_observation",
+      "pairId": "W114-mcp-smoking-status",
+      "productionFile": "mcp/src/index.ts",
+      "function": "CallToolRequestSchema create_smoking_status_observation case",
+      "redLog": "mcp-runtime/mutations/W114-mcp-smoking-status-red.txt",
+      "greenLog": "mcp-runtime/mutations/W114-mcp-smoking-status-green.txt",
+      "failureWitness": "AssertionError [ERR_ASSERTION]: T22:mcp-smoking-status:adversarial-stored-only-shared-output: {\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"observation\\\": {\\n    \\\"resourceType\\\": \\\"Observation\\\",\\n    \\\"id\\\": \\\"shared\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"23fc966a-ee1a-4d19-b4fc-3cbb28acb31c\\\"\\n    },\\n    \\\"status\\\": \\\"preliminary\\\",\\n    \\\"code\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n          \\\"code\\\": \\\"synthetic-practice-shared\\\",\\n          \\\"display\\\": \\\"synthetic-practice-shared\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"synthetic-practice-shared\\\"\\n    },\\n    \\\"subject\\\": {\\n      \\\"reference\\\": \\\"Patient/p1\\\"\\n    },\\n    \\\"encounter\\\": {\\n      \\\"reference\\\": \\\"Encounter/e1\\\"\\n    },\\n    \\\"effectiveDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"extension\\\": [\\n      {\\n        \\\"url\\\": \\\"https://odos2020.com/fhir/StructureDefinition/eye-laterality\\\",\\n        \\\"valueCodeableConcept\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD\\\",\\n              \\\"display\\\": \\\"Right eye\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Right eye\\\"\\n        }\\n      }\\n    ],\\n    \\\"component\\\": [\\n      {\\n        \\\"code\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"https://odos2020.com/fhir/CodeSystem/ophthalmology\\\",\\n              \\\"code\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\",\\n              \\\"display\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\\\"\\n        },\\n        \\\"valueBoolean\\\": true\\n      }\\n    ]\\n  },\\n  \\\"provenance\\\": {\\n    \\\"resourceType\\\": \\\"Provenance\\\",\\n    \\\"target\\\": [\\n      {\\n        \\\"reference\\\": \\\"Observation/shared\\\"\\n      },\\n      {\\n        \\\"reference\\\": \\\"Patient/p1\\\"\\n      }\\n    ],\\n    \\\"recorded\\\": \\\"2026-09-17T03:40:22.901Z\\\",\\n    \\\"occurredDateTime\\\": \\\"2026-09-15T12:00:00.000Z\\\",\\n    \\\"activity\\\": {\\n      \\\"coding\\\": [\\n        {\\n          \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/v3-DataOperation\\\",\\n          \\\"code\\\": \\\"CREATE\\\",\\n          \\\"display\\\": \\\"Create\\\"\\n        }\\n      ],\\n      \\\"text\\\": \\\"Create\\\"\\n    },\\n    \\\"agent\\\": [\\n      {\\n        \\\"type\\\": {\\n          \\\"coding\\\": [\\n            {\\n              \\\"system\\\": \\\"http://terminology.hl7.org/CodeSystem/provenance-participant-type\\\",\\n              \\\"code\\\": \\\"author\\\",\\n              \\\"display\\\": \\\"Author\\\"\\n            }\\n          ],\\n          \\\"text\\\": \\\"Author\\\"\\n        },\\n        \\\"who\\\": {\\n          \\\"reference\\\": \\\"Practitioner/synthetic\\\"\\n        }\\n      }\\n    ],\\n    \\\"id\\\": \\\"2fb8fe59-7090-4dca-a6c4-4c92ed262e03\\\",\\n    \\\"meta\\\": {\\n      \\\"versionId\\\": \\\"8c7562dc-10ca-4035-9902-4e4ddbd39cde\\\"\\n    }\\n  }\\n}\"}]}",
+      "restored": "mcp-smoking-status"
+    }
+  ],
+  "pairCount": 25,
+  "consumerActionCount": 26,
+  "note": "25 independently mutated dependency pairs cover 26 consumer actions. Protocol apply and capture share one load and each has its own failing test. A combined test only counts for a later action where that later dependency was mutated in isolation."
+}

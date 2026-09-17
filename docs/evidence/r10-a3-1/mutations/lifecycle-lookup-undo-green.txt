@@ -1,0 +1,23 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 173.148125
+  type: 'test'
+  ...
+# Subtest: V26 undo finding lookup outage is structured 503 zero writes
+ok 2 - V26 undo finding lookup outage is structured 503 zero writes
+  ---
+  duration_ms: 43.924125
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 219.00825

@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: T17 supported Ocular Health pick links fact targets without Condition evidence
+not ok 1 - T17 supported Ocular Health pick links fact targets without Condition evidence
+  ---
+  duration_ms: 3.926959
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:1:12048'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"This diagnosis requires laterality. Supply laterality explicitly.","result":"invalid","reason":"invalid-pick"}
+    
+    422 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 422
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:161:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T21 pre-rebuild Ocular Health history and capture remain read-only
+ok 2 - T21 pre-rebuild Ocular Health history and capture remain read-only
+  ---
+  duration_ms: 4.292917
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 207.625958

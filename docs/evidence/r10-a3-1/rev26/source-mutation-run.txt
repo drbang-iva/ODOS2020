@@ -1,0 +1,4 @@
+{"id":"rev26-V28-protocol-validation-order","redExit":1,"greenExit":0,"command":["npm","--prefix","mcp","test","--","src/__tests__/protocol-phase5.test.ts"]}
+{"id":"rev26-V28-protocol-unscoped-capture","redExit":1,"greenExit":0,"command":["npm","--prefix","mcp","test","--","src/__tests__/protocol-phase5.test.ts"]}
+{"id":"rev26-V25-search-contract","redExit":1,"greenExit":0,"command":["npm","--prefix","mcp","test","--","tests/searchParamContract.test.ts"]}
+{"id":"rev26-V35-inventory-anchor","redExit":1,"greenExit":0,"command":["node","--import","./mcp/node_modules/tsx/dist/loader.mjs","--test","tests/preflight/fhir-read-grant-check.test.ts"]}

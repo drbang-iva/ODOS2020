@@ -1,0 +1,59 @@
+[
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T19",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 150,
+      "context": "\"T19 protocol capture reads current canonical facts instead of raw exact-code rows\"",
+      "text": "assert.equal(result.items.filter(i=>i.itemType===\"finding-seed\").length,1)"
+    },
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 178,
+      "context": "\"T19 protocol capture reads current canonical facts instead of raw exact-code rows\"",
+      "text": "assert.equal(result.items.filter((i:any)=>i.itemType===\"finding-seed\").length,1)"
+    },
+    "row": "V28/W107/W119",
+    "change": "real handler/store fixture; todo removed; expected semantic result preserved"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T19",
+    "before": null,
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 176,
+      "context": "\"T19 protocol capture reads current canonical facts instead of raw exact-code rows\"",
+      "text": "assert.equal(response.status,201,JSON.stringify(response.body))"
+    },
+    "row": "V28/W107/W119",
+    "change": "new handler response/prompt/eye assertion"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T19",
+    "before": null,
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 179,
+      "context": "\"T19 protocol capture reads current canonical facts instead of raw exact-code rows\"",
+      "text": "assert.equal(result.items[0].payload.mode,\"promptOnly\")"
+    },
+    "row": "V28/W107/W119",
+    "change": "new handler response/prompt/eye assertion"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T19",
+    "before": null,
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 180,
+      "context": "\"T19 protocol capture reads current canonical facts instead of raw exact-code rows\"",
+      "text": "assert.deepEqual(result.items[0].payload.expand.eyes,[\"OD\"])"
+    },
+    "row": "V28/W107/W119",
+    "change": "new handler response/prompt/eye assertion"
+  }
+]

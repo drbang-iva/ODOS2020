@@ -1,0 +1,77 @@
+[
+  {
+    "id": "rev26-V28-protocol-validation-order",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+        "before": "  const definition = await service.definitions.get(parsed.data.protocolId) ?? BUILTIN_PROTOCOLS.find(p=>p.id === parsed.data.protocolId);\n  const validation = await validateProtocolDiagnosis(staff, service, parsed.data, definition);\n  if (\"response\" in validation) return validation.response;\n  const { protocol } = validation;\n  try {\n    await assertProtocolMutation(staff,parsed.data,selectedProtocolItems(protocol.items,parsed.data.selections ?? []));\n  } catch(error) { if(error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}}; throw error; }\n  await ensureBuiltInProtocol(service, parsed.data.protocolId);\n",
+        "after": "  try {\n    const definition = await service.definitions.get(parsed.data.protocolId) ?? BUILTIN_PROTOCOLS.find(p=>p.id === parsed.data.protocolId);\n    await assertProtocolMutation(staff,parsed.data,definition ? selectedProtocolItems(definition.items,parsed.data.selections ?? []) : []);\n  } catch(error) { if(error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}}; throw error; }\n  await ensureBuiltInProtocol(service, parsed.data.protocolId);\n  const validation = await validateProtocolDiagnosis(staff, service, parsed.data);\n  if (\"response\" in validation) return validation.response;\n  const { protocol } = validation;\n"
+      }
+    ],
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "src/__tests__/protocol-phase5.test.ts"
+    ],
+    "failurePattern": "not ok [0-9]+ - apply verifies the persisted Condition"
+  },
+  {
+    "id": "rev26-V28-protocol-unscoped-capture",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+        "before": "  const input = {patientReference:encounter.subject?.reference ?? \"\",encounterReference:`Encounter/${encounter.id}`,\n    definitions:findingDefinitions,catalog:materializeAtomicFindingCatalog(findingDefinitions)};\n  const state = encounter.subject?.reference\n    ? await loadEncounterFindingState(staff.fhir,input)\n    : {...input,incomplete:false as const,observations:[],conditions:[]};\n",
+        "after": "  const state = await loadEncounterFindingState(staff.fhir,{patientReference:encounter.subject?.reference ?? \"\",encounterReference:`Encounter/${encounter.id}`,\n    definitions:findingDefinitions,catalog:materializeAtomicFindingCatalog(findingDefinitions)});\n"
+      }
+    ],
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "src/__tests__/protocol-phase5.test.ts"
+    ],
+    "failurePattern": "not ok [0-9]+ - encounter capture does not treat two absent"
+  },
+  {
+    "id": "rev26-V25-search-contract",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+        "before": "    // search-contract: diagnosis-carry-provenance.search-resource\n",
+        "after": ""
+      }
+    ],
+    "command": [
+      "npm",
+      "--prefix",
+      "mcp",
+      "test",
+      "--",
+      "tests/searchParamContract.test.ts"
+    ],
+    "failurePattern": "not ok [0-9]+ - all direct fhir.search"
+  },
+  {
+    "id": "rev26-V35-inventory-anchor",
+    "edits": [
+      {
+        "file": "scripts/fhir-read-grant-check.ts",
+        "before": "path: \"mcp/src/index.ts\", line: 3269,",
+        "after": "path: \"mcp/src/index.ts\", line: 3251,"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "tests/preflight/fhir-read-grant-check.test.ts"
+    ],
+    "failurePattern": "not ok [0-9]+ - live FHIR read grant check covers"
+  }
+]

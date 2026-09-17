@@ -1,0 +1,384 @@
+TAP version 13
+# Finding-definition Basic/61a72899-29e4-4e44-b36c-2379f957e1b6 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/5d9a63d6-08f8-4ea2-9d01-8341bfa317ac skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/bfad5cb8-968f-4839-98eb-33d83a0f6fd2 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/cdcce002-c425-411c-825c-e1c7e8490e8e skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/cdcce002-c425-411c-825c-e1c7e8490e8e skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/02d690dc-aa28-4bf5-b9d5-5d3828505408 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/02d690dc-aa28-4bf5-b9d5-5d3828505408 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/02d690dc-aa28-4bf5-b9d5-5d3828505408 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/02d690dc-aa28-4bf5-b9d5-5d3828505408 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/02d690dc-aa28-4bf5-b9d5-5d3828505408 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/970df31e-8479-4fb4-ad9a-3e61ac08c86f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/b9a18c89-e106-4ec6-8c4a-d377555600db skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/7d416574-62c1-4f5a-9603-0a9715ed348f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/7d416574-62c1-4f5a-9603-0a9715ed348f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/7d416574-62c1-4f5a-9603-0a9715ed348f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/6be1525b-fcbe-4437-b4d9-62054327817f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/6be1525b-fcbe-4437-b4d9-62054327817f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/6be1525b-fcbe-4437-b4d9-62054327817f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/7670265b-3a80-44c9-a379-4df18c493af3 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/990dd82b-4391-4418-905a-7843fdca9fdf skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/ebd9ec5d-6f2c-4640-9811-ceaaa49bc75f skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/688be0d1-b4f2-4dd3-8a8f-f00a99c3d7aa skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/1f64f6da-36b5-4987-a6fd-d8238721c85a skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/c8bc4ee5-ac6a-42e3-b75e-c1872d8b7dcb skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/c8bc4ee5-ac6a-42e3-b75e-c1872d8b7dcb skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/5d52316a-dba7-4083-8f50-f87055629989 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/5d52316a-dba7-4083-8f50-f87055629989 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/8bf7207b-f1c8-4d82-90c1-30e29da64d6e skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/8bf7207b-f1c8-4d82-90c1-30e29da64d6e skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/e3f3d20f-9c08-4844-bc5b-c56063e90471 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/e3f3d20f-9c08-4844-bc5b-c56063e90471 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/fc5360bd-2482-4459-9f1c-431bd5ea6812 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Finding-definition Basic/fc5360bd-2482-4459-9f1c-431bd5ea6812 skipped: Persisted finding definitions must have sourceStatus local-practice.
+# Subtest: V27 live canonical preliminary credits and overview displays
+not ok 1 - V27 live canonical preliminary credits and overview displays
+  ---
+  duration_ms: 12.465792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:1295'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:14:215)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: V27 live canonical final credits and overview displays
+not ok 2 - V27 live canonical final credits and overview displays
+  ---
+  duration_ms: 7.477917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:1295'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:14:215)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V27 live canonical amended credits and overview displays
+not ok 3 - V27 live canonical amended credits and overview displays
+  ---
+  duration_ms: 7.746125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:1295'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:14:215)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W80 extension homes supply overview diagnosis
+not ok 4 - W80 extension homes supply overview diagnosis
+  ---
+  duration_ms: 16.426375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:1642'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'Synthetic current diagnosis'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Synthetic current diagnosis'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:15:304)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 cleared canonical cannot credit or display
+ok 5 - W81 cleared canonical cannot credit or display
+  ---
+  duration_ms: 32.559458
+  type: 'test'
+  ...
+# Subtest: W81 explicit absent canonical credits
+not ok 6 - W81 explicit absent canonical credits
+  ---
+  duration_ms: 6.349834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:2313'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:17:137)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 explicit negative act credits
+ok 7 - W81 explicit negative act credits
+  ---
+  duration_ms: 6.464291
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 8 credits
+ok 8 - W118 present TBUT 8 credits
+  ---
+  duration_ms: 20.03325
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 0 credits
+ok 9 - W118 present TBUT 0 credits
+  ---
+  duration_ms: 18.701958
+  type: 'test'
+  ...
+# Subtest: W81 panel context other no credit
+not ok 10 - W81 panel context other no credit
+  ---
+  duration_ms: 6.753417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3074'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'ocular-health:anterior:tear-film'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:tear-film'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:20:204)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 panel context remarks no credit
+not ok 11 - W81 panel context remarks no credit
+  ---
+  duration_ms: 6.599292
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3074'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'ocular-health:anterior:tear-film'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:tear-film'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:20:204)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 panel context deferred no credit
+not ok 12 - W81 panel context deferred no credit
+  ---
+  duration_ms: 5.874625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3074'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'ocular-health:anterior:tear-film'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'ocular-health:anterior:tear-film'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:20:204)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W81 inactive canonical no credit
+ok 13 - W81 inactive canonical no credit
+  ---
+  duration_ms: 6.151917
+  type: 'test'
+  ...
+# Subtest: W114 stored practice option resolves in both consumers
+not ok 14 - W114 stored practice option resolves in both consumers
+  ---
+  duration_ms: 6.7605
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:3428'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:22:537)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V27 persisted carry unchanged evidence
+ok 15 - V27 persisted carry unchanged evidence
+  ---
+  duration_ms: 16.580875
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry link-only evidence
+ok 16 - V27 persisted carry link-only evidence
+  ---
+  duration_ms: 14.045459
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry void-undo evidence
+ok 17 - V27 persisted carry void-undo evidence
+  ---
+  duration_ms: 13.767334
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry reassert evidence
+not ok 18 - V27 persisted carry reassert evidence
+  ---
+  duration_ms: 14.434042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:4167'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:23:1175)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V27 persisted carry clinical-edit evidence
+not ok 19 - V27 persisted carry clinical-edit evidence
+  ---
+  duration_ms: 13.334375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:1:4167'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'ocular-health:anterior:lens'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'ocular-health:anterior:lens'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Overview.test.ts:23:1175)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 8
+# fail 11
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 508.20825

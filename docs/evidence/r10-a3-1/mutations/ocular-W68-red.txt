@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: W68 selected positive and scoped negative refuse before writes
+not ok 1 - W68 selected positive and scoped negative refuse before writes
+  ---
+  duration_ms: 14.054833
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:38:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'positive-in-negative-scope'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'positive-in-negative-scope'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:38:224)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 194.097667

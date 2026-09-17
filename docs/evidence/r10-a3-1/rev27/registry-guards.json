@@ -1,0 +1,38 @@
+[
+  {
+    "url": "https://odos2020.com/fhir/StructureDefinition/carry-plan",
+    "redExit": 1,
+    "greenExit": 0,
+    "finding": {
+      "pass": "vendor-canonical-shapes",
+      "severity": "hard-block",
+      "code": "odos-extension-url-shape",
+      "message": "ODOS-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
+      "source": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+      "line": 20,
+      "column": 32,
+      "ledgerRow": 19,
+      "lesson": "v0.55b Binding #1",
+      "sourceLine": "export const CARRY_PLAN_URL = \"https://odos2020.com/fhir/StructureDefinition/carry-plan\";"
+    },
+    "restoredByteIdentical": true
+  },
+  {
+    "url": "https://odos2020.com/fhir/StructureDefinition/carry-versions",
+    "redExit": 1,
+    "greenExit": 0,
+    "finding": {
+      "pass": "vendor-canonical-shapes",
+      "severity": "hard-block",
+      "code": "odos-extension-url-shape",
+      "message": "ODOS-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
+      "source": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+      "line": 21,
+      "column": 36,
+      "ledgerRow": 19,
+      "lesson": "v0.55b Binding #1",
+      "sourceLine": "export const CARRY_VERSIONS_URL = \"https://odos2020.com/fhir/StructureDefinition/carry-versions\";"
+    },
+    "restoredByteIdentical": true
+  }
+]

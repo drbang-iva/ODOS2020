@@ -10,6 +10,7 @@ import { ensureBuiltInProtocols } from "../clinical-graph/protocol-seeding.js";
 
 function setup() {
   const fhir = new PlanAuthoringFhir();
+  fhir.rows.push({ resourceType: "Encounter", id: "e", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p" } });
   const service = new ProtocolService(fhir, { commitFinding: async () => undefined, materializeAction: async () => undefined });
   return { fhir, service, deps: endpointDeps(fhir) };
 }
@@ -80,14 +81,17 @@ for (const mode of ["tap", "whole"] as const) test(`fixback warm ${mode} seeds o
     ? await handleProtocolItemAddRequest(deps, { authHeader: "test", body: { ...body, itemKey: "order-fundus-photography" } })
     : await handleProtocolApplyRequest(deps, { authHeader: "test", body });
   assert.equal(result.status, 200);
-  // Seeding precedes the first application/encounter work: one head, one snapshot, five rules.
-  const seedEnd = searches.findIndex(p => p?.code?.endsWith("odos-protocol-application"));
-  const ruleSearches = searches.filter(p => p?.code?.endsWith("odos-procedure-charge-rule"));
-  const definitionSearches = searches.filter(p => /odos-protocol-definition/.test(p?.code ?? ""));
-  console.log(JSON.stringify({ mode, total: searches.length, seedEnd, ruleSearches: ruleSearches.length, definitionSearches: definitionSearches.length }));
+  const guardDefinitionQuery = { code: "https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition", _count: "200" };
+  const guardEncounterQuery = { encounter: "Encounter/e", _count: "200" };
+  const guardSearches = searches.filter(p => p?.code === guardDefinitionQuery.code || p?.encounter === "Encounter/e");
+  assert.deepEqual(guardSearches, Array.from({ length: mode === "tap" ? 3 : 10 }, () =>
+    [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat());
+  const protocolSearches = searches.filter(p => !(guardSearches as typeof searches).includes(p));
+  const ruleSearches = protocolSearches.filter(p => p?.code?.endsWith("odos-procedure-charge-rule"));
+  const definitionSearches = protocolSearches.filter(p => /odos-protocol-definition/.test(p?.code ?? ""));
   assert.equal(definitionSearches.length, mode === "tap" ? 4 : 5);
-  assert.ok(searches.length <= (mode === "tap" ? 24 : 52));
-  assert.deepEqual(searches.slice(0, 7).map(p => p?.code?.split("|").at(-1)), ["odos-protocol-definition", "odos-protocol-definition-snapshot", ...Array(5).fill("odos-procedure-charge-rule")]);
+  assert.ok(protocolSearches.length <= (mode === "tap" ? 24 : 52));
+  assert.deepEqual(protocolSearches.slice(0, mode === "tap" ? 7 : 8).map(p => p?.code?.split("|").at(-1)), [...(mode === "whole" ? ["odos-protocol-definition"] : []), "odos-protocol-definition", "odos-protocol-definition-snapshot", ...Array(5).fill("odos-procedure-charge-rule")]);
   assert.ok(ruleSearches.length <= (mode === "tap" ? 6 : 10));
 });
 test("fixback first apply seeds only requested head and its five rules", async () => {

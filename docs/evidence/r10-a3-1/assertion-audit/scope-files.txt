@@ -1,0 +1,58 @@
+ M mcp/package.json
+ M mcp/scripts/check-r10-a3-release.mjs
+ M mcp/src/clinical-graph/current-finding-identity.ts
+ M mcp/src/clinical-graph/current-finding-reader.ts
+ M mcp/src/clinical-graph/current-finding-writer.ts
+ M mcp/src/clinical-graph/custom-section-endpoint.ts
+ M mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts
+ M mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts
+ M mcp/src/clinical-graph/diagnosis-carry-provenance.ts
+ M mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts
+ M mcp/src/clinical-graph/diagnosis-findings-endpoint.ts
+ M mcp/src/clinical-graph/diagnosis-pick-endpoint.ts
+ M mcp/src/clinical-graph/encounter-undo-endpoint.ts
+ M mcp/src/clinical-graph/encounter-undo-ledger-store.ts
+ M mcp/src/clinical-graph/encounter-void-endpoint.ts
+ M mcp/src/clinical-graph/exam-overview-endpoint.ts
+ M mcp/src/clinical-graph/exam-overview-projection.ts
+ M mcp/src/clinical-graph/protocol-endpoint.ts
+ M mcp/src/clinical-graph/protocol-service.ts
+ M mcp/src/index.ts
+ M mcp/tests/currentFindingReader.test.ts
+ M mcp/tests/currentFindingWriter.test.ts
+ M mcp/tests/customSectionEndpoint.test.ts
+ M mcp/tests/diagnosisCarryForward.test.ts
+ M mcp/tests/diagnosisFindingsCommands.test.ts
+ M mcp/tests/diagnosisLinkL2.test.ts
+ M mcp/tests/dryEyeInitiationProtocols.test.ts
+ M mcp/tests/encounterUndoEndpoint.test.ts
+ M mcp/tests/encounterUndoLedgerAuthzLive.test.ts
+ M mcp/tests/encounterVoidEndpoint.test.ts
+ M mcp/tests/encounterVoidFixture.ts
+ M mcp/tests/examOverviewProjection.test.ts
+ M mcp/tests/r10A3ReleaseChecker.test.ts
+ M mcp/tests/r10A3ReleaseScenarios.test.ts
+?? docs/evidence/r10-a3-1/
+?? mcp/scripts/r10-a3-preflight.mjs
+?? mcp/src/clinical-graph/shared-finding-write-guard.ts
+?? mcp/tests/fixtures/r10/carry-harness.ts
+?? mcp/tests/fixtures/r10/endpoint-write-path-runtime.ts
+?? mcp/tests/fixtures/r10/finding-write-exclusions.json
+?? mcp/tests/fixtures/r10/finding-write-paths.json
+?? mcp/tests/fixtures/r10/mcp-runtime-transport.ts
+?? mcp/tests/fixtures/r10/mcp-write-paths.ts
+?? mcp/tests/fixtures/r10/overview-harness.ts
+?? mcp/tests/fixtures/r10/protocol-harness.ts
+?? mcp/tests/fixtures/r10/protocol-write-paths.ts
+?? mcp/tests/fixtures/r10/write-path-recorder.ts
+?? mcp/tests/r10A3Carry.test.ts
+?? mcp/tests/r10A3CustomCaptureRoute.test.ts
+?? mcp/tests/r10A3DoorGuards.test.ts
+?? mcp/tests/r10A3Library.test.ts
+?? mcp/tests/r10A3McpGuards.test.ts
+?? mcp/tests/r10A3OcularDoor.test.ts
+?? mcp/tests/r10A3Overview.test.ts
+?? mcp/tests/r10A3Protocols.test.ts
+?? mcp/tests/r10A3StoredDefinitions.test.ts
+?? mcp/tests/r10A3VoidUndo.test.ts
+?? mcp/tests/r10OcularHealthDoorAuthzLive.test.ts

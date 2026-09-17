@@ -1,3 +1,6 @@
+import { loadOverviewFindingEvidence } from "./exam-overview-endpoint.js";
+import { sharedFindingEvidence } from "./exam-overview-projection.js";
+import { parseCurrentFindingEnvelope, parseFindingPanelEnvelope } from "./current-finding-identity.js";
 import type { Basic, Bundle, Condition, Encounter, Observation, Resource } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { searchAll } from "../fhir-search.js";
@@ -81,6 +84,15 @@ export async function handleDiagnosisCompletenessRequest(
     : [];
   const now = new Date(deps.now?.() ?? new Date().toISOString());
 
+  const sharedCredits = new Set<string>();
+  const sharedDefinitions = definitions.filter(d=>d.valueSchema.type === "ocular-health-structure");
+  if (sharedDefinitions.length && isRelativeFhirReference(patientReference,"Patient")) {
+    const encounterReferences = new Set([encounterReference,...historyObservations.flatMap(o=>o.encounter?.reference ? [o.encounter.reference] : [])]);
+    for (const reference of encounterReferences) {
+      const evidence = await loadOverviewFindingEvidence(staff.fhir,patientReference,reference,definitions);
+      for (const ref of sharedFindingEvidence(evidence.projection,definitions,evidence.carriedWithoutCurrentEvidence)) sharedCredits.add(ref);
+    }
+  }
   const diagnoses = confirmed.flatMap((condition): DiagnosisCompletenessRow[] => {
     const identity = diagnosisIdentity(condition);
     if (!identity) return [];
@@ -103,6 +115,7 @@ export async function handleDiagnosisCompletenessRequest(
         encounterObservations,
         historyObservations,
         now,
+        sharedCredits,
       )) return [];
       return [{ findingKey: entry.findingKey, display: entry.label ?? definition.display }];
       }),
@@ -126,10 +139,16 @@ function keyFindingSatisfied(
   encounterObservations: readonly Observation[],
   historyObservations: readonly Observation[],
   now: Date,
+  sharedCredits?: ReadonlySet<string>,
 ): boolean {
   const observations = entry.satisfiedBy === "this-encounter" ? encounterObservations : historyObservations;
   return observations.some((observation) =>
-    observationMatchesFindingDefinition(observation, definition) &&
+    (definition.valueSchema.type === "ocular-health-structure"
+      ? definition.active && sharedCredits?.has(`Observation/${observation.id}`) === true &&
+        (parseCurrentFindingEnvelope(observation).status === "valid"
+          ? (parseCurrentFindingEnvelope(observation) as {status:"valid";key:{stableKey:string}}).key.stableKey === definition.stableKey
+          : observationMatchesFindingDefinition(observation,definition))
+      : observationMatchesFindingDefinition(observation, definition)) &&
     (entry.withinMonths === undefined || observationWithinMonths(observation, entry.withinMonths, now))
   );
 }

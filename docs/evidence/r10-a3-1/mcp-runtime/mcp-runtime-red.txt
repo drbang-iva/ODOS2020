@@ -1,0 +1,26 @@
+AssertionError [ERR_ASSERTION]: Every real MCP write path must execute
++ actual - expected
+
++ []
+- [
+-   'mcp-amend',
+-   'mcp-append-context',
+-   'mcp-attest',
+-   'mcp-create-observation',
+-   'mcp-dry-eye-questionnaire-score',
+-   'mcp-eye-growth',
+-   'mcp-meibography',
+-   'mcp-ortho-k-fit',
+-   'mcp-save-section',
+-   'mcp-scribe-write',
+-   'mcp-smoking-status'
+- ]
+
+    at main (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/r10-a3-1/verify-mcp-runtime.ts:6:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [],
+  expected: [Array],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "stableKey": "ocular-health:anterior:tear-film",
+    "before": [
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film",
+      "ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein",
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam"
+    ],
+    "after": [
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film",
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam",
+      "ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::mucus-strands"
+    ],
+    "mapping": "V32/W93"
+  },
+  {
+    "stableKey": "ocular-health:anterior:anterior-chamber",
+    "before": [
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells",
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare",
+      "ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed"
+    ],
+    "after": [
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells",
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare",
+      "ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::hyphema"
+    ],
+    "mapping": "V32/W93"
+  },
+  {
+    "stableKey": "ocular-health:posterior:vessels",
+    "before": [
+      "ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2",
+      "ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3",
+      "ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4"
+    ],
+    "after": [
+      "ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::arteriolar-attenuation",
+      "ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-crossing-changes",
+      "ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-nicking"
+    ],
+    "mapping": "V32/W93"
+  }
+]

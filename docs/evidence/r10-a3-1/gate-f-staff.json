@@ -1,0 +1,15 @@
+{
+  "concurrent": [
+    {
+      "status": 201,
+      "id": "782e0995-a634-4d71-ac31-2dd47acde777"
+    },
+    {
+      "status": 200,
+      "id": "782e0995-a634-4d71-ac31-2dd47acde777"
+    }
+  ],
+  "replayStatus": 200,
+  "persistedCount": 1,
+  "json": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+}

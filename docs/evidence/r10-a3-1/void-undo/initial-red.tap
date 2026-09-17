@@ -1,0 +1,621 @@
+TAP version 13
+# Subtest: W76 canonical section and finding identity include panels and preserve siblings
+not ok 1 - W76 canonical section and finding identity include panels and preserve siblings
+  ---
+  duration_ms: 73.047583
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:3230'
+  failureType: 'testCodeFailure'
+  error: |-
+    canonical identity selects expected owners
+    + actual - expected
+    
+      [
+        'Observation/observation-1',
+    -   'Observation/od',
+    -   'Observation/os'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Observation/observation-1'
+    1: 'Observation/od'
+    2: 'Observation/os'
+  actual:
+    0: 'Observation/observation-1'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:33:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W77 void fact repairs real debt before lifecycle and refuses failed repair
+not ok 2 - W77 void fact repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 21.331167
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:4467'
+  failureType: 'testCodeFailure'
+  error: |-
+    Void transaction indeterminate: the FHIR server did not answer usably; 4 entries were sent. audit precedes lifecycle
+    
+    false !== true
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'VoidTransactionError'
+  stack: |-
+    classifyVoidTransactionFailure (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:964:12)
+    handleEncounterVoidRequest (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:501:11)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:46:37)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W77 void panel repairs real debt before lifecycle and refuses failed repair
+not ok 3 - W77 void panel repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 19.58125
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:4467'
+  failureType: 'testCodeFailure'
+  error: |-
+    Void transaction indeterminate: the FHIR server did not answer usably; 4 entries were sent. audit precedes lifecycle
+    
+    false !== true
+    
+  code: 'ERR_TEST_FAILURE'
+  name: 'VoidTransactionError'
+  stack: |-
+    classifyVoidTransactionFailure (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:964:12)
+    handleEncounterVoidRequest (<worktree>/mcp/src/clinical-graph/encounter-void-endpoint.ts:501:11)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:46:37)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W77 undo fact repairs real debt before lifecycle and refuses failed repair
+not ok 4 - W77 undo fact repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 19.739209
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:4467'
+  failureType: 'testCodeFailure'
+  error: |-
+    audit precedes lifecycle
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    MemoryFhir.f.fhir.beforeTransaction (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:45:39)
+    MemoryFhir.executeTransaction (<worktree>/mcp/tests/encounterVoidFixture.ts:174:10)
+    handleEncounterUndoRequest (<worktree>/mcp/src/clinical-graph/encounter-undo-endpoint.ts:221:37)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:46:78)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W77 undo panel repairs real debt before lifecycle and refuses failed repair
+not ok 5 - W77 undo panel repairs real debt before lifecycle and refuses failed repair
+  ---
+  duration_ms: 19.7345
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:4467'
+  failureType: 'testCodeFailure'
+  error: |-
+    audit precedes lifecycle
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    MemoryFhir.f.fhir.beforeTransaction (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:45:39)
+    MemoryFhir.executeTransaction (<worktree>/mcp/tests/encounterVoidFixture.ts:174:10)
+    handleEncounterUndoRequest (<worktree>/mcp/src/clinical-graph/encounter-undo-endpoint.ts:221:37)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:46:78)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W77 preview never repairs actual debt
+ok 6 - W77 preview never repairs actual debt
+  ---
+  duration_ms: 18.778375
+  type: 'test'
+  ...
+# Subtest: W78 fact final signed refusal
+not ok 7 - W78 fact final signed refusal
+  ---
+  duration_ms: 18.637375
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6270'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:55:329)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W78 panel final signed refusal
+not ok 8 - W78 panel final signed refusal
+  ---
+  duration_ms: 18.336792
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6270'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:55:329)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W78 fact amended signed refusal
+not ok 9 - W78 fact amended signed refusal
+  ---
+  duration_ms: 18.583083
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6270'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:55:329)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W78 panel amended signed refusal
+not ok 10 - W78 panel amended signed refusal
+  ---
+  duration_ms: 19.673041
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6270'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:55:329)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W78 fact corrected signed refusal
+not ok 11 - W78 fact corrected signed refusal
+  ---
+  duration_ms: 18.63175
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6270'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:55:329)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W78 panel corrected signed refusal
+not ok 12 - W78 panel corrected signed refusal
+  ---
+  duration_ms: 17.377542
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6270'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 422
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 422
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:55:329)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W106 void repairs only selected debt
+not ok 13 - W106 void repairs only selected debt
+  ---
+  duration_ms: 29.74675
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6630'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:66:37)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W106 undo repairs only selected debt
+not ok 14 - W106 undo repairs only selected debt
+  ---
+  duration_ms: 17.366792
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:6630'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'meta')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:62:43)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W105 fact writer supersession refuses whole undo
+not ok 15 - W105 fact writer supersession refuses whole undo
+  ---
+  duration_ms: 53.195042
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:7578'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:70:88)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W105 panel writer supersession refuses whole undo
+not ok 16 - W105 panel writer supersession refuses whole undo
+  ---
+  duration_ms: 41.906459
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:7578'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:70:88)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W127 void action UUID is persisted and delayed or consumed undo refuses
+not ok 17 - W127 void action UUID is persisted and delayed or consumed undo refuses
+  ---
+  duration_ms: 17.647375
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:8609'
+  failureType: 'testCodeFailure'
+  error: 'The "string" argument must be of type string. Received type undefined (undefined)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:72:185)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W127 missing void action is 400 zero writes
+not ok 18 - W127 missing void action is 400 zero writes
+  ---
+  duration_ms: 16.928875
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:9566'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:73:217)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V23 void prebuild refuses before any repair
+not ok 19 - V23 void prebuild refuses before any repair
+  ---
+  duration_ms: 17.903625
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:9868'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:75:440)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V23 undo prebuild refuses before any repair
+not ok 20 - V23 undo prebuild refuses before any repair
+  ---
+  duration_ms: 17.725375
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:9868'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:75:440)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V24 void finished closed before repair
+ok 21 - V24 void finished closed before repair
+  ---
+  duration_ms: 11.998208
+  type: 'test'
+  ...
+# Subtest: V24 void cancelled closed before repair
+ok 22 - V24 void cancelled closed before repair
+  ---
+  duration_ms: 11.41725
+  type: 'test'
+  ...
+# Subtest: V24 void entered-in-error closed before repair
+ok 23 - V24 void entered-in-error closed before repair
+  ---
+  duration_ms: 11.367417
+  type: 'test'
+  ...
+# Subtest: V24 undo finished closed before repair
+ok 24 - V24 undo finished closed before repair
+  ---
+  duration_ms: 17.323209
+  type: 'test'
+  ...
+# Subtest: V24 undo cancelled closed before repair
+ok 25 - V24 undo cancelled closed before repair
+  ---
+  duration_ms: 16.961917
+  type: 'test'
+  ...
+# Subtest: V24 undo entered-in-error closed before repair
+ok 26 - V24 undo entered-in-error closed before repair
+  ---
+  duration_ms: 17.561917
+  type: 'test'
+  ...
+# Subtest: W114 effective stored practice definition resolves lifecycle identity
+not ok 27 - W114 effective stored practice definition resolves lifecycle identity
+  ---
+  duration_ms: 17.6895
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:11038'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:78:1021)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: canonical marker null and status-only content round trip
+not ok 28 - canonical marker null and status-only content round trip
+  ---
+  duration_ms: 17.543291
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:12212'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:80:210)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W105 marker absence transitions refuse without touching unrelated owners
+not ok 29 - W105 marker absence transitions refuse without touching unrelated owners
+  ---
+  duration_ms: 30.259375
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:12667'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:81:820)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: signed canonical outside selection and unrelated final records keep prior behavior
+ok 30 - signed canonical outside selection and unrelated final records keep prior behavior
+  ---
+  duration_ms: 17.734292
+  type: 'test'
+  ...
+# Subtest: ledger preserves and validates action and marker identities
+not ok 31 - ledger preserves and validates action and marker identities
+  ---
+  duration_ms: 0.649541
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:14140'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        encounter: {
+          at: 'synthetic',
+          count: 2,
+          label: 'scope',
+          sectionKeys: [],
+    -     voidActionId: 'befb209f-2953-4fce-9522-dbd785f81211',
+          voided: [
+            {
+    -         markerCommandId: '24bd8a52-20e2-4d75-8e94-4141633bb062',
+              priorStatus: 'preliminary',
+              ref: 'Observation/x'
+            },
+            {
+    -         markerCommandId: null,
+              priorStatus: 'preliminary',
+              ref: 'Observation/y'
+            }
+          ]
+        },
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterId: 'e1'
+    encounter:
+      voidActionId: 'befb209f-2953-4fce-9522-dbd785f81211'
+      voided:
+        0:
+          ref: 'Observation/x'
+          priorStatus: 'preliminary'
+          markerCommandId: '24bd8a52-20e2-4d75-8e94-4141633bb062'
+        1:
+          ref: 'Observation/y'
+          priorStatus: 'preliminary'
+          markerCommandId: ~
+      label: 'scope'
+      count: 2
+      at: 'synthetic'
+      sectionKeys:
+    sections:
+  actual:
+    encounterId: 'e1'
+    encounter:
+      voided:
+        0:
+          ref: 'Observation/x'
+          priorStatus: 'preliminary'
+        1:
+          ref: 'Observation/y'
+          priorStatus: 'preliminary'
+      label: 'scope'
+      count: 2
+      at: 'synthetic'
+      sectionKeys:
+    sections:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:83:397)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 8
+# fail 23
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 871.339417

@@ -1,4 +1,5 @@
-import { FINDING_PANEL_SYSTEM, SUPPORTS_DIAGNOSIS_URL, currentFindingIdentifier } from "../src/clinical-graph/current-finding-identity.js";
+import { randomUUID } from "node:crypto";
+import { FINDING_PANEL_SYSTEM, SUPPORTS_DIAGNOSIS_URL, currentFindingIdentifier, findingPanelIdentifier, parseCurrentFindingEnvelope, type CurrentFindingKey } from "../src/clinical-graph/current-finding-identity.js";
 import { canonicalFact, keyFor } from "./fixtures/r10/writer-harness.js";
 import { comp, snapshot } from "./fixtures/r10/factories.js";
 import assert from "node:assert/strict";
@@ -12,7 +13,7 @@ import ts from "typescript";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { handleCupDiscCaptureRequest } from "../src/clinical-graph/cup-disc-endpoint.js";
 import {
-  handleCustomSectionCaptureRequest,
+  handleCustomSectionCaptureRequest as captureCustomSection,
   handleCustomSectionHistoryRequest,
 } from "../src/clinical-graph/custom-section-endpoint.js";
 import {
@@ -60,6 +61,47 @@ import {
 } from "../src/clinical-graph/refraction-suspect.js";
 
 const { handleDiagnosisPickRequest } = diagnosisPickEndpoint;
+
+async function captureCustomSectionFixture(
+  deps: Parameters<typeof captureCustomSection>[0],
+  input: Parameters<typeof captureCustomSection>[1],
+) {
+  const definitions = deps.findingDefinitions?.() ??
+    await new FhirFindingDefinitionStore((await deps.authenticate(input.authHeader))!.fhir).list();
+  const definition = definitions.find(row => row.stableKey === (input.params as { stableKey: string }).stableKey);
+  const body = input.body as {
+    patientReference: string;
+    encounterReference: string;
+    commandId?: string;
+    eyes?: Record<string, {
+      customFields?: Array<{ code: string; value: unknown }>;
+      findingDetails?: Record<string, Record<string, unknown>>;
+    }>;
+  };
+  if (definition?.valueSchema.type !== "ocular-health-structure" || body.commandId) return captureCustomSection(deps, input);
+  const eyes = Object.fromEntries(Object.entries(body.eyes ?? {}).map(([eye, row]) => [eye, {
+    loaded: [],
+    selected: (row.customFields ?? []).flatMap(field => {
+      assert.ok(Array.isArray(field.value), "Shared clinical fixture must supply checkbox options explicitly.");
+      return field.value.map(optionCode => {
+        const key = {
+          v: 1 as const,
+          patientId: body.patientReference.slice(8),
+          encounterId: body.encounterReference.slice(10),
+          stableKey: definition.stableKey,
+          fieldCode: field.code,
+          optionCode,
+          eye,
+        };
+        return { key, baseline: { kind: "absent", key }, presence: "present", qualifiers: row.findingDetails?.[optionCode] ?? {}, homes: [] };
+      });
+    }),
+  }]));
+  return captureCustomSection(deps, {
+    ...input,
+    body: { commandId: randomUUID(), patientReference: body.patientReference, encounterReference: body.encounterReference, eyes },
+  });
+}
 
 test("staff diagnosis pick refuses all actions with zero writes", async (t) => {
   for (const action of ["possible", "confirm", "discard"] as const) {
@@ -490,6 +532,9 @@ class MemoryFhir {
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
     this.searches.push({ resourceType, params: { ...params } });
     const resources = this.resources.filter((resource) => resource.resourceType === resourceType).filter((resource) => {
+      if (params._tag && !params._tag.split(",").some(token=>resource.meta?.tag?.some(tag=>`${tag.system}|${tag.code}`===token))) return false;
+      if (params.identifier && !(resource as Observation).identifier?.some(identifier=>`${identifier.system}|${identifier.value}`===params.identifier)) return false;
+      if (resourceType === "Provenance" && params.target && !(resource as Provenance).target.some(target=>target.reference===params.target)) return false;
       if (resourceType === "Basic") {
         const basic = resource as Basic;
         if (params.code && !basic.code?.coding?.some((coding) => `${coding.system}|${coding.code}` === params.code)) return false;
@@ -504,19 +549,29 @@ class MemoryFhir {
   }
 
   async create<T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> {
-    const conditionalIdentifier = headers?.["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
-    if (conditionalIdentifier) {
-      const existing = this.resources.find((candidate) => candidate.resourceType === resource.resourceType &&
-        "identifier" in candidate && candidate.identifier?.some((identifier) =>
-          identifier.system === conditionalIdentifier[1] && identifier.value === conditionalIdentifier[2]
-        ));
-      if (existing) return structuredClone(existing as T);
-    }
+    const existing = this.conditionalResource(resource,headers);
+    if (existing) return structuredClone(existing);
     const id = resource.id ?? `${resource.resourceType.toLowerCase()}-${this.resources.length + 1}`;
     const persisted = { ...resource, id, meta: { ...(resource.meta ?? {}), versionId: "1", lastUpdated: "2026-07-11T16:00:00.000Z" } } as T;
     this.resources.push(persisted);
     this.writes.push({ operation: "create", resourceType: resource.resourceType, id, headers });
     return structuredClone(persisted);
+  }
+
+  private conditionalResource<T extends Resource>(resource:T,headers?:Record<string,string>):T | undefined {
+    const query=headers?.["If-None-Exist"];if(!query)return undefined;
+    const params=new URLSearchParams(query);
+    const matches=this.resources.filter(candidate=>candidate.resourceType===resource.resourceType && [...params].every(([name,value])=>
+      name==="identifier" ? (candidate as Observation).identifier?.some(i=>`${i.system}|${i.value}`===value) :
+      name==="_tag" ? candidate.meta?.tag?.some(t=>`${t.system}|${t.code}`===value) : false));
+    if(matches.length>1)throw Object.assign(new Error("Conditional create has multiple matches."),{status:412});
+    return matches[0] as T | undefined;
+  }
+
+  async createWithOutcome<T extends Resource>(resource:T,headers?:Record<string,string>):Promise<{resource:T;created:boolean}> {
+    const existing=this.conditionalResource(resource,headers);
+    if(existing)return {resource:structuredClone(existing),created:false};
+    const saved=await this.create(resource,headers);return {resource:saved,created:true};
   }
 
   async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
@@ -689,7 +744,7 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
 test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions", async () => {
   const fhir = new MemoryFhir();
   fhir.resources.push({
-    resourceType: "Encounter", id: "e-oh3", status: "in-progress",
+    resourceType: "Encounter", id: "e-oh3", status: "in-progress", meta: { versionId: "1" },
     class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
     subject: { reference: "Patient/p-oh3" },
   } as Encounter);
@@ -709,7 +764,7 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
   };
 
   const cornea = fieldFor("ocular-health:anterior:cornea");
-  const corneaCapture = await handleCustomSectionCaptureRequest({
+  const corneaCapture = await captureCustomSectionFixture({
     authenticate,
     findingDefinitions: () => definitions,
     now: () => "2026-07-12T16:00:00.000Z",
@@ -724,16 +779,17 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
   });
   assert.equal(corneaCapture.status, 200, JSON.stringify(corneaCapture.body));
   const corneaObservation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation" &&
-    resource.code.coding?.some((coding) => coding.code === cornea.definition.stableKey))!;
+    parseCurrentFindingEnvelope(resource).status === "valid" &&
+    resource.code.coding?.some((coding) => coding.code === `${cornea.definition.stableKey}::${cornea.localCode}::keratoconus`))!;
 
   const corneaCandidates = await handleDiagnosisCandidatesRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e-oh3" },
   });
   assert.equal(corneaCandidates.status, 200, JSON.stringify(corneaCandidates.body));
-  const corneaRow = (corneaCandidates.body as {
-    findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string; icd10?: { code?: string } }> }>;
-  }).findings.find((finding) => finding.observationReference === `Observation/${corneaObservation.id}`);
+  const corneaRow = (corneaCandidates.body as CandidateResponse).findings.find((finding) =>
+    finding.findingDefinitionKey === cornea.definition.stableKey);
+  assert.deepEqual(corneaRow?.candidates[0]?.supportingFacts, [candidateSupport(corneaObservation)]);
   assert.deepEqual(corneaRow?.candidates.map((candidate) => candidate.diagnosisKey), [
     "keratoconus_stable",
     "keratoconus_unstable",
@@ -747,17 +803,22 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e-oh3" },
     body: {
-      findingInstanceId: `Observation/${corneaObservation.id}`,
+      commandId: randomUUID(),
+      supportingFacts: corneaRow!.candidates[0].supportingFacts!.map(({ key, baseline }) => ({ key, baseline })),
       diagnosisKey: "keratoconus_stable",
       action: "confirm",
       source: "mapping",
     },
   });
-  assert.equal(confirmedCornea.status, 409, JSON.stringify(confirmedCornea.body));
-  assert.equal((confirmedCornea.body as any).reason, "pre-rebuild-test-encounter");
+  assert.equal(confirmedCornea.status, 200, JSON.stringify(confirmedCornea.body));
+  const corneaCondition = fhir.resources.find((resource): resource is Condition => resource.resourceType === "Condition")!;
+  assert.equal(corneaCondition.code?.coding?.[0]?.code, "H18.611");
+  assert.equal((confirmedCornea.body as { link: string }).link, "pending");
+  assert.equal(corneaCondition.evidence, undefined);
+  assert.deepEqual(fhir.resources.find(resource => resource.resourceType === "Observation" && resource.id === corneaObservation.id), corneaObservation);
 
   const lids = fieldFor("ocular-health:anterior:lids-lashes");
-  const lidsCapture = await handleCustomSectionCaptureRequest({
+  const lidsCapture = await captureCustomSectionFixture({
     authenticate,
     findingDefinitions: () => definitions,
     now: () => "2026-07-12T16:02:00.000Z",
@@ -775,21 +836,30 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
   });
   assert.equal(lidsCapture.status, 200, JSON.stringify(lidsCapture.body));
   const lidsObservations = fhir.resources.filter((resource): resource is Observation => resource.resourceType === "Observation" &&
-    resource.code.coding?.some((coding) => coding.code === lids.definition.stableKey));
-  assert.equal(lidsObservations.length, 2);
+    resource.code.coding?.some((coding) => coding.code?.startsWith(`${lids.definition.stableKey}::`)));
+  assert.equal(lidsObservations.length, 4);
+  assert.deepEqual(lidsObservations.map(observation => {
+    const envelope = parseCurrentFindingEnvelope(observation);
+    assert.equal(envelope.status, "valid");
+    return envelope.status === "valid" ? `${envelope.key.eye}:${envelope.key.optionCode}` : "invalid";
+  }).sort(), ["OD:anterior-blepharitis", "OD:anterior-blepharitis::ulcerative", "OS:anterior-blepharitis", "OS:anterior-blepharitis::ulcerative"]);
   const lidsCandidates = await handleDiagnosisCandidatesRequest({ authenticate }, {
     authHeader: "Bearer doctor-1",
     params: { encounterId: "e-oh3" },
   });
-  const lidsRows = (lidsCandidates.body as {
-    findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string }> }>;
-  }).findings.filter((finding) => lidsObservations.some((observation) => finding.observationReference === `Observation/${observation.id}`));
+  assert.equal(lidsCandidates.status, 200, JSON.stringify(lidsCandidates.body));
+  const lidsRows = (lidsCandidates.body as CandidateResponse).findings.filter((finding) => finding.findingDefinitionKey === lids.definition.stableKey);
+  assert.equal(lidsRows.length, 2);
   assert.deepEqual(lidsRows.map((row) => row.candidates.map((candidate) => candidate.diagnosisKey)), [
     ["ulcerative_blepharitis"],
     ["ulcerative_blepharitis"],
   ]);
 
-  for (const observation of lidsObservations) {
+  for (const row of lidsRows) {
+    assert.equal(row.candidates[0].supportingFacts?.length, 1);
+    const support = row.candidates[0].supportingFacts![0];
+    assert.equal(support.key.optionCode, "anterior-blepharitis::ulcerative");
+    assert.deepEqual(support, candidateSupport(lidsObservations.find(observation => `Observation/${observation.id}` === support.baseline.reference)!));
     const result = await handleDiagnosisPickRequest({
       authenticate,
       now: () => "2026-07-12T16:03:00.000Z",
@@ -797,19 +867,24 @@ test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit
       authHeader: "Bearer doctor-1",
       params: { encounterId: "e-oh3" },
       body: {
-        findingInstanceId: `Observation/${observation.id}`,
+        commandId: randomUUID(),
+        supportingFacts: [{ key: support.key, baseline: support.baseline }],
         diagnosisKey: "ulcerative_blepharitis",
         action: "confirm",
         source: "mapping",
       },
     });
-    assert.equal(result.status, 409, JSON.stringify(result.body));
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    assert.equal((result.body as { link: string }).link, "pending");
   }
+  assert.deepEqual(fhir.resources.filter((resource): resource is Observation => resource.resourceType === "Observation" &&
+    resource.code.coding?.some((coding) => coding.code?.startsWith(`${lids.definition.stableKey}::`))), lidsObservations);
   const blepharitisCodes = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition" &&
     resource.code?.text === "Ulcerative blepharitis")
     .map((condition) => condition.code?.coding?.[0]?.code)
     .sort();
-  assert.deepEqual(blepharitisCodes, []);
+  assert.deepEqual(blepharitisCodes, ["H01.01A", "H01.01B"]);
+  assert.equal(fhir.resources.filter(resource => resource.resourceType === "Condition").length, 3);
 });
 
 test("I1 complete ocular qualifiers resolve each selected finding to one diagnosis", async () => {
@@ -1415,7 +1490,7 @@ test("I6 allOf-wrapped option fallbacks are suppressed like bare option fallback
     actorRole: "provider" as PracticeRoleId,
     fhir,
   });
-  const capture = await handleCustomSectionCaptureRequest({
+  const capture = await captureCustomSectionFixture({
     authenticate,
     findingDefinitions: () => definitions,
     now: () => "2026-08-04T12:00:00.000Z",
@@ -1518,7 +1593,7 @@ test("visual-field descriptors derive every approved code while preserving the d
       actorRole: "provider" as PracticeRoleId,
       fhir,
     });
-    const capture = await handleCustomSectionCaptureRequest({
+    const capture = await captureCustomSectionFixture({
       authenticate,
       findingDefinitions: () => definitions,
       now: () => "2026-08-05T14:00:00.000Z",
@@ -1600,7 +1675,7 @@ test("staged glaucoma visibly suppresses only the visual-field proposal and over
     actorRole: "provider" as PracticeRoleId,
     fhir,
   });
-  const capture = await handleCustomSectionCaptureRequest({
+  const capture = await captureCustomSectionFixture({
     authenticate,
     findingDefinitions: () => definitions,
     now: () => "2026-08-05T14:00:00.000Z",
@@ -1806,7 +1881,7 @@ test("posterior plain drusen returns an ordered leaf and staged family while occ
     const field = Object.values(definition.valueSchema.fields as Record<string, { localCode?: string; valueType?: string }>)
       .find((candidate) => candidate.valueType === "multi-select");
     assert.ok(field?.localCode);
-    const capture = await handleCustomSectionCaptureRequest({
+    const capture = await captureCustomSectionFixture({
       authenticate,
       findingDefinitions: () => definitions,
       now: () => "2026-08-11T12:00:00.000Z",
@@ -1833,7 +1908,11 @@ test("posterior plain drusen returns an ordered leaf and staged family while occ
     "macular_drusen",
     "nonexudative-amd",
   ]);
-  assert.deepEqual(macula?.candidates[1], {
+  const { supportingFacts: maculaSupports, ...maculaFamily } = macula!.candidates[1];
+  const maculaObservation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation" &&
+    resource.code.coding?.some(coding => coding.code?.startsWith("ocular-health:posterior:macula::")))!;
+  assert.deepEqual(maculaSupports, [candidateSupport(maculaObservation)]);
+  assert.deepEqual(maculaFamily, {
     familyGroup: "nonexudative-amd",
     clinicalFamily: "nonexudative-amd",
     display: "Nonexudative AMD",
@@ -1856,16 +1935,21 @@ test("posterior plain drusen returns an ordered leaf and staged family while occ
     authHeader: "Bearer doctor-1",
     params: { encounterId: "drusen" },
     body: {
-      findingInstanceId: macula?.observationReference,
+      commandId: randomUUID(),
+      supportingFacts: maculaSupports!.map(({ key, baseline }) => ({ key, baseline })),
       diagnosisKey: "dry_amd_early",
       action: "confirm",
       laterality: "OD",
       source: "mapping",
     },
   });
-  assert.equal(picked.status, 409, JSON.stringify(picked.body));
-  assert.equal((picked.body as any).reason, "pre-rebuild-test-encounter");
-  assert.equal(fhir.resources.some(r => r.resourceType === "Condition"), false);
+  assert.equal(picked.status, 200, JSON.stringify(picked.body));
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 1);
+  assert.equal(conditions[0].code?.coding?.[0]?.code, sourcedDiagnosisCode("dry_amd_early", "right"));
+  assert.equal((picked.body as { link: string }).link, "pending");
+  assert.equal(conditions[0].evidence, undefined);
+  assert.deepEqual(fhir.resources.find(resource => resource.resourceType === "Observation" && resource.id === maculaObservation.id), maculaObservation);
 });
 
 test("homonymous field-side picks never derive field side from eye laterality", async () => {
@@ -2360,7 +2444,7 @@ test("a signed Encounter refuses discard before changing the Condition or Encoun
   const discarded = await pick("discard");
 
   assert.equal(discarded.status, 409, JSON.stringify(discarded.body));
-  assert.match(String((discarded.body as { error: string }).error), /after the encounter is signed/);
+  assert.equal((discarded.body as { reason: string }).reason, "encounter-closed");
   assert.equal(fhir.writes.length, writesBeforeDiscard);
   assert.equal((await fhir.read<Condition>("Condition", condition.id!)).verificationStatus?.coding?.[0]?.code, "confirmed");
   assert.equal((await fhir.read<Encounter>("Encounter", "e1")).diagnosis?.length, 1);
@@ -2446,6 +2530,7 @@ type CandidateResponse = {
     observationReference?: string;
     candidates: Array<{
       diagnosisKey?: string;
+      supportingFacts?: Array<{ rowKey: string; key: CurrentFindingKey; baseline: { kind: "canonical"; reference: string; versionId: string } }>;
       familyGroup?: string;
       clinicalFamily?: string;
       display: string;
@@ -2459,6 +2544,15 @@ type CandidateResponse = {
     suppression?: { message: string; overridable: boolean };
   }>;
 };
+
+function candidateSupport(observation: Observation) {
+  assert.ok(observation);
+  const envelope = parseCurrentFindingEnvelope(observation);
+  assert.equal(envelope.status, "valid");
+  if (envelope.status !== "valid") throw new Error(envelope.reason);
+  return { rowKey: `finding:${currentFindingIdentifier(envelope.key).value!}`, key: envelope.key,
+    baseline: { kind: "canonical", reference: `Observation/${observation.id}`, versionId: observation.meta!.versionId! } };
+}
 
 async function ocularCandidateKeys(
   stableKey: string,
@@ -2480,7 +2574,7 @@ async function ocularCandidateKeys(
     actorRole: "provider" as PracticeRoleId,
     fhir,
   });
-  const capture = await handleCustomSectionCaptureRequest({
+  const capture = await captureCustomSectionFixture({
     authenticate,
     findingDefinitions: () => definitions,
     now: () => "2026-08-04T12:00:00.000Z",
@@ -2604,7 +2698,8 @@ test("mixed option definition preserves numeric panel context in current candida
   await store.save({ ...definition, valueSchema: { ...definition.valueSchema, fields: { ...(definition.valueSchema.fields as object), numericContext: { localCode: "CUSTOM_CONTEXT", display: "Context", valueType: "number", origin: "practice", active: true, order: 2 } } }, diagnosisCandidates: [
     { id: "mixed-context", diagnosisKey: "presbyopia", trigger: { kind: "allOf", triggers: [ { kind: "option", field: keyFor().fieldCode, anyOf: [keyFor().optionCode] }, { kind: "numeric", field: "CUSTOM_CONTEXT", op: ">", value: 1 } ] }, active: true, origin: "practice" },
   ] });
-  const panel = snapshot("panel", []); panel.identifier = [{ system: FINDING_PANEL_SYSTEM, value: "synthetic-panel" }]; panel.component = [comp("OD_CUSTOM_CONTEXT", 3)];
+  const {fieldCode: _field, optionCode: _option, ...panelKey} = keyFor();
+  const panel = snapshot("panel", []); panel.identifier = [findingPanelIdentifier(panelKey)]; panel.component = [comp("R10_PANEL_META",JSON.stringify(panelKey)),comp("CUSTOM_CONTEXT", 3)];
   fhir.resources.push(canonicalFact(), panel);
   const result = await handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider", fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
   assert.equal(result.status, 200, JSON.stringify(result.body));
@@ -2739,21 +2834,22 @@ test("§3.7 option-trigger supports exclude unrelated present options without di
   assert.deepEqual(row.candidates[0].supportingFacts.map((f: any) => f.key.optionCode), ["nuclear-sclerosis"]);
 });
 
-test("mixed panel context uses newest projected context and refuses ambiguous equal-time contexts", async () => {
+test("mixed panel context uses its unique owner and refuses a second owner regardless of time", async () => {
   const fhir = diagnosisPickFhir(); const store = new FhirFindingDefinitionStore(fhir);
   const definition = (await store.list()).find(d => d.stableKey === keyFor().stableKey)!;
   await store.save({ ...definition, valueSchema: { ...definition.valueSchema, fields: { ...(definition.valueSchema.fields as object), numericContext: { localCode: "CUSTOM_CONTEXT", display: "Context", valueType: "number", origin: "practice", active: true, order: 2 } } }, diagnosisCandidates: [
     { id: "numeric-context", diagnosisKey: "presbyopia", trigger: { kind: "numeric", field: "CUSTOM_CONTEXT", op: ">", value: 1 }, active: true, origin: "practice" },
   ] });
-  const panel = (id: string, time: string, value: number) => ({ ...snapshot(id, []), effectiveDateTime: time, identifier: [{ system: FINDING_PANEL_SYSTEM, value: id }], component: [comp("OD_CUSTOM_CONTEXT", value)] });
-  fhir.resources.push(canonicalFact(), panel("old-panel", "2026-01-01T00:00:00Z", 0), panel("new-panel", "2026-01-02T00:00:00Z", 3));
+  const {fieldCode: _field, optionCode: _option, ...panelKey} = keyFor();
+  const panel = (id: string, time: string, value: number) => ({ ...snapshot(id, []), effectiveDateTime: time, identifier: [findingPanelIdentifier(panelKey)], component: [comp("R10_PANEL_META",JSON.stringify(panelKey)),comp("CUSTOM_CONTEXT", value)] });
+  fhir.resources.push(canonicalFact(), panel("new-panel", "2026-01-02T00:00:00Z", 3));
   const get = () => handleDiagnosisCandidatesRequest({ authenticate: async () => ({ staffReference: "Practitioner/doctor", actorRole: "provider" as const, fhir }) }, { authHeader: "Bearer doctor", params: { encounterId: "e1" } });
   const result = await get(); assert.equal(result.status, 200, JSON.stringify(result.body));
   const row = (result.body as any).findings.find((r: any) => r.findingDefinitionKey === definition.stableKey);
   assert.equal(row.candidates[0].diagnosisKey, "presbyopia"); assert.equal(row.candidates[0].supportingFacts, undefined); assert.equal(row.linkable, false); assert.equal(row.candidates[0].linkable, false);
   assert.equal(row.contributors.some((c: any) => c.reference === "Observation/new-panel"), true);
   assert.equal(row.contributors.some((c: any) => c.reference === "Observation/old-panel"), false);
-  fhir.resources.push(panel("conflicting-panel", "2026-01-02T00:00:00Z", 0));
+  fhir.resources.push(panel("conflicting-panel", "2026-01-01T00:00:00Z", 0));
   const refused = await get(); assert.equal(refused.status, 502); assert.equal((refused.body as any).result, "unavailable");
   const pick = await supportedPick(fhir); assert.equal(pick.status, 502); assert.equal(fhir.transactions.length, 0);
 });

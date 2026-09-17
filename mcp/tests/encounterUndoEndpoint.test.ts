@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import type { Basic, Condition, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { parseEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
@@ -25,6 +26,7 @@ import {
   condition,
   cvf,
   fixture,
+  seedCanonical,
   observation,
   type MemoryFhir,
   type VoidBody,
@@ -62,14 +64,23 @@ test("staff cannot undo a diagnosis clear and can still undo a finding-only clea
   }
 });
 
+const capturedActions = new WeakMap<object, Record<string,string>>();
+
 async function voidEntries(deps: Parameters<typeof handleEncounterVoidRequest>[0], body: unknown) {
   const result = await handleEncounterVoidRequest(deps, { authHeader: AUTH, params: PARAMS, body });
   assert.equal(result.status, 200, JSON.stringify(result.body));
-  return result.body as VoidBody & { ledger: EncounterUndoLedger };
+  const bodyResult = result.body as VoidBody & { ledger: EncounterUndoLedger };
+  const captured = capturedActions.get(deps) ?? {};
+  if(bodyResult.ledger.encounter?.voidActionId) captured.encounter = bodyResult.ledger.encounter.voidActionId;
+  for(const [key,slot] of Object.entries(bodyResult.ledger.sections)) if(slot.voidActionId) captured[key] = slot.voidActionId;
+  capturedActions.set(deps,captured);
+  return bodyResult;
 }
 
 async function undo(deps: Parameters<typeof handleEncounterUndoRequest>[0], body: unknown) {
-  return handleEncounterUndoRequest(deps, { authHeader: AUTH, params: PARAMS, body });
+  const request = body as {scope:string;sectionKey?:string;voidActionId?:string};
+  const voidActionId = request.voidActionId ?? capturedActions.get(deps)?.[request.scope === "encounter" ? "encounter" : request.sectionKey ?? ""] ?? randomUUID();
+  return handleEncounterUndoRequest(deps, { authHeader: AUTH, params: PARAMS, body: {...request,voidActionId} });
 }
 
 function ledgerEntries(fhir: MemoryFhir): Basic[] {
@@ -79,7 +90,7 @@ function ledgerEntries(fhir: MemoryFhir): Basic[] {
 }
 
 /** Six Pupils values (three per eye) plus twenty-five across four other sections. */
-function seedPupilsAndTwentyFive(fhir: MemoryFhir): { pupils: string[]; others: string[] } {
+async function seedPupilsAndTwentyFive(fhir: MemoryFhir): Promise<{ pupils: string[]; others: string[] }> {
   const pupils: string[] = [];
   const others: string[] = [];
   for (let index = 1; index <= 3; index += 1) {
@@ -91,7 +102,7 @@ function seedPupilsAndTwentyFive(fhir: MemoryFhir): { pupils: string[]; others: 
   }
   for (let index = 1; index <= 10; index += 1) { fhir.add(cvf(`cvf-${index}`, index % 2 ? "OD" : "OS")); others.push(`Observation/cvf-${index}`); }
   for (let index = 1; index <= 5; index += 1) { fhir.add(observation(`iop-${index}`, "intraocular_pressure", "OD", { status: "preliminary" })); others.push(`Observation/iop-${index}`); }
-  for (let index = 1; index <= 5; index += 1) { fhir.add(observation(`cornea-${index}`, "ocular-health:anterior:cornea", "OS")); others.push(`Observation/cornea-${index}`); }
+  for (let index = 1; index <= 5; index += 1) { await seedCanonical(fhir, `cornea-${index}`, "ocular-health:anterior:cornea", "OS", index - 1); others.push(`Observation/cornea-${index}`); }
   for (let index = 1; index <= 5; index += 1) { fhir.add(observation(`dfe-${index}`, "entrance:dilation", "UNKNOWN")); others.push(`Observation/dfe-${index}`); }
   return { pupils, others };
 }
@@ -190,6 +201,7 @@ test("rule 2: sections own independent slots — clearing CVF leaves Pupils' Und
   fhir.add(observation("pupil-again", "entrance:pupils", "OD", { status: "preliminary" }));
   body = await voidEntries(deps, { scope: "observation", observationReference: "Observation/pupil-again", label: "Reactivity · OD" });
   assert.deepEqual(body.ledger.sections["entrance:pupils"], {
+    voidActionId: body.voidActionId,
     voided: [{ ref: "Observation/pupil-again", priorStatus: "preliminary" }],
     label: "Reactivity · OD",
     count: 1,
@@ -241,7 +253,7 @@ test("rule 3: a visit clear absorbs every pending section Undo — only the visi
 
 test("guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error", async () => {
   const { deps, fhir } = fixture();
-  const { pupils, others } = seedPupilsAndTwentyFive(fhir);
+  const { pupils, others } = await seedPupilsAndTwentyFive(fhir);
 
   const pupilsVoid = await voidEntries(deps, { scope: "section", sectionKey: "entrance:pupils" });
   assert.equal(pupilsVoid.count, 6);
@@ -433,21 +445,21 @@ test("undo is not itself undoable: once a slot is undone there is nothing to und
   assert.equal(first.status, 200, JSON.stringify(first.body));
 
   const second = await undo(deps, { scope: "section", sectionKey: "entrance:cvf" });
-  assert.equal(second.status, 404, JSON.stringify(second.body));
-  assert.match((second.body as UndoBody).error ?? "", /nothing to undo/i);
+  assert.equal(second.status, 409, JSON.stringify(second.body));
+  assert.equal((second.body as UndoBody).code, "undo-superseded");
   assert.equal(fhir.transactions.length, 2, "the second undo wrote nothing");
   const stored = await new FhirEncounterUndoLedgerStore(fhir).get("e1");
   assert.deepEqual(stored, { encounterId: "e1", encounter: null, sections: {} });
 });
 
-test("undo with an empty visit slot or an unknown section returns 404 and writes nothing", async () => {
+test("undo with an empty visit slot or an unknown section returns 409 and writes nothing", async () => {
   const { deps, fhir } = fixture();
   fhir.add(cvf("cvf-od", "OD"));
   await voidEntries(deps, { scope: "section", sectionKey: "entrance:cvf" });
   const visit = await undo(deps, { scope: "encounter" });
-  assert.equal(visit.status, 404, JSON.stringify(visit.body));
+  assert.equal(visit.status, 409, JSON.stringify(visit.body));
   const other = await undo(deps, { scope: "section", sectionKey: "entrance:pupils" });
-  assert.equal(other.status, 404, JSON.stringify(other.body));
+  assert.equal(other.status, 409, JSON.stringify(other.body));
   assert.equal(fhir.transactions.length, 1);
 });
 
@@ -492,7 +504,7 @@ test("undo requires authentication, chart.write, a valid encounter id, and a kno
   assert.equal((await undo(deps, { scope: "nope" })).status, 400);
   assert.equal((await undo(deps, { scope: "section" })).status, 400, "section scope needs a sectionKey");
   assert.equal((await undo(deps, { scope: "encounter", sectionKey: "x" })).status, 400, "the visit scope takes no section key");
-  assert.equal((await handleEncounterUndoRequest(deps, { authHeader: AUTH, params: { encounterId: "missing" }, body: { scope: "encounter" } })).status, 404);
+  assert.equal((await handleEncounterUndoRequest(deps, { authHeader: AUTH, params: { encounterId: "missing" }, body: { scope: "encounter", voidActionId: randomUUID() } })).status, 404);
   assert.equal(fhir.transactions.length, 1);
 });
 
@@ -535,7 +547,7 @@ test("partial void: the slot over-names the refused row, but undo restores only 
   const provenancesBefore = provenancesOnO2();
 
   fhir.refuse = undefined;
-  const undone = await undo(deps, { scope: "encounter" });
+  const undone = await undo(deps, { scope: "encounter", voidActionId: written.encounter?.voidActionId });
 
   assert.equal(undone.status, 200, JSON.stringify(undone.body));
   const body = undone.body as UndoBody & { skipped: string[] };

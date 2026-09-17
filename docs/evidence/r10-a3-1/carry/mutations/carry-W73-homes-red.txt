@@ -1,0 +1,54 @@
+TAP version 13
+# Subtest: W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared
+not ok 1 - W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared
+  ---
+  duration_ms: 12.949875
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:15:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:29:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T1 previous exams displays canonical finding linked by extension
+not ok 2 - T1 previous exams displays canonical finding linked by extension
+  ---
+  duration_ms: 15.579958
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:65:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(facts.some((f:any)=>f.observationReference==="Observation/source-OD"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:73:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 247.925667

@@ -1,0 +1,15 @@
+# T17 and T21 fixture migration
+
+Author checks only. Both obsolete fixtures were observed failing before migration (T17 502 from a location-only transaction response; T21 400 from the old save wire), with TODO markers still present. `t17-t21-red.txt` records those assertion failures; Node reports them as TODO rather than process failures. After migration the same two named scenarios have no TODO: **2 tests, 2 pass, 0 fail, 0 skip, 0 todo**, recorded in `t17-t21-green.txt`.
+
+Only T17, T21 and the required diagnosis finding mutation-handler import were changed in this assignment. An AST scope comparison confirmed that boundary before handing the file back. Other agents subsequently resumed their own blocks; those concurrent changes were preserved. No production, shared fixture helper, checker or other T slot was edited here.
+
+T17 supplies the fake's actual persisted transaction representations and resolves Bundle urn references in the persisted fake resources. It derives `Condition/<body.condition.id>`, asserts the pick's link is pending, and links through the actual diagnosis finding mutation handler with the selected Condition context and frozen canonical baseline. All original no-Condition-evidence assertions remain. T21 supplies UUIDv4 plus loaded/selected claims and conditional writer transport, so the save reaches the actual pre-rebuild refusal. Its original 409 and unchanged Observation count assertions remain; exact reason and unchanged attempted-write count were added.
+
+`t17-t21-assertions.json` maps all **11** original assertion calls: ten preserved byte-for-byte, one completion assertion now reads the actual door response body. Mapping is V30/V18 for T17 and V23 for T21. Four assertions were added: T17 link pending and link HTTP success; T21 refusal reason and zero attempted writes. No assertion is unmapped.
+
+Mutation execution is deferred to the parent's coordinated release guard window, because this assignment forbids production edits and the void agent owns an active mutation window. Run `mcp/node_modules/.bin/tsx --test --test-name-pattern='T17 |T21 ' mcp/tests/r10A3ReleaseScenarios.test.ts` in the relevant parent recipes. A pick mutation dropping parsed supports should make T17's pending-link assertion red; a save mutation bypassing the pre-rebuild refusal should make T21's 409/reason assertion red. W90's closed-pick case remains a separate existing guard, not a claim that this open-encounter T17 proves closure.
+
+## Parent mutation completion
+
+Two additional real-source mutations each produced red exit1 then restored green exit0 (`t17-t21-mutation-results.json`). Dropping pick supportingFacts fails T17. Removing the save pre-rebuild gate initially survived because an independent stale/legacy baseline check also returned409. T21 now additionally requires the contract reason `pre-rebuild-test-encounter` (V23); the gate-removal mutant fails that exact assertion. Original status/no-write assertions remain. This strengthened probe distinguishes the intended boundary from an incidental refusal. Both source files restored byte-exactly.

@@ -1,0 +1,194 @@
+[
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T7",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 89,
+      "context": "\"T7 overview shows live canonical facts and excludes cleared facts\"",
+      "text": "assert.deepEqual(result.findings.map(f=>f.observationReference),[\"Observation/fact\"])"
+    },
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 103,
+      "context": "\"T7 overview shows live canonical facts and excludes cleared facts\"",
+      "text": "assert.deepEqual(result.findings.map(f=>f.observationReference),[\"Observation/fact\"])"
+    },
+    "row": "V27",
+    "change": "real handler/store fixture; todo removed; expected semantic result preserved"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T8",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 94,
+      "context": "\"T8 overview evidence includes extension homes without Condition evidence\"",
+      "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+    },
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 108,
+      "context": "\"T8 overview evidence includes extension homes without Condition evidence\"",
+      "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+    },
+    "row": "W80",
+    "change": "real handler/store fixture; todo removed; expected semantic result preserved"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T8",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 95,
+      "context": "\"T8 overview evidence includes extension homes without Condition evidence\"",
+      "text": "assert.ok((result.body as any).findings.find((f:any)=>f.observationReference===\"Observation/linked-fact\")?.diagnoses?.length)"
+    },
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 109,
+      "context": "\"T8 overview evidence includes extension homes without Condition evidence\"",
+      "text": "assert.ok((result.body as any).findings.find((f:any)=>f.observationReference===\"Observation/linked-fact\")?.diagnoses?.length)"
+    },
+    "row": "W80",
+    "change": "real handler/store fixture; todo removed; expected semantic result preserved"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T9",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 99,
+      "context": "\"T9 completeness credits live canonical facts but not cleared facts\"",
+      "text": "assert.equal(keyFindingSatisfied(entry,lens,[fact()],[],new Date(\"2026-09-16T12:00:00Z\")),true)"
+    },
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 113,
+      "context": "\"T9 completeness credits live canonical facts but not cleared facts\"",
+      "text": "assert.equal((await missingOverviewFindings(c)).length===0,true)"
+    },
+    "row": "W81/V27",
+    "change": "real handler/store fixture; todo removed; expected semantic result preserved"
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "slot": "T9",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 100,
+      "context": "\"T9 completeness credits live canonical facts but not cleared facts\"",
+      "text": "assert.equal(keyFindingSatisfied(entry,lens,[{...fact(),status:\"entered-in-error\"}],[],new Date(\"2026-09-16T12:00:00Z\")),false)"
+    },
+    "after": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 115,
+      "context": "\"T9 completeness credits live canonical facts but not cleared facts\"",
+      "text": "assert.equal((await missingOverviewFindings(c)).length===0,false)"
+    },
+    "row": "W81/V27",
+    "change": "real handler/store fixture; todo removed; expected semantic result preserved"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 539,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.status, \"complete\")"
+    },
+    "after": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 539,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.status, \"complete\")"
+    },
+    "row": "V27/W81",
+    "change": "assertion byte-identical; fixture now real shared definition and explicit absent canonical fact"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 540,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.requiredSectionCount, 6)"
+    },
+    "after": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 540,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.requiredSectionCount, 6)"
+    },
+    "row": "V27/W81",
+    "change": "assertion byte-identical; fixture now real shared definition and explicit absent canonical fact"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 541,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.resolvedSectionCount, 6)"
+    },
+    "after": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 541,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.resolvedSectionCount, 6)"
+    },
+    "row": "V27/W81",
+    "change": "assertion byte-identical; fixture now real shared definition and explicit absent canonical fact"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 542,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.deepEqual(projection.completeness.documentationIssues, [{\n    sectionKey: \"entrance\",\n    issue: \"deferred-reason-missing\",\n  }])"
+    },
+    "after": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 542,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.deepEqual(projection.completeness.documentationIssues, [{\n    sectionKey: \"entrance\",\n    issue: \"deferred-reason-missing\",\n  }])"
+    },
+    "row": "V27/W81",
+    "change": "assertion byte-identical; fixture now real shared definition and explicit absent canonical fact"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 546,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.sections.find((row) => row.sectionKey === \"entrance\")?.state, \"examined\")"
+    },
+    "after": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 546,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.sections.find((row) => row.sectionKey === \"entrance\")?.state, \"examined\")"
+    },
+    "row": "V27/W81",
+    "change": "assertion byte-identical; fixture now real shared definition and explicit absent canonical fact"
+  },
+  {
+    "file": "mcp/tests/examOverviewProjection.test.ts",
+    "before": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 547,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.trace.find((row) => row.sectionKey === \"entrance\")?.resolved, true)"
+    },
+    "after": {
+      "file": "mcp/tests/examOverviewProjection.test.ts",
+      "line": 547,
+      "context": "\"Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete\"",
+      "text": "assert.equal(projection.completeness.trace.find((row) => row.sectionKey === \"entrance\")?.resolved, true)"
+    },
+    "row": "V27/W81",
+    "change": "assertion byte-identical; fixture now real shared definition and explicit absent canonical fact"
+  }
+]

@@ -1,3 +1,5 @@
+import { canonicalFact } from "./fixtures/r10/writer-harness.js";
+import { lens as canonicalLens } from "./fixtures/r10/factories.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Observation } from "@medplum/fhirtypes";
@@ -509,7 +511,7 @@ test("Exams clinical completeness is traceable and missing deferred documentatio
     definition("entrance:pupils", "entrance:pupils"),
     definition("refraction", "refraction"),
     definition("wearing_rx", "wearing"),
-    definition("ocular-health:anterior:cornea", "ocular-health:anterior:cornea"),
+    canonicalLens,
   ];
   const current = [
     observation("history", "hpi_ros", { valueString: "Routine examination" }),
@@ -521,9 +523,7 @@ test("Exams clinical completeness is traceable and missing deferred documentatio
     }),
     observation("refraction", "refraction", { valueString: "Manifest" }),
     observation("pretest", "wearing_rx", { valueString: "Current glasses" }),
-    observation("ocular-health", "ocular-health:anterior:cornea", {
-      component: [stringComponent("EXAM_STATE", "normal")],
-    }),
+    {...canonicalFact("ocular-health"),valueBoolean:false},
   ];
 
   const projection = buildExamOverviewProjection({

@@ -1,0 +1,170 @@
+[
+  {
+    "id": "library-W65",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W65",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W71",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W71 strict",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W83",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W83 W109",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W84",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W84 actor-bound",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W85",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W85 fact baseline read 410",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W92",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W92 inactive",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W95",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W95 panel rejects",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W106",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W106 W110",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W109",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W83 W109 rejects audit mixed",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W110",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W106 W110",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W112",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W112 W117",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W117",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W112 W117",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W128",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W85 W128",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "library-W115",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W115 signed",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  }
+]

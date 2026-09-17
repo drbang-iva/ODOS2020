@@ -1,0 +1,269 @@
+[
+  {
+    "id": "library-W65",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W65",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W65",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "if (definition && definition.valueSchema.type === \"ocular-health-structure\") return { kind: \"legacy-section-snapshot\", definition };",
+        "after": "if (definition && customFieldEntries(definition,true).some(f=>f.valueType===\"multi-select\")) return { kind: \"legacy-section-snapshot\", definition };"
+      }
+    ]
+  },
+  {
+    "id": "library-W71",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W71 strict",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W71 strict",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "if (ids[0].value !== findingPanelIdentifier(key).value ||",
+        "after": "if (false && (ids[0].value !== findingPanelIdentifier(key).value ||"
+      },
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "![\"preliminary\",\"entered-in-error\",\"final\",\"amended\",\"corrected\"].includes(observation.status)) return invalid(\"Panel identity or role mismatch.\");",
+        "after": "![\"preliminary\",\"entered-in-error\",\"final\",\"amended\",\"corrected\"].includes(observation.status))) return invalid(\"Panel identity or role mismatch.\");"
+      }
+    ]
+  },
+  {
+    "id": "library-W83",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W83 W109",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W83 W109",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "return matchesFindingAuditContent(audit, key, operation.audit.actor, V3_DATA_OPERATION_CODE_SYSTEM,\n    operation.audit.activity, operation.audit.targetReferences.map(r => r === \"self\" ? reference : r), operation.audit.recorded);",
+        "after": "return !!audit.meta?.tag?.some(t=>t.system===FINDING_OPERATION_AUDIT_SYSTEM && t.code===key) && !!audit.target?.some(t=>t.reference===reference);"
+      }
+    ]
+  },
+  {
+    "id": "library-W84",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W84 actor-bound",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W84 actor-bound",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "audit.agent?.length === 1 && audit.agent[0].who.reference === actor &&",
+        "after": "audit.agent?.length === 1 &&"
+      }
+    ]
+  },
+  {
+    "id": "library-W85",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W85 fact baseline read 410",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W85 fact baseline read 410",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "function isDeleted(error:unknown):boolean {return [404,410].includes",
+        "after": "function isDeleted(error:unknown):boolean {return [404].includes"
+      }
+    ]
+  },
+  {
+    "id": "library-W92",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W92 inactive",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W92 inactive",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "if (!row && definition && field && option) row =",
+        "after": "if (false && !row && definition && field && option) row ="
+      }
+    ]
+  },
+  {
+    "id": "library-W95",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W95 panel rejects",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W95 panel rejects",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "if (!field || ownsFact(definition,field)) return fail();",
+        "after": "if (!field) return fail();"
+      }
+    ]
+  },
+  {
+    "id": "library-W106",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W106 W110",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W106 W110",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": " && (!options?.targets || options.targets.includes(`Observation/${o.id}`))",
+        "after": ""
+      }
+    ]
+  },
+  {
+    "id": "library-W109",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W83 W109 rejects audit mixed",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W83 W109 rejects audit mixed",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-identity.ts",
+        "before": "const mismatch = tagged.some(a => !matchesFindingAudit(a, marker.key, marker.reference, marker.operation));",
+        "after": "const mismatch = tagged.every(a => !matchesFindingAudit(a, marker.key, marker.reference, marker.operation));"
+      }
+    ]
+  },
+  {
+    "id": "library-W110",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W106 W110",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W106 W110",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-reader.ts",
+        "before": "if (state.pendingAudits?.has(context.source.reference)) p.auditPending = true;",
+        "after": "if (false) p.auditPending = true;"
+      }
+    ]
+  },
+  {
+    "id": "library-W112",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W112 W117",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W112 W117",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "if(owner)saved=await deps.fhir.update<Observation>(\"Observation\",owner.id!,next,",
+        "after": "if(owner && owner.status!==\"entered-in-error\")saved=await deps.fhir.update<Observation>(\"Observation\",owner.id!,next,"
+      }
+    ]
+  },
+  {
+    "id": "library-W117",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W112 W117",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W112 W117",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-reader.ts",
+        "before": "else if(!result.currentFacts.some(f=>f.key.stableKey===p.stableKey && f.eye===p.eye && f.status===\"live\") &&",
+        "after": "else if(false && !result.currentFacts.some(f=>f.key.stableKey===p.stableKey && f.eye===p.eye && f.status===\"live\") &&"
+      }
+    ]
+  },
+  {
+    "id": "library-W128",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W85 W128",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W85 W128",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "try {const fresh=await deps.fhir.read<Observation>(\"Observation\",owner.id!);",
+        "after": "try {const fresh=owner;"
+      },
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "try { latest=await deps.fhir.read<Observation>(\"Observation\",reference.slice(12)); }",
+        "after": "try { latest=state.observations.find(o=>`Observation/${o.id}`===reference)!; }"
+      }
+    ]
+  },
+  {
+    "id": "library-W115",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W115 signed",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok .*W115 signed",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "  const owner=ownerRows[0];\n  if(owner && ![\"preliminary\",\"entered-in-error\"].includes(owner.status))return {clinicalWrite:\"none\",status:\"refused\",target:id,reason:\"signed-observation\"};",
+        "after": "  const owner=ownerRows[0];"
+      },
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "  const owner=owners[0],baseline=target.baseline;\n  if(owner && ![\"preliminary\",\"entered-in-error\"].includes(owner.status))return {clinicalWrite:\"none\",status:\"refused\",target:id,reason:\"signed-observation\"};",
+        "after": "  const owner=owners[0],baseline=target.baseline;"
+      }
+    ]
+  }
+]

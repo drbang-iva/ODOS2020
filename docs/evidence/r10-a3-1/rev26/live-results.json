@@ -1,0 +1,767 @@
+{
+  "source": "full-checks/live-authz.txt",
+  "sha256": "795947a44253dde84749e4df8ef25a14e47e31f70ed6dac6bc19c05791c74697",
+  "laneCounts": {
+    "tests": 73,
+    "pass": 73,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "a3Tests": 4,
+  "a3Pass": 4,
+  "diagnosticRowCount": 38,
+  "rowsByRole": {
+    "staff": 16,
+    "provider": 16,
+    "MCP service identity": 6
+  },
+  "rows": [
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "save assert",
+      "before": "absent",
+      "after": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "preliminary",
+        "versionId": "ce6fc47e-3007-4913-b3a6-d6377a9086e2"
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/1258a886-a3cd-4c8c-87bc-13e6785f2326",
+      "operation": "panel create",
+      "before": "absent",
+      "after": {
+        "reference": "Observation/1258a886-a3cd-4c8c-87bc-13e6785f2326",
+        "status": "preliminary",
+        "versionId": "4a0eb855-ba06-45e6-9a67-7f89484b7e25",
+        "tbut": 6
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "save clear",
+      "before": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "preliminary",
+        "versionId": "ce6fc47e-3007-4913-b3a6-d6377a9086e2"
+      },
+      "after": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "entered-in-error",
+        "versionId": "9ee4060b-1ef2-45a4-b0ba-0cef0cb18f85"
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "save revive",
+      "before": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "entered-in-error",
+        "versionId": "9ee4060b-1ef2-45a4-b0ba-0cef0cb18f85"
+      },
+      "after": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "preliminary",
+        "versionId": "c8d8def1-84b3-48e8-9349-2274def9ddc9"
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/1258a886-a3cd-4c8c-87bc-13e6785f2326",
+      "operation": "panel update",
+      "before": {
+        "reference": "Observation/1258a886-a3cd-4c8c-87bc-13e6785f2326",
+        "status": "preliminary",
+        "versionId": "4a0eb855-ba06-45e6-9a67-7f89484b7e25",
+        "tbut": 6
+      },
+      "after": {
+        "reference": "Observation/1258a886-a3cd-4c8c-87bc-13e6785f2326",
+        "status": "preliminary",
+        "versionId": "219818e6-58e5-4a3f-8039-49a4b99fa031",
+        "tbut": 9
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/dd50df57-4800-4c75-a72d-cb0cceacd7eb",
+      "operation": "negative act",
+      "before": "absent",
+      "after": {
+        "reference": "Observation/dd50df57-4800-4c75-a72d-cb0cceacd7eb",
+        "status": "preliminary",
+        "versionId": "44a4fa94-4ef2-4b86-b392-5bca2d86ab5f"
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "void",
+      "before": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "preliminary",
+        "versionId": "c8d8def1-84b3-48e8-9349-2274def9ddc9"
+      },
+      "after": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "entered-in-error",
+        "versionId": "1a01f876-58f5-4834-9a7a-48c7463e2281"
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "voidActionId": "0e5658f3-f56c-4de2-b263-59088667cfe8"
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "undo",
+      "before": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "entered-in-error",
+        "versionId": "1a01f876-58f5-4834-9a7a-48c7463e2281"
+      },
+      "after": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "preliminary",
+        "versionId": "13562332-6ed2-4c9c-ad5e-9832d84c1d9b"
+      },
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "voidActionId": "0e5658f3-f56c-4de2-b263-59088667cfe8"
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/4ab8f2e0-b0ef-4497-8716-a116aaf823bf",
+      "operation": "superseded undo",
+      "before": "10061988-9a76-4d76-aa91-d000991d1c43",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "voidActionId": "0e5658f3-f56c-4de2-b263-59088667cfe8"
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/ad09cf59-a8c3-4de8-86b5-3ac7c97f6521",
+      "operation": "pre-rebuild save",
+      "before": "legacy read-only",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/49640037-1286-45f3-8c00-d254fecba611",
+      "operation": "closed door PUT",
+      "before": "finished",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/49640037-1286-45f3-8c00-d254fecba611",
+      "operation": "closed save",
+      "before": "finished",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/49640037-1286-45f3-8c00-d254fecba611",
+      "operation": "closed pull",
+      "before": "finished",
+      "after": "403 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/62b85401-4eca-426f-b78c-aeabe4407469",
+      "operation": "staff pull",
+      "before": "unchanged",
+      "after": "403 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "signed canonical void",
+      "before": {
+        "reference": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+        "status": "final",
+        "versionId": "e485d8d7-1af2-4e87-bcf7-05dcbe30036a"
+      },
+      "after": "422 zero writes",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "staff",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e5a5bcc2-04a1-4bb5-a478-dc1cf22e07a6",
+      "operation": "mismatched audit surfaced",
+      "before": {
+        "reference": "Provenance/2a61c262-cf33-4f6f-bec1-c831b6fd7913",
+        "versionId": "09b55ed4-7e40-4423-ba40-dfa8fc5c7fa9"
+      },
+      "after": "auditPending true",
+      "policyReference": "AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913",
+      "policyVersion": "7dc9316f-a13b-49b7-8e1b-319c8c97a733",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "save assert",
+      "before": "absent",
+      "after": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "preliminary",
+        "versionId": "d7e2ef67-02f2-4e71-b5ca-8e938781e19c"
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/a8c82808-5f53-4958-9d13-1f5677fcf594",
+      "operation": "panel create",
+      "before": "absent",
+      "after": {
+        "reference": "Observation/a8c82808-5f53-4958-9d13-1f5677fcf594",
+        "status": "preliminary",
+        "versionId": "e3e79ad3-ee4c-4804-aac3-4b2eadb80927",
+        "tbut": 6
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "save clear",
+      "before": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "preliminary",
+        "versionId": "d7e2ef67-02f2-4e71-b5ca-8e938781e19c"
+      },
+      "after": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "entered-in-error",
+        "versionId": "4e4db83e-3c2c-4a14-ae74-ffabf0257e5f"
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "save revive",
+      "before": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "entered-in-error",
+        "versionId": "4e4db83e-3c2c-4a14-ae74-ffabf0257e5f"
+      },
+      "after": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "preliminary",
+        "versionId": "9454ac7e-0a94-4837-943e-0598d5596667"
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/a8c82808-5f53-4958-9d13-1f5677fcf594",
+      "operation": "panel update",
+      "before": {
+        "reference": "Observation/a8c82808-5f53-4958-9d13-1f5677fcf594",
+        "status": "preliminary",
+        "versionId": "e3e79ad3-ee4c-4804-aac3-4b2eadb80927",
+        "tbut": 6
+      },
+      "after": {
+        "reference": "Observation/a8c82808-5f53-4958-9d13-1f5677fcf594",
+        "status": "preliminary",
+        "versionId": "209cc3f5-2dd5-4b5b-a1b7-0e7f70b4040e",
+        "tbut": 9
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/9621c357-bda0-419e-8e69-cbfb86fa0764",
+      "operation": "negative act",
+      "before": "absent",
+      "after": {
+        "reference": "Observation/9621c357-bda0-419e-8e69-cbfb86fa0764",
+        "status": "preliminary",
+        "versionId": "63fc9c4b-3ffa-461c-a034-8e6d97d6af40"
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "void",
+      "before": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "preliminary",
+        "versionId": "9454ac7e-0a94-4837-943e-0598d5596667"
+      },
+      "after": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "entered-in-error",
+        "versionId": "8d17fcc1-bc35-4fe4-adb4-5a2300332cdd"
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "voidActionId": "319e2c3c-5b4c-4cf2-948b-55e08e121a14"
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "undo",
+      "before": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "entered-in-error",
+        "versionId": "8d17fcc1-bc35-4fe4-adb4-5a2300332cdd"
+      },
+      "after": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "preliminary",
+        "versionId": "eddc6e77-517e-4104-a034-c1444bcdd122"
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "voidActionId": "319e2c3c-5b4c-4cf2-948b-55e08e121a14"
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/3c80caa1-a1b7-44b0-8df4-29cf721a05da",
+      "operation": "superseded undo",
+      "before": "0a525439-924a-4bde-bd8e-72d5bb345a4d",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "voidActionId": "319e2c3c-5b4c-4cf2-948b-55e08e121a14"
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/a1898216-2631-48d9-bbf0-dd916c09280a",
+      "operation": "pre-rebuild save",
+      "before": "legacy read-only",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/9931f89a-fe8b-46b5-bdb3-a5c87bf1b5ca",
+      "operation": "closed door PUT",
+      "before": "finished",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/9931f89a-fe8b-46b5-bdb3-a5c87bf1b5ca",
+      "operation": "closed save",
+      "before": "finished",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/9931f89a-fe8b-46b5-bdb3-a5c87bf1b5ca",
+      "operation": "closed pull",
+      "before": "finished",
+      "after": "409 zero writes",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Encounter/5c2b70ab-a215-418b-9208-d338737d8024",
+      "operation": "provider pull and identical resend",
+      "before": "no diagnosis/facts",
+      "after": {
+        "condition": "Condition/e7362f2f-01cd-4736-b0af-9f6e81fdef83",
+        "facts": [
+          {
+            "reference": "Observation/709dd1ff-99ab-41a5-8d39-3259638d990d",
+            "status": "preliminary",
+            "versionId": "2c95569c-848b-40c1-91c9-bbe6f2c3ad69"
+          }
+        ],
+        "planAndFindingsProvenances": 2
+      },
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "signed canonical void",
+      "before": {
+        "reference": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+        "status": "final",
+        "versionId": "83d9c267-98c9-499e-aa5f-90f58750b238"
+      },
+      "after": "422 zero writes",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "provider",
+      "actorReference": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "resource": "Observation/e0b63f48-fb6e-4500-8651-e28b4e0f9392",
+      "operation": "mismatched audit surfaced",
+      "before": {
+        "reference": "Provenance/a7c2a719-379c-4c4d-b0f6-83be74eabcfd",
+        "versionId": "c50db4a0-a775-4b35-b9e6-c26b7e09f5a6"
+      },
+      "after": "auditPending true",
+      "policyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "policyVersion": "0a1f972c-e60e-4d88-b9b8-2174b7a9502a",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "MCP service identity",
+      "serviceAuthentication": "password",
+      "sessionPractitioner": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "activeProject": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "superAdmin": false,
+      "resource": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+      "operation": "amend transaction response",
+      "before": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "final",
+        "versionId": "6c35d323-6512-4b76-9bc6-85301743ee8d"
+      },
+      "after": [
+        {
+          "status": "200",
+          "outcome": {
+            "resourceType": "OperationOutcome",
+            "id": "ok",
+            "issue": [
+              {
+                "severity": "information",
+                "code": "informational",
+                "details": {
+                  "text": "All OK"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "status": "404",
+          "outcome": {
+            "resourceType": "OperationOutcome",
+            "id": "not-found",
+            "issue": [
+              {
+                "severity": "error",
+                "code": "not-found",
+                "details": {
+                  "text": "Not found"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "serviceActor": "Practitioner/3bd8ef2d-cf96-463b-baa7-bbb3e24e7c23",
+      "policyReferences": [],
+      "serviceAdminMembership": true,
+      "clinicianPolicyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "provenance": "Provenance/9b0df8d0-f3dd-418b-bdec-e279166a3840",
+      "observationReadback": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "amended",
+        "versionId": "d284f181-04d3-4058-b34d-852b11705f7d"
+      },
+      "protectedFieldsUnchanged": true,
+      "provenanceReadback": {
+        "error": "FHIR GET /fhir/R4/Provenance/:id [Provenance] 404 Not Found: Not found"
+      }
+    },
+    {
+      "actorRole": "MCP service identity",
+      "serviceAuthentication": "password",
+      "sessionPractitioner": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "activeProject": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "superAdmin": false,
+      "resource": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+      "operation": "amend closed canonical",
+      "before": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "final",
+        "versionId": "6c35d323-6512-4b76-9bc6-85301743ee8d"
+      },
+      "after": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "amended",
+        "versionId": "d284f181-04d3-4058-b34d-852b11705f7d"
+      },
+      "serviceActor": "Practitioner/3bd8ef2d-cf96-463b-baa7-bbb3e24e7c23",
+      "policyReferences": [],
+      "serviceAdminMembership": true,
+      "clinicianPolicyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "bundleEntryStatuses": [
+        "200",
+        "404"
+      ],
+      "provenance": "Provenance/9b0df8d0-f3dd-418b-bdec-e279166a3840",
+      "provenanceReadback": {
+        "error": "FHIR GET /fhir/R4/Provenance/:id [Provenance] 404 Not Found: Not found"
+      },
+      "knownDefect": "kickoff rev 2.5 \u00a73.13: project-scoped lifecycle Provenance PUT cannot create client-chosen id; result recorded, not required"
+    },
+    {
+      "actorRole": "MCP service identity",
+      "serviceAuthentication": "password",
+      "sessionPractitioner": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "activeProject": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "superAdmin": false,
+      "resource": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+      "operation": "generic create shared body (public schema refusal)",
+      "before": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "amended",
+        "versionId": "d284f181-04d3-4058-b34d-852b11705f7d"
+      },
+      "after": "tool error; zero FHIR writes",
+      "serviceActor": "Practitioner/3bd8ef2d-cf96-463b-baa7-bbb3e24e7c23",
+      "policyReferences": [],
+      "serviceAdminMembership": true,
+      "clinicianPolicyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "MCP service identity",
+      "serviceAuthentication": "password",
+      "sessionPractitioner": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "activeProject": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "superAdmin": false,
+      "resource": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+      "operation": "generic append canonical target",
+      "before": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "amended",
+        "versionId": "d284f181-04d3-4058-b34d-852b11705f7d"
+      },
+      "after": "tool error; zero FHIR writes",
+      "serviceActor": "Practitioner/3bd8ef2d-cf96-463b-baa7-bbb3e24e7c23",
+      "policyReferences": [],
+      "serviceAdminMembership": true,
+      "clinicianPolicyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "lane": "test:live-authz",
+      "blocking": true
+    },
+    {
+      "actorRole": "MCP service identity",
+      "serviceAuthentication": "password",
+      "sessionPractitioner": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "activeProject": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "superAdmin": false,
+      "resource": "Observation/05b5305c-54fd-4709-9bfb-0bd4d86fdfb3",
+      "operation": "pre-rebuild canonical amendment",
+      "before": {
+        "reference": "Observation/05b5305c-54fd-4709-9bfb-0bd4d86fdfb3",
+        "status": "final",
+        "versionId": "edccd057-2528-4d5c-8f22-dc423f92440b"
+      },
+      "after": "refused; zero attempted/persisted FHIR writes",
+      "serviceActor": "Practitioner/3bd8ef2d-cf96-463b-baa7-bbb3e24e7c23",
+      "policyReferences": [],
+      "serviceAdminMembership": true,
+      "clinicianPolicyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "encounter": "Encounter/e19ff491-4d7a-46ad-8f5f-67623578730d"
+    },
+    {
+      "actorRole": "MCP service identity",
+      "serviceAuthentication": "password",
+      "sessionPractitioner": "Practitioner/b87eee6d-db75-4230-8776-098d9dfc2d4e",
+      "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "activeProject": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+      "superAdmin": false,
+      "resource": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+      "operation": "mismatching session practitioner",
+      "before": {
+        "reference": "Observation/63393081-3bf3-42ce-b4a3-54270050c3e5",
+        "status": "amended",
+        "versionId": "d284f181-04d3-4058-b34d-852b11705f7d"
+      },
+      "after": "refused; zero attempted/persisted FHIR writes",
+      "serviceActor": "Practitioner/3bd8ef2d-cf96-463b-baa7-bbb3e24e7c23",
+      "policyReferences": [],
+      "serviceAdminMembership": true,
+      "clinicianPolicyReference": "AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326",
+      "lane": "test:live-authz",
+      "blocking": true,
+      "actualSessionPractitioner": "different synthetic practitioner"
+    }
+  ]
+}

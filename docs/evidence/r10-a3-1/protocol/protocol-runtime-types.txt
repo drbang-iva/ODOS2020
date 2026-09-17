@@ -1,0 +1,2 @@
+
+{"files":["mcp/tests/fixtures/r10/protocol-write-paths.ts","mcp/tests/fixtures/r10/protocol-harness.ts"],"diagnostics":0}

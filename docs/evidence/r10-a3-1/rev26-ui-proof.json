@@ -1,0 +1,362 @@
+{
+  "purpose": "Rev 2.6 carried-UI-failure classification; not an independent evaluation or fresh test run",
+  "head": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "scope": "Current uncommitted A3.1 source plus prior recorded full UI output; UI diff against base 1706d7c8 is empty",
+  "priorCounts": {
+    "tests": 1685,
+    "pass": 1673,
+    "fail": 8,
+    "skipped": 0,
+    "todo": 4
+  },
+  "matchingFailures": 8,
+  "unexpectedAmongListed": 0,
+  "commonEvidence": {
+    "legacy_ui_request": [
+      {
+        "path": "ui/src/components/charting/OcularHealthSection.tsx",
+        "start": 396,
+        "end": 410,
+        "excerpt": "396:             const state = derivedExamState(capture);\n397:             return [[eye, {\n398:               state,\n399:               ...(capture.negativeAct ? { negativeAct: {\n400:                 id: capture.negativeAct.id,\n401:                 definitionStableKey: capture.negativeAct.definitionStableKey,\n402:                 eye: capture.negativeAct.eye,\n403:                 optionCodes: capture.negativeAct.optionCodes,\n404:                 exclusions: capture.negativeAct.exclusions,\n405:                 assertedAt: capture.negativeAct.assertedAt,\n406:               } } : {}),\n407:               customFields: [\n408:                 ...(field && capture.selections.length\n409:                   ? [{ code: field.localCode, value: capture.selections }]\n410:                   : []),"
+      },
+      {
+        "path": "ui/src/components/charting/OcularHealthSection.tsx",
+        "start": 423,
+        "end": 431,
+        "excerpt": "423:             }]];\n424:           }));\n425:           const response = await fetchImpl(\n426:             `${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`,\n427:             {\n428:               method: \"POST\",\n429:               headers: { ...authHeaders(), \"Content-Type\": \"application/json\" },\n430:               body: JSON.stringify({ patientReference, encounterReference, eyes }),\n431:             },"
+      }
+    ],
+    "shared_capture_gate": [
+      {
+        "path": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "start": 120,
+        "end": 122,
+        "excerpt": "120:   const definition = resolveCustomDefinition(deps.findingDefinitions?.(), input.params, true);\n121:   if (!definition) return { status: 404, body: { error: \"Active custom section not found.\" } };\n122:   if (definition.valueSchema.type === \"ocular-health-structure\") return saveOcularHealth(deps, staff, definition, input.body);"
+      },
+      {
+        "path": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "start": 578,
+        "end": 579,
+        "excerpt": "578: const ocularEyeSchema = z.object({ loaded: z.array(claimSchema).max(500), selected: z.array(claimSchema).max(500), panel: z.object({ baseline: z.union([canonicalBaselineSchema, z.object({ kind: z.literal(\"absent\"), key: currentFindingPanelKeySchema }).strict()]).optional(), state: z.unknown() }).strict().optional(), negativeAct: ocularNegativeSchema.optional() }).strict();\n579: const ocularSaveSchema = z.object({ commandId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i), patientReference: z.string().regex(/^Patient\\/[A-Za-z0-9.-]+$/), encounterReference: z.string().regex(/^Encounter\\/[A-Za-z0-9.-]+$/), eyes: z.object({ OD: ocularEyeSchema.optional(), OS: ocularEyeSchema.optional() }).strict().refine(e => !!e.OD || !!e.OS) }).strict();"
+      },
+      {
+        "path": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "start": 624,
+        "end": 627,
+        "excerpt": "624: async function saveOcularHealth(deps: CustomSectionEndpointDeps, staff: OcularStaff, definition: ClinicalFindingDefinition, input: unknown): Promise<OcularResponse> {\n625:   const parsed = ocularSaveSchema.safeParse(input);\n626:   if (!parsed.success) return ocularError(400, \"invalid\");\n627:   const body = parsed.data;"
+      }
+    ],
+    "compiled_seed_ownership": [
+      {
+        "path": "mcp/src/clinical-graph/finding-definition-store.ts",
+        "start": 142,
+        "end": 146,
+        "excerpt": "142:     ...buildMyopiaFindingDefinitions(provenance),\n143:     ...buildDryEyeFindingDefinitions(provenance),\n144:     ...buildAnteriorOcularHealthDefinitions(provenance),\n145:     ...buildPosteriorOcularHealthDefinitions(provenance),\n146:   ];"
+      },
+      {
+        "path": "mcp/src/clinical-graph/ocular-health-definition.ts",
+        "start": 558,
+        "end": 562,
+        "excerpt": "558: export function buildAnteriorOcularHealthDefinitions(\n559:   provenance: ClinicalGraphProvenance,\n560: ): ClinicalFindingDefinition[] {\n561:   return buildOcularHealthDefinitions(ANTERIOR_STRUCTURES, ANTERIOR_OCULAR_HEALTH_PREFIX, provenance);\n562: }"
+      },
+      {
+        "path": "mcp/src/clinical-graph/ocular-health-definition.ts",
+        "start": 575,
+        "end": 590,
+        "excerpt": "575:   return structures.map((structure, structureIndex) => {\n576:     const stableKey = `${prefix}${structure.key}`;\n577:     const fields = [\n578:       abnormalField(structure, structureIndex),\n579:       ...(structure.gradeFields ?? []).map((grade, gradeIndex) => gradeField(grade, gradeIndex)),\n580:     ];\n581:     const definition = buildClinicalFindingDefinition({\n582:       stableKey,\n583:       display: structure.display,\n584:       sectionKey: stableKey,\n585:       anatomyTarget: structure.key === \"cornea\" ? \"cornea\" : \"eye\",\n586:       valueSchema: {\n587:         type: \"ocular-health-structure\",\n588:         perEye: true,\n589:         fields: Object.fromEntries(fields.map((field) => [field.localCode, field])),\n590:       },"
+      }
+    ],
+    "overview_helper": [
+      {
+        "path": "ui/tests/examOverviewBoard.test.tsx",
+        "start": 2142,
+        "end": 2177,
+        "excerpt": "2142: \n2143: async function renderedWriterStateSectionValue(\n2144:   stableKey: \"entrance:pupils\" | \"entrance:stereo\" | \"ocular-health:anterior:conjunctiva\",\n2145:   state: \"normal\" | \"abnormal\" | \"deferred\",\n2146:   other: string,\n2147: ): Promise<{\n2148:   value: string;\n2149:   formattedValue: string;\n2150:   componentCodes: string[];\n2151:   finding: ExamOverviewFindingProjection;\n2152: }> {\n2153:   const definitions = buildFindingDefinitionSeeds();\n2154:   const definition = definitions.find((candidate) => candidate.stableKey === stableKey);\n2155:   assert.ok(definition);\n2156:   const fhir = new EomWriterFhir();\n2157:   const deps: CustomSectionEndpointDeps = {\n2158:     authenticate: async () => ({\n2159:       staffReference: \"Practitioner/state-writer-fixture\",\n2160:       actorRole: \"provider\",\n2161:       fhir,\n2162:     }),\n2163:     findingDefinitions: () => definitions,\n2164:     now: () => \"2026-07-22T12:00:00.000Z\",\n2165:   };\n2166:   const result = await handleCustomSectionCaptureRequest(deps, {\n2167:     authHeader: \"Bearer state-writer-fixture\",\n2168:     params: { stableKey },\n2169:     body: {\n2170:       patientReference: \"Patient/state-writer-fixture\",\n2171:       encounterReference: \"Encounter/state-writer-fixture\",\n2172:       ...(definition.valueSchema.perEye === true\n2173:         ? { eyes: { OD: { customFields: [], state, other } } }\n2174:         : { customFields: [], state, other }),\n2175:     },\n2176:   });\n2177:   assert.equal(result.status, 200, JSON.stringify(result.body));"
+      }
+    ],
+    "void_response_chain": [
+      {
+        "path": "ui/tests/encounterVoid.test.tsx",
+        "start": 695,
+        "end": 718,
+        "excerpt": "695: function installRealVoidBridge(\n696:   deps: Parameters<typeof handleEncounterVoidRequest>[0],\n697:   responses: VoidBody[],\n698:   confirmations: string[],\n699: ): () => void {\n700:   const originalFetch = globalThis.fetch;\n701:   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, \"window\");\n702:   Object.defineProperty(globalThis, \"window\", {\n703:     configurable: true,\n704:     value: { confirm(message: string) { confirmations.push(message); return true; } },\n705:   });\n706:   globalThis.fetch = async (input, init) => {\n707:     const url = new URL(String(input), \"http://localhost\");\n708:     const match = url.pathname.match(/^\\/clinical-graph\\/encounters\\/([^/]+)\\/void$/);\n709:     if (!match || init?.method !== \"POST\") throw new Error(`Unexpected request: ${url}`);\n710:     const result = await handleEncounterVoidRequest(deps, {\n711:       authHeader: AUTH,\n712:       params: { encounterId: decodeURIComponent(match[1]!) },\n713:       body: JSON.parse(String(init.body)),\n714:     });\n715:     responses.push(result.body as VoidBody);\n716:     return Response.json(result.body, { status: result.status });\n717:   };\n718:   return () => {"
+      },
+      {
+        "path": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "start": 431,
+        "end": 433,
+        "excerpt": "431:   const response: EncounterVoidResponse = { canWriteDiagnosis, voided, count: voided.length, sections, entries, preview, ledger: nextLedger, voidActionId };\n432: \n433:   // --- One transaction ------------------------------------------------------------------"
+      },
+      {
+        "path": "ui/src/lib/encounter-void.ts",
+        "start": 87,
+        "end": 100,
+        "excerpt": "87:   const body = await response.json().catch(() => ({})) as Partial<EncounterVoidResult> & ClinicalGraphErrorBody;\n88:   if (!response.ok) {\n89:     throw clinicalGraphResponseError(response, body, `Void failed (${response.status}).`);\n90:   }\n91:   return {\n92:     canWriteDiagnosis: body.canWriteDiagnosis === true,\n93:     voided: body.voided ?? [],\n94:     count: body.count ?? 0,\n95:     sections: body.sections ?? [],\n96:     entries: Array.isArray(body.entries) ? body.entries : [],\n97:     preview: body.preview === true,\n98:     ...(body.ledger ? { ledger: parseUndoLedger({ ledger: body.ledger }, encounterId) } : {}),\n99:   };\n100: }"
+      }
+    ]
+  },
+  "failures": [
+    {
+      "test": "deferred and recorded ocular findings cannot coexist at the client-server boundary",
+      "allowedCategory": "legacy-shared-save",
+      "matchesRev26": true,
+      "proof": "The synthetic definition explicitly has ocular-health-structure type and a multi-select field. The rendered selection posts eyes.OD.state/customFields without commandId, loaded or selected; first save returns 400.",
+      "evidence": [
+        {
+          "path": "ui/tests/customSections.test.tsx",
+          "start": 1244,
+          "end": 1255,
+          "excerpt": "1244: test(\"deferred and recorded ocular findings cannot coexist at the client-server boundary\", async () => {\n1245:   const definition = syntheticDeferredOcularDefinition();\n1246:   const serverDefinition: ClinicalFindingDefinition = {\n1247:     id: \"finding-definition-synthetic-deferred\",\n1248:     stableKey: definition.stableKey,\n1249:     display: definition.display,\n1250:     sectionKey: definition.sectionKey,\n1251:     valueSchema: {\n1252:       type: \"ocular-health-structure\",\n1253:       perEye: true,\n1254:       fields: { CUSTOM_DEFERRED_FINDINGS: { ...definition.customFields[0]!, origin: \"practice\" } },\n1255:     },"
+        },
+        {
+          "path": "ui/tests/customSections.test.tsx",
+          "start": 1276,
+          "end": 1293,
+          "excerpt": "1276:   const attempts: Array<{ body: Record<string, any>; status: number; response: unknown }> = [];\n1277:   const fetchImpl = (async (_input, init) => {\n1278:     if (init?.method !== \"POST\") return jsonResponse({ rows: [] });\n1279:     const body = JSON.parse(String(init.body));\n1280:     const result = await handleCustomSectionCaptureRequest({\n1281:       authenticate: async () => ({\n1282:         staffReference: \"Practitioner/test\",\n1283:         actorRole: \"provider\" as const,\n1284:         fhir: serverFhir,\n1285:       }),\n1286:       findingDefinitions: () => [serverDefinition],\n1287:       now: () => \"2026-09-09T12:00:00.000Z\",\n1288:     }, {\n1289:       authHeader: \"Bearer test\",\n1290:       params: { stableKey: serverDefinition.stableKey },\n1291:       body,\n1292:     });\n1293:     attempts.push({ body, status: result.status, response: result.body });"
+        },
+        {
+          "path": "ui/tests/customSections.test.tsx",
+          "start": 1328,
+          "end": 1334,
+          "excerpt": "1328:     await act(async () => save.props.onClick());\n1329:     assert.equal(attempts[0]?.status, 200, JSON.stringify(attempts[0]?.response));\n1330:     assert.equal(attempts[0]?.body.eyes.OD.state, \"abnormal\");\n1331:     assert.deepEqual(attempts[0]?.body.eyes.OD.customFields, [{\n1332:       code: \"CUSTOM_DEFERRED_FINDINGS\",\n1333:       value: [\"synthetic-finding\"],\n1334:     }]);"
+        },
+        {
+          "path": "ui/tests/customSections.test.tsx",
+          "start": 1916,
+          "end": 1931,
+          "excerpt": "1916: function syntheticDeferredOcularDefinition() {\n1917:   return {\n1918:     stableKey: \"ocular-health:anterior:synthetic-deferred\",\n1919:     sectionKey: \"ocular-health:anterior:synthetic-deferred\",\n1920:     display: \"Synthetic Deferred\",\n1921:     active: true,\n1922:     perEye: true,\n1923:     normalTemplate: \"Synthetic normal.\",\n1924:     allowDeferred: true,\n1925:     customFields: [{\n1926:       localCode: \"CUSTOM_DEFERRED_FINDINGS\",\n1927:       display: \"Abnormal findings\",\n1928:       valueType: \"multi-select\" as const,\n1929:       options: [{\n1930:         code: \"synthetic-finding\",\n1931:         display: \"Synthetic Finding\","
+        }
+      ],
+      "commonEvidence": [
+        "legacy_ui_request",
+        "shared_capture_gate"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 1586
+      },
+      "priorDiagnostic": "TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/customSections.test.tsx:1329:12)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "fresh ocular-health history restores scoped diagnosis suggestions without a save",
+      "allowedCategory": "legacy-shared-save",
+      "matchesRev26": true,
+      "proof": "The actual injected lens definition explicitly has ocular-health-structure type. The direct handler request supplies eyes.OD.state/customFields; its setup save returns 400 before history remount.",
+      "evidence": [
+        {
+          "path": "ui/tests/customSections.test.tsx",
+          "start": 2962,
+          "end": 2978,
+          "excerpt": "2962:   const serverDefinition: ClinicalFindingDefinition = {\n2963:     id: \"finding-definition-lens\",\n2964:     stableKey: \"ocular-health:anterior:lens\",\n2965:     display: \"Lens\",\n2966:     sectionKey: \"ocular-health:anterior:lens\",\n2967:     valueSchema: {\n2968:       type: \"ocular-health-structure\",\n2969:       perEye: true,\n2970:       fields: {\n2971:         CUSTOM_LENS_FINDINGS: {\n2972:           localCode: \"CUSTOM_LENS_FINDINGS\",\n2973:           display: \"Abnormal findings\",\n2974:           origin: \"practice\",\n2975:           valueType: \"multi-select\",\n2976:           options: [{\n2977:             code: \"nuclear-sclerosis\",\n2978:             display: \"nuclear sclerosis\","
+        },
+        {
+          "path": "ui/tests/customSections.test.tsx",
+          "start": 3003,
+          "end": 3020,
+          "excerpt": "3003:     findingDefinitions: () => [serverDefinition],\n3004:     now: () => \"2026-08-27T14:00:00.000Z\",\n3005:   };\n3006:   const saved = await handleCustomSectionCaptureRequest(serverDeps, {\n3007:     authHeader: \"Bearer test\",\n3008:     params: { stableKey: serverDefinition.stableKey },\n3009:     body: {\n3010:       patientReference: \"Patient/p-history-structure-dx\",\n3011:       encounterReference: \"Encounter/e-history-structure-dx\",\n3012:       eyes: {\n3013:         OD: {\n3014:           state: \"abnormal\",\n3015:           customFields: [{ code: \"CUSTOM_LENS_FINDINGS\", value: [\"nuclear-sclerosis\"] }],\n3016:         },\n3017:       },\n3018:     },\n3019:   });\n3020:   assert.equal(saved.status, 200, JSON.stringify(saved.body));"
+        }
+      ],
+      "commonEvidence": [
+        "shared_capture_gate"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 1776
+      },
+      "priorDiagnostic": "TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/customSections.test.tsx:3020:10)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree",
+      "allowedCategory": "void-result-action-id",
+      "matchesRev26": true,
+      "proof": "The real handler response is recorded, then compared to the UI callback result. The callback parser drops top-level voidActionId; the recorded deep-equality diagnostic identifies that extra expected field.",
+      "evidence": [
+        {
+          "path": "ui/tests/encounterVoid.test.tsx",
+          "start": 412,
+          "end": 414,
+          "excerpt": "412:   const confirmations: string[] = [];\n413:   const cleared: VoidBody[] = [];\n414:   const restore = installRealVoidBridge(deps, responses, confirmations);"
+        },
+        {
+          "path": "ui/tests/encounterVoid.test.tsx",
+          "start": 439,
+          "end": 444,
+          "excerpt": "439:     assert.equal(result?.count, 3);\n440:     assert.equal(result?.voided.length, 3);\n441:     assert.deepEqual([...result!.voided].sort(), [\"MedicationAdministration/ma1\", \"MedicationAdministration/ma2\", \"Observation/dfe\"]);\n442:     assert.equal(result?.sections.reduce((sum, section) => sum + section.count, 0), result?.count);\n443:     assert.equal(result?.sections.find((section) => section.sectionKey === \"entrance:dilation\")?.count, 3);\n444:     assert.deepEqual(cleared, [{ ...result, canWriteDiagnosis: (result as Partial<EncounterVoidResult>)?.canWriteDiagnosis === true }]);"
+        }
+      ],
+      "commonEvidence": [
+        "void_response_chain"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 3220
+      },
+      "priorDiagnostic": "---\n  duration_ms: 41.914667\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/encounterVoid.test.tsx:1:15669'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      [\n        {\n          canWriteDiagnosis: true,\n          count: 3,\n          entries: [\n    ...\n          ],\n    -     voidActionId: 'c15518d1-03b8-4b7a-874b-8025d8291163',\n          voided: [\n            'Observation/dfe',\n            'MedicationAdministration/ma1',\n            'MedicationAdministration/ma2'\n          ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0:\n      canWriteDiagnosis: true\n      voided:\n        0: 'Observation/dfe'\n        1: 'MedicationAdministration/ma1'\n        2: 'MedicationAdministration/ma2'\n      count: 3\n      sections:\n        0:\n          sectionKey: 'entrance:dilation'\n          label: 'Dilation'\n          count: 3\n      entries:\n        0:\n          reference: 'Observation/dfe'\n          sectionKey: 'entrance:dilation'\n          findingKey: 'entrance:dilation'\n          laterality: 'UNKNOWN'\n      preview: false\n      ledger:\n        encounterId: 'e1'\n        encounter: ~\n        sections:\n          entrance:dilation:\n            voidActionId: 'c15518d1-03b8-4b7a-874b-8025d8291163'\n            voided:\n              0:\n                ref: 'Observation/dfe'\n                priorStatus: 'final'\n              1:\n                ref: 'MedicationAdministration/ma1'\n                priorStatus: 'completed'\n              2:\n                ref: 'MedicationAdministration/ma2'\n                priorStatus: 'completed'\n            label: 'Dilation'\n            count: 3\n            at: '2026-09-01T15:00:00.000Z'\n            sectionKeys:\n              0: 'entrance:dilation'\n            scope: 'section'\n      voidActionId: 'c15518d1-03b8-4b7a-874b-8025d8291163'\n  actual:\n    0:\n      canWriteDiagnosis: true\n      voided:\n        0: 'Observation/dfe'\n        1: 'MedicationAdministration/ma1'\n        2: 'MedicationAdministration/ma2'\n      count: 3\n      sections:\n        0:\n          sectionKey: 'entrance:dilation'\n          label: 'Dilation'\n          count: 3\n      entries:\n        0:\n          reference: 'Observation/dfe'\n          sectionKey: 'entrance:dilation'\n          findingKey: 'entrance:dilation'\n          laterality: 'UNKNOWN'\n      preview: false\n      ledger:\n        encounterId: 'e1'\n        encounter: ~\n        sections:\n          entrance:dilation:\n            voidActionId: 'c15518d1-03b8-4b7a-874b-8025d8291163'\n            voided:\n              0:\n                ref: 'Observation/dfe'\n                priorStatus: 'final'\n              1:\n                ref: 'MedicationAdministration/ma1'\n                priorStatus: 'completed'\n              2:\n                ref: 'MedicationAdministration/ma2'\n                priorStatus: 'completed'\n            label: 'Dilation'\n            count: 3\n            at: '2026-09-01T15:00:00.000Z'\n            sectionKeys:\n              0: 'entrance:dilation'\n            scope: 'section'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/encounterVoid.test.tsx:444:12)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree",
+      "allowedCategory": "void-result-action-id",
+      "matchesRev26": true,
+      "proof": "The whole-visit real handler response is compared to the UI callback result. The parser drops top-level voidActionId; the diagnostic identifies that exact missing field.",
+      "evidence": [
+        {
+          "path": "ui/tests/encounterVoid.test.tsx",
+          "start": 471,
+          "end": 473,
+          "excerpt": "471:   const confirmations: string[] = [];\n472:   const cleared: VoidBody[] = [];\n473:   const restore = installRealVoidBridge(deps, responses, confirmations);"
+        },
+        {
+          "path": "ui/tests/encounterVoid.test.tsx",
+          "start": 497,
+          "end": 502,
+          "excerpt": "497:     assert.equal(result?.count, 4);\n498:     assert.equal(result?.voided.length, 4);\n499:     assert.deepEqual([...result!.voided].sort(), [\"MedicationAdministration/ma1\", \"MedicationAdministration/ma2\", \"Observation/dfe\", \"Observation/today\"]);\n500:     assert.equal(result?.sections.reduce((sum, section) => sum + section.count, 0), result?.count);\n501:     assert.equal(result?.sections.find((section) => section.sectionKey === \"entrance:dilation\")?.count, 3);\n502:     assert.deepEqual(cleared, [{ ...result, canWriteDiagnosis: (result as Partial<EncounterVoidResult>)?.canWriteDiagnosis === true }]);"
+        }
+      ],
+      "commonEvidence": [
+        "void_response_chain"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 3339
+      },
+      "priorDiagnostic": "---\n  duration_ms: 24.618417\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/encounterVoid.test.tsx:1:18086'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      [\n        {\n          canWriteDiagnosis: true,\n          count: 4,\n          entries: [\n    ...\n          ],\n    -     voidActionId: '6fad2905-4009-4a42-ad8b-70ec661ed9e1',\n          voided: [\n            'Observation/dfe',\n            'Observation/today',\n            'MedicationAdministration/ma1',\n            'MedicationAdministration/ma2'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0:\n      canWriteDiagnosis: true\n      voided:\n        0: 'Observation/dfe'\n        1: 'Observation/today'\n        2: 'MedicationAdministration/ma1'\n        3: 'MedicationAdministration/ma2'\n      count: 4\n      sections:\n        0:\n          sectionKey: 'entrance:dilation'\n          label: 'Dilation'\n          count: 3\n        1:\n          sectionKey: 'entrance:cvf'\n          label: 'Confrontation visual fields'\n          count: 1\n      entries:\n        0:\n          reference: 'Observation/dfe'\n          sectionKey: 'entrance:dilation'\n          findingKey: 'entrance:dilation'\n          laterality: 'UNKNOWN'\n        1:\n          reference: 'Observation/today'\n          sectionKey: 'entrance:cvf'\n          findingKey: 'entrance:cvf'\n          laterality: 'OD'\n      preview: false\n      ledger:\n        encounterId: 'e1'\n        encounter:\n          voidActionId: '6fad2905-4009-4a42-ad8b-70ec661ed9e1'\n          voided:\n            0:\n              ref: 'Observation/dfe'\n              priorStatus: 'final'\n            1:\n              ref: 'Observation/today'\n              priorStatus: 'final'\n            2:\n              ref: 'MedicationAdministration/ma1'\n              priorStatus: 'completed'\n            3:\n              ref: 'MedicationAdministration/ma2'\n              priorStatus: 'completed'\n          label: 'everything charted'\n          count: 4\n          at: '2026-09-01T15:00:00.000Z'\n          sectionKeys:\n          scope: 'encounter'\n        sections:\n      voidActionId: '6fad2905-4009-4a42-ad8b-70ec661ed9e1'\n  actual:\n    0:\n      canWriteDiagnosis: true\n      voided:\n        0: 'Observation/dfe'\n        1: 'Observation/today'\n        2: 'MedicationAdministration/ma1'\n        3: 'MedicationAdministration/ma2'\n      count: 4\n      sections:\n        0:\n          sectionKey: 'entrance:dilation'\n          label: 'Dilation'\n          count: 3\n        1:\n          sectionKey: 'entrance:cvf'\n          label: 'Confrontation visual fields'\n          count: 1\n      entries:\n        0:\n          reference: 'Observation/dfe'\n          sectionKey: 'entrance:dilation'\n          findingKey: 'entrance:dilation'\n          laterality: 'UNKNOWN'\n        1:\n          reference: 'Observation/today'\n          sectionKey: 'entrance:cvf'\n          findingKey: 'entrance:cvf'\n          laterality: 'OD'\n      preview: false\n      ledger:\n        encounterId: 'e1'\n        encounter:\n          voidActionId: '6fad2905-4009-4a42-ad8b-70ec661ed9e1'\n          voided:\n            0:\n              ref: 'Observation/dfe'\n              priorStatus: 'final'\n            1:\n              ref: 'Observation/today'\n              priorStatus: 'final'\n            2:\n              ref: 'MedicationAdministration/ma1'\n              priorStatus: 'completed'\n            3:\n              ref: 'MedicationAdministration/ma2'\n              priorStatus: 'completed'\n          label: 'everything charted'\n          count: 4\n          at: '2026-09-01T15:00:00.000Z'\n          sectionKeys:\n          scope: 'encounter'\n        sections:\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/encounterVoid.test.tsx:502:12)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "custom state writer preserves other-only notes for normal and abnormal findings",
+      "allowedCategory": "legacy-shared-save",
+      "matchesRev26": true,
+      "proof": "First awaited helper call is real-seed ocular-health:anterior:conjunctiva, abnormal Other-only. Seed builder gives ocular-health-structure/perEye. Helper sends eyes.OD={customFields:[],state,other}; 400 occurs before the later non-shared stereo call.",
+      "evidence": [
+        {
+          "path": "ui/tests/examOverviewBoard.test.tsx",
+          "start": 1065,
+          "end": 1076,
+          "excerpt": "1065: test(\"custom state writer preserves other-only notes for normal and abnormal findings\", async () => {\n1066:   const abnormal = await renderedWriterStateSectionValue(\n1067:     \"ocular-health:anterior:conjunctiva\",\n1068:     \"abnormal\",\n1069:     \"Reports intermittent shimmer\",\n1070:   );\n1071:   const normal = await renderedWriterStateSectionValue(\n1072:     \"entrance:stereo\",\n1073:     \"normal\",\n1074:     \"Reliable responses throughout\",\n1075:   );\n1076:   assert.deepEqual({"
+        },
+        {
+          "path": "mcp/src/clinical-graph/ocular-health-definition.ts",
+          "start": 68,
+          "end": 74,
+          "excerpt": "68:   {\n69:     key: \"conjunctiva\",\n70:     display: \"Conjunctiva\",\n71:     normalTemplate: \"White and quiet; no injection or discharge.\",\n72:     sheetLabel: \"White and quiet\",\n73:     priority: [\"injection\", \"pinguecula\", pterygiumFinding(\"pterygium\", \"pterygium\"), \"chemosis\"],\n74:     additional: [\"subconjunctival hemorrhage\", \"nevus\", \"pigmentation\", \"concretion\", \"conjunctivochalasis\", \"episcleritis\", \"scleritis\", \"phlyctenule\", \"lymphangiectasia\", \"scleral thinning\", \"nodule\"],"
+        }
+      ],
+      "commonEvidence": [
+        "overview_helper",
+        "compiled_seed_ownership",
+        "shared_capture_gate"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 4664
+      },
+      "priorDiagnostic": "renderedWriterStateSectionValue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/examOverviewBoard.test.tsx:2177:10)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/examOverviewBoard.test.tsx:1066:20)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "abnormal custom state other-only value leaves the exact unformatted sentinel behind",
+      "allowedCategory": "legacy-shared-save",
+      "matchesRev26": true,
+      "proof": "Real-seed conjunctiva abnormal Other-only runs the same legacy request through the real capture handler and returns 400.",
+      "evidence": [
+        {
+          "path": "ui/tests/examOverviewBoard.test.tsx",
+          "start": 1098,
+          "end": 1105,
+          "excerpt": "1098: test(\"abnormal custom state other-only value leaves the exact unformatted sentinel behind\", async () => {\n1099:   const abnormal = await renderedWriterStateSectionValue(\n1100:     \"ocular-health:anterior:conjunctiva\",\n1101:     \"abnormal\",\n1102:     \"Reports intermittent shimmer\",\n1103:   );\n1104:   assert.equal(abnormal.formattedValue, \"Other Reports intermittent shimmer\");\n1105: });"
+        },
+        {
+          "path": "mcp/src/clinical-graph/ocular-health-definition.ts",
+          "start": 68,
+          "end": 74,
+          "excerpt": "68:   {\n69:     key: \"conjunctiva\",\n70:     display: \"Conjunctiva\",\n71:     normalTemplate: \"White and quiet; no injection or discharge.\",\n72:     sheetLabel: \"White and quiet\",\n73:     priority: [\"injection\", \"pinguecula\", pterygiumFinding(\"pterygium\", \"pterygium\"), \"chemosis\"],\n74:     additional: [\"subconjunctival hemorrhage\", \"nevus\", \"pigmentation\", \"concretion\", \"conjunctivochalasis\", \"episcleritis\", \"scleritis\", \"phlyctenule\", \"lymphangiectasia\", \"scleral thinning\", \"nodule\"],"
+        }
+      ],
+      "commonEvidence": [
+        "overview_helper",
+        "compiled_seed_ownership",
+        "shared_capture_gate"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 4693
+      },
+      "priorDiagnostic": "renderedWriterStateSectionValue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/examOverviewBoard.test.tsx:2177:10)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/examOverviewBoard.test.tsx:1099:20)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "exercised EOM and custom-state writers declare every schema-blind component code",
+      "allowedCategory": "legacy-shared-save",
+      "matchesRev26": true,
+      "proof": "After the EOM helper calls, failure occurs at abnormalState: conjunctiva Other-only via the same real-seed helper, before normal stereo and the component-code comparison.",
+      "evidence": [
+        {
+          "path": "ui/tests/examOverviewBoard.test.tsx",
+          "start": 1284,
+          "end": 1294,
+          "excerpt": "1284:   const normalEom = await renderedWriterEomFinding({}, \"normal\");\n1285:   const abnormalState = await renderedWriterStateSectionValue(\n1286:     \"ocular-health:anterior:conjunctiva\",\n1287:     \"abnormal\",\n1288:     \"Reports intermittent shimmer\",\n1289:   );\n1290:   const normalState = await renderedWriterStateSectionValue(\n1291:     \"entrance:stereo\",\n1292:     \"normal\",\n1293:     \"Reliable responses throughout\",\n1294:   );"
+        },
+        {
+          "path": "mcp/src/clinical-graph/ocular-health-definition.ts",
+          "start": 68,
+          "end": 74,
+          "excerpt": "68:   {\n69:     key: \"conjunctiva\",\n70:     display: \"Conjunctiva\",\n71:     normalTemplate: \"White and quiet; no injection or discharge.\",\n72:     sheetLabel: \"White and quiet\",\n73:     priority: [\"injection\", \"pinguecula\", pterygiumFinding(\"pterygium\", \"pterygium\"), \"chemosis\"],\n74:     additional: [\"subconjunctival hemorrhage\", \"nevus\", \"pigmentation\", \"concretion\", \"conjunctivochalasis\", \"episcleritis\", \"scleritis\", \"phlyctenule\", \"lymphangiectasia\", \"scleral thinning\", \"nodule\"],"
+        }
+      ],
+      "commonEvidence": [
+        "overview_helper",
+        "compiled_seed_ownership",
+        "shared_capture_gate"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 4740
+      },
+      "priorDiagnostic": "renderedWriterStateSectionValue (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/examOverviewBoard.test.tsx:2177:10)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/examOverviewBoard.test.tsx:1285:25)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+    },
+    {
+      "test": "SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler",
+      "allowedCategory": "legacy-shared-save",
+      "matchesRev26": true,
+      "proof": "Real seeds feed both the rendered UI and handler. Anterior All Normal emits nine legacy eyes state/negativeAct/customFields requests; all nine are 400 in the saved diagnostic. Each anterior structure comes through buildOcularHealthDefinitions and has ocular-health-structure type. No fixture name inference.",
+      "evidence": [
+        {
+          "path": "ui/tests/ocularSweepValueOnly.test.tsx",
+          "start": 12,
+          "end": 24,
+          "excerpt": "12: const seeds = buildFindingDefinitionSeeds();\n13: const definitions: CustomFindingDefinition[] = seeds.map((definition) => ({\n14:   stableKey: definition.stableKey,\n15:   sectionKey: definition.sectionKey,\n16:   display: definition.display,\n17:   active: definition.active,\n18:   perEye: definition.valueSchema.perEye === true,\n19:   customFields: customFieldEntries(definition, true),\n20:   normalTemplate: definition.normalSemantics?.template as string | undefined,\n21:   allowDeferred: definition.normalSemantics?.allowDeferred === true,\n22: }));\n23: const stainingKey = \"dry-eye:conjunctival-staining\";\n24: const ocularDefinitions = definitions.filter((definition) => definition.stableKey.startsWith(\"ocular-health:\") || definition.stableKey === stainingKey);"
+        },
+        {
+          "path": "ui/tests/ocularSweepValueOnly.test.tsx",
+          "start": 31,
+          "end": 35,
+          "excerpt": "31: test(\"SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler\", async () => {\n32:   const writes: Array<Observation | Provenance> = [];\n33:   const deps: CustomSectionEndpointDeps = {\n34:     findingDefinitions: () => seeds,\n35:     authenticate: async () => ({"
+        },
+        {
+          "path": "ui/tests/ocularSweepValueOnly.test.tsx",
+          "start": 47,
+          "end": 56,
+          "excerpt": "47:   const posts: Array<{ key: string; body: { eyes: Record<string, { negativeAct: NegativeAct }> }; status: number; response: unknown }> = [];\n48:   const fetchImpl = (async (input, init) => {\n49:     if (init?.method !== \"POST\") return Response.json({ rows: [] });\n50:     const key = decodeURIComponent(String(input).split(\"/\").at(-1)!);\n51:     const body = JSON.parse(String(init.body));\n52:     const result = await handleCustomSectionCaptureRequest(deps, {\n53:       authHeader: undefined, params: { stableKey: key }, body,\n54:     });\n55:     posts.push({ key, body, status: result.status, response: result.body });\n56:     return Response.json(result.body, { status: result.status });"
+        },
+        {
+          "path": "ui/tests/ocularSweepValueOnly.test.tsx",
+          "start": 60,
+          "end": 75,
+          "excerpt": "60:     await act(async () => {\n61:       renderer = create(<OcularHealthSection definitions={ocularDefinitions}\n62:         patientReference=\"Patient/sweep-test\" encounterReference=\"Encounter/sweep-test\"\n63:         onSaved={() => undefined} apiBase=\"http://synthetic\" fetchImpl={fetchImpl} />);\n64:     });\n65:     const button = (label: string) => renderer.root.findAllByType(\"button\").find((node) => text(node) === label)!;\n66:     act(() => button(\"Anterior All Normal\").props.onClick());\n67:     await act(async () => button(\"Save Ocular Health\").props.onClick());\n68:     assert.ok(posts.length > 0);\n69:     assert.deepEqual(posts.filter((post) => post.status !== 200), [], \"every posted request must be accepted\");\n70:     assert.equal(posts.length, 9);\n71:     assert.ok(posts.every((post) => post.key !== stainingKey));\n72:     for (const post of posts) {\n73:       for (const eye of [\"OD\", \"OS\"]) assert.ok(post.body.eyes[eye].negativeAct.optionCodes.length > 0);\n74:     }\n75:     assert.equal(writes.filter((resource) => resource.resourceType === \"Observation\").length, 18);"
+        }
+      ],
+      "commonEvidence": [
+        "compiled_seed_ownership",
+        "legacy_ui_request",
+        "shared_capture_gate"
+      ],
+      "priorLog": {
+        "path": "docs/evidence/r10-a3-1/full-checks/ui-test.txt",
+        "line": 7131
+      },
+      "priorDiagnostic": "TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/ui/tests/ocularSweepValueOnly.test.tsx:69:12)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n  ..."
+    }
+  ],
+  "contractMapping": {
+    "legacy-shared-save": "\u00a73.4 frozen save request; V19/V20 and W66 establish baseline-relative save semantics. \u00a78 specifically carries these legacy requests; \u00a79 migrates screens. This evidence does not claim those guards were rerun.",
+    "void-result-action-id": "\u00a73.6 void action identity (lines 319-321); W127 requires identity-bound undo; \u00a79 makes UI preserve/send it."
+  },
+  "verification": "Read-only source and saved log inspection; no tests or UI/source/test changes performed."
+}

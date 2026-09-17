@@ -1,0 +1,16 @@
+AssertionError [ERR_ASSERTION]: T22:mcp-save-section:adversarial-stored-only-shared-output: {"content":[{"type":"text","text":"{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction-response\",\n  \"entry\": [\n    {\n      \"resource\": {\n        \"resourceType\": \"Observation\",\n        \"id\": \"shared\",\n        \"meta\": {\n          \"versionId\": \"a9edd2f6-4e17-43dc-979a-30d3d74e2a02\"\n        },\n        \"status\": \"preliminary\",\n        \"code\": {\n          \"coding\": [\n            {\n              \"system\": \"https://odos2020.com/fhir/CodeSystem/ophthalmology\",\n              \"code\": \"synthetic-practice-shared\",\n              \"display\": \"synthetic-practice-shared\"\n            }\n          ],\n          \"text\": \"synthetic-practice-shared\"\n        },\n        \"subject\": {\n          \"reference\": \"Patient/p1\"\n        },\n        \"encounter\": {\n          \"reference\": \"Encounter/e1\"\n        },\n        \"effectiveDateTime\": \"2026-09-15T12:00:00.000Z\",\n        \"extension\": [\n          {\n            \"url\": \"https://odos2020.com/fhir/StructureDefinition/eye-laterality\",\n            \"valueCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"https://odos2020.com/fhir/CodeSystem/ophthalmology\",\n                  \"code\": \"OD\",\n                  \"display\": \"Right eye\"\n                }\n              ],\n              \"text\": \"Right eye\"\n            }\n          }\n        ],\n        \"component\": [\n          {\n            \"code\": {\n              \"coding\": [\n                {\n                  \"system\": \"https://odos2020.com/fhir/CodeSystem/ophthalmology\",\n                  \"code\": \"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\",\n                  \"display\": \"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\"\n                }\n              ],\n              \"text\": \"OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis\"\n            },\n            \"valueBoolean\": true\n          }\n        ]\n      },\n      \"response\": {\n        \"status\": \"201 Created\",\n        \"location\": \"Observation/shared/_history/a9edd2f6-4e17-43dc-979a-30d3d74e2a02\"\n      }\n    }\n  ]\n}"}]}
++ actual - expected
+
++ undefined
+- true
+
+    at sharedBodyControls (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/mcp-write-paths.ts:282:14)
+    at async runMcpWritePaths (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/mcp-write-paths.ts:234:24)
+    at async main (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/r10-a3-1/verify-mcp-runtime.ts:5:13) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

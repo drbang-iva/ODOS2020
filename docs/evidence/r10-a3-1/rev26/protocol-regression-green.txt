@@ -1,0 +1,23 @@
+TAP version 13
+# Built-in glaucoma-suspect-initial: conditional head conflict; race refused.
+# Subtest: encounter capture does not treat two absent subject references as a patient match
+ok 1 - encounter capture does not treat two absent subject references as a patient match
+  ---
+  duration_ms: 16.143958
+  type: 'test'
+  ...
+# Subtest: apply verifies the persisted Condition and creates no prompt-only Observations
+ok 2 - apply verifies the persisted Condition and creates no prompt-only Observations
+  ---
+  duration_ms: 142.077667
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 419.789833

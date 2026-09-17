@@ -15,6 +15,7 @@ import {
   condition,
   cvf,
   fixture,
+  seedCanonical,
   observation,
   type VoidBody,
 } from "./encounterVoidFixture.js";
@@ -238,8 +239,8 @@ test("section scope matches the section key exactly or as a prefix, and reports 
   const { deps, fhir } = fixture();
   fhir.add(cvf("cvf-od", "OD"));
   fhir.add(observation("pupils-od", "entrance:pupils", "OD"));
-  fhir.add(observation("cornea-od", "ocular-health:anterior:cornea", "OD"));
-  fhir.add(observation("lens-os", "ocular-health:anterior:lens", "OS"));
+  await seedCanonical(fhir, "cornea-od", "ocular-health:anterior:cornea", "OD");
+  await seedCanonical(fhir, "lens-os", "ocular-health:anterior:lens", "OS");
 
   const result = await handleEncounterVoidRequest(deps, {
     authHeader: AUTH,

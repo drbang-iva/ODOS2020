@@ -1,0 +1,81 @@
+{
+  "existingEntryCountChanged": 9,
+  "onlyLineAnchorsChanged": true,
+  "allOtherSourceBytesEqualAfterLineNormalization": true,
+  "entriesAdded": 0,
+  "entriesRemoved": 0,
+  "entries": [
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "VisionPrescription",
+      "callee": "fhir.create",
+      "old": 3251,
+      "new": 3269,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "AllergyIntolerance",
+      "callee": "fhir.create",
+      "old": 3633,
+      "new": 3651,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "CareTeam",
+      "callee": "fhir.create",
+      "old": 3687,
+      "new": 3706,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "DeviceDefinition",
+      "callee": "fhir.create",
+      "old": 3836,
+      "new": 3855,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "ConceptMap",
+      "callee": "fhir.create",
+      "old": 3864,
+      "new": 3883,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "Substance",
+      "callee": "fhir.create",
+      "old": 3887,
+      "new": 3906,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "AdverseEvent",
+      "callee": "fhir.create",
+      "old": 4217,
+      "new": 4240,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "BodyStructure",
+      "callee": "fhir.create",
+      "old": 5318,
+      "new": 5345,
+      "reason": "MCP process service client."
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "resourceType": "AccessPolicy",
+      "callee": "fhir.patch",
+      "old": 7895,
+      "new": 7923,
+      "reason": "Policy sync uses the MCP process service client."
+    }
+  ]
+}

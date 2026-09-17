@@ -1,0 +1,15 @@
+AssertionError [ERR_ASSERTION]: mcp-attest: {"content":[{"type":"text","text":"Error: Shared findings are charted in the finding doors; legacy targets are read-only"}],"isError":true}
++ actual - expected
+
++ true
+- undefined
+
+    at runMcpWritePaths (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/mcp-write-paths.ts:183:16)
+    at async main (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/r10-a3-1/verify-mcp-runtime.ts:5:13) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: undefined,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

@@ -1,0 +1,184 @@
+TAP version 13
+# Subtest: W82 selected valued shared default refuses before all writes
+ok 1 - W82 selected valued shared default refuses before all writes
+  ---
+  duration_ms: 11.637709
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared override refuses before all writes
+ok 2 - W82 selected valued shared override refuses before all writes
+  ---
+  duration_ms: 8.555667
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared per-eye refuses before all writes
+ok 3 - W82 selected valued shared per-eye refuses before all writes
+  ---
+  duration_ms: 7.2805
+  type: 'test'
+  ...
+# Subtest: W82 shared prompt applies with no Observation
+ok 4 - W82 shared prompt applies with no Observation
+  ---
+  duration_ms: 21.317084
+  type: 'test'
+  ...
+# Subtest: W82 opted-out valued shared is allowed
+ok 5 - W82 opted-out valued shared is allowed
+  ---
+  duration_ms: 20.360083
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply closed zero writes
+ok 6 - W91 protocol apply closed zero writes
+  ---
+  duration_ms: 0.810125
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply pre-rebuild zero writes
+ok 7 - W91 protocol apply pre-rebuild zero writes
+  ---
+  duration_ms: 8.288416
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply closed zero writes
+ok 8 - W108 protocol unapply closed zero writes
+  ---
+  duration_ms: 20.472208
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply pre-rebuild zero writes
+ok 9 - W108 protocol unapply pre-rebuild zero writes
+  ---
+  duration_ms: 24.690666
+  type: 'test'
+  ...
+# Subtest: V28 capture preliminary canonical prompt
+ok 10 - V28 capture preliminary canonical prompt
+  ---
+  duration_ms: 8.703375
+  type: 'test'
+  ...
+# Subtest: V28 capture final canonical prompt
+ok 11 - V28 capture final canonical prompt
+  ---
+  duration_ms: 7.011459
+  type: 'test'
+  ...
+# Subtest: V28 capture amended canonical prompt
+ok 12 - V28 capture amended canonical prompt
+  ---
+  duration_ms: 7.194666
+  type: 'test'
+  ...
+# Subtest: W107 capture fact OD + committed prompt OS dedupes
+ok 13 - W107 capture fact OD + committed prompt OS dedupes
+  ---
+  duration_ms: 25.035375
+  type: 'test'
+  ...
+# Subtest: W119 panel value capture
+ok 14 - W119 panel value capture
+  ---
+  duration_ms: 9.023834
+  type: 'test'
+  ...
+# Subtest: W119 panel context-only capture
+ok 15 - W119 panel context-only capture
+  ---
+  duration_ms: 6.956084
+  type: 'test'
+  ...
+# Subtest: W114 capture respects stored shared definition
+ok 16 - W114 capture respects stored shared definition
+  ---
+  duration_ms: 25.987459
+  type: 'test'
+  ...
+# Subtest: V28 unapply shared target rejects before unrelated removals
+ok 17 - V28 unapply shared target rejects before unrelated removals
+  ---
+  duration_ms: 37.736125
+  type: 'test'
+  ...
+# Subtest: T22 control actual failed unapply restores unrelated Observation
+ok 18 - T22 control actual failed unapply restores unrelated Observation
+  ---
+  duration_ms: 50.03375
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback closed refuses Observation restore
+ok 19 - W108 actual unapply rollback closed refuses Observation restore
+  ---
+  duration_ms: 41.881084
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback pre-rebuild refuses Observation restore
+ok 20 - W108 actual unapply rollback pre-rebuild refuses Observation restore
+  ---
+  duration_ms: 47.369291
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback shared refuses Observation restore
+ok 21 - W108 actual unapply rollback shared refuses Observation restore
+  ---
+  duration_ms: 47.194
+  type: 'test'
+  ...
+# Subtest: W82 payload definition override cannot value a shared proposed row
+ok 22 - W82 payload definition override cannot value a shared proposed row
+  ---
+  duration_ms: 6.529
+  type: 'test'
+  ...
+# Subtest: W82 built-in closed reject precedes seeding
+ok 23 - W82 built-in closed reject precedes seeding
+  ---
+  duration_ms: 0.6075
+  type: 'test'
+  ...
+# Subtest: W82 built-in valued reject precedes seeding
+ok 24 - W82 built-in valued reject precedes seeding
+  ---
+  duration_ms: 5.93075
+  type: 'test'
+  ...
+# Subtest: W114 stored local shared valued item refuses
+ok 25 - W114 stored local shared valued item refuses
+  ---
+  duration_ms: 6.664083
+  type: 'test'
+  ...
+# Subtest: W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+ok 26 - W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+  ---
+  duration_ms: 23.041042
+  type: 'test'
+  ...
+# Subtest: V28 capture excludes cleared canonical and retains unrelated value
+ok 27 - V28 capture excludes cleared canonical and retains unrelated value
+  ---
+  duration_ms: 29.985083
+  type: 'test'
+  ...
+# Subtest: W82 prompt override cannot hide a valued shared proposed item
+ok 28 - W82 prompt override cannot hide a valued shared proposed item
+  ---
+  duration_ms: 6.615041
+  type: 'test'
+  ...
+# Subtest: V28 inactive shared capture cannot seed
+ok 29 - V28 inactive shared capture cannot seed
+  ---
+  duration_ms: 12.234583
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 718.388167

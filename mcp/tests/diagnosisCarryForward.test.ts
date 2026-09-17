@@ -29,7 +29,7 @@ import {
   type DiagnosisCarryForwardFhirClient,
   type PreviousExamsPage,
 } from "../src/clinical-graph/diagnosis-carry-forward-endpoint.js";
-import { readDiagnosisCarryState } from "../src/clinical-graph/diagnosis-carry-provenance.js";
+import { readDiagnosisCarryState as readCarryState, CARRY_COMMAND_SYSTEM, CARRY_PLAN_URL, CARRY_VERSIONS_URL, CARRY_DIAGNOSIS_SYSTEM } from "../src/clinical-graph/diagnosis-carry-provenance.js";
 import {
   buildEncounterDiagnosisComponent,
   buildEncounterDiagnosisCondition,
@@ -43,6 +43,11 @@ import { createAuthenticatedFhirClient, loadRepoEnv, requireMedplumAdmin } from 
 import { createMedplumClient } from "../src/fhir-client.js";
 import { searchAll } from "../src/fhir-search.js";
 import { TEST_FHIR_AUDIT_CONTEXT, TEST_FHIR_AUDIT_RECORDER } from "./fhirAuditTestStub.js";
+
+import {currentFindingIdentifier,parseCurrentFindingEnvelope,SUPPORTS_DIAGNOSIS_URL} from "../src/clinical-graph/current-finding-identity.js";
+import {keyFor} from "./fixtures/r10/writer-harness.js";
+import {comp,nuclear} from "./fixtures/r10/factories.js";
+const readDiagnosisCarryState: typeof readCarryState = (fhir,condition,observations) => readCarryState(fhir,condition,observations,{preRebuild:true});
 
 const AUTH_CLINICIAN = "Bearer clinician";
 const AUTH_FORBIDDEN = "Bearer forbidden";
@@ -62,7 +67,7 @@ test("POST previous exams returns 401 when unauthenticated", async (t) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      sourceEncounterReference: "Encounter/prior",
+      commandId: randomUUID(), sourceEncounterReference: "Encounter/prior",
       sourceConditionReference: "Condition/prior-diagnosis",
     }),
   });
@@ -77,7 +82,7 @@ test("POST previous exams returns 403 without chart.write", async (t) => {
     method: "POST",
     headers: { Authorization: AUTH_FORBIDDEN, "Content-Type": "application/json" },
     body: JSON.stringify({
-      sourceEncounterReference: "Encounter/prior",
+      commandId: randomUUID(), sourceEncounterReference: "Encounter/prior",
       sourceConditionReference: "Condition/prior-diagnosis",
     }),
   });
@@ -257,7 +262,7 @@ test("carry provenance follows every target-search Bundle page before deciding w
   );
 
   assert.equal(state.edited, true);
-  assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Provenance?_page=2"]);
+  assert.deepEqual(fhir.followedUrls, ["/fhir/R4/Provenance?_page=2", "/fhir/R4/Provenance?_page=2"]);
 });
 
 for (const mutation of ["wrong-code", "wrong-system", "wrong-text", "wrong-role", "missing-condition"] as const) {
@@ -384,90 +389,39 @@ test("carry provenance cycles terminate with a visible integrity warning", async
   assert.match(state.integrityWarning ?? "", /cycle/i);
 });
 
-test("pull posts one present finding atomically while preserving absent source provenance and rank gaps", async (t) => {
-  const fhir = pullFhir();
-  const sourceCondition = await fhir.read<Condition>("Condition", "source-dry-eye-od");
-  const sourcePresent = await fhir.read<Observation>("Observation", "source-staining-present");
-  const base = await startPreviousExamRoutes(t, fhir, "admin");
-
-  const response = await fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`, {
-    method: "POST",
-    headers: { Authorization: AUTH_CLINICIAN, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sourceEncounterReference: "Encounter/source-pull",
-      sourceConditionReference: "Condition/source-dry-eye-od",
-    }),
-  });
-
-  assert.equal(response.status, 200, await response.clone().text());
-  assert.equal(fhir.transactions.length, 1);
-  const { bundle, headers } = fhir.transactions[0]!;
-  assert.equal(bundle.type, "transaction");
-  assert.equal(headers.Prefer, "return=representation");
-  assert.deepEqual(bundle.entry?.map((entry) => [entry.resource?.resourceType, entry.request?.method, entry.request?.url]), [
-    ["Encounter", "PUT", "Encounter/current-pull"],
-    ["Condition", "POST", "Condition"],
-    ["Observation", "POST", "Observation"],
-    ["Provenance", "POST", "Provenance"],
-  ]);
-  assert.equal(bundle.entry?.every((entry) => entry.fullUrl?.startsWith("urn:uuid:")), true);
-
-  const encounterEntry = bundle.entry![0]!;
-  const conditionEntry = bundle.entry![1]!;
-  const observationEntry = bundle.entry![2]!;
-  const provenanceEntry = bundle.entry![3]!;
-  const pulledCondition = conditionEntry.resource as Condition;
-  const pulledEncounter = encounterEntry.resource as Encounter;
-  const pulledObservation = observationEntry.resource as Observation;
-  const provenance = provenanceEntry.resource as Provenance;
-
-  assert.deepEqual(pulledCondition.code, sourceCondition.code);
-  assert.deepEqual(pulledCondition.extension, sourceCondition.extension);
-  assert.equal(pulledCondition.subject.reference, "Patient/patient-1");
-  assert.equal(pulledCondition.encounter?.reference, "Encounter/current-pull");
-  assert.equal(pulledCondition.verificationStatus?.coding?.[0]?.code, "confirmed");
-  assert.deepEqual(pulledCondition.identifier, [{
-    system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
-    value: "current-pull::dry_eye::right",
-  }]);
-  assert.deepEqual(pulledCondition.evidence?.flatMap((evidence) => evidence.detail ?? []), [
-    { reference: observationEntry.fullUrl },
-  ]);
-
-  assert.equal(encounterEntry.request?.ifMatch, 'W/"7"');
-  assert.deepEqual(pulledEncounter.diagnosis?.map((diagnosisRow) => diagnosisRow.rank), [1, 4, 5]);
-  assert.equal(pulledEncounter.diagnosis?.at(-1)?.condition.reference, conditionEntry.fullUrl);
-
-  assert.deepEqual(pulledObservation.code, sourcePresent.code);
-  assert.equal(pulledObservation.subject?.reference, "Patient/patient-1");
-  assert.equal(pulledObservation.encounter?.reference, "Encounter/current-pull");
-  assert.equal(pulledObservation.status, "preliminary");
-  assert.equal(pulledObservation.valueBoolean, true);
-  assert.deepEqual(pulledObservation.extension, sourcePresent.extension);
-  assert.deepEqual(pulledObservation.component, sourcePresent.component);
-  assert.equal(pulledObservation.focus, undefined);
-  assert.equal(JSON.stringify(pulledObservation).includes("source-staining-present"), false);
-
-  assert.equal(provenance.activity?.coding?.[0]?.code, "CREATE");
-  assert.equal(provenance.activity?.text, "Diagnosis pull-forward");
-  assert.deepEqual(provenance.target.map((target) => target.reference), [
-    conditionEntry.fullUrl,
-    encounterEntry.fullUrl,
-    observationEntry.fullUrl,
-    "Patient/patient-1",
-  ]);
-  assert.deepEqual(provenance.entity?.map((entity) => entity.what.reference), [
-    "Condition/source-dry-eye-od",
-    "Observation/source-staining-present",
-    "Observation/source-filaments-absent",
-    "Observation/source-legacy-no-boolean",
-  ]);
-  assert.deepEqual(provenance.agent.map((agent) => agent.who.reference), ["Practitioner/doc"]);
-
-  const body = await response.json() as Record<string, unknown>;
-  assert.equal(body.conditionReference, "Condition/pulled-condition");
-  assert.equal(body.alreadyPresent, false);
-  assert.equal((body.transaction as Bundle).type, "transaction-response");
+test("pull standalone steps preserve source clinical state, typed facts and rank gaps", async (t) => {
+  const fhir=pullFhir();const sourceCondition=await fhir.read<Condition>("Condition","source-dry-eye-od");
+  const sourcePresent=await fhir.read<Observation>("Observation","source-staining-present");
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");
+  assert.equal(response.status,200,await response.clone().text());assert.equal(fhir.transactions.length,0);
+  assert.deepEqual(fhir.writes.map(w=>[w.resource.resourceType,w.method]),[["Condition","POST"],["Provenance","POST"],["Encounter","PUT"],["Observation","POST"],["Provenance","POST"],["Observation","POST"],["Provenance","POST"],["Provenance","POST"]]);
+  assert.ok(fhir.writes[0].headers["If-None-Exist"]?.startsWith("identifier="));
+  assert.ok(fhir.writes[1].headers["If-None-Exist"]?.startsWith("_tag="));
+  const pulledCondition=fhir.resource<Condition>("Condition","pulled-condition");
+  const pulledEncounter=fhir.resource<Encounter>("Encounter","current-pull");
+  const facts=fhir.resources.filter((r):r is Observation=>r.resourceType==="Observation"&&r.encounter?.reference==="Encounter/current-pull");
+  const pulledObservation=facts.find(o=>o.valueBoolean===true)!;
+  const plan=fhir.resources.find((r):r is Provenance=>r.resourceType==="Provenance"&&r.meta?.tag?.some(t=>t.code?.endsWith(":plan")))!;
+  const witness=fhir.resources.find((r):r is Provenance=>r.resourceType==="Provenance"&&r.meta?.tag?.some(t=>t.code?.endsWith(":findings")))!;
+  assert.deepEqual(pulledCondition.code,sourceCondition.code);assert.deepEqual(pulledCondition.extension,sourceCondition.extension);
+  assert.equal(pulledCondition.subject.reference,"Patient/patient-1");assert.equal(pulledCondition.encounter?.reference,"Encounter/current-pull");
+  assert.equal(pulledCondition.verificationStatus?.coding?.[0]?.code,"confirmed");
+  assert.deepEqual(pulledCondition.identifier?.filter(i=>i.system===DIAGNOSIS_KEY_IDENTIFIER_SYSTEM),[{system:DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,value:"current-pull::dry_eye::right"}]);
+  assert.equal(pulledCondition.identifier?.filter(i=>i.system===CARRY_DIAGNOSIS_SYSTEM).length,1);assert.equal(pulledCondition.evidence,undefined);
+  assert.equal(fhir.writes.find(w=>w.method==="PUT")?.headers["If-Match"],'W/"7"');
+  assert.deepEqual(pulledEncounter.diagnosis?.map(d=>d.rank),[1,4,5]);assert.equal(pulledEncounter.diagnosis?.at(-1)?.condition.reference,"Condition/pulled-condition");
+  assert.equal(facts.length,2);assert.deepEqual(facts.map(o=>o.valueBoolean).sort(),[false,true]);
+  assert.deepEqual(pulledObservation.code.coding?.map(c=>c.code),sourcePresent.code.coding?.map(c=>c.code));
+  assert.equal(pulledObservation.subject?.reference,"Patient/patient-1");assert.equal(pulledObservation.encounter?.reference,"Encounter/current-pull");assert.equal(pulledObservation.status,"preliminary");assert.equal(pulledObservation.valueBoolean,true);
+  assert.deepEqual(pulledObservation.extension?.filter(e=>e.url===ODOS_EXTENSION_URLS.eyeLaterality),sourcePresent.extension?.filter(e=>e.url===ODOS_EXTENSION_URLS.eyeLaterality));
+  assert.deepEqual(pulledObservation.extension?.filter(e=>e.url===SUPPORTS_DIAGNOSIS_URL),[{url:SUPPORTS_DIAGNOSIS_URL,valueReference:{reference:"Condition/pulled-condition"}}]);
+  assert.equal(parseCurrentFindingEnvelope(pulledObservation).status,"valid");assert.equal(pulledObservation.component?.find(c=>c.code.coding?.some(v=>v.code?.endsWith("::grade")))?.valueCodeableConcept?.coding?.[0]?.code,"2+");
+  assert.equal(pulledObservation.focus,undefined);assert.equal(JSON.stringify(pulledObservation).includes("source-staining-present"),false);
+  assert.deepEqual(fhir.resource("Observation","source-staining-present"),sourcePresent);
+  assert.equal(plan.activity?.coding?.[0]?.code,"CREATE");assert.equal(plan.activity?.text,"Diagnosis pull-forward");assert.deepEqual(plan.target.map(t=>t.reference),["Condition/pulled-condition"]);
+  assert.deepEqual(plan.entity?.map(e=>e.what.reference),["Condition/source-dry-eye-od"]);assert.deepEqual(plan.agent.map(a=>a.who.reference),["Practitioner/doc"]);
+  assert.deepEqual(witness.target.map(t=>t.reference).sort(),facts.map(o=>`Observation/${o.id}`).sort());
+  const body=await response.json() as any;assert.equal(body.conditionReference,"Condition/pulled-condition");assert.equal(body.alreadyPresent,false);assert.equal(body.conditionStep,"applied");assert.equal(body.planStep,"applied");assert.equal(body.linkStep,"applied");assert.equal(body.lineageStep,"applied");assert.equal(body.findings.complete,true);
 });
 
 test("pull-forward preserves an existing staged diagnosis code exactly", async (t) => {
@@ -491,441 +445,53 @@ test("pull-forward preserves an existing staged diagnosis code exactly", async (
     method: "POST",
     headers: { Authorization: AUTH_CLINICIAN, "Content-Type": "application/json" },
     body: JSON.stringify({
-      sourceEncounterReference: "Encounter/source-pull",
+      commandId: randomUUID(), sourceEncounterReference: "Encounter/source-pull",
       sourceConditionReference: "Condition/source-dry-eye-od",
     }),
   });
 
   assert.equal(response.status, 200, await response.clone().text());
-  const pulled = fhir.transactions[0]!.bundle.entry?.find((entry) => entry.resource?.resourceType === "Condition")?.resource as Condition;
+  const pulled = fhir.resource<Condition>("Condition", "pulled-condition");
   assert.deepEqual(pulled.code, expectedCode);
   assert.equal(pulled.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value, "current-pull::poag_severe::right");
 });
 
-test("pull puts the optimistic Encounter version guard before every transaction create", async (t) => {
-  const fhir = pullFhir();
-  const base = await startPreviousExamRoutes(t, fhir, "admin");
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 200, await response.clone().text());
-  const entries = fhir.transactions[0]?.bundle.entry ?? [];
-  assert.deepEqual(
-    entries.map((entry) => [entry.resource?.resourceType, entry.request?.method]),
-    [
-      ["Encounter", "PUT"],
-      ["Condition", "POST"],
-      ["Observation", "POST"],
-      ["Provenance", "POST"],
-    ],
-  );
-  assert.equal(entries[0]?.request?.ifMatch, 'W/"7"');
-  assert.equal(entries.slice(1).every((entry) => entry.request?.method === "POST"), true);
+test("pull puts an If-Match guard on the standalone Encounter link after the plan", async(t)=>{
+  const fhir=pullFhir();const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");
+  assert.equal(response.status,200,await response.clone().text());assert.equal(fhir.transactions.length,0);
+  assert.deepEqual(fhir.writes.slice(0,3).map(w=>[w.resource.resourceType,w.method]),[["Condition","POST"],["Provenance","POST"],["Encounter","PUT"]]);
+  assert.equal(fhir.writes[2].headers["If-Match"],'W/"7"');assert.equal(fhir.writes.slice(3).every(w=>w.method==="POST"),true);
 });
 
-test("all-success pull accepts representation-free create locations and an update without a location", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = structuredClone(response);
-    changed.entry?.forEach((entry, index) => {
-      if (index === 0) {
-        delete entry.resource;
-        entry.response = { status: "200 OK" };
-        return;
-      }
-      assert.ok(entry.resource?.id);
-      entry.response = {
-        status: "201 Created",
-        location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
-      };
-      delete entry.resource;
-    });
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 200, await response.clone().text());
-  assert.equal((await response.json() as { conditionReference?: string }).conditionReference, "Condition/pulled-condition");
-  assert.equal(rollback.transactions.length, 0);
-});
-
-test("mixed conflict rolls back representation-free creates by their exact locations", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = mixedConflictTransactionResponse(response);
-    changed.entry?.forEach((entry) => delete entry.resource);
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 409, await response.clone().text());
-  assert.equal(rollback.transactions.length, 1);
-  assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
-    { method: "DELETE", url: "Provenance/pulled-provenance" },
-    { method: "DELETE", url: "Observation/pulled-observation" },
-    { method: "DELETE", url: "Condition/pulled-condition" },
-  ]);
-  assert.deepEqual([...rollback.readReferences].sort(), [
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-});
-
-test("representation-free 201 without a parseable location fails without privileged rollback", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = mixedConflictTransactionResponse(response);
-    changed.entry?.forEach((entry) => delete entry.resource);
-    delete changed.entry?.[1]?.response?.location;
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-  assert.equal(rollback.transactions.length, 0);
-});
-
-test("representation-free 201 with the wrong positional location type fails without privileged rollback", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = mixedConflictTransactionResponse(response);
-    changed.entry?.forEach((entry) => delete entry.resource);
-    changed.entry![1]!.response!.location = "Observation/pulled-condition/_history/1";
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-  assert.equal(rollback.transactions.length, 0);
-});
-
-test("representation-free Observation 201 with the wrong location type fails without privileged rollback", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = structuredClone(response);
-    changed.entry?.forEach((entry, index) => {
-      if (index === 0) {
-        delete entry.resource;
-        entry.response = { status: "200 OK" };
-        return;
-      }
-      assert.ok(entry.resource?.id);
-      entry.response = {
-        status: "201 Created",
-        location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
-      };
-      delete entry.resource;
-    });
-    changed.entry![2]!.response!.location = "Provenance/pulled-observation/_history/1";
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-  assert.equal(rollback.transactions.length, 0);
-});
-
-test("representation-free Observation create returning 200 fails without privileged rollback", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = structuredClone(response);
-    changed.entry?.forEach((entry, index) => {
-      if (index === 0) {
-        delete entry.resource;
-        entry.response = { status: "200 OK" };
-        return;
-      }
-      assert.ok(entry.resource?.id);
-      entry.response = {
-        status: "201 Created",
-        location: `${entry.resource.resourceType}/${entry.resource.id}/_history/1`,
-      };
-      delete entry.resource;
-    });
-    changed.entry![2]!.response!.status = "200 OK";
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-  assert.equal(rollback.transactions.length, 0);
-});
-
-test("represented 201 with a mismatched location id still refuses privileged rollback", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = mixedConflictTransactionResponse(response);
-    changed.entry![1]!.resource!.id = "different-condition-id";
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-  assert.equal(rollback.transactions.length, 0);
-});
-
-test("mixed stale transaction uses only the service rollback for exact generated create locations", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = mixedConflictTransactionResponse;
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 409, await response.clone().text());
-  assert.deepEqual(fhir.transactions[0]?.options, { autoRollbackCreatedEntries: false });
-  assert.equal(rollback.transactions.length, 1);
-  assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
-    { method: "DELETE", url: "Provenance/pulled-provenance" },
-    { method: "DELETE", url: "Observation/pulled-observation" },
-    { method: "DELETE", url: "Condition/pulled-condition" },
-  ]);
-  assert.equal(rollback.readReferences.has("Encounter/current-pull"), false);
-  assert.deepEqual([...rollback.remaining], []);
-});
-
-test("mixed 409 transaction also authorizes only the exact generated create rollback", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = mixedConflictTransactionResponse(response);
-    changed.entry![0]!.response!.status = "409 Conflict";
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 409, await response.clone().text());
-  assert.equal(rollback.transactions.length, 1);
-  assert.deepEqual([...rollback.remaining], []);
-});
-
-test("guarded Encounter conflict compensates only validated creates around a later POST failure", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = (response) => {
-    const changed = mixedConflictTransactionResponse(response);
-    changed.entry![2]!.response!.status = "500 Internal Server Error";
-    return changed;
-  };
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Provenance/pulled-provenance",
-  ]);
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-  assert.deepEqual(rollback.transactions[0]?.entry?.map((entry) => entry.request), [
-    { method: "DELETE", url: "Provenance/pulled-provenance" },
-    { method: "DELETE", url: "Condition/pulled-condition" },
-  ]);
-  assert.deepEqual([...rollback.remaining], []);
-});
-
-for (const mutation of [
-  "same-type-wrong-id",
-  "non-mixed-invalid",
-  "wrong-full-url",
-  "wrong-response-order",
-  "wrong-location-id",
-  "invalid-fhir-id",
-  "invalid-http-status",
-  "encounter-200-before-later-500",
-  "encounter-201-before-later-500",
-  "encounter-1xx-before-later-500",
-  "encounter-500",
-  "later-1xx",
-  "later-3xx",
-  "later-missing-status",
-  "later-malformed-status",
-] as const) {
-  test(`mixed transaction makes zero service rollback calls for ${mutation}`, async (t) => {
-    const fhir = pullFhir();
-    if (mutation === "wrong-full-url") {
-      fhir.transactionRequestMutator = (request) => {
-        request.entry![1]!.fullUrl = "urn:uuid:not-a-generated-uuid";
-      };
-    }
-    fhir.transactionResponseMutator = (response) => {
-      const changed = mixedConflictTransactionResponse(response);
-      if (mutation === "same-type-wrong-id") {
-        changed.entry![1]!.resource!.id = "different-condition-id";
-      } else if (mutation === "non-mixed-invalid") {
-        changed.type = "batch-response";
-        changed.entry![0]!.response!.status = "200 OK";
-      } else if (mutation === "wrong-response-order") {
-        [changed.entry![1], changed.entry![2]] = [changed.entry![2]!, changed.entry![1]!];
-      } else if (mutation === "wrong-location-id") {
-        changed.entry![1]!.response!.location = "Condition/different-condition-id/_history/1";
-      } else if (mutation === "invalid-fhir-id") {
-        changed.entry![1]!.resource!.id = "invalid$id";
-        changed.entry![1]!.response!.location = "Condition/invalid$id/_history/1";
-      } else if (mutation === "invalid-http-status") {
-        changed.entry![0]!.response!.status = "999 Not HTTP";
-      } else if (mutation === "encounter-200-before-later-500") {
-        changed.entry![0]!.response!.status = "200 OK";
-        changed.entry![2]!.response!.status = "500 Internal Server Error";
-      } else if (mutation === "encounter-201-before-later-500") {
-        changed.entry![0]!.response!.status = "201 Created";
-        changed.entry![2]!.response!.status = "500 Internal Server Error";
-      } else if (mutation === "encounter-1xx-before-later-500") {
-        changed.entry![0]!.response!.status = "102 Processing";
-        changed.entry![2]!.response!.status = "500 Internal Server Error";
-      } else if (mutation === "encounter-500") {
-        changed.entry![0]!.response!.status = "500 Internal Server Error";
-      } else if (mutation === "later-1xx") {
-        changed.entry![2]!.response!.status = "102 Processing";
-      } else if (mutation === "later-3xx") {
-        changed.entry![2]!.response!.status = "302 Found";
-      } else if (mutation === "later-missing-status") {
-        delete changed.entry![2]!.response!.status;
-      } else if (mutation === "later-malformed-status") {
-        changed.entry![2]!.response!.status = "not-an-http-status";
-      }
-      return changed;
+for(const phase of ["condition","plan","link","fact","audit","witness"] as const)for(const status of [403,409,412,500,503] as const){
+  test(`standalone ${phase} failure ${status} keeps exact persisted state without privileged compensation`,async(t)=>{
+    const fhir=pullFhir();const rollback=new MemoryRollbackFhir([]);let blocked=false;
+    fhir.beforeWrite=(resource)=>{
+      const tag=resource.meta?.tag?.find(t=>t.system===CARRY_COMMAND_SYSTEM)?.code;
+      const hit=phase==="condition"?resource.resourceType==="Condition":phase==="plan"?tag?.endsWith(":plan"):phase==="link"?resource.resourceType==="Encounter":phase==="fact"?resource.resourceType==="Observation":phase==="audit"?resource.resourceType==="Provenance"&&!tag:tag?.endsWith(":findings");
+      if(hit){blocked=true;throw Object.assign(new Error("Synthetic standalone failure"),{status});}
     };
-    const rollback = new MemoryRollbackFhir([
-      "Condition/pulled-condition",
-      "Observation/pulled-observation",
-      "Provenance/pulled-provenance",
-    ]);
-    const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-    const response = await postPull(base, "source-dry-eye-od");
-
-    assert.equal(response.status, 502, `${mutation}: ${await response.clone().text()}`);
-    assert.equal(rollback.transactions.length, 0, mutation);
+    const base=await startPreviousExamRoutes(t,fhir,"admin",rollback);const commandId=randomUUID();
+    const send=()=>fetch(`${base}/clinical-graph/encounters/current-pull/previous-exams`,{method:"POST",headers:{Authorization:AUTH_CLINICIAN,"Content-Type":"application/json"},body:JSON.stringify({commandId,sourceEncounterReference:"Encounter/source-pull",sourceConditionReference:"Condition/source-dry-eye-od"})});
+    const first=await send();const body=await first.json() as any;assert.equal(blocked,true);assert.notEqual(first.status,200,JSON.stringify(body));
+    assert.equal(fhir.transactions.length,0);assert.equal(rollback.transactions.length,0);assert.equal(rollback.readReferences.size,0);
+    const conditions=fhir.resources.filter(r=>r.resourceType==="Condition"&&r.id==="pulled-condition");assert.equal(conditions.length,phase==="condition"?0:1);
+    if(phase!=="condition")assert.equal(body.conditionReference,"Condition/pulled-condition");
+    const witnessed=fhir.resources.filter(r=>r.resourceType==="Provenance"&&r.meta?.tag?.some(t=>t.code?.endsWith(":findings")));assert.equal(witnessed.length,0);
+    fhir.beforeWrite=undefined;const resumed=await send();assert.equal(resumed.status,200,await resumed.clone().text());
+    assert.equal(fhir.resources.filter(r=>r.resourceType==="Condition"&&r.id==="pulled-condition").length,1);
+    assert.equal(fhir.resources.filter(r=>r.resourceType==="Observation"&&(r as Observation).encounter?.reference==="Encounter/current-pull").length,2);
+    assert.equal(fhir.resources.filter(r=>r.resourceType==="Provenance"&&r.meta?.tag?.some(t=>t.code?.endsWith(":findings"))).length,1);
   });
 }
-
-test("mixed stale transaction fails closed when privileged rollback is absent", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = mixedConflictTransactionResponse;
-  const base = await startPreviousExamRoutes(t, fhir, "admin");
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
-});
-
-for (const mutation of ["wrong-location-type", "delete-failure", "still-readable"] as const) {
-  test(`mixed stale transaction fails closed for ${mutation} rollback evidence`, async (t) => {
-    const fhir = pullFhir();
-    fhir.transactionResponseMutator = (response) => {
-      const changed = mixedConflictTransactionResponse(response);
-      if (mutation === "wrong-location-type") {
-        changed.entry![1]!.response!.location = "Patient/not-a-generated-condition/_history/1";
-      }
-      return changed;
-    };
-    const rollback = new MemoryRollbackFhir([
-      "Condition/pulled-condition",
-      "Observation/pulled-observation",
-      "Provenance/pulled-provenance",
-    ]);
-    rollback.failDelete = mutation === "delete-failure";
-    rollback.keepReadable = mutation === "still-readable";
-    const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-    const response = await postPull(base, "source-dry-eye-od");
-
-    assert.equal(response.status, 502, `${mutation}: ${await response.clone().text()}`);
-    if (mutation === "wrong-location-type") assert.equal(rollback.transactions.length, 0);
-  });
-}
-
-for (const status of ["201 Created", "202 Accepted", "206 Partial Content", "226 IM Used"] as const) {
-  test(`mixed stale transaction rejects rollback DELETE status ${status}`, async (t) => {
-    const fhir = pullFhir();
-    fhir.transactionResponseMutator = mixedConflictTransactionResponse;
-    const rollback = new MemoryRollbackFhir([
-      "Condition/pulled-condition",
-      "Observation/pulled-observation",
-      "Provenance/pulled-provenance",
-    ]);
-    rollback.deleteStatus = status;
-    const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-    const response = await postPull(base, "source-dry-eye-od");
-
-    assert.equal(response.status, 502, `${status}: ${await response.clone().text()}`);
-  });
-}
-
-test("mixed stale transaction rejects message-only 404 rollback verification", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionResponseMutator = mixedConflictTransactionResponse;
-  const rollback = new MemoryRollbackFhir([
-    "Condition/pulled-condition",
-    "Observation/pulled-observation",
-    "Provenance/pulled-provenance",
-  ]);
-  rollback.readError = new Error("FHIR 404 synthetic message without numeric status");
-  const base = await startPreviousExamRoutes(t, fhir, "admin", rollback);
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 502, await response.clone().text());
+for(const malformed of ["missing-id","wrong-type","wrong-id","wrong-scope"] as const)test(`conditional Condition ${malformed} response is resolved only by an exact owner read`,async(t)=>{
+  const fhir=pullFhir();fhir.createResultMutator=resource=>{
+    if(resource.resourceType!=="Condition")return resource;
+    const copy=structuredClone(resource);if(malformed==="missing-id")delete copy.id;else if(malformed==="wrong-type")return {resourceType:"Observation",id:copy.id} as Observation;else if(malformed==="wrong-id")copy.id="foreign";else copy.subject={reference:"Patient/foreign"};return copy;
+  };
+  const rollback=new MemoryRollbackFhir([]);const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin",rollback),"source-dry-eye-od");
+  assert.equal(response.status,200,await response.clone().text());assert.equal(fhir.transactions.length,0);assert.equal(rollback.transactions.length,0);
+  assert.equal((await response.json() as any).conditionReference,"Condition/pulled-condition");assert.equal(fhir.resources.filter(r=>r.resourceType==="Condition"&&r.id==="pulled-condition").length,1);
 });
 
 test("pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction", async (t) => {
@@ -972,7 +538,7 @@ test("pull does not treat an existing OD diagnosis as the requested OS identity"
 
   assert.equal(response.status, 200, await response.clone().text());
   assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
-  assert.equal(fhir.transactions.length, 1);
+  assert.equal(fhir.transactions.length, 0);
 });
 
 test("pull ignores a matching Condition that does not belong to the current Encounter", async (t) => {
@@ -993,7 +559,7 @@ test("pull ignores a matching Condition that does not belong to the current Enco
 
   assert.equal(response.status, 200, await response.clone().text());
   assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
-  assert.equal(fhir.transactions.length, 1);
+  assert.equal(fhir.transactions.length, 0);
 });
 
 test("pull treats a catalog stable key and recorded laterality as identity despite changed literal coding and text", async (t) => {
@@ -1073,7 +639,7 @@ test("pull keeps uncataloged diagnoses distinct when their literal text differs"
 
   assert.equal(response.status, 200, await response.clone().text());
   assert.equal((await response.json() as { alreadyPresent: boolean }).alreadyPresent, false);
-  assert.equal(fhir.transactions.length, 1);
+  assert.equal(fhir.transactions.length, 0);
 });
 
 test("pull uses the recorded Condition bodySite instead of a stale catalog identifier laterality", async (t) => {
@@ -1161,71 +727,23 @@ test("pull rejects source patient, diagnosis membership, and retracted-condition
   }
 });
 
-test("pull rejects failed transaction entries and maps precondition failures to 409", async (t) => {
-  for (const failureStatus of ["412 Precondition Failed", "500 Internal Server Error"] as const) {
-    const fhir = pullFhir();
-    fhir.transactionFailureStatus = failureStatus;
-    const base = await startPreviousExamRoutes(t, fhir, "admin");
-
-    const response = await postPull(base, "source-dry-eye-od");
-
-    assert.equal(response.status, failureStatus.startsWith("412") ? 409 : 502, await response.text());
-    assert.equal(fhir.transactions.length, 1);
+test("standalone Condition failure maps precondition failures to 409", async(t)=>{
+  for(const status of [412,500]){const fhir=pullFhir();fhir.beforeWrite=resource=>{if(resource.resourceType==="Condition")throw Object.assign(new Error("Synthetic create error"),{status});};
+    const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,status===412?409:502,await response.clone().text());assert.equal(fhir.transactions.length,0);assert.equal(fhir.writes.length,1);assert.equal((await response.json() as any).conditionStep,"unconfirmed");
   }
 });
-
-for (const malformed of [
-  {
-    name: "a non-Bundle resource discriminator",
-    mutate: (response: Bundle) => ({
-      ...response,
-      resourceType: "OperationOutcome",
-    }) as unknown as Bundle,
-  },
-  {
-    name: "a non-transaction-response Bundle",
-    mutate: (response: Bundle) => ({ ...response, type: "batch-response" as Bundle["type"] }),
-  },
-  {
-    name: "a truncated transaction response",
-    mutate: (response: Bundle) => ({ ...response, entry: response.entry?.slice(0, -1) }),
-  },
-  {
-    name: "a transaction entry without status",
-    mutate: (response: Bundle) => {
-      const changed = structuredClone(response);
-      delete changed.entry?.[1]?.response?.status;
-      return changed;
-    },
-  },
-  {
-    name: "a 3xx transaction entry",
-    mutate: (response: Bundle) => {
-      const changed = structuredClone(response);
-      changed.entry![1]!.response!.status = "302 Found";
-      return changed;
-    },
-  },
-  {
-    name: "transaction entries in the wrong resource order",
-    mutate: (response: Bundle) => {
-      const changed = structuredClone(response);
-      [changed.entry![2], changed.entry![3]] = [changed.entry![3]!, changed.entry![2]!];
-      return changed;
-    },
-  },
-] as const) {
-  test(`pull rejects ${malformed.name}`, async (t) => {
-    const fhir = pullFhir();
-    fhir.transactionResponseMutator = malformed.mutate;
-    const base = await startPreviousExamRoutes(t, fhir, "admin");
-
-    const response = await postPull(base, "source-dry-eye-od");
-
-    assert.equal(response.status, 502, await response.text());
-    assert.equal(fhir.transactions.length, 1);
-  });
-}
+for(const malformed of ["non-Bundle","non-searchset","missing-resource","missing-id","wrong-type","duplicate-owner"] as const)test(`pull refuses malformed conditional owner lookup ${malformed}`,async(t)=>{
+  const fhir=pullFhir();fhir.searchResultMutator=(type,bundle)=>{
+    if(type!=="Condition"||fhir.writes.length)return bundle;
+    if(malformed==="non-Bundle")return {...bundle,resourceType:"OperationOutcome"} as any;
+    if(malformed==="non-searchset")return {...bundle,type:"batch-response"};
+    if(malformed==="missing-resource")return {...bundle,entry:[{}]};
+    if(malformed==="missing-id")return {...bundle,entry:[{resource:{resourceType:"Condition"} as Condition}]};
+    if(malformed==="wrong-type")return {...bundle,entry:[{resource:{resourceType:"Patient",id:"foreign"}}]};
+    return {...bundle,entry:[{resource:{resourceType:"Condition",id:"duplicate"} as Condition},{resource:{resourceType:"Condition",id:"duplicate-2"} as Condition}]};
+  };
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.notEqual(response.status,200);assert.equal(fhir.transactions.length,0);assert.equal(fhir.writes.length,0);
+});
 
 for (const missing of [
   { name: "current Encounter", reference: "Encounter/current-pull" },
@@ -1259,16 +777,9 @@ test("pull maps a patient-compartment source read denial to a non-leaking 403", 
   assert.equal(fhir.transactions.length, 0);
 });
 
-test("pull maps a missing source evidence Observation to a non-leaking 404", async (t) => {
-  const fhir = pullFhir();
-  fhir.readFailures.set("Observation/source-staining-present", 404);
-  const base = await startPreviousExamRoutes(t, fhir, "admin");
-
-  const response = await postPull(base, "source-dry-eye-od");
-
-  assert.equal(response.status, 404);
-  assert.deepEqual(await response.json(), { error: "Diagnosis pull resources were not found." });
-  assert.equal(fhir.transactions.length, 0);
+test("pull maps unavailable canonical source findings to a non-leaking 404",async(t)=>{
+  const fhir=pullFhir();const search=fhir.search.bind(fhir);fhir.search=async(type,params)=>{if(type==="Observation"&&params?.encounter==="Encounter/source-pull")throw Object.assign(new Error("Source search missing"),{status:404});return search(type,params);};
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,404);assert.deepEqual(await response.json(),{error:"Encounter search resource is missing."});assert.equal(fhir.transactions.length,0);assert.equal(fhir.writes.length,0);
 });
 
 test("pull maps a gone source Condition to the same non-leaking 404", async (t) => {
@@ -1317,16 +828,15 @@ test("pull rejects source evidence for another patient", async (t) => {
   const fhir = pullFhir();
   fhir.resource<Observation>("Observation", "source-staining-present").subject = { reference: "Patient/other" };
   const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
-  assert.equal(response.status, 409, await response.text());
+  assert.equal(response.status, 502, await response.text());
   assert.equal(fhir.transactions.length, 0);
+  assert.equal(fhir.writes.length, 0);
 });
 
-test("pull rejects source evidence declaring another Encounter", async (t) => {
-  const fhir = pullFhir();
-  fhir.resource<Observation>("Observation", "source-staining-present").encounter = { reference: "Encounter/other" };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
-  assert.equal(response.status, 409, await response.text());
-  assert.equal(fhir.transactions.length, 0);
+test("pull refuses a foreign-Encounter canonical fact returned by the source search",async(t)=>{
+  const fhir=pullFhir();const foreign=fhir.resource<Observation>("Observation","source-staining-present");foreign.encounter={reference:"Encounter/other"};
+  fhir.searchResultMutator=(type,bundle)=>type==="Observation"?{...bundle,entry:[...(bundle.entry??[]),{resource:structuredClone(foreign)}]}:bundle;
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,502,await response.clone().text());assert.equal(fhir.transactions.length,0);assert.equal(fhir.writes.length,0);
 });
 
 test("pull rejects an entered-in-error source Condition", async (t) => {
@@ -1339,19 +849,11 @@ test("pull rejects an entered-in-error source Condition", async (t) => {
   assert.equal(fhir.transactions.length, 0);
 });
 
-test("pull excludes an entered-in-error source Observation", async (t) => {
-  const fhir = pullFhir();
-  fhir.resource<Observation>("Observation", "source-staining-present").status = "entered-in-error";
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
-  assert.equal(response.status, 200, await response.clone().text());
-  const transaction = fhir.transactions[0]!.bundle;
-  assert.deepEqual(transaction.entry?.map((entry) => entry.resource?.resourceType), [
-    "Encounter",
-    "Condition",
-    "Provenance",
-  ]);
-  assert.deepEqual((transaction.entry?.[1]?.resource as Condition).evidence, undefined);
-  assert.equal(JSON.stringify(transaction.entry?.at(-1)?.resource).includes("source-staining-present"), false);
+test("pull excludes an entered-in-error source Observation",async(t)=>{
+  const fhir=pullFhir();fhir.resource<Observation>("Observation","source-staining-present").status="entered-in-error";
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,200,await response.clone().text());
+  const facts=fhir.resources.filter((r):r is Observation=>r.resourceType==="Observation"&&r.encounter?.reference==="Encounter/current-pull");assert.equal(facts.length,1);assert.equal(facts[0].valueBoolean,false);
+  assert.equal(facts.some(o=>o.code.coding?.some(c=>c.code?.endsWith("::nuclear-sclerosis"))),false);assert.equal(fhir.transactions.length,0);
 });
 
 test("pull rejects an entered-in-error source Encounter", async (t) => {
@@ -1419,41 +921,22 @@ test("a repeated exact pull returns the current Condition without a transaction"
   assert.equal(fhir.transactions.length, 0);
 });
 
-test("a transaction conflict re-read returns the concurrently created exact Condition", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionErrorStatus = 412;
-  fhir.beforeTransaction = () => {
-    const current = diagnosis("current-conflict-dry-eye-od", "current-pull", "dry_eye", "right", "confirmed", []);
-    current.extension = structuredClone(fhir.resource<Condition>("Condition", "source-dry-eye-od").extension);
-    fhir.resources.push(current);
-    fhir.resource<Encounter>("Encounter", "current-pull").diagnosis!.push(
-      buildEncounterDiagnosisComponent("Condition/current-conflict-dry-eye-od", 5),
-    );
-  };
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
-  assert.equal(response.status, 200, await response.clone().text());
-  assert.deepEqual(await response.json(), {
-    conditionReference: "Condition/current-conflict-dry-eye-od",
-    alreadyPresent: true,
-  });
-  assert.equal(fhir.transactions.length, 1);
+test("a standalone link conflict re-read accepts the concurrently linked exact carried Condition",async(t)=>{
+  const fhir=pullFhir();fhir.beforeWrite=resource=>{if(resource.resourceType==="Encounter"){
+    fhir.resource<Encounter>("Encounter","current-pull").diagnosis=structuredClone(resource.diagnosis);throw Object.assign(new Error("Concurrent exact link"),{status:412});
+  }};
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,200,await response.clone().text());const body=await response.json() as any;
+  assert.equal(body.conditionReference,"Condition/pulled-condition");assert.equal(body.linkStep,"applied");assert.equal(body.lineageStep,"applied");assert.equal(fhir.transactions.length,0);
 });
-
-test("a transaction conflict without the exact identity returns 409", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionErrorStatus = 412;
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
-  assert.equal(response.status, 409, await response.text());
-  assert.equal(fhir.transactions.length, 1);
+test("a standalone link conflict without the exact link returns 409 and preserves resumable plan",async(t)=>{
+  const fhir=pullFhir();fhir.beforeWrite=resource=>{if(resource.resourceType==="Encounter")throw Object.assign(new Error("Concurrent different link"),{status:412});};
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,409,await response.clone().text());const body=await response.json() as any;
+  assert.equal(body.conditionReference,"Condition/pulled-condition");assert.equal(body.conditionStep,"applied");assert.equal(body.planStep,"applied");assert.equal(body.linkStep,"unconfirmed");assert.equal(fhir.transactions.length,0);
 });
-
-test("a transaction conflict whose current Encounter disappeared returns 409", async (t) => {
-  const fhir = pullFhir();
-  fhir.transactionErrorStatus = 412;
-  fhir.beforeTransaction = () => fhir.remove("Encounter/current-pull");
-  const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
-  assert.equal(response.status, 409, await response.text());
-  assert.equal(fhir.transactions.length, 1);
+test("a standalone link conflict with unreadable destination reports unconfirmed retained state",async(t)=>{
+  const fhir=pullFhir();fhir.beforeWrite=resource=>{if(resource.resourceType==="Encounter"){fhir.remove("Encounter/current-pull");throw Object.assign(new Error("Concurrent deleted encounter"),{status:412});}};
+  const response=await postPull(await startPreviousExamRoutes(t,fhir,"admin"),"source-dry-eye-od");assert.equal(response.status,502,await response.clone().text());const body=await response.json() as any;
+  assert.equal(body.conditionReference,"Condition/pulled-condition");assert.equal(body.planStep,"applied");assert.equal(body.linkStep,"unconfirmed");assert.equal(fhir.transactions.length,0);
 });
 
 test("a conflict reread never returns an exact diagnosis from an entered-in-error current Encounter", async (t) => {
@@ -1476,10 +959,10 @@ test("a conflict reread never returns an exact diagnosis from an entered-in-erro
   const response = await postPull(await startPreviousExamRoutes(t, fhir, "admin"), "source-dry-eye-od");
 
   assert.equal(response.status, 409, await response.text());
-  assert.equal(fhir.transactions.length, 1);
+  assert.equal(fhir.transactions.length, 0);
 });
 
-test("live ordinary-clinician policy persists and reads diagnosis carry while preserving atomic conflict rollback", { timeout: 90_000 }, async (t) => {
+test("live ordinary-clinician policy persists standalone carry and resumes an Encounter link conflict", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
   const credentials = requireMedplumAdmin(
@@ -1544,6 +1027,15 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       }),
       extension: [{ url: ODOS_EXTENSION_URLS.eyeLaterality, valueCodeableConcept: lateralityConcept("OD") }],
     }));
+    const canonicalize = async (observation: Observation, optionCode: string, home: string) => {
+      const key = {...keyFor("OD", optionCode),patientId:patient.id!,encounterId:observation.encounter!.reference!.slice(10)};
+      await adminFhir.update<Observation>("Observation", observation.id!, {...observation,identifier:[...(observation.identifier??[]),currentFindingIdentifier(key)],
+        code:{coding:[{system:ODOS_OPHTHALMOLOGY_CODE_SYSTEM,code:`${key.stableKey}::${key.fieldCode}::${key.optionCode}`}]},
+        component:[...(observation.component??[]),comp("R10_CURRENT_META",JSON.stringify(key))],
+        extension:[...(observation.extension??[]),{url:ODOS_EXTENSION_URLS.eyeLaterality,valueCodeableConcept:lateralityConcept("OD")},{url:SUPPORTS_DIAGNOSIS_URL,valueReference:{reference:home}}]});
+    };
+    await canonicalize(present,"nuclear-sclerosis",`Condition/${sourceCondition.id}`);
+    await canonicalize(absent,"cortical-cataract",`Condition/${sourceCondition.id}`);
     await adminFhir.update<Encounter>("Encounter", sourceEncounter.id!, {
       ...sourceEncounter,
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${sourceCondition.id}`, 1)],
@@ -1607,48 +1099,27 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       authHeader: "Bearer synthetic-live-proof",
       params: { encounterId: currentEncounter.id },
       body: {
-        sourceEncounterReference: `Encounter/${sourceEncounter.id}`,
+        commandId: randomUUID(), sourceEncounterReference: `Encounter/${sourceEncounter.id}`,
         sourceConditionReference: `Condition/${sourceCondition.id}`,
       },
     });
-    const successfulBody = result.body as { conditionReference: string; transaction: Bundle };
-    captureTransactionResponseReferences(successfulBody.transaction, cleanupReferences);
+    const successfulBody = result.body as any;
     assert.equal(result.status, 200, JSON.stringify(result.body));
-    assert.equal(successfulBody.transaction.type, "transaction-response");
-    assert.equal(successfulBody.transaction.entry?.length, 4);
-    assert.ok(successfulBody.transaction.entry?.every((entry) => entry.response?.status?.match(/^2\d\d(?:\s|$)/)));
-    const pulledConditionId = successfulBody.conditionReference.split("/")[1]!;
-    const persistedCondition = await clinicianFhir.read<Condition>("Condition", pulledConditionId);
-    const persistedEncounter = await clinicianFhir.read<Encounter>("Encounter", currentEncounter.id!);
-    const persistedObservation = successfulBody.transaction.entry?.find((entry) =>
-      entry.resource?.resourceType === "Observation"
-    )?.resource as Observation | undefined;
-    const persistedProvenance = successfulBody.transaction.entry?.find((entry) =>
-      entry.resource?.resourceType === "Provenance"
-    )?.resource as Provenance | undefined;
-    assert.ok(persistedObservation?.id);
-    assert.ok(persistedProvenance?.id);
-    const reloadedObservation = await clinicianFhir.read<Observation>("Observation", persistedObservation.id);
-    const reloadedProvenance = await clinicianFhir.read<Provenance>("Provenance", persistedProvenance.id);
-    assert.equal(persistedCondition.encounter?.reference, `Encounter/${currentEncounter.id}`);
-    assert.equal(persistedCondition.verificationStatus?.coding?.[0]?.code, "confirmed");
-    assert.deepEqual(persistedCondition.evidence?.[0]?.detail?.map((detail) => detail.reference), [
-      `Observation/${persistedObservation.id}`,
-    ]);
-    assert.equal(persistedEncounter.diagnosis?.at(-1)?.condition.reference, `Condition/${persistedCondition.id}`);
-    assert.equal(reloadedObservation.status, "preliminary");
-    assert.equal(reloadedObservation.valueBoolean, true);
-    assert.equal(reloadedObservation.focus, undefined);
-    assert.equal(reloadedProvenance.activity?.text, "Diagnosis pull-forward");
-    assert.deepEqual(reloadedProvenance.entity?.map((entity) => entity.what.reference), [
-      `Condition/${sourceCondition.id}`,
-      `Observation/${present.id}`,
-      `Observation/${absent.id}`,
-    ]);
-    assert.equal(reloadedProvenance.target.some((target) => target.reference === patientReference), true);
-    const carryState = await readDiagnosisCarryState(clinicianFhir, persistedCondition, [reloadedObservation]);
-    assert.equal(carryState.edited, false, carryState.integrityWarning);
-    assert.equal(carryState.pulledFromDate, sourceEncounter.period?.start);
+    assert.equal(successfulBody.conditionStep,"applied");assert.equal(successfulBody.planStep,"applied");assert.equal(successfulBody.linkStep,"applied");assert.equal(successfulBody.lineageStep,"applied");
+    assert.equal(successfulBody.findings.outcomes.length,2);assert.equal(successfulBody.findings.complete,true);
+    const persistedCondition=await clinicianFhir.read<Condition>("Condition",successfulBody.conditionReference.split("/")[1]);track(persistedCondition);
+    const persistedEncounter=await clinicianFhir.read<Encounter>("Encounter",currentEncounter.id!);
+    const persistedObservations=await allSearchResources<Observation>(clinicianFhir,"Observation",{encounter:`Encounter/${currentEncounter.id}`});persistedObservations.forEach(track);
+    assert.equal(persistedObservations.length,2);const reloadedObservation=persistedObservations.find(o=>o.valueBoolean===true)!;assert.ok(reloadedObservation.id);
+    const planRows=await allSearchResources<Provenance>(clinicianFhir,"Provenance",{target:successfulBody.conditionReference});planRows.forEach(track);
+    const reloadedProvenance=planRows.find(p=>p.meta?.tag?.some(t=>t.code?.endsWith(":plan")))!;assert.ok(reloadedProvenance?.id);
+    assert.equal(persistedCondition.encounter?.reference,`Encounter/${currentEncounter.id}`);assert.equal(persistedCondition.verificationStatus?.coding?.[0]?.code,"confirmed");assert.equal(persistedCondition.evidence,undefined);
+    assert.equal(persistedEncounter.diagnosis?.at(-1)?.condition.reference,`Condition/${persistedCondition.id}`);
+    assert.equal(reloadedObservation.status,"preliminary");assert.equal(reloadedObservation.valueBoolean,true);assert.equal(reloadedObservation.focus,undefined);assert.equal(parseCurrentFindingEnvelope(reloadedObservation).status,"valid");
+    assert.deepEqual(reloadedObservation.extension?.filter(e=>e.url===SUPPORTS_DIAGNOSIS_URL).map(e=>e.valueReference?.reference),[successfulBody.conditionReference]);
+    assert.equal(reloadedProvenance.activity?.text,"Diagnosis pull-forward");assert.deepEqual(reloadedProvenance.entity?.map(e=>e.what.reference),[`Condition/${sourceCondition.id}`]);assert.deepEqual(reloadedProvenance.target.map(t=>t.reference),[successfulBody.conditionReference]);
+    const carryState=await readCarryState(clinicianFhir,persistedCondition,persistedObservations);
+    assert.equal(carryState.edited,false,carryState.integrityWarning);assert.equal(carryState.pulledFromDate,sourceEncounter.period?.start);
 
     const conflictSourceEncounter = track(await adminFhir.create<Encounter>(
       syntheticEncounter(patientReference, system, `conflict-source-${runId}`),
@@ -1675,39 +1146,19 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       }],
       evidenceObservationReferences: [`Observation/${conflictEvidence.id}`],
     })));
+    await canonicalize(conflictEvidence,"nuclear-sclerosis",`Condition/${conflictCondition.id}`);
     await adminFhir.update<Encounter>("Encounter", conflictSourceEncounter.id!, {
       ...conflictSourceEncounter,
       diagnosis: [buildEncounterDiagnosisComponent(`Condition/${conflictCondition.id}`, 1)],
     });
 
-    let injectedConflict = false;
-    let conflictResponseSummary: unknown;
-    const conflictFhir: DiagnosisCarryForwardFhirClient = {
-      read: (resourceType, id) => clinicianFhir.read(resourceType, id),
-      search: (resourceType, params) => clinicianFhir.search(resourceType, params),
-      searchUrl: (url, resourceType) => clinicianFhir.searchUrl!(url, resourceType),
-      executeTransaction: async (bundle, headers, options) => {
-        if (!injectedConflict) {
-          injectedConflict = true;
-          const fresh = await adminFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
-          await adminFhir.update<Encounter>("Encounter", conflictCurrentEncounter.id!, {
-            ...fresh,
-            extension: [...(fresh.extension ?? []), { url: system, valueString: `race-${runId}` }],
-          });
-        }
-        const response = await clinicianFhir.executeTransaction(bundle, headers, options);
-        captureTransactionResponseReferences(response, cleanupReferences);
-        conflictResponseSummary = {
-          type: response.type,
-          entries: response.entry?.map((entry) => ({
-            status: entry.response?.status,
-            resourceType: entry.resource?.resourceType,
-            location: entry.response?.location,
-          })),
-        };
-        return response;
-      },
-    };
+    let injectedConflict=false;
+    const conflictFhir:DiagnosisCarryForwardFhirClient={...clinicianFhir,update:async(type,id,resource,headers)=>{
+      if(type==="Encounter"&&!injectedConflict){injectedConflict=true;const fresh=await adminFhir.read<Encounter>("Encounter",conflictCurrentEncounter.id!);
+        await adminFhir.update<Encounter>("Encounter",fresh.id!,{...fresh,extension:[...(fresh.extension??[]),{url:system,valueString:`race-${runId}`}]});}
+      return clinicianFhir.update(type,id,resource,headers);
+    }};
+    const conflictCommandId=randomUUID();
     const originalFetch = globalThis.fetch;
     let clinicianDeleteRequests = 0;
     globalThis.fetch = async (input, init) => {
@@ -1733,7 +1184,7 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
         authHeader: "Bearer synthetic-live-proof",
         params: { encounterId: conflictCurrentEncounter.id },
         body: {
-          sourceEncounterReference: `Encounter/${conflictSourceEncounter.id}`,
+          commandId: conflictCommandId, sourceEncounterReference: `Encounter/${conflictSourceEncounter.id}`,
           sourceConditionReference: `Condition/${conflictCondition.id}`,
         },
       });
@@ -1741,14 +1192,16 @@ test("live ordinary-clinician policy persists and reads diagnosis carry while pr
       globalThis.fetch = originalFetch;
     }
     assert.equal(clinicianDeleteRequests, 0, "Ordinary clinician token must never send compensating DELETE.");
-    assert.equal(
-      conflictResult.status,
-      409,
-      JSON.stringify({ body: conflictResult.body, transaction: conflictResponseSummary }),
-    );
-    const rolledBackEncounter = await clinicianFhir.read<Encounter>("Encounter", conflictCurrentEncounter.id!);
-    assert.deepEqual(rolledBackEncounter.diagnosis, undefined);
-    await assertNoTransactionLeaks(adminFhir, conflictCurrentEncounter.id!, conflictResponseSummary);
+    assert.equal(conflictResult.status,409,JSON.stringify(conflictResult.body));
+    const conflictBody=conflictResult.body as any;assert.equal(conflictBody.conditionStep,"applied");assert.equal(conflictBody.planStep,"applied");assert.equal(conflictBody.linkStep,"unconfirmed");assert.equal(conflictBody.lineageStep,"not-attempted");
+    const unlinkedEncounter=await clinicianFhir.read<Encounter>("Encounter",conflictCurrentEncounter.id!);assert.deepEqual(unlinkedEncounter.diagnosis,undefined);
+    const retainedConditions=await allSearchResources<Condition>(clinicianFhir,"Condition",{encounter:`Encounter/${conflictCurrentEncounter.id}`});retainedConditions.forEach(track);assert.equal(retainedConditions.length,1);assert.equal(`Condition/${retainedConditions[0].id}`,conflictBody.conditionReference);
+    const noFacts=await allSearchResources<Observation>(clinicianFhir,"Observation",{encounter:`Encounter/${conflictCurrentEncounter.id}`});assert.deepEqual(noFacts,[]);
+    const resumed=await handleDiagnosisPullRequest({fhirBaseUrl:baseUrl,authenticate:async()=>({staffReference:`Practitioner/${practitioner.id}`,actorRole:"provider",fhir:conflictFhir})},
+      {authHeader:"Bearer synthetic-live-proof",params:{encounterId:conflictCurrentEncounter.id},body:{commandId:conflictCommandId,sourceEncounterReference:`Encounter/${conflictSourceEncounter.id}`,sourceConditionReference:`Condition/${conflictCondition.id}`}});
+    assert.equal(resumed.status,200,JSON.stringify(resumed.body));assert.equal((resumed.body as any).conditionReference,conflictBody.conditionReference);assert.equal((resumed.body as any).lineageStep,"applied");
+    assert.equal((await allSearchResources<Condition>(clinicianFhir,"Condition",{encounter:`Encounter/${conflictCurrentEncounter.id}`})).length,1);
+    assert.equal((await allSearchResources<Observation>(clinicianFhir,"Observation",{encounter:`Encounter/${conflictCurrentEncounter.id}`})).length,1);
   }, async () => {
     await cleanupSyntheticPullProof(
       adminFhir,
@@ -2581,6 +2034,15 @@ async function cleanupSyntheticPullProof(
       }
     }
   }
+  for (const reference of [...references].filter(ref => /^(Condition|Observation)\//.test(ref))) {
+    try {
+      for (const provenance of await allSearchResources<Provenance>(fhir, "Provenance", {target: reference})) {
+        if (provenance.id) references.add(`Provenance/${provenance.id}`);
+      }
+    } catch (error) {
+      failures.push(new Error(`Synthetic carry audit cleanup discovery failed for ${reference}.`, {cause: error}));
+    }
+  }
   try {
     await deleteSyntheticReferences(baseUrl, accessToken, references, identity?.fetchImpl);
   } catch (error) {
@@ -2862,7 +2324,7 @@ async function postPull(base: string, sourceConditionId: string): Promise<Respon
     method: "POST",
     headers: { Authorization: AUTH_CLINICIAN, "Content-Type": "application/json" },
     body: JSON.stringify({
-      sourceEncounterReference: "Encounter/source-pull",
+      commandId: randomUUID(), sourceEncounterReference: "Encounter/source-pull",
       sourceConditionReference: `Condition/${sourceConditionId}`,
     }),
   });
@@ -2984,6 +2446,7 @@ function pullFhir(sourceConditionId = "source-dry-eye-od"): MemoryFhir {
     "current-other-2",
   ]);
   current.meta = { versionId: "7" };
+  current.status = "in-progress";
   current.diagnosis![0]!.rank = 1;
   current.diagnosis![1]!.rank = 4;
   fhir.resources.push(current);
@@ -3045,6 +2508,15 @@ function pullFhir(sourceConditionId = "source-dry-eye-od"): MemoryFhir {
   delete sourceLegacy.valueBoolean;
   sourceLegacy.valueString = "Legacy recorded value";
   fhir.resources.push(sourceLegacy);
+  for (const [id, option] of [["source-staining-present", "nuclear-sclerosis"], ["source-filaments-absent", "cortical-cataract"]]) {
+    const fact = fhir.resource<Observation>("Observation", id);
+    const key = {...keyFor("OD", option), patientId:"patient-1",encounterId:"source-pull"};
+    fact.meta={versionId:"1"};fact.identifier=[currentFindingIdentifier(key)];
+    fact.code={coding:[{system:ODOS_OPHTHALMOLOGY_CODE_SYSTEM,code:`${key.stableKey}::${key.fieldCode}::${key.optionCode}`}],text:fact.code.text};
+    fact.component=[...(fact.component??[]),comp("R10_CURRENT_META",JSON.stringify(key))];
+    fact.extension!.push({url:SUPPORTS_DIAGNOSIS_URL,valueReference:{reference:"Condition/source-dry-eye-od"}});
+  }
+  sourceLegacy.code={text:"Unrelated historical narrative"};
   return fhir;
 }
 
@@ -3093,7 +2565,7 @@ function diagnosis(
       } : {}),
       evidenceObservationReferences: evidenceIds.map((evidenceId) => `Observation/${evidenceId}`),
     }),
-    id,
+    id, meta: {versionId:"1"},
   };
 }
 
@@ -3205,6 +2677,45 @@ const unreachableFhir = new Proxy({}, {
 });
 
 class MemoryFhir {
+  readonly baseUrl="https://fhir.local";
+  readonly writes:Array<{method:"POST"|"PUT";resource:Resource;headers:Record<string,string>}>=[];
+  beforeWrite?: (resource:Resource,method:"POST"|"PUT")=>void;
+  afterWrite?: (resource:Resource,method:"POST"|"PUT")=>void;
+  createResultMutator?: (resource:Resource)=>Resource;
+  searchResultMutator?: (type:string,bundle:Bundle)=>Bundle;
+  private persist<T extends Resource>(resource:T):T {
+    const id=resource.id??(resource.resourceType==="Condition"?"pulled-condition":`${resource.resourceType.toLowerCase()}-${randomUUID()}`);
+    const stored={...structuredClone(resource),id,meta:{...resource.meta,versionId:randomUUID()}};
+    const index=this.resources.findIndex(r=>r.resourceType===resource.resourceType&&r.id===id);
+    if(index<0)this.resources.push(stored);else this.resources[index]=stored;
+    return structuredClone(stored);
+  }
+  private matches(resource:Resource,params:Record<string,string>):boolean {
+    return Object.entries(params).every(([key,value])=>{
+      if(key.startsWith("_")&&key!=="_tag")return true;
+      if(key==="encounter")return (resource as Observation).encounter?.reference===value;
+      if(key==="subject")return (resource as Observation).subject?.reference===value;
+      if(key==="target")return (resource as Provenance).target?.some(t=>t.reference===value);
+      if(key==="code")return (resource as Observation).code?.coding?.some(c=>`${c.system}|${c.code}`===value);
+      const tokens=key==="_tag"?resource.meta?.tag?.map(t=>`${t.system}|${t.code}`):(resource as Observation).identifier?.map(i=>`${i.system}|${i.value}`);
+      return value.split(",").some(v=>tokens?.includes(v));
+    });
+  }
+  async createWithOutcome<T extends Resource>(resource:T,headers:Record<string,string>={}) {
+    this.writes.push({method:"POST",resource:structuredClone(resource),headers});this.beforeWrite?.(resource,"POST");
+    const condition=headers["If-None-Exist"];
+    const owners=condition?this.resources.filter(r=>r.resourceType===resource.resourceType&&this.matches(r,Object.fromEntries(new URLSearchParams(condition)))):[];
+    if(owners.length>1)throw Object.assign(new Error("Ambiguous owner"),{status:412});
+    if(owners.length)return {resource:structuredClone(owners[0]) as T,created:false};
+    const stored=this.persist(resource);this.afterWrite?.(stored,"POST");
+    return {resource:(this.createResultMutator?.(stored)??stored) as T,created:true};
+  }
+  async update<T extends Resource>(type:T["resourceType"],id:string,resource:T,headers:Record<string,string>={}) {
+    this.writes.push({method:"PUT",resource:structuredClone(resource),headers});this.beforeWrite?.(resource,"PUT");
+    const existing=await this.read(type,id);
+    if(headers["If-Match"]!==`W/"${existing.meta?.versionId}"`)throw Object.assign(new Error("Stale"),{status:412});
+    const stored=this.persist({...resource,id});this.afterWrite?.(stored,"PUT");return stored;
+  }
   readonly resources: Resource[] = [];
   readonly followedUrls: string[] = [];
   readonly transactions: Array<{
@@ -3302,6 +2813,10 @@ class MemoryFhir {
     resourceType: T["resourceType"],
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
+    if (resourceType !== "Encounter" && resourceType !== "Provenance") {
+      const bundle:Bundle<T>={resourceType:"Bundle",type:"searchset",entry:this.resources.filter(r=>r.resourceType===resourceType&&this.matches(r,params)).map(resource=>({resource:structuredClone(resource as T)}))};
+      return (this.searchResultMutator?.(resourceType,bundle)??bundle) as Bundle<T>;
+    }
     if (resourceType === "Provenance") {
       if (params.target === this.provenancePageTarget && this.provenancePages) {
         return {
@@ -3315,7 +2830,7 @@ class MemoryFhir {
       }
       const rows = this.resources.filter((resource): resource is Provenance =>
         resource.resourceType === "Provenance" &&
-        (!params.target || resource.target.some((target) => target.reference === params.target))
+        this.matches(resource,params)
       );
       return {
         resourceType: "Bundle",

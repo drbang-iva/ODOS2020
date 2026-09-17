@@ -1,0 +1,361 @@
+{
+  "mappings": [
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 348,
+        "context": "\"review regression: wrong-target audit stays pending and cannot permit marker supersession\"",
+        "text": "assert.equal(blocked.outcomes[0].reason,\"prior-audit-unrepaired\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 348,
+        "context": "\"review regression: wrong-target audit stays pending and cannot permit marker supersession\"",
+        "text": "assert.equal(blocked.outcomes[0].reason,\"audit-mismatch\")"
+      },
+      "rows": [
+        "W83"
+      ]
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 360,
+        "context": "\"review regression: a reassertion tag cannot confirm an audit targeting another Observation\"",
+        "text": "assert.equal(replay.outcomes[0].status,\"refused\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 360,
+        "context": "\"review regression: a reassertion tag cannot confirm an audit targeting another Observation\"",
+        "text": "assert.equal(replay.outcomes[0].status,\"conflict\")"
+      },
+      "rows": [
+        "W84"
+      ]
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 457,
+        "context": "\"W-h reassert replay audit lookup failure has a typed cause\"",
+        "text": "assert.rejects(writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir }, c, c.targets[0]),\n    (error: unknown) => (error as { cause?: string }).cause === \"audit-lookup\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 457,
+        "context": "\"W-h reassert replay audit lookup failure has a typed cause\"",
+        "text": "assert.rejects(writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference }, c, c.targets[0]),\n    (error: unknown) => (error as { cause?: string }).cause === \"audit-lookup\")"
+      },
+      "rows": [
+        "W84"
+      ]
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 506,
+        "context": "\"W45 reassert command witness rejects changed-baseline reuse without changing mutation audits\"",
+        "text": "assert.equal(await writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir }, retry, retry.targets[0]), \"reused-with-different-content\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 506,
+        "context": "\"W45 reassert command witness rejects changed-baseline reuse without changing mutation audits\"",
+        "text": "assert.equal(await writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference }, retry, retry.targets[0]), \"reused-with-different-content\")"
+      },
+      "rows": [
+        "W84"
+      ]
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 519,
+        "context": "\"W-h old reassert audits without command witness keep exact-key fallback semantics\"",
+        "text": "assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), \"exact-replay\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 519,
+        "context": "\"W84 old reassert audits without both tags are rejected\"",
+        "text": "assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), \"reused-with-different-content\")"
+      },
+      "rows": [
+        "W84"
+      ]
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 521,
+        "context": "\"W-h old reassert audits without command witness keep exact-key fallback semantics\"",
+        "text": "assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), \"not-replay\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 521,
+        "context": "\"W84 old reassert audits without both tags are rejected\"",
+        "text": "assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), \"reused-with-different-content\")"
+      },
+      "rows": [
+        "W84"
+      ]
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2363,
+        "context": "\"a signed Encounter refuses discard before changing the Condition or Encounter\"",
+        "text": "assert.match(String((discarded.body as { error: string }).error), /after the encounter is signed/)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2447,
+        "context": "\"a signed Encounter refuses discard before changing the Condition or Encounter\"",
+        "text": "assert.equal((discarded.body as { reason: string }).reason, \"encounter-closed\")"
+      },
+      "rows": [
+        "V24",
+        "W90"
+      ]
+    },
+    {
+      "file": "mcp/tests/currentFindingWriter.test.ts",
+      "before": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 523,
+        "context": "\"W-h old reassert audits without command witness keep exact-key fallback semantics\"",
+        "text": "assert.equal(await writer.classifyReplay(loaded(), retry, retry.targets[0]), \"not-replay\")"
+      },
+      "after": {
+        "file": "mcp/tests/currentFindingWriter.test.ts",
+        "line": 523,
+        "context": "\"W84 old reassert audits without both tags are rejected\"",
+        "text": "assert.equal(await writer.classifyReplay(loaded(), retry, retry.targets[0]), \"not-replay\")"
+      },
+      "rows": [
+        "W84"
+      ],
+      "rationale": "Assertion retained verbatim in renamed W84 test; actor context supplied to replay classifier. Existing W84 mapping governs the adjacent changed outcomes."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2751,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(result.status, 200, JSON.stringify(result.body))"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2847,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(result.status, 200, JSON.stringify(result.body))"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2753,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(row.candidates[0].diagnosisKey, \"presbyopia\")"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2849,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(row.candidates[0].diagnosisKey, \"presbyopia\")"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2753,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(row.candidates[0].supportingFacts, undefined)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2849,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(row.candidates[0].supportingFacts, undefined)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2753,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(row.linkable, false)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2849,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(row.linkable, false)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2753,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(row.candidates[0].linkable, false)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2849,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(row.candidates[0].linkable, false)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2754,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(row.contributors.some((c: any) => c.reference === \"Observation/new-panel\"), true)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2850,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(row.contributors.some((c: any) => c.reference === \"Observation/new-panel\"), true)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2755,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(row.contributors.some((c: any) => c.reference === \"Observation/old-panel\"), false)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2851,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(row.contributors.some((c: any) => c.reference === \"Observation/old-panel\"), false)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2757,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(refused.status, 502)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2853,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(refused.status, 502)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2757,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal((refused.body as any).result, \"unavailable\")"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2853,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal((refused.body as any).result, \"unavailable\")"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2758,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(pick.status, 502)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2854,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(pick.status, 502)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    },
+    {
+      "file": "mcp/tests/diagnosisLinkL2.test.ts",
+      "before": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2758,
+        "context": "\"mixed panel context uses newest projected context and refuses ambiguous equal-time contexts\"",
+        "text": "assert.equal(fhir.transactions.length, 0)"
+      },
+      "after": {
+        "file": "mcp/tests/diagnosisLinkL2.test.ts",
+        "line": 2854,
+        "context": "\"mixed panel context uses its unique owner and refuses a second owner regardless of time\"",
+        "text": "assert.equal(fhir.transactions.length, 0)"
+      },
+      "rows": [
+        "W71"
+      ],
+      "rationale": "Assertion retained verbatim under strict panel identity. Fixture now has one valid owner for success; adding a second owner with an older timestamp refuses. W71 replaces newest-timestamp selection with duplicate-owner refusal."
+    }
+  ],
+  "unmapped": 0,
+  "note": "Exact supplement to earlier library and door report mappings; remaining file changes are in their dedicated ledgers."
+}
