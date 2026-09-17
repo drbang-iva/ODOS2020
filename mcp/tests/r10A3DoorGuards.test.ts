@@ -94,3 +94,72 @@ test('W92 inactive historical fact remains a labelled read-only row through actu
   const result=await handleDiagnosisFindingsReadRequest({fhirBaseUrl:m.fhir.baseUrl,authenticate:async()=>({staffReference:'Practitioner/synthetic',actorRole:'provider',fhir:m.fhir as any}),findingDefinitions:()=>[{...lens,active:false}],diagnosisCatalog:()=>[]},{authHeader:AUTH,params:{encounterId:'e1'},query:{}});
   assert.equal(result.status,200);const body=result.body as any;assert.equal(body.encounterEditable,true);assert.equal(body.searchIndex.length,0);const row=body.bySection[lens.sectionKey][0];assert.equal(row.display,nuclear.display);assert.equal(row.editable,false);assert.equal(row.readOnlyReason,'inactive-definition');assert.equal(m.writes.length,0);
 });
+
+for (const path of ['door-put', 'door-audit-repair'] as const) {
+  test(`W111 review closure read failure preserves ${path} command response`, async () => {
+    const m = memoryFhir([{resourceType:'Encounter',id:'e1',status:'in-progress',class:{code:'synthetic'},subject:{reference:'Patient/p1'}} as any]);
+    const deps = {fhirBaseUrl:m.fhir.baseUrl, authenticate:async()=>({staffReference:'Practitioner/synthetic',actorRole:'provider' as const,fhir:m.fhir as any}),findingDefinitions:()=>definitions};
+    const request = {authHeader:AUTH,params:{encounterId:'e1'},body:{commandId:randomUUID(),patientReference:'Patient/p1',...(path==='door-put'?{operation:'assert',targets:[factTarget()]}:{})}};
+    const handler = path === 'door-put' ? handleDiagnosisFindingsMutationRequest : handleDiagnosisFindingsAuditRepairRequest;
+    assert.equal((await handler(deps,request)).status,200);
+    const expected = await handler(deps,request);
+    let reads = 0;
+    m.hooks.beforeRead = type => { if(type==='Encounter') reads++; };
+    assert.deepEqual(await handler(deps,request),expected);
+    const finalRead = reads;
+    reads = 0;
+    let faults = 0;
+    m.hooks.beforeRead = type => { if(type==='Encounter' && ++reads===finalRead) { faults++; throw Error('post-command Encounter unavailable'); } };
+    assert.deepEqual(await handler(deps,request),expected);
+    assert.equal(faults,1);
+    assert.equal((expected.body as any).encounterClosedDuringCommand,undefined);
+  });
+}
+
+test('W94 review candidate dedupe preserves input objects and unions support',async()=>{
+ const {deduplicateDiagnosisCandidates}=await import('../src/clinical-graph/diagnosis-candidates-endpoint.js');
+ const key=factTarget().key;
+ const first={diagnosisKey:'synthetic',source:'rule',priority:2,order:0};
+ const support={rowKey:'synthetic-row',key,baseline:{kind:'canonical',reference:'Observation/fact',versionId:'1'}};
+ const second={diagnosisKey:'synthetic',source:'mapping',priority:1,order:1,supportingFacts:[support]};
+ const candidates=[first,second],before=structuredClone(candidates);
+ const rows=deduplicateDiagnosisCandidates(candidates as any);
+ assert.deepEqual(candidates,before);assert.equal(rows.length,1);assert.deepEqual(rows[0].supportingFacts,[support]);assert.notEqual(rows[0],first);
+});
+
+function pickClosureFixture() {
+  const {deps,fhir}=fixture();deps.findingDefinitions=()=>definitions;
+  const search=fhir.search.bind(fhir);
+  fhir.search=async(type:any,params:any={})=>{
+    const page=await search(type,params);
+    return {...page,entry:page.entry?.filter(({resource:r}:any)=>
+      (!params.encounter||r.encounter?.reference===params.encounter)&&
+      (!params.target||r.target?.some((t:any)=>t.reference===params.target))&&
+      (!params._tag||r.meta?.tag?.some((t:any)=>params._tag.split(',').includes(`${t.system}|${t.code}`)))&&
+      (!params.date||new Date(r.period?.start).getTime()<new Date(params.date.slice(2)).getTime()))} as any;
+  };
+  const clinical={...fhir,baseUrl:"http://synthetic.local",read:fhir.read.bind(fhir),search:fhir.search.bind(fhir),executeTransaction:fhir.executeTransaction.bind(fhir),
+    create:async(r:Resource)=>fhir.add({...r,id:r.id??`created-${fhir.all(r.resourceType).length}`} as Resource)};
+  const authenticate=async()=>({staffReference:"Practitioner/doc1",actorRole:"provider" as const,fhir:clinical});
+  return {deps,fhir,clinical,authenticate};
+}
+
+test('W111 review closure read failure preserves pick command response',async()=>{
+ const request={authHeader:AUTH,params:{encounterId:'e1'},body:{diagnosisKey:nuclear.diagnosisKeys[0],action:'confirm',source:'mapping',laterality:'right'}};
+ const run=async(faultAt?:number)=>{
+  const c=pickClosureFixture();let reads=0,faults=0;
+  const read=c.clinical.read;
+  c.clinical.read=async(type:any,id:any)=>{if(type==='Encounter'&&++reads===faultAt){faults++;throw Error('post-command Encounter unavailable');}return read(type,id);};
+  const execute=c.clinical.executeTransaction;
+  c.clinical.executeTransaction=async(bundle)=>{
+   const response=await execute(bundle);
+   const refs=new Map((bundle.entry??[]).map((entry,index)=>[entry.fullUrl,response.entry?.[index]?.response?.location?.split('/_history/')[0]]));
+   for(const entry of response.entry??[]){const [type,id]=entry.response!.location!.split('/_history/')[0].split('/');const resource=await c.fhir.read(type as any,id);const resolved=JSON.parse(JSON.stringify(resource),(_key,value)=>typeof value==='string'&&refs.has(value)?refs.get(value):value);c.fhir.replace(resolved);entry.resource=resolved;}
+   return response;
+  };
+  const result=await handleDiagnosisPickRequest({authenticate:c.authenticate,now:()=> '2026-09-16T12:00:00Z',diagnosisVisitStatusStore:{listByEncounter:async()=>[],upsert:async(input:any)=>({...input,updatedAt:input.at,setAt:input.at})}} as any,request);
+  return {result,reads,faults};
+ };
+ const expected=await run();assert.equal(expected.result.status,200,JSON.stringify(expected.result.body));assert.equal((expected.result.body as any).conditionStep,'applied');
+ const failed=await run(expected.reads);assert.deepEqual(failed.result,expected.result);assert.equal(failed.faults,1);assert.equal((failed.result.body as any).encounterClosedDuringCommand,undefined);
+});

@@ -42,6 +42,7 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
   const staffReference=`Practitioner/${me.profile.id}`;
   const cleanup:string[]=[];const track=<T extends Resource>(r:T):T=>{assert.ok(r.id);cleanup.push(`${r.resourceType}/${r.id}`);return r;};
   const policies=await searchAll<AccessPolicy>(callerFhir,'AccessPolicy',{_project:projectId});
+  let bodyFailure: unknown;
   try {
     for(const role of ['staff','provider'] as const) await t.test(`${role}: assert clear revive move link and zero-write refusals`,async()=>{
       const matches=canonicalRolePolicies(policies,role);
@@ -126,6 +127,9 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
       const persisted=await searchAll<Observation>(real,'Observation',{encounter:`Encounter/${retryEncounter.id}`});assert.equal(persisted.length,1);
       t.diagnostic(JSON.stringify({role,project:projectId,resourceType:'Observation',operation:'lost response then identical Retry',before:'absent',after:'one persisted owner and one clinical write',policyReference,policyVersion:policy.meta?.versionId,lane:'test:live-authz',blocking:true}));
     });
+  } catch (error) {
+    bodyFailure = error;
+    throw error;
   } finally {
     const failures: unknown[] = [];
     for (const [token, references] of [
@@ -135,6 +139,6 @@ test('R10 diagnosis door enforces canonical policies through real handlers for s
       try { await cleanupReferences(baseUrl, token, references); }
       catch (error) { failures.push(error); }
     }
-    if (failures.length) throw new AggregateError(failures, "Synthetic live-proof cleanup failed.");
+    if (failures.length) throw new AggregateError(bodyFailure === undefined ? failures : [bodyFailure, ...failures], "Synthetic live-proof cleanup failed.");
   }
 });

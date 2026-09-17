@@ -1,0 +1,2051 @@
+TAP version 13
+# Diagnosis-definition Basic/basic-1 skipped: Basic resource is not an ODOS diagnosis definition.
+# Subtest: Skin Carotenoid Score creates, captures, reads, renames, and deactivates without changing its stable key
+ok 1 - Skin Carotenoid Score creates, captures, reads, renames, and deactivates without changing its stable key
+  ---
+  duration_ms: 63.103667
+  type: 'test'
+  ...
+# Subtest: per-eye custom sections prefix field components and read OD and OS independently
+ok 2 - per-eye custom sections prefix field components and read OD and OS independently
+  ---
+  duration_ms: 12.16225
+  type: 'test'
+  ...
+# Subtest: per-eye multi-select fields namespace shared option codes, preserve legacy rows, and omit empty selections
+ok 3 - per-eye multi-select fields namespace shared option codes, preserve legacy rows, and omit empty selections
+  ---
+  duration_ms: 13.624709
+  type: 'test'
+  ...
+# Subtest: bare-string ocular-health seeds keep the current definition and presence-only history shape — seed contract
+ok 4 - bare-string ocular-health seeds keep the current definition and presence-only history shape — seed contract
+  ---
+  duration_ms: 0.104625
+  type: 'test'
+  ...
+# Subtest: finding qualifiers — seed contract
+ok 5 - finding qualifiers — seed contract
+  ---
+  duration_ms: 0.4765
+  type: 'test'
+  ...
+# Subtest: ocular-health saves — seed contract
+ok 6 - ocular-health saves — seed contract
+  ---
+  duration_ms: 5.438291
+  type: 'test'
+  ...
+# Subtest: OH-1 seeds nine editable structures — seed contract
+ok 7 - OH-1 seeds nine editable structures — seed contract
+  ---
+  duration_ms: 5.90175
+  type: 'test'
+  ...
+# Subtest: OH-1 finding options and normal templates are editable through finding-definition HTTP handlers
+ok 8 - OH-1 finding options and normal templates are editable through finding-definition HTTP handlers
+  ---
+  duration_ms: 38.044125
+  type: 'test'
+  ...
+# Subtest: ocular-health cleanup keeps only clinically scoped chips and qualifiers
+ok 9 - ocular-health cleanup keeps only clinically scoped chips and qualifiers
+  ---
+  duration_ms: 6.246166
+  type: 'test'
+  ...
+# Subtest: corneal findings expose sourced grade axes and arcus extent through live qualifier precedents
+ok 10 - corneal findings expose sourced grade axes and arcus extent through live qualifier precedents
+  ---
+  duration_ms: 6.188
+  type: 'test'
+  ...
+# Subtest: historical positive SPK grades remain editable after the provisional scale is sourced — seed contract
+ok 11 - historical positive SPK grades remain editable after the provisional scale is sourced — seed contract
+  ---
+  duration_ms: 5.315333
+  type: 'test'
+  ...
+# Subtest: historical SPK Grade 0 — seed contract
+ok 12 - historical SPK Grade 0 — seed contract
+  ---
+  duration_ms: 5.63975
+  type: 'test'
+  ...
+# Subtest: a new SPK finding cannot be written with retired Grade 0 — seed contract
+ok 13 - a new SPK finding cannot be written with retired Grade 0 — seed contract
+  ---
+  duration_ms: 7.045667
+  type: 'test'
+  ...
+# Subtest: retired SPK Grade 0 translation does not drop the same value from another corneal finding — seed contract
+ok 14 - retired SPK Grade 0 translation does not drop the same value from another corneal finding — seed contract
+  ---
+  duration_ms: 5.654625
+  type: 'test'
+  ...
+# Subtest: lens exposes sourced independent grade and colour axes without a zero rung or selectable brunescent finding
+ok 15 - lens exposes sourced independent grade and colour axes without a zero rung or selectable brunescent finding
+  ---
+  duration_ms: 6.086458
+  type: 'test'
+  ...
+# Subtest: nuclear sclerosis grade and colour — seed contract
+ok 16 - nuclear sclerosis grade and colour — seed contract
+  ---
+  duration_ms: 5.194833
+  type: 'test'
+  ...
+# Subtest: historical brunescent alone — seed contract
+ok 17 - historical brunescent alone — seed contract
+  ---
+  duration_ms: 5.383042
+  type: 'test'
+  ...
+# Subtest: historical brunescent merges with a recorded nuclear grade into one deduplicated finding — seed contract
+ok 18 - historical brunescent merges with a recorded nuclear grade into one deduplicated finding — seed contract
+  ---
+  duration_ms: 5.87175
+  type: 'test'
+  ...
+# Subtest: retired finding translation stays scoped to lens brunescent — seed contract
+ok 19 - retired finding translation stays scoped to lens brunescent — seed contract
+  ---
+  duration_ms: 0.089208
+  type: 'test'
+  ...
+# Subtest: corneal graded qualifiers never offer a zero or none rung
+ok 20 - corneal graded qualifiers never offer a zero or none rung
+  ---
+  duration_ms: 6.0665
+  type: 'test'
+  ...
+# Subtest: every corneal graded qualifier has exactly four options
+ok 21 - every corneal graded qualifier has exactly four options
+  ---
+  duration_ms: 5.891208
+  type: 'test'
+  ...
+# Subtest: anterior chamber cells and flare expose the operator-adapted SUN-derived options through the lens graded-qualifier shape
+ok 22 - anterior chamber cells and flare expose the operator-adapted SUN-derived options through the lens graded-qualifier shape
+  ---
+  duration_ms: 6.189708
+  type: 'test'
+  ...
+# Subtest: anterior chamber cell and flare grades — seed contract
+ok 23 - anterior chamber cell and flare grades — seed contract
+  ---
+  duration_ms: 5.737375
+  type: 'test'
+  ...
+# Subtest: GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade — seed contract
+ok 24 - GET diagnosis candidates returns nuclear cataract after ocular-health capture regardless of grade — seed contract
+  ---
+  duration_ms: 5.730083
+  type: 'test'
+  ...
+# Subtest: retinal-detachment macula status remains documentation-only for diagnosis proposals — seed contract
+ok 25 - retinal-detachment macula status remains documentation-only for diagnosis proposals — seed contract
+  ---
+  duration_ms: 5.537083
+  type: 'test'
+  ...
+# Subtest: Macula splits the hole findings, keeps Gass as an enum, and declares every ruled candidate route
+ok 26 - Macula splits the hole findings, keeps Gass as an enum, and declares every ruled candidate route
+  ---
+  duration_ms: 5.193916
+  type: 'test'
+  ...
+# Subtest: historical ambiguous macular-hole selections — seed contract
+ok 27 - historical ambiguous macular-hole selections — seed contract
+  ---
+  duration_ms: 5.085
+  type: 'test'
+  ...
+# Subtest: posterior Slice 5 exposes the sourced vitreous hemorrhage scale and categorical retinal subtypes
+ok 28 - posterior Slice 5 exposes the sourced vitreous hemorrhage scale and categorical retinal subtypes
+  ---
+  duration_ms: 5.804292
+  type: 'test'
+  ...
+# Subtest: surviving Periphery diagnosis mappings keep their pre-fold public ids
+ok 29 - surviving Periphery diagnosis mappings keep their pre-fold public ids
+  ---
+  duration_ms: 5.601833
+  type: 'test'
+  ...
+# Subtest: posterior drusen seeds preserve plain-drusen mappings while occasional drusen stays non-codeable
+ok 30 - posterior drusen seeds preserve plain-drusen mappings while occasional drusen stays non-codeable
+  ---
+  duration_ms: 5.810833
+  type: 'test'
+  ...
+# Subtest: OH-2 seeds five posterior structures — seed contract
+ok 31 - OH-2 seeds five posterior structures — seed contract
+  ---
+  duration_ms: 5.852958
+  type: 'test'
+  ...
+# Subtest: ocular-health history returns the Observation reference written by the save — seed contract
+ok 32 - ocular-health history returns the Observation reference written by the save — seed contract
+  ---
+  duration_ms: 5.419708
+  type: 'test'
+  ...
+# Subtest: OH-2b Vessels seeds — seed contract
+ok 33 - OH-2b Vessels seeds — seed contract
+  ---
+  duration_ms: 5.747125
+  type: 'test'
+  ...
+# Subtest: anterior structure grades exclude retired LOCS III fields — seed contract
+ok 34 - anterior structure grades exclude retired LOCS III fields — seed contract
+  ---
+  duration_ms: 17.452833
+  type: 'test'
+  ...
+# Subtest: E1 entrance state sections emit coded attributes and round-trip normal and abnormal fields
+ok 35 - E1 entrance state sections emit coded attributes and round-trip normal and abnormal fields
+  ---
+  duration_ms: 6.63
+  type: 'test'
+  ...
+# Subtest: screenshot refinement stores binocular stereopsis once with top-level state
+ok 36 - screenshot refinement stores binocular stereopsis once with top-level state
+  ---
+  duration_ms: 6.297708
+  type: 'test'
+  ...
+# Subtest: CVF persists four-quadrant schematic values through the generic entrance endpoint
+ok 37 - CVF persists four-quadrant schematic values through the generic entrance endpoint
+  ---
+  duration_ms: 6.432375
+  type: 'test'
+  ...
+# Subtest: E1 Pachymetry and Manual K use measurement capture without exam state
+ok 38 - E1 Pachymetry and Manual K use measurement capture without exam state
+  ---
+  duration_ms: 6.125625
+  type: 'test'
+  ...
+# Subtest: dry-eye total score cannot persist without its instrument
+ok 39 - dry-eye total score cannot persist without its instrument
+  ---
+  duration_ms: 5.30725
+  type: 'test'
+  ...
+# Subtest: DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through shared history
+ok 40 - DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through shared history
+  ---
+  duration_ms: 6.932333
+  type: 'test'
+  ...
+# Subtest: DE-1 tear-stability and routine tear-film entry share one stableKey and one history — seed contract
+ok 41 - DE-1 tear-stability and routine tear-film entry share one stableKey and one history — seed contract
+  ---
+  duration_ms: 5.312416
+  type: 'test'
+  ...
+# Subtest: DE-1 abnormal mappings return proposal badges and never auto-confirm a diagnosis
+ok 42 - DE-1 abnormal mappings return proposal badges and never auto-confirm a diagnosis
+  ---
+  duration_ms: 20.042958
+  type: 'test'
+  ...
+# Subtest: guard 3: custom-section history hides voided (entered-in-error) rows so a void leaves the sheet, not just the Overview
+ok 43 - guard 3: custom-section history hides voided (entered-in-error) rows so a void leaves the sheet, not just the Overview
+  ---
+  duration_ms: 5.735042
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 4: deferred Pupils save is refused without writes
+ok 44 - DEFER-1 guard 4: deferred Pupils save is refused without writes
+  ---
+  duration_ms: 5.953583
+  type: 'test'
+  ...
+# Subtest: DEFER-1 guard 6: runtime grants refuse non-dilation and accept dilation
+ok 45 - DEFER-1 guard 6: runtime grants refuse non-dilation and accept dilation
+  ---
+  duration_ms: 16.44125
+  type: 'test'
+  ...
+# Subtest: V3 pre-rebuild diagnosis door refuses before any clinical or audit write
+ok 46 - V3 pre-rebuild diagnosis door refuses before any clinical or audit write
+  ---
+  duration_ms: 9.619708
+  type: 'test'
+  ...
+# Subtest: findings payload distinguishes finding write access from diagnosis write access
+ok 47 - findings payload distinguishes finding write access from diagnosis write access
+  ---
+  duration_ms: 1.472541
+  type: 'test'
+  ...
+# Subtest: GET encounter findings returns 401 when unauthenticated
+ok 48 - GET encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 25.867584
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 401 when unauthenticated
+ok 49 - PUT encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 12.93875
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 403 for read-only Admin
+ok 50 - PUT encounter findings returns 403 for read-only Admin
+  ---
+  duration_ms: 3.185542
+  type: 'test'
+  ...
+# Subtest: GET expands offered rows and normalizes only the latest section snapshot
+ok 51 - GET expands offered rows and normalizes only the latest section snapshot
+  ---
+  duration_ms: 2.874167
+  type: 'test'
+  ...
+# Subtest: GET finds the selected encounter Condition on a later safe Bundle page
+ok 52 - GET finds the selected encounter Condition on a later safe Bundle page
+  ---
+  duration_ms: 1.640292
+  type: 'test'
+  ...
+# Subtest: GET projects carried present findings and merges prior absence into the exact offered eye only
+ok 53 - GET projects carried present findings and merges prior absence into the exact offered eye only
+  ---
+  duration_ms: 1.652625
+  type: 'test'
+  ...
+# Subtest: GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+ok 54 - GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+  ---
+  duration_ms: 1.327083
+  type: 'test'
+  ...
+# Subtest: a reassertion marker older than the current carry does not reassert the carried finding
+ok 55 - a reassertion marker older than the current carry does not reassert the carried finding
+  ---
+  duration_ms: 13.737083
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cross-origin next page
+ok 56 - findings pagination fails closed for a cross-origin next page
+  ---
+  duration_ms: 0.364625
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a off-root next page
+ok 57 - findings pagination fails closed for a off-root next page
+  ---
+  duration_ms: 0.180542
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a unavailable next page
+ok 58 - findings pagination fails closed for a unavailable next page
+  ---
+  duration_ms: 0.18325
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cycle next page
+ok 59 - findings pagination fails closed for a cycle next page
+  ---
+  duration_ms: 0.225834
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a upstream next page
+ok 60 - findings pagination fails closed for a upstream next page
+  ---
+  duration_ms: 0.134083
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 401 dependency response without a generic route 500
+ok 61 - findings maps a FHIR 401 dependency response without a generic route 500
+  ---
+  duration_ms: 0.083583
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 403 dependency response without a generic route 500
+ok 62 - findings maps a FHIR 403 dependency response without a generic route 500
+  ---
+  duration_ms: 0.047333
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 500 dependency response without a generic route 500
+ok 63 - findings maps a FHIR 500 dependency response without a generic route 500
+  ---
+  duration_ms: 0.049333
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 401 dependency response
+ok 64 - GET findings route preserves the named FHIR 401 dependency response
+  ---
+  duration_ms: 3.719209
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 403 dependency response
+ok 65 - GET findings route preserves the named FHIR 403 dependency response
+  ---
+  duration_ms: 1.790583
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 500 dependency response
+ok 66 - GET findings route preserves the named FHIR 500 dependency response
+  ---
+  duration_ms: 2.431375
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 404 to a non-leaking 404
+ok 67 - findings maps Encounter FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.170417
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 410 to a non-leaking 404
+ok 68 - findings maps Encounter FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.062291
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 404 to a non-leaking 404
+ok 69 - findings maps Condition FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.144875
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 410 to a non-leaking 404
+ok 70 - findings maps Condition FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.312459
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 404 to a non-leaking 404
+ok 71 - findings maps Observation FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.177916
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 410 to a non-leaking 404
+ok 72 - findings maps Observation FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.11625
+  type: 'test'
+  ...
+# Subtest: findings gives Condition bodySite laterality precedence over a stale catalog identifier
+ok 73 - findings gives Condition bodySite laterality precedence over a stale catalog identifier
+  ---
+  duration_ms: 0.977708
+  type: 'test'
+  ...
+# Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
+ok 74 - GET findings route returns missing lineage as visible state and a cyclic next link as 502
+  ---
+  duration_ms: 5.639333
+  type: 'test'
+  ...
+# Subtest: 404 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 75 - 404 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.563958
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 76 - 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.36425
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 77 - 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.614625
+  type: 'test'
+  ...
+# Subtest: 410 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 78 - 410 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.598666
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 79 - 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.373084
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 80 - 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.413209
+  type: 'test'
+  ...
+# Subtest: W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared
+ok 81 - W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared
+  ---
+  duration_ms: 14.305542
+  type: 'test'
+  ...
+# Subtest: W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+ok 82 - W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+  ---
+  duration_ms: 13.072792
+  type: 'test'
+  ...
+# Subtest: W101 lost Condition response resumes one conditional owner
+ok 83 - W101 lost Condition response resumes one conditional owner
+  ---
+  duration_ms: 25.933958
+  type: 'test'
+  ...
+# Subtest: W102 same command changed source fingerprint refuses zero further writes
+ok 84 - W102 same command changed source fingerprint refuses zero further writes
+  ---
+  duration_ms: 16.83075
+  type: 'test'
+  ...
+# Subtest: W103 W104 frozen retry stays stale and partial carry has no findings witness
+ok 85 - W103 W104 frozen retry stays stale and partial carry has no findings witness
+  ---
+  duration_ms: 20.500041
+  type: 'test'
+  ...
+# Subtest: W125 replan accepts unchanged already-completed target and records exact versions
+ok 86 - W125 replan accepts unchanged already-completed target and records exact versions
+  ---
+  duration_ms: 18.4655
+  type: 'test'
+  ...
+# Subtest: W124 resumes persisted Condition with failed plan
+ok 87 - W124 resumes persisted Condition with failed plan
+  ---
+  duration_ms: 20.793209
+  type: 'test'
+  ...
+# Subtest: W124 resumes persisted Condition with failed link
+ok 88 - W124 resumes persisted Condition with failed link
+  ---
+  duration_ms: 16.562125
+  type: 'test'
+  ...
+# Subtest: W123 two different commands race one conditional Condition owner
+ok 89 - W123 two different commands race one conditional Condition owner
+  ---
+  duration_ms: 15.671
+  type: 'test'
+  ...
+# Subtest: W75 W126 void between facts and witness remains edited
+ok 90 - W75 W126 void between facts and witness remains edited
+  ---
+  duration_ms: 9.343667
+  type: 'test'
+  ...
+# Subtest: W75 W126 void-undo between facts and witness remains edited
+ok 91 - W75 W126 void-undo between facts and witness remains edited
+  ---
+  duration_ms: 7.239166
+  type: 'test'
+  ...
+# Subtest: W79 W91 refuses source before all writes
+ok 92 - W79 W91 refuses source before all writes
+  ---
+  duration_ms: 8.017084
+  type: 'test'
+  ...
+# Subtest: W79 W91 refuses destination before all writes
+ok 93 - W79 W91 refuses destination before all writes
+  ---
+  duration_ms: 6.758333
+  type: 'test'
+  ...
+# Subtest: W79 W91 refuses closed before all writes
+ok 94 - W79 W91 refuses closed before all writes
+  ---
+  duration_ms: 0.125875
+  type: 'test'
+  ...
+# Subtest: W125 identical interrupted replan resend resumes its stored plan with replan true
+ok 95 - W125 identical interrupted replan resend resumes its stored plan with replan true
+  ---
+  duration_ms: 27.385208
+  type: 'test'
+  ...
+# Subtest: W75 completed command resend preserves original witness after a later edit
+ok 96 - W75 completed command resend preserves original witness after a later edit
+  ---
+  duration_ms: 15.631292
+  type: 'test'
+  ...
+# Subtest: W104 findings witness lost response is recovered once
+ok 97 - W104 findings witness lost response is recovered once
+  ---
+  duration_ms: 14.666792
+  type: 'test'
+  ...
+# Subtest: W125 unchanged auditPending refuses witness at the real route
+ok 98 - W125 unchanged auditPending refuses witness at the real route
+  ---
+  duration_ms: 15.462709
+  type: 'test'
+  ...
+# Subtest: W125 unchanged missing-version refuses witness at the real route
+ok 99 - W125 unchanged missing-version refuses witness at the real route
+  ---
+  duration_ms: 15.982083
+  type: 'test'
+  ...
+# Subtest: W114 stored practice option carries through effective definitions and historical read
+ok 100 - W114 stored practice option carries through effective definitions and historical read
+  ---
+  duration_ms: 14.591083
+  type: 'test'
+  ...
+# Subtest: plan target refusal reports its already persisted Condition and failed plan step
+ok 101 - plan target refusal reports its already persisted Condition and failed plan step
+  ---
+  duration_ms: 7.341709
+  type: 'test'
+  ...
+# Subtest: completed own command restores a missing Encounter link without changing its findings witness
+ok 102 - completed own command restores a missing Encounter link without changing its findings witness
+  ---
+  duration_ms: 15.074333
+  type: 'test'
+  ...
+# Subtest: W75 duplicate findings witness produces integrity warning
+ok 103 - W75 duplicate findings witness produces integrity warning
+  ---
+  duration_ms: 8.492708
+  type: 'test'
+  ...
+# Subtest: W75 wrong-target findings witness produces integrity warning
+ok 104 - W75 wrong-target findings witness produces integrity warning
+  ---
+  duration_ms: 7.978125
+  type: 'test'
+  ...
+# Subtest: canonical frozen plan scope is checked before relinking or writing facts
+ok 105 - canonical frozen plan scope is checked before relinking or writing facts
+  ---
+  duration_ms: 13.596916
+  type: 'test'
+  ...
+# Subtest: unconfirmed no-op Encounter link never permits fact writes
+ok 106 - unconfirmed no-op Encounter link never permits fact writes
+  ---
+  duration_ms: 7.343333
+  type: 'test'
+  ...
+# Subtest: carry requires UUIDv4 command missing
+ok 107 - carry requires UUIDv4 command missing
+  ---
+  duration_ms: 0.1335
+  type: 'test'
+  ...
+# Subtest: carry requires UUIDv4 command not-uuid
+ok 108 - carry requires UUIDv4 command not-uuid
+  ---
+  duration_ms: 0.123417
+  type: 'test'
+  ...
+# Subtest: carry requires UUIDv4 command 11111111-1111-1111-8111-111111111111
+ok 109 - carry requires UUIDv4 command 11111111-1111-1111-8111-111111111111
+  ---
+  duration_ms: 0.071459
+  type: 'test'
+  ...
+# Subtest: empty carry plan completes Condition plan link and skips findings witness
+ok 110 - empty carry plan completes Condition plan link and skips findings witness
+  ---
+  duration_ms: 13.370542
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves carry pull command response
+ok 111 - W111 review closure read failure preserves carry pull command response
+  ---
+  duration_ms: 15.913875
+  type: 'test'
+  ...
+# Subtest: W90 door-put refuses a closed encounter before clinical or audit writes
+ok 112 - W90 door-put refuses a closed encounter before clinical or audit writes
+  ---
+  duration_ms: 3.338333
+  type: 'test'
+  ...
+# Subtest: W90 door-audit-repair refuses a closed encounter before clinical or audit writes
+ok 113 - W90 door-audit-repair refuses a closed encounter before clinical or audit writes
+  ---
+  duration_ms: 0.674375
+  type: 'test'
+  ...
+# Subtest: W90 pick refuses a closed encounter before Condition or Encounter writes
+ok 114 - W90 pick refuses a closed encounter before Condition or Encounter writes
+  ---
+  duration_ms: 0.578667
+  type: 'test'
+  ...
+# Subtest: W111 door returns closure observed after a confirmed command
+ok 115 - W111 door returns closure observed after a confirmed command
+  ---
+  duration_ms: 2.69075
+  type: 'test'
+  ...
+# Subtest: W65 W93 non-shared checkbox definition remains editable but its key is refused by the finding door
+ok 116 - W65 W93 non-shared checkbox definition remains editable but its key is refused by the finding door
+  ---
+  duration_ms: 1.100959
+  type: 'test'
+  ...
+# Subtest: W94 W117 stored select-panel-only mapping produces a candidate without finding supports or evidence reference
+ok 117 - W94 W117 stored select-panel-only mapping produces a candidate without finding supports or evidence reference
+  ---
+  duration_ms: 17.449583
+  type: 'test'
+  ...
+# Subtest: W94 W117 stored select-with-live-fact mapping produces a candidate without finding supports or evidence reference
+ok 118 - W94 W117 stored select-with-live-fact mapping produces a candidate without finding supports or evidence reference
+  ---
+  duration_ms: 10.724292
+  type: 'test'
+  ...
+# Subtest: W94 W117 stored numeric-TBUT-panel-only mapping produces a candidate without finding supports or evidence reference
+ok 119 - W94 W117 stored numeric-TBUT-panel-only mapping produces a candidate without finding supports or evidence reference
+  ---
+  duration_ms: 10.799958
+  type: 'test'
+  ...
+# Subtest: W93 finding GET searchIndex excludes shared select number and non-shared checkbox fields
+ok 120 - W93 finding GET searchIndex excludes shared select number and non-shared checkbox fields
+  ---
+  duration_ms: 1.855542
+  type: 'test'
+  ...
+# Subtest: W92 inactive historical fact remains a labelled read-only row through actual GET
+ok 121 - W92 inactive historical fact remains a labelled read-only row through actual GET
+  ---
+  duration_ms: 1.090459
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves door-put command response
+ok 122 - W111 review closure read failure preserves door-put command response
+  ---
+  duration_ms: 5.130792
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves door-audit-repair command response
+ok 123 - W111 review closure read failure preserves door-audit-repair command response
+  ---
+  duration_ms: 1.786167
+  type: 'test'
+  ...
+# Subtest: W94 review candidate dedupe preserves input objects and unions support
+ok 124 - W94 review candidate dedupe preserves input objects and unions support
+  ---
+  duration_ms: 0.278375
+  type: 'test'
+  ...
+# Subtest: W65 ownership restricts catalog and section classification
+ok 125 - W65 ownership restricts catalog and section classification
+  ---
+  duration_ms: 0.810209
+  type: 'test'
+  ...
+# Subtest: W92 inactive definition remains canonical read-only
+ok 126 - W92 inactive definition remains canonical read-only
+  ---
+  duration_ms: 1.973792
+  type: 'test'
+  ...
+# Subtest: W92 inactive field remains canonical read-only
+ok 127 - W92 inactive field remains canonical read-only
+  ---
+  duration_ms: 0.413166
+  type: 'test'
+  ...
+# Subtest: W92 inactive option remains canonical read-only
+ok 128 - W92 inactive option remains canonical read-only
+  ---
+  duration_ms: 0.347625
+  type: 'test'
+  ...
+# Subtest: W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+ok 129 - W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+  ---
+  duration_ms: 0.943542
+  type: 'test'
+  ...
+# Subtest: W95 panel rejects unknown owned inactive select and invalid typed values without writes
+ok 130 - W95 panel rejects unknown owned inactive select and invalid typed values without writes
+  ---
+  duration_ms: 1.056
+  type: 'test'
+  ...
+# Subtest: W112 W117 panel writer roundtrip replay conflict and revive retain identity
+ok 131 - W112 W117 panel writer roundtrip replay conflict and revive retain identity
+  ---
+  duration_ms: 4.1155
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit agent
+ok 132 - W83 W109 rejects audit agent
+  ---
+  duration_ms: 1.528333
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit activity
+ok 133 - W83 W109 rejects audit activity
+  ---
+  duration_ms: 1.121209
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit system
+ok 134 - W83 W109 rejects audit system
+  ---
+  duration_ms: 1.126417
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit instant
+ok 135 - W83 W109 rejects audit instant
+  ---
+  duration_ms: 0.975292
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit targets
+ok 136 - W83 W109 rejects audit targets
+  ---
+  duration_ms: 2.448375
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit mixed
+ok 137 - W83 W109 rejects audit mixed
+  ---
+  duration_ms: 1.003334
+  type: 'test'
+  ...
+# Subtest: W83 equivalent recorded instants and duplicate targets accepted
+ok 138 - W83 equivalent recorded instants and duplicate targets accepted
+  ---
+  duration_ms: 0.792417
+  type: 'test'
+  ...
+# Subtest: W84 actor-bound reassertion rejects changed actor
+ok 139 - W84 actor-bound reassertion rejects changed actor
+  ---
+  duration_ms: 0.783042
+  type: 'test'
+  ...
+# Subtest: W106 W110 selected panel audit repair leaves other debt unchanged
+ok 140 - W106 W110 selected panel audit repair leaves other debt unchanged
+  ---
+  duration_ms: 1.966917
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact empty deletion conflicts before write or replay
+ok 141 - W85 W128 fact empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.615375
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 404 deletion conflicts before write or replay
+ok 142 - W85 W128 fact 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.624708
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 410 deletion conflicts before write or replay
+ok 143 - W85 W128 fact 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.587709
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel empty deletion conflicts before write or replay
+ok 144 - W85 W128 panel empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.30275
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 404 deletion conflicts before write or replay
+ok 145 - W85 W128 panel 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.427208
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 410 deletion conflicts before write or replay
+ok 146 - W85 W128 panel 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.325625
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert empty deletion conflicts before write or replay
+ok 147 - W85 W128 reassert empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.462292
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 404 deletion conflicts before write or replay
+ok 148 - W85 W128 reassert 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.495459
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 410 deletion conflicts before write or replay
+ok 149 - W85 W128 reassert 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 1.998042
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 404 and empty owner
+ok 150 - W85 fact baseline read 404 and empty owner
+  ---
+  duration_ms: 4.29375
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 410 and empty owner
+ok 151 - W85 fact baseline read 410 and empty owner
+  ---
+  duration_ms: 0.841209
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 502 and empty owner
+ok 152 - W85 fact baseline read 502 and empty owner
+  ---
+  duration_ms: 0.714125
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 404 and empty owner
+ok 153 - W85 panel baseline read 404 and empty owner
+  ---
+  duration_ms: 0.674625
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 410 and empty owner
+ok 154 - W85 panel baseline read 410 and empty owner
+  ---
+  duration_ms: 0.433042
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 502 and empty owner
+ok 155 - W85 panel baseline read 502 and empty owner
+  ---
+  duration_ms: 0.390375
+  type: 'test'
+  ...
+# Subtest: W85 fact confirmed write then deleted
+ok 156 - W85 fact confirmed write then deleted
+  ---
+  duration_ms: 0.344916
+  type: 'test'
+  ...
+# Subtest: W85 fact unknown write then deleted
+ok 157 - W85 fact unknown write then deleted
+  ---
+  duration_ms: 0.332417
+  type: 'test'
+  ...
+# Subtest: W85 panel confirmed write then deleted
+ok 158 - W85 panel confirmed write then deleted
+  ---
+  duration_ms: 0.1765
+  type: 'test'
+  ...
+# Subtest: W85 panel unknown write then deleted
+ok 159 - W85 panel unknown write then deleted
+  ---
+  duration_ms: 0.162875
+  type: 'test'
+  ...
+# Subtest: W83 initial mismatching audit result and lost response stay mismatch without overwrite
+ok 160 - W83 initial mismatching audit result and lost response stay mismatch without overwrite
+  ---
+  duration_ms: 0.650459
+  type: 'test'
+  ...
+# Subtest: W84 reassert initial forged audit and mixed response are command-reused
+ok 161 - W84 reassert initial forged audit and mixed response are command-reused
+  ---
+  duration_ms: 0.479375
+  type: 'test'
+  ...
+# Subtest: W92 direct writers reject inactive assertions even with historical catalog supplied
+ok 162 - W92 direct writers reject inactive assertions even with historical catalog supplied
+  ---
+  duration_ms: 0.380625
+  type: 'test'
+  ...
+# Subtest: W71 panel scalar storage rejects alternate clinical data and wrong typed payload
+ok 163 - W71 panel scalar storage rejects alternate clinical data and wrong typed payload
+  ---
+  duration_ms: 0.226
+  type: 'test'
+  ...
+# Subtest: W95 panel missing effective definition is a 400 before any write
+ok 164 - W95 panel missing effective definition is a 400 before any write
+  ---
+  duration_ms: 0.12075
+  type: 'test'
+  ...
+# Subtest: W85 fact lost write then recovery direct read 410 stays unknown
+ok 165 - W85 fact lost write then recovery direct read 410 stays unknown
+  ---
+  duration_ms: 2.022292
+  type: 'test'
+  ...
+# Subtest: W85 panel lost write then recovery direct read 410 stays unknown
+ok 166 - W85 panel lost write then recovery direct read 410 stays unknown
+  ---
+  duration_ms: 0.291709
+  type: 'test'
+  ...
+# Subtest: W71 every panel identity dimension is checked
+ok 167 - W71 every panel identity dimension is checked
+  ---
+  duration_ms: 0.301375
+  type: 'test'
+  ...
+# Subtest: W112 panel stale baseline conflicts; replays classify same state and reject different payload
+ok 168 - W112 panel stale baseline conflicts; replays classify same state and reject different payload
+  ---
+  duration_ms: 0.624625
+  type: 'test'
+  ...
+# Subtest: W84 classifyReplay actor binding includes both tags and target set
+ok 169 - W84 classifyReplay actor binding includes both tags and target set
+  ---
+  duration_ms: 0.472333
+  type: 'test'
+  ...
+# Subtest: W109 panel mixed valid and forged audits remains pending
+ok 170 - W109 panel mixed valid and forged audits remains pending
+  ---
+  duration_ms: 0.748209
+  type: 'test'
+  ...
+# Subtest: W95 panel scalar select and string values roundtrip normalized without facts
+ok 171 - W95 panel scalar select and string values roundtrip normalized without facts
+  ---
+  duration_ms: 0.759875
+  type: 'test'
+  ...
+# Subtest: W115 signed final panels and facts retain identity with zero ordinary writes
+ok 172 - W115 signed final panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.454833
+  type: 'test'
+  ...
+# Subtest: W115 signed amended panels and facts retain identity with zero ordinary writes
+ok 173 - W115 signed amended panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.399417
+  type: 'test'
+  ...
+# Subtest: W115 signed corrected panels and facts retain identity with zero ordinary writes
+ok 174 - W115 signed corrected panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.273625
+  type: 'test'
+  ...
+# Subtest: W95 review non-shared panel definition returns not-a-shared-finding before writes
+ok 175 - W95 review non-shared panel definition returns not-a-shared-finding before writes
+  ---
+  duration_ms: 0.094666
+  type: 'test'
+  ...
+# Subtest: W66 frozen loaded set preserves concurrent addition
+ok 176 - W66 frozen loaded set preserves concurrent addition
+  ---
+  duration_ms: 20.753542
+  type: 'test'
+  ...
+# Subtest: W67 whole request prevalidates stale second eye
+ok 177 - W67 whole request prevalidates stale second eye
+  ---
+  duration_ms: 7.816625
+  type: 'test'
+  ...
+# Subtest: W68 selected positive and scoped negative refuse before writes
+ok 178 - W68 selected positive and scoped negative refuse before writes
+  ---
+  duration_ms: 7.925125
+  type: 'test'
+  ...
+# Subtest: W69 fresh read prevents new negative after concurrent positive
+ok 179 - W69 fresh read prevents new negative after concurrent positive
+  ---
+  duration_ms: 8.772708
+  type: 'test'
+  ...
+# Subtest: W70 deferred preserves fact bytes and version
+ok 180 - W70 deferred preserves fact bytes and version
+  ---
+  duration_ms: 9.695583
+  type: 'test'
+  ...
+# Subtest: W72 current and prior projections hide clears as current
+ok 181 - W72 current and prior projections hide clears as current
+  ---
+  duration_ms: 12.677875
+  type: 'test'
+  ...
+# Subtest: W91 finished refuses save
+ok 182 - W91 finished refuses save
+  ---
+  duration_ms: 6.6525
+  type: 'test'
+  ...
+# Subtest: W91 cancelled refuses save
+ok 183 - W91 cancelled refuses save
+  ---
+  duration_ms: 7.30825
+  type: 'test'
+  ...
+# Subtest: W91 entered-in-error refuses save
+ok 184 - W91 entered-in-error refuses save
+  ---
+  duration_ms: 7.425208
+  type: 'test'
+  ...
+# Subtest: W96 TBUT panel typed values round trip
+ok 185 - W96 TBUT panel typed values round trip
+  ---
+  duration_ms: 7.485208
+  type: 'test'
+  ...
+# Subtest: W97 exact resend completes interrupted eye
+ok 186 - W97 exact resend completes interrupted eye
+  ---
+  duration_ms: 12.359542
+  type: 'test'
+  ...
+# Subtest: W98 intervening same target stale; unrelated target replay succeeds
+ok 187 - W98 intervening same target stale; unrelated target replay succeeds
+  ---
+  duration_ms: 18.785875
+  type: 'test'
+  ...
+# Subtest: W99 loaded present claim cannot match live absent
+ok 188 - W99 loaded present claim cannot match live absent
+  ---
+  duration_ms: 6.814208
+  type: 'test'
+  ...
+# Subtest: W100 negative only audit failure is causal incomplete
+ok 189 - W100 negative only audit failure is causal incomplete
+  ---
+  duration_ms: 9.348167
+  type: 'test'
+  ...
+# Subtest: W110 panel debt surfaces and repair clears it
+ok 190 - W110 panel debt surfaces and repair clears it
+  ---
+  duration_ms: 8.2405
+  type: 'test'
+  ...
+# Subtest: W114 practice option from stored definitions saves and reads
+ok 191 - W114 practice option from stored definitions saves and reads
+  ---
+  duration_ms: 20.510209
+  type: 'test'
+  ...
+# Subtest: W120 persisted negative repairs original audit despite new positive
+ok 192 - W120 persisted negative repairs original audit despite new positive
+  ---
+  duration_ms: 9.654167
+  type: 'test'
+  ...
+# Subtest: W121 same negative id second actor refuses zero writes
+ok 193 - W121 same negative id second actor refuses zero writes
+  ---
+  duration_ms: 7.937708
+  type: 'test'
+  ...
+# Subtest: W122 absent transition requires explicit flag; omission preserves
+ok 194 - W122 absent transition requires explicit flag; omission preserves
+  ---
+  duration_ms: 7.781209
+  type: 'test'
+  ...
+# Subtest: missing baseline 428 no-store and pre-rebuild zero write
+ok 195 - missing baseline 428 no-store and pre-rebuild zero write
+  ---
+  duration_ms: 12.474958
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: dry-eye:conjunctival-staining
+ok 196 - V18 canonical per-eye fields and qualifiers: dry-eye:conjunctival-staining
+  ---
+  duration_ms: 6.41275
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:periocular-adnexa
+ok 197 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:periocular-adnexa
+  ---
+  duration_ms: 32.015875
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lids-lashes
+ok 198 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lids-lashes
+  ---
+  duration_ms: 122.042167
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:palpebral-conjunctiva
+ok 199 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:palpebral-conjunctiva
+  ---
+  duration_ms: 21.97225
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:conjunctiva
+ok 200 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:conjunctiva
+  ---
+  duration_ms: 51.910541
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:tear-film
+ok 201 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:tear-film
+  ---
+  duration_ms: 12.777625
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:cornea
+ok 202 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:cornea
+  ---
+  duration_ms: 390.394792
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:anterior-chamber
+ok 203 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:anterior-chamber
+  ---
+  duration_ms: 18.912458
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:iris
+ok 204 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:iris
+  ---
+  duration_ms: 35.091
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lens
+ok 205 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lens
+  ---
+  duration_ms: 57.763916
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vitreous
+ok 206 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vitreous
+  ---
+  duration_ms: 22.501416
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:fundus
+ok 207 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:fundus
+  ---
+  duration_ms: 55.908208
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:macula
+ok 208 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:macula
+  ---
+  duration_ms: 50.993084
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vessels
+ok 209 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vessels
+  ---
+  duration_ms: 23.945417
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:periphery
+ok 210 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:periphery
+  ---
+  duration_ms: 35.441334
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+ok 211 - V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+  ---
+  duration_ms: 12.95525
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+ok 212 - V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+  ---
+  duration_ms: 12.686916
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:lens brunescent remains readable and refuses writes
+ok 213 - V18 W72 legacy anterior:lens brunescent remains readable and refuses writes
+  ---
+  duration_ms: 12.312542
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy posterior:macula macular-hole-full-lamellar remains readable and refuses writes
+ok 214 - V18 W72 legacy posterior:macula macular-hole-full-lamellar remains readable and refuses writes
+  ---
+  duration_ms: 12.554208
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy posterior:periphery operculated-hole+horseshoe-tear remains readable and refuses writes
+ok 215 - V18 W72 legacy posterior:periphery operculated-hole+horseshoe-tear remains readable and refuses writes
+  ---
+  duration_ms: 12.898209
+  type: 'test'
+  ...
+# Subtest: V18 negative scope stays frozen after catalog grows and empty panel never implies a negative
+ok 216 - V18 negative scope stays frozen after catalog grows and empty panel never implies a negative
+  ---
+  duration_ms: 9.295625
+  type: 'test'
+  ...
+# Subtest: V18 negative malformed scope and changed payload refuse without replacement
+ok 217 - V18 negative malformed scope and changed payload refuse without replacement
+  ---
+  duration_ms: 32.87325
+  type: 'test'
+  ...
+# Subtest: V18 malformed persisted negative act fails closed on history
+ok 218 - V18 malformed persisted negative act fails closed on history
+  ---
+  duration_ms: 8.026666
+  type: 'test'
+  ...
+# Subtest: W96 select-only Surface Staining panel round trips without facts
+ok 219 - W96 select-only Surface Staining panel round trips without facts
+  ---
+  duration_ms: 8.145791
+  type: 'test'
+  ...
+# Subtest: W97 panel replay uses frozen original baseline
+ok 220 - W97 panel replay uses frozen original baseline
+  ---
+  duration_ms: 7.608542
+  type: 'test'
+  ...
+# Subtest: V18 invalid qualifiers and signed second target refuse the whole request
+ok 221 - V18 invalid qualifiers and signed second target refuse the whole request
+  ---
+  duration_ms: 13.197833
+  type: 'test'
+  ...
+# Subtest: V18 canonical capture retains ruled lens macula and periphery diagnosis proposals
+ok 222 - V18 canonical capture retains ruled lens macula and periphery diagnosis proposals
+  ---
+  duration_ms: 213.696292
+  type: 'test'
+  ...
+# Subtest: V18 qualifier omission never fills sibling cells or flare
+ok 223 - V18 qualifier omission never fills sibling cells or flare
+  ---
+  duration_ms: 8.973334
+  type: 'test'
+  ...
+# Subtest: V18 panel selects and measurements reject invalid range step owned field and option
+ok 224 - V18 panel selects and measurements reject invalid range step owned field and option
+  ---
+  duration_ms: 8.009875
+  type: 'test'
+  ...
+# Subtest: V18 all four qualifier kinds stay independent across options and eyes
+ok 225 - V18 all four qualifier kinds stay independent across options and eyes
+  ---
+  duration_ms: 2.465625
+  type: 'test'
+  ...
+# Subtest: V18 historical aliases are scoped and explicit qualifiers take precedence
+ok 226 - V18 historical aliases are scoped and explicit qualifiers take precedence
+  ---
+  duration_ms: 13.944875
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+ok 227 - V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+  ---
+  duration_ms: 6.602084
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing foreign record follows scoped history policy
+ok 228 - V21 F1 patient-wide contributing foreign record follows scoped history policy
+  ---
+  duration_ms: 6.47325
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing unscoped record follows scoped history policy
+ok 229 - V21 F1 patient-wide contributing unscoped record follows scoped history policy
+  ---
+  duration_ms: 5.988459
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing malformed record follows scoped history policy
+ok 230 - V21 F1 patient-wide contributing malformed record follows scoped history policy
+  ---
+  duration_ms: 5.8875
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves ocular save command response
+ok 231 - W111 review closure read failure preserves ocular save command response
+  ---
+  duration_ms: 9.4355
+  type: 'test'
+  ...
+# Subtest: V21 review priors searches exact base field and option codes including inactive entries
+ok 232 - V21 review priors searches exact base field and option codes including inactive entries
+  ---
+  duration_ms: 0.567458
+  type: 'test'
+  ...
+# Subtest: V27 live canonical preliminary credits and overview displays
+ok 233 - V27 live canonical preliminary credits and overview displays
+  ---
+  duration_ms: 36.196334
+  type: 'test'
+  ...
+# Subtest: V27 live canonical final credits and overview displays
+ok 234 - V27 live canonical final credits and overview displays
+  ---
+  duration_ms: 20.613833
+  type: 'test'
+  ...
+# Subtest: V27 live canonical amended credits and overview displays
+ok 235 - V27 live canonical amended credits and overview displays
+  ---
+  duration_ms: 16.560417
+  type: 'test'
+  ...
+# Subtest: W80 extension homes supply overview diagnosis
+ok 236 - W80 extension homes supply overview diagnosis
+  ---
+  duration_ms: 9.05975
+  type: 'test'
+  ...
+# Subtest: W81 cleared canonical cannot credit or display
+ok 237 - W81 cleared canonical cannot credit or display
+  ---
+  duration_ms: 26.999833
+  type: 'test'
+  ...
+# Subtest: W81 explicit absent canonical credits
+ok 238 - W81 explicit absent canonical credits
+  ---
+  duration_ms: 8.995583
+  type: 'test'
+  ...
+# Subtest: W81 explicit negative act credits
+ok 239 - W81 explicit negative act credits
+  ---
+  duration_ms: 8.120125
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 8 credits
+ok 240 - W118 present TBUT 8 credits
+  ---
+  duration_ms: 15.068833
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 0 credits
+ok 241 - W118 present TBUT 0 credits
+  ---
+  duration_ms: 14.655584
+  type: 'test'
+  ...
+# Subtest: W81 panel context other no credit
+ok 242 - W81 panel context other no credit
+  ---
+  duration_ms: 8.409208
+  type: 'test'
+  ...
+# Subtest: W81 panel context remarks no credit
+ok 243 - W81 panel context remarks no credit
+  ---
+  duration_ms: 7.796958
+  type: 'test'
+  ...
+# Subtest: W81 panel context deferred no credit
+ok 244 - W81 panel context deferred no credit
+  ---
+  duration_ms: 8.683625
+  type: 'test'
+  ...
+# Subtest: W81 inactive canonical no credit
+ok 245 - W81 inactive canonical no credit
+  ---
+  duration_ms: 9.39975
+  type: 'test'
+  ...
+# Subtest: W114 stored practice option resolves in both consumers
+ok 246 - W114 stored practice option resolves in both consumers
+  ---
+  duration_ms: 15.7275
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry unchanged evidence
+ok 247 - V27 persisted carry unchanged evidence
+  ---
+  duration_ms: 18.93325
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry link-only evidence
+ok 248 - V27 persisted carry link-only evidence
+  ---
+  duration_ms: 15.767208
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry void-undo evidence
+ok 249 - V27 persisted carry void-undo evidence
+  ---
+  duration_ms: 16.871708
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry reassert evidence
+ok 250 - V27 persisted carry reassert evidence
+  ---
+  duration_ms: 16.412958
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry clinical-edit evidence
+ok 251 - V27 persisted carry clinical-edit evidence
+  ---
+  duration_ms: 16.104916
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness fact
+ok 252 - W81 overview completeness fact
+  ---
+  duration_ms: 0.484625
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-value
+ok 253 - W81 overview completeness panel-value
+  ---
+  duration_ms: 0.408917
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-context
+ok 254 - W81 overview completeness panel-context
+  ---
+  duration_ms: 0.172
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness cleared
+ok 255 - W81 overview completeness cleared
+  ---
+  duration_ms: 0.113208
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness inactive
+ok 256 - W81 overview completeness inactive
+  ---
+  duration_ms: 0.141458
+  type: 'test'
+  ...
+# Subtest: W118 retired panel value does not credit or display
+ok 257 - W118 retired panel value does not credit or display
+  ---
+  duration_ms: 14.238916
+  type: 'test'
+  ...
+# Subtest: V27 pre-rebuild legacy atomic is displayed through reader view without credit
+ok 258 - V27 pre-rebuild legacy atomic is displayed through reader view without credit
+  ---
+  duration_ms: 14.992459
+  type: 'test'
+  ...
+# Subtest: W114 overview stored definition dependency resolves practice option label and clinical credit
+ok 259 - W114 overview stored definition dependency resolves practice option label and clinical credit
+  ---
+  duration_ms: 7.339917
+  type: 'test'
+  ...
+# Subtest: W81 review completeness loads only candidate encounters and retains canonical credit
+ok 260 - W81 review completeness loads only candidate encounters and retains canonical credit
+  ---
+  duration_ms: 8.414208
+  type: 'test'
+  ...
+# Subtest: W81 review completeness loads only candidate encounters and retains panel credit
+ok 261 - W81 review completeness loads only candidate encounters and retains panel credit
+  ---
+  duration_ms: 7.780209
+  type: 'test'
+  ...
+# Subtest: W81 review completeness loads only candidate encounters and retains negative credit
+ok 262 - W81 review completeness loads only candidate encounters and retains negative credit
+  ---
+  duration_ms: 8.598292
+  type: 'test'
+  ...
+# Subtest: W81 review completeness bounds concurrent history evidence loads at four
+ok 263 - W81 review completeness bounds concurrent history evidence loads at four
+  ---
+  duration_ms: 19.529917
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared default refuses before all writes
+ok 264 - W82 selected valued shared default refuses before all writes
+  ---
+  duration_ms: 12.144167
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared override refuses before all writes
+ok 265 - W82 selected valued shared override refuses before all writes
+  ---
+  duration_ms: 9.680708
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared per-eye refuses before all writes
+ok 266 - W82 selected valued shared per-eye refuses before all writes
+  ---
+  duration_ms: 7.362625
+  type: 'test'
+  ...
+# Subtest: W82 shared prompt applies with no Observation
+ok 267 - W82 shared prompt applies with no Observation
+  ---
+  duration_ms: 9.620041
+  type: 'test'
+  ...
+# Subtest: W82 opted-out valued shared is allowed
+ok 268 - W82 opted-out valued shared is allowed
+  ---
+  duration_ms: 10.178291
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply closed zero writes
+ok 269 - W91 protocol apply closed zero writes
+  ---
+  duration_ms: 1.031708
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply pre-rebuild zero writes
+ok 270 - W91 protocol apply pre-rebuild zero writes
+  ---
+  duration_ms: 9.311792
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply closed zero writes
+ok 271 - W108 protocol unapply closed zero writes
+  ---
+  duration_ms: 8.347333
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply pre-rebuild zero writes
+ok 272 - W108 protocol unapply pre-rebuild zero writes
+  ---
+  duration_ms: 16.357959
+  type: 'test'
+  ...
+# Subtest: V28 capture preliminary canonical prompt
+ok 273 - V28 capture preliminary canonical prompt
+  ---
+  duration_ms: 10.063667
+  type: 'test'
+  ...
+# Subtest: V28 capture final canonical prompt
+ok 274 - V28 capture final canonical prompt
+  ---
+  duration_ms: 8.20975
+  type: 'test'
+  ...
+# Subtest: V28 capture amended canonical prompt
+ok 275 - V28 capture amended canonical prompt
+  ---
+  duration_ms: 9.06175
+  type: 'test'
+  ...
+# Subtest: W107 capture fact OD + committed prompt OS dedupes
+ok 276 - W107 capture fact OD + committed prompt OS dedupes
+  ---
+  duration_ms: 14.822667
+  type: 'test'
+  ...
+# Subtest: W119 panel value capture
+ok 277 - W119 panel value capture
+  ---
+  duration_ms: 9.252833
+  type: 'test'
+  ...
+# Subtest: W119 panel context-only capture
+ok 278 - W119 panel context-only capture
+  ---
+  duration_ms: 6.977417
+  type: 'test'
+  ...
+# Subtest: W114 capture respects stored shared definition
+ok 279 - W114 capture respects stored shared definition
+  ---
+  duration_ms: 13.723375
+  type: 'test'
+  ...
+# Subtest: V28 unapply shared target rejects before unrelated removals
+ok 280 - V28 unapply shared target rejects before unrelated removals
+  ---
+  duration_ms: 14.716459
+  type: 'test'
+  ...
+# Subtest: T22 control actual failed unapply restores unrelated Observation
+ok 281 - T22 control actual failed unapply restores unrelated Observation
+  ---
+  duration_ms: 15.250416
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback closed refuses Observation restore
+ok 282 - W108 actual unapply rollback closed refuses Observation restore
+  ---
+  duration_ms: 14.45675
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback pre-rebuild refuses Observation restore
+not ok 283 - W108 actual unapply rollback pre-rebuild refuses Observation restore
+  ---
+  duration_ms: 15.727292
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Protocols.test.ts:1:5852'
+  failureType: 'testCodeFailure'
+  error: 'synthetic finding-state failure after Observation removal'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.c.hooks.beforeWrite (<worktree>/mcp/tests/fixtures/r10/protocol-harness.ts:31:9)
+    Object.update (<worktree>/mcp/tests/fixtures/r10/writer-harness.ts:75:39)
+    ProtocolBasicStore.saveWithIdentifiers (<worktree>/mcp/src/clinical-graph/protocol-store.ts:155:25)
+    async ProtocolService.unapplyLocked (<worktree>/mcp/src/clinical-graph/protocol-service.ts:809:11)
+    async InProcessProtocolItemAddLock.run (<worktree>/mcp/src/clinical-graph/protocol-service.ts:78:14)
+    async handleProtocolUnapplyRequest (<worktree>/mcp/src/clinical-graph/protocol-endpoint.ts:855:33)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Protocols.test.ts:21:196)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W108 actual unapply rollback shared refuses Observation restore
+ok 284 - W108 actual unapply rollback shared refuses Observation restore
+  ---
+  duration_ms: 14.712208
+  type: 'test'
+  ...
+# Subtest: W82 payload definition override cannot value a shared proposed row
+ok 285 - W82 payload definition override cannot value a shared proposed row
+  ---
+  duration_ms: 7.202916
+  type: 'test'
+  ...
+# Subtest: W82 built-in closed reject precedes seeding
+ok 286 - W82 built-in closed reject precedes seeding
+  ---
+  duration_ms: 0.778
+  type: 'test'
+  ...
+# Subtest: W82 built-in valued reject precedes seeding
+ok 287 - W82 built-in valued reject precedes seeding
+  ---
+  duration_ms: 6.825209
+  type: 'test'
+  ...
+# Subtest: W114 stored local shared valued item refuses
+ok 288 - W114 stored local shared valued item refuses
+  ---
+  duration_ms: 6.609542
+  type: 'test'
+  ...
+# Subtest: W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+ok 289 - W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+  ---
+  duration_ms: 13.703625
+  type: 'test'
+  ...
+# Subtest: V28 capture excludes cleared canonical and retains unrelated value
+ok 290 - V28 capture excludes cleared canonical and retains unrelated value
+  ---
+  duration_ms: 14.186333
+  type: 'test'
+  ...
+# Subtest: W82 prompt override cannot hide a valued shared proposed item
+ok 291 - W82 prompt override cannot hide a valued shared proposed item
+  ---
+  duration_ms: 7.062708
+  type: 'test'
+  ...
+# Subtest: V28 inactive shared capture cannot seed
+ok 292 - V28 inactive shared capture cannot seed
+  ---
+  duration_ms: 13.318208
+  type: 'test'
+  ...
+# Subtest: W108 review inactive unapply closed is a zero-write no-op
+ok 293 - W108 review inactive unapply closed is a zero-write no-op
+  ---
+  duration_ms: 14.124666
+  type: 'test'
+  ...
+# Subtest: W108 review inactive unapply pre-rebuild is a zero-write no-op
+ok 294 - W108 review inactive unapply pre-rebuild is a zero-write no-op
+  ---
+  duration_ms: 14.076375
+  type: 'test'
+  ...
+# Subtest: W82 review whole protocol loads shared definitions and projection once
+ok 295 - W82 review whole protocol loads shared definitions and projection once
+  ---
+  duration_ms: 7.789875
+  type: 'test'
+  ...
+# Subtest: W91 review protocol closure after projection load still refuses
+ok 296 - W91 review protocol closure after projection load still refuses
+  ---
+  duration_ms: 7.589958
+  type: 'test'
+  ...
+# Subtest: W40 complete green fixture satisfies the fixed A3 scenario set
+ok 297 - W40 complete green fixture satisfies the fixed A3 scenario set
+  ---
+  duration_ms: 335.960459
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test and names T1
+ok 298 - W40 strict rejects delete-test and names T1
+  ---
+  duration_ms: 329.03925
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test-and-manifest and names T1
+ok 299 - W40 strict rejects delete-test-and-manifest and names T1
+  ---
+  duration_ms: 335.687333
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects skip and names T1
+ok 300 - W40 strict rejects skip and names T1
+  ---
+  duration_ms: 332.899834
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects todo and names T1
+ok 301 - W40 strict rejects todo and names T1
+  ---
+  duration_ms: 332.712375
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects failure and names T1
+ok 302 - W40 strict rejects failure and names T1
+  ---
+  duration_ms: 328.253458
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects wrong-suite and names T1
+ok 303 - W40 strict rejects wrong-suite and names T1
+  ---
+  duration_ms: 326.840209
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects duplicate and names T1
+ok 304 - W40 strict rejects duplicate and names T1
+  ---
+  duration_ms: 332.354875
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects child-failure and names T1
+ok 305 - W40 strict rejects child-failure and names T1
+  ---
+  duration_ms: 324.574334
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects truncated
+ok 306 - W40 strict TAP parser rejects truncated
+  ---
+  duration_ms: 1.076458
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects malformed
+ok 307 - W40 strict TAP parser rejects malformed
+  ---
+  duration_ms: 0.081417
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects wrongPlan
+ok 308 - W40 strict TAP parser rejects wrongPlan
+  ---
+  duration_ms: 0.17
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects duplicateNumber
+ok 309 - W40 strict TAP parser rejects duplicateNumber
+  ---
+  duration_ms: 0.120125
+  type: 'test'
+  ...
+# Subtest: W40 TAP completion requires every final summary and duration
+ok 310 - W40 TAP completion requires every final summary and duration
+  ---
+  duration_ms: 0.037125
+  type: 'test'
+  ...
+# Subtest: W40 rejects traversal that executes MCP scenarios as UI proof
+ok 311 - W40 rejects traversal that executes MCP scenarios as UI proof
+  ---
+  duration_ms: 254.859125
+  type: 'test'
+  ...
+# Subtest: W86 rejects escaping suite symlink before execution
+ok 312 - W86 rejects escaping suite symlink before execution
+  ---
+  duration_ms: 251.9515
+  type: 'test'
+  ...
+# Subtest: W86 rejects broken suite symlink before execution
+ok 313 - W86 rejects broken suite symlink before execution
+  ---
+  duration_ms: 254.811708
+  type: 'test'
+  ...
+# Subtest: W87a W87b W129 exact finding write registry covers every call site including Binary patches
+ok 314 - W87a W87b W129 exact finding write registry covers every call site including Binary patches
+  ---
+  duration_ms: 1995.109
+  type: 'test'
+  ...
+# Subtest: W40 F3 Node census finds nested mixed-case exam PDF consumers in every source root
+ok 315 - W40 F3 Node census finds nested mixed-case exam PDF consumers in every source root
+  ---
+  duration_ms: 2.759875
+  type: 'test'
+  ...
+# Subtest: W40 review census names missing source roots and retains planted consumer
+ok 316 - W40 review census names missing source roots and retains planted consumer
+  ---
+  duration_ms: 0.63175
+  type: 'test'
+  ...
+# Subtest: T1 previous exams displays canonical finding linked by extension
+ok 317 - T1 previous exams displays canonical finding linked by extension
+  ---
+  duration_ms: 13.801125
+  type: 'test'
+  ...
+# Subtest: T2 carry pull preserves canonical identity typed qualifiers and destination home
+ok 318 - T2 carry pull preserves canonical identity typed qualifiers and destination home
+  ---
+  duration_ms: 11.332667
+  type: 'test'
+  ...
+# Subtest: T3 later writer version after carry is read as edited
+ok 319 - T3 later writer version after carry is read as edited
+  ---
+  duration_ms: 12.48125
+  type: 'test'
+  ...
+# Subtest: T7 overview shows live canonical facts and excludes cleared facts
+ok 320 - T7 overview shows live canonical facts and excludes cleared facts
+  ---
+  duration_ms: 1.352459
+  type: 'test'
+  ...
+# Subtest: T8 overview evidence includes extension homes without Condition evidence
+ok 321 - T8 overview evidence includes extension homes without Condition evidence
+  ---
+  duration_ms: 10.244709
+  type: 'test'
+  ...
+# Subtest: T9 completeness credits live canonical facts but not cleared facts
+ok 322 - T9 completeness credits live canonical facts but not cleared facts
+  ---
+  duration_ms: 16.930833
+  type: 'test'
+  ...
+# Subtest: T10 section void selects canonical facts and undo restores exact records
+ok 323 - T10 section void selects canonical facts and undo restores exact records
+  ---
+  duration_ms: 3.980416
+  type: 'test'
+  ...
+# Subtest: T11 finding void and undo preserve identity qualifiers homes and other eye
+ok 324 - T11 finding void and undo preserve identity qualifiers homes and other eye
+  ---
+  duration_ms: 2.6895
+  type: 'test'
+  ...
+# Subtest: T12 encounter void and undo include canonical facts with exact counts
+ok 325 - T12 encounter void and undo include canonical facts with exact counts
+  ---
+  duration_ms: 2.166875
+  type: 'test'
+  ...
+# Subtest: T13 lifecycle mutation repairs owed audit before replacing clinical state
+ok 326 - T13 lifecycle mutation repairs owed audit before replacing clinical state
+  ---
+  duration_ms: 1.803333
+  type: 'test'
+  ...
+# Subtest: T14 lifecycle refuses signed canonical facts without downgrading them
+ok 327 - T14 lifecycle refuses signed canonical facts without downgrading them
+  ---
+  duration_ms: 0.468833
+  type: 'test'
+  ...
+# Subtest: T17 supported Ocular Health pick links fact targets without Condition evidence
+ok 328 - T17 supported Ocular Health pick links fact targets without Condition evidence
+  ---
+  duration_ms: 9.928875
+  type: 'test'
+  ...
+# Subtest: T19 protocol capture reads current canonical facts instead of raw exact-code rows
+ok 329 - T19 protocol capture reads current canonical facts instead of raw exact-code rows
+  ---
+  duration_ms: 8.918834
+  type: 'test'
+  ...
+# Subtest: T20 source census identifies any exam PDF consumer for canonical migration
+ok 330 - T20 source census identifies any exam PDF consumer for canonical migration
+  ---
+  duration_ms: 74.70775
+  type: 'test'
+  ...
+# Subtest: T21 pre-rebuild Ocular Health history and capture remain read-only
+ok 331 - T21 pre-rebuild Ocular Health history and capture remain read-only
+  ---
+  duration_ms: 2.74725
+  type: 'test'
+  ...
+# Subtest: T22 every registered finding write path uses real handlers and emits permitted Observations
+ok 332 - T22 every registered finding write path uses real handlers and emits permitted Observations
+  ---
+  duration_ms: 4950.801625
+  type: 'test'
+  ...
+# {"id":"door-put","scenarioId":"door-put-success","handler":"handleDiagnosisFindingsMutationRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"}],"rejection":{"scenarioId":"door-put-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"door-audit-repair","scenarioId":"door-audit-repair-success","handler":"handleDiagnosisFindingsAuditRepairRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"door-repair-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"pick-condition","scenarioId":"pick-condition-success","handler":"handleDiagnosisPickRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[],"rejection":{"scenarioId":"pick-condition-success","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-save-fact","scenarioId":"oh-save-fact-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"}],"rejection":{"scenarioId":"oh-save-fact-refusal","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-save-panel","scenarioId":"oh-save-panel-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"panel-context"}],"rejection":{"scenarioId":"oh-save-panel-refusal","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-negative-act","scenarioId":"oh-negative-act-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"negative-act"},{"stage":"persisted","reference":"Observation/observation-1","kind":"negative-act"}],"rejection":{"scenarioId":"oh-negative-act-refusal","status":409,"reason":"positive-in-negative-scope","attempted":0,"persisted":0}}
+# {"id":"void","scenarioId":"lifecycle-success","handler":"handleEncounterVoidRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-3","kind":"panel-context"}],"rejection":{"scenarioId":"void-signed","status":422,"reason":"signed-or-cancelled","attempted":0,"persisted":0}}
+# {"id":"undo","scenarioId":"lifecycle-success","handler":"handleEncounterUndoRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-3","kind":"panel-context"}],"rejection":{"scenarioId":"lifecycle-success","status":409,"reason":"undo-superseded","attempted":0,"persisted":0}}
+# {"id":"carry-condition","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-plan","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-link","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-facts","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/af610da5-28da-4bea-968a-7c6f50c9c30c","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/afadf840-4deb-4c71-86ba-a9554c9c8e58","kind":"canonical-fact"}],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-lineage","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"protocol-commit","scenarioId":"protocol-apply-unapply","handler":"handleProtocolApplyRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":5,"persisted":5,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/1038491c-2edd-4d51-a2de-0388c2b9177f","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-commit-shared-reject","status":422,"reason":"shared-finding-charted-in-ocular-health","attempted":0,"persisted":0}}
+# {"id":"protocol-unapply","scenarioId":"protocol-apply-unapply","handler":"handleProtocolUnapplyRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/1038491c-2edd-4d51-a2de-0388c2b9177f","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-unapply-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"protocol-restore","scenarioId":"protocol-restore-compensation","handler":"handleProtocolUnapplyRequest","responseStatus":500,"rejectionScope":"phase-only","attempted":1,"persisted":1,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/2cc39dc9-0e9d-4472-ad4e-5946b15980b7","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-restore-late-close","status":409,"reason":"encounter-closed; zero restore writes, preceding unapply and Basic compensation retained separately","attempted":0,"persisted":0}}
+# {"id":"mcp-create-observation","scenarioId":"T22:mcp-create-observation","handler":"create_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/dfd4abbd-a85e-414c-8038-8b1a888230c8","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-create-observation:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-scribe-write","scenarioId":"T22:mcp-scribe-write","handler":"scribe_write_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/c7b3ea58-ba48-4654-8a49-dad9151219ce","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-scribe-write:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-save-section","scenarioId":"T22:mcp-save-section","handler":"save_section_observations","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/f0e298f9-d793-4282-aa9e-5a731ad9084a","kind":"unrelated"},{"stage":"persisted","reference":"Observation/be0ae03f-b0fe-4c91-8445-ed2630b46563","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-save-section:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-append-context","scenarioId":"T22:mcp-append-context","handler":"append_observation_context","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/32597805-6fd1-4bb9-af57-2c402a745eb6","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-append-context:canonical-shared-source","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-attest","scenarioId":"T22:mcp-attest","handler":"clinician_attest_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"persisted","reference":"Observation/5fbaf493-a02a-4871-93e4-832f3bb052ce","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/71974361-b8be-453e-9ad6-24caba2275b2","kind":"panel-context"}],"rejection":{"scenarioId":"T22:mcp-attest:legacy-target-refusal","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-amend","scenarioId":"T22:mcp-amend","handler":"amend_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"persisted","reference":"Observation/9447a615-61ad-4942-a209-93784d8e8168","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/35415cc8-e306-4542-9448-98cf29c23850","kind":"panel-context"}],"rejection":{"scenarioId":"T22:mcp-amend:legacy-target-refusal","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-smoking-status","scenarioId":"T22:mcp-smoking-status","handler":"create_smoking_status_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/bd89c83e-c831-421f-b228-0dd2c5150248","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-smoking-status:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-dry-eye-questionnaire-score","scenarioId":"T22:mcp-dry-eye-questionnaire-score","handler":"create_dry_eye_questionnaire_response","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/3d3961b6-9932-4928-8d67-784907a8b28b","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-dry-eye-questionnaire-score:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-meibography","scenarioId":"T22:mcp-meibography","handler":"create_meibography_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/77ea3c39-1fbf-4635-a68e-fed927868f27","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-meibography:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-ortho-k-fit","scenarioId":"T22:mcp-ortho-k-fit","handler":"record_ortho_k_fit_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/293d3acb-afc4-4edb-ba7b-6453a64425c9","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-ortho-k-fit:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-eye-growth","scenarioId":"T22:mcp-eye-growth","handler":"record_eye_growth_axial_length_measurement","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/finding-axial-length-od-2026-09-16t12-00-00-000z","kind":"unrelated"},{"stage":"persisted","reference":"Observation/finding-corneal-radius-od-2026-09-16t12-00-00-000z","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-eye-growth:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"census":{"paths":27,"sites":97,"mapped":30,"excluded":67}}
+# Subtest: W111 review closure read failure preserves pick command response
+ok 333 - W111 review closure read failure preserves pick command response
+  ---
+  duration_ms: 1.512625
+  type: 'test'
+  ...
+1..333
+# tests 333
+# suites 0
+# pass 332
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6412.799042

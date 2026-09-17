@@ -1,0 +1,23 @@
+[
+  {
+    "row": "V21",
+    "test": "F1 patient-wide contributing scope",
+    "before": "Both foreign and unscoped contributing records asserted HTTP 409, reason foreign-or-unscoped.",
+    "after": "Foreign still asserts HTTP 409; missing and malformed encounter references assert HTTP 200, unscopedCount=1, one valid encounter retained, zero writes.",
+    "authority": "CodeRabbit adjudication item 5 explicitly supersedes the earlier F1 rule."
+  },
+  {
+    "row": "W82 / W108",
+    "test": "review whole protocol loads shared definitions and projection once before first write",
+    "before": "Intermediate uncommitted test asserted total definitions and projection loads equal one across the whole request.",
+    "after": "Assert exactly [1,1] at first write, and both load counts >1 afterward. Existing W108 rollback assertion unchanged.",
+    "authority": "Protocol guard cache vs W108 ruling explicitly limits cache lifetime to before first write."
+  },
+  {
+    "row": "W82 / W108",
+    "test": "fixback warm tap/whole seeds only its built-in and rules",
+    "before": "Exact guard query triplets: tap 3, whole 10.",
+    "after": "Exact guard query triplets: tap 2, whole 9. All post-write guard loads retained; one redundant pre-write load eliminated.",
+    "authority": "Request-cache ruling and post-first-write freshness ruling; cache-removal mutation reintroduces the duplicate and fails these exact assertions."
+  }
+]

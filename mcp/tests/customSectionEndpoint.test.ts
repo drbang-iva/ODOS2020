@@ -1743,6 +1743,7 @@ test("DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through
       expectedRows: 1,
     },
   ];
+  // Conjunctival staining is shared Ocular Health; canonical save coverage lives in r10A3OcularDoor.test.ts (W96), not this legacy capture loop.
   for (const row of cases.filter(row => row.stableKey !== "dry-eye:conjunctival-staining")) {
     const definition = dryEye.find((candidate) => candidate.stableKey === row.stableKey);
     assert.ok(definition, row.stableKey);

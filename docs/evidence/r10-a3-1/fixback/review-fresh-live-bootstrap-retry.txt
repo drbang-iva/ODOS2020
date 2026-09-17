@@ -1,0 +1,1465 @@
+
+> odos-mcp@0.1.0 test:live-integration
+> node scripts/run-tests.mjs --bootstrap-project tests/searchParamMedplumSmoke.test.ts tests/audit-header.test.ts tests/billingIdentityConfigParity.test.ts tests/body-structure-idempotency.test.ts tests/diagnosisCarryForward.test.ts tests/encounter-lifecycle.test.ts tests/encounter.test.ts tests/patient-update.test.ts tests/profile-validation.test.ts tests/provenance-defaults.test.ts tests/transaction-atomicity.test.ts tests/v035-terminology-install.test.ts tests/v035-write-tools.test.ts tests/v04-observation-focus-conformance.test.ts tests/v04-write-tools.test.ts tests/v04b-write-tools.test.ts tests/v04c-write-tools.test.ts tests/v05b-audit-ib-backup.test.ts
+
+TAP version 13
+# Subtest: Medplum 5.1.8 accepts ChargeItem occurrence range with sort search
+ok 1 - Medplum 5.1.8 accepts ChargeItem occurrence range with sort search
+  ---
+  duration_ms: 782.568334
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts Invoice subject with date sort search
+ok 2 - Medplum 5.1.8 accepts Invoice subject with date sort search
+  ---
+  duration_ms: 6.749458
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts Invoice date range search
+ok 3 - Medplum 5.1.8 accepts Invoice date range search
+  ---
+  duration_ms: 5.370167
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts PaymentReconciliation active status search
+ok 4 - Medplum 5.1.8 accepts PaymentReconciliation active status search
+  ---
+  duration_ms: 6.026792
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts PaymentReconciliation created range search
+ok 5 - Medplum 5.1.8 accepts PaymentReconciliation created range search
+  ---
+  duration_ms: 5.25725
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts Claim patient with created sort search
+ok 6 - Medplum 5.1.8 accepts Claim patient with created sort search
+  ---
+  duration_ms: 5.400083
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts ClaimResponse patient with created sort search
+ok 7 - Medplum 5.1.8 accepts ClaimResponse patient with created sort search
+  ---
+  duration_ms: 6.035208
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts Task code and business status search
+ok 8 - Medplum 5.1.8 accepts Task code and business status search
+  ---
+  duration_ms: 7.084708
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts Basic code and identifier search
+ok 9 - Medplum 5.1.8 accepts Basic code and identifier search
+  ---
+  duration_ms: 5.843875
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts Provenance target with recorded sort search
+ok 10 - Medplum 5.1.8 accepts Provenance target with recorded sort search
+  ---
+  duration_ms: 5.3035
+  type: 'test'
+  ...
+# Subtest: Medplum 5.1.8 accepts AuditEvent patient and date search
+ok 11 - Medplum 5.1.8 accepts AuditEvent patient and date search
+  ---
+  duration_ms: 5.71175
+  type: 'test'
+  ...
+# Subtest: real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL
+ok 12 - real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL
+  ---
+  duration_ms: 73.193291
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1597.430209
+TAP version 13
+# {
+#   "level": "WARNING",
+#   "test": "audit-header",
+#   "outcome": "x-odos-source-not-surfaced-in-fhir-auditevent",
+#   "searchedFor": "mcp/create_encounter",
+#   "encounterReference": "Encounter/5d214078-ef59-4fa7-87a6-1c04cd572bb1",
+#   "recordedAt": "2026-09-17T12:33:25.483Z",
+#   "attempts": [
+#     {
+#       "label": "date+entity",
+#       "path": "http://localhost:18103/fhir/R4/AuditEvent?date=ge2026-09-17T12%3A33%3A25.483Z&entity=Encounter%2F5d214078-ef59-4fa7-87a6-1c04cd572bb1",
+#       "ok": true,
+#       "entryCount": 0
+#     },
+#     {
+#       "label": "entity",
+#       "path": "http://localhost:18103/fhir/R4/AuditEvent?entity=Encounter%2F5d214078-ef59-4fa7-87a6-1c04cd572bb1",
+#       "ok": true,
+#       "entryCount": 0
+#     },
+#     {
+#       "label": "date",
+#       "path": "http://localhost:18103/fhir/R4/AuditEvent?date=ge2026-09-17T12%3A33%3A25.483Z",
+#       "ok": true,
+#       "entryCount": 20
+#     },
+#     {
+#       "label": "_lastUpdated",
+#       "path": "http://localhost:18103/fhir/R4/AuditEvent?_lastUpdated=ge2026-09-17T12%3A33%3A25.483Z",
+#       "ok": true,
+#       "entryCount": 20
+#     },
+#     {
+#       "label": "recent",
+#       "path": "http://localhost:18103/fhir/R4/AuditEvent?_count=50&_sort=-date",
+#       "ok": true,
+#       "entryCount": 50
+#     }
+#   ]
+# }
+# Subtest: X-ODOS-Source header visibility in Medplum AuditEvent
+ok 1 - X-ODOS-Source header visibility in Medplum AuditEvent
+  ---
+  duration_ms: 6679.152875
+  type: 'test'
+  ...
+# Subtest: UI billing identity mirror matches the MCP coded singleton wire shape
+ok 2 - UI billing identity mirror matches the MCP coded singleton wire shape
+  ---
+  duration_ms: 0.837
+  type: 'test'
+  ...
+# Subtest: MCP billing identity loader searches by code and uses the latest server-assigned singleton
+ok 3 - MCP billing identity loader searches by code and uses the latest server-assigned singleton
+  ---
+  duration_ms: 0.177708
+  type: 'test'
+  ...
+# Subtest: UI and MCP billing identity validation reject the same invalid NPI check digit
+ok 4 - UI and MCP billing identity validation reject the same invalid NPI check digit
+  ---
+  duration_ms: 0.19625
+  type: 'test'
+  ...
+# Subtest: real Medplum assigns ids and reloads coded Basic singletons
+ok 5 - real Medplum assigns ids and reloads coded Basic singletons
+  ---
+  duration_ms: 52515.809833
+  type: 'test'
+  ...
+# Subtest: section saves reuse BodyStructure by patient and location
+ok 6 - section saves reuse BodyStructure by patient and location
+  ---
+  duration_ms: 222.9895
+  type: 'test'
+  ...
+# Subtest: GET previous exams returns 401 when unauthenticated
+ok 7 - GET previous exams returns 401 when unauthenticated
+  ---
+  duration_ms: 23.071333
+  type: 'test'
+  ...
+# Subtest: POST previous exams returns 401 when unauthenticated
+ok 8 - POST previous exams returns 401 when unauthenticated
+  ---
+  duration_ms: 12.49375
+  type: 'test'
+  ...
+# Subtest: POST previous exams returns 403 without chart.write
+ok 9 - POST previous exams returns 403 without chart.write
+  ---
+  duration_ms: 2.530875
+  type: 'test'
+  ...
+# Subtest: carry provenance walks the actual unedited Condition chain without a depth cap
+ok 10 - carry provenance walks the actual unedited Condition chain without a depth cap
+  ---
+  duration_ms: 22.62675
+  type: 'test'
+  ...
+# Subtest: a later Provenance on a middle Condition stops unchanged aging at that source encounter
+ok 11 - a later Provenance on a middle Condition stops unchanged aging at that source encounter
+  ---
+  duration_ms: 0.316
+  type: 'test'
+  ...
+# Subtest: a later Provenance on a middle carried Observation also stops unchanged aging there
+ok 12 - a later Provenance on a middle carried Observation also stops unchanged aging there
+  ---
+  duration_ms: 0.229958
+  type: 'test'
+  ...
+# Subtest: a later finding Provenance edits the diagnosis and removes carried from only that finding
+ok 13 - a later finding Provenance edits the diagnosis and removes carried from only that finding
+  ---
+  duration_ms: 0.59725
+  type: 'test'
+  ...
+# Subtest: a later Provenance on a carried Observation still edits the diagnosis after that row leaves the active bundle
+ok 14 - a later Provenance on a carried Observation still edits the diagnosis after that row leaves the active bundle
+  ---
+  duration_ms: 0.132667
+  type: 'test'
+  ...
+# Subtest: carry provenance compares recorded instants and fails closed on tied or invalid target timestamps
+ok 15 - carry provenance compares recorded instants and fails closed on tied or invalid target timestamps
+  ---
+  duration_ms: 0.467875
+  type: 'test'
+  ...
+# Subtest: carry provenance follows every target-search Bundle page before deciding which record is latest
+ok 16 - carry provenance follows every target-search Bundle page before deciding which record is latest
+  ---
+  duration_ms: 0.340083
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-code instead of relaxing its exact tuple and source-role contract
+ok 17 - carry provenance rejects wrong-code instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.079167
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-system instead of relaxing its exact tuple and source-role contract
+ok 18 - carry provenance rejects wrong-system instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.123875
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-text instead of relaxing its exact tuple and source-role contract
+ok 19 - carry provenance rejects wrong-text instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.079083
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects wrong-role instead of relaxing its exact tuple and source-role contract
+ok 20 - carry provenance rejects wrong-role instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.099125
+  type: 'test'
+  ...
+# Subtest: carry provenance rejects missing-condition instead of relaxing its exact tuple and source-role contract
+ok 21 - carry provenance rejects missing-condition instead of relaxing its exact tuple and source-role contract
+  ---
+  duration_ms: 0.066458
+  type: 'test'
+  ...
+# Subtest: only source-role Observation entities can become prior absent offers
+ok 22 - only source-role Observation entities can become prior absent offers
+  ---
+  duration_ms: 0.104041
+  type: 'test'
+  ...
+# Subtest: tied ancestor carry instant fails the strict lineage chronology
+ok 23 - tied ancestor carry instant fails the strict lineage chronology
+  ---
+  duration_ms: 0.111667
+  type: 'test'
+  ...
+# Subtest: reversed ancestor carry instant fails the strict lineage chronology
+ok 24 - reversed ancestor carry instant fails the strict lineage chronology
+  ---
+  duration_ms: 0.078042
+  type: 'test'
+  ...
+# Subtest: 404 Condition/carry-condition-0 returns a visible edited integrity state
+ok 25 - 404 Condition/carry-condition-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.123875
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/carry-encounter-0 returns a visible edited integrity state
+ok 26 - 404 Encounter/carry-encounter-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.091625
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-absent returns a visible edited integrity state
+ok 27 - 404 Observation/prior-absent returns a visible edited integrity state
+  ---
+  duration_ms: 0.1235
+  type: 'test'
+  ...
+# Subtest: 410 Condition/carry-condition-0 returns a visible edited integrity state
+ok 28 - 410 Condition/carry-condition-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.09675
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/carry-encounter-0 returns a visible edited integrity state
+ok 29 - 410 Encounter/carry-encounter-0 returns a visible edited integrity state
+  ---
+  duration_ms: 0.0765
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-absent returns a visible edited integrity state
+ok 30 - 410 Observation/prior-absent returns a visible edited integrity state
+  ---
+  duration_ms: 0.084166
+  type: 'test'
+  ...
+# Subtest: Provider AccessPolicy keeps Provenance reads and creates in separate practice-wide rules
+ok 31 - Provider AccessPolicy keeps Provenance reads and creates in separate practice-wide rules
+  ---
+  duration_ms: 0.189
+  type: 'test'
+  ...
+# Subtest: carry provenance cycles terminate with a visible integrity warning
+ok 32 - carry provenance cycles terminate with a visible integrity warning
+  ---
+  duration_ms: 0.116625
+  type: 'test'
+  ...
+# Subtest: pull standalone steps preserve source clinical state, typed facts and rank gaps
+ok 33 - pull standalone steps preserve source clinical state, typed facts and rank gaps
+  ---
+  duration_ms: 22.699167
+  type: 'test'
+  ...
+# Subtest: pull-forward preserves an existing staged diagnosis code exactly
+ok 34 - pull-forward preserves an existing staged diagnosis code exactly
+  ---
+  duration_ms: 14.041875
+  type: 'test'
+  ...
+# Subtest: pull puts an If-Match guard on the standalone Encounter link after the plan
+ok 35 - pull puts an If-Match guard on the standalone Encounter link after the plan
+  ---
+  duration_ms: 11.718208
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 403 keeps exact persisted state without privileged compensation
+ok 36 - standalone condition failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 19.940542
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 409 keeps exact persisted state without privileged compensation
+ok 37 - standalone condition failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 21.899416
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 412 keeps exact persisted state without privileged compensation
+ok 38 - standalone condition failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 19.343167
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 500 keeps exact persisted state without privileged compensation
+ok 39 - standalone condition failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.729042
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 503 keeps exact persisted state without privileged compensation
+ok 40 - standalone condition failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.061292
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 403 keeps exact persisted state without privileged compensation
+ok 41 - standalone plan failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.022125
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 409 keeps exact persisted state without privileged compensation
+ok 42 - standalone plan failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.572042
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 412 keeps exact persisted state without privileged compensation
+ok 43 - standalone plan failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.3295
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 500 keeps exact persisted state without privileged compensation
+ok 44 - standalone plan failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.099667
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 503 keeps exact persisted state without privileged compensation
+ok 45 - standalone plan failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.61475
+  type: 'test'
+  ...
+# Subtest: standalone link failure 403 keeps exact persisted state without privileged compensation
+ok 46 - standalone link failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.322084
+  type: 'test'
+  ...
+# Subtest: standalone link failure 409 keeps exact persisted state without privileged compensation
+ok 47 - standalone link failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.962292
+  type: 'test'
+  ...
+# Subtest: standalone link failure 412 keeps exact persisted state without privileged compensation
+ok 48 - standalone link failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.297708
+  type: 'test'
+  ...
+# Subtest: standalone link failure 500 keeps exact persisted state without privileged compensation
+ok 49 - standalone link failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.193709
+  type: 'test'
+  ...
+# Subtest: standalone link failure 503 keeps exact persisted state without privileged compensation
+ok 50 - standalone link failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.834042
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 403 keeps exact persisted state without privileged compensation
+ok 51 - standalone fact failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.286959
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 409 keeps exact persisted state without privileged compensation
+ok 52 - standalone fact failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.007833
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 412 keeps exact persisted state without privileged compensation
+ok 53 - standalone fact failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.735542
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 500 keeps exact persisted state without privileged compensation
+ok 54 - standalone fact failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.785666
+  type: 'test'
+  ...
+# Subtest: standalone fact failure 503 keeps exact persisted state without privileged compensation
+ok 55 - standalone fact failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.097958
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 403 keeps exact persisted state without privileged compensation
+ok 56 - standalone audit failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 22.969584
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 409 keeps exact persisted state without privileged compensation
+ok 57 - standalone audit failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.106458
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 412 keeps exact persisted state without privileged compensation
+ok 58 - standalone audit failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.462458
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 500 keeps exact persisted state without privileged compensation
+ok 59 - standalone audit failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.234334
+  type: 'test'
+  ...
+# Subtest: standalone audit failure 503 keeps exact persisted state without privileged compensation
+ok 60 - standalone audit failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.557375
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 403 keeps exact persisted state without privileged compensation
+ok 61 - standalone witness failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.589709
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 409 keeps exact persisted state without privileged compensation
+ok 62 - standalone witness failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.633375
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 412 keeps exact persisted state without privileged compensation
+ok 63 - standalone witness failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.849167
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 500 keeps exact persisted state without privileged compensation
+ok 64 - standalone witness failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.146834
+  type: 'test'
+  ...
+# Subtest: standalone witness failure 503 keeps exact persisted state without privileged compensation
+ok 65 - standalone witness failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.330583
+  type: 'test'
+  ...
+# Subtest: conditional Condition missing-id response is resolved only by an exact owner read
+ok 66 - conditional Condition missing-id response is resolved only by an exact owner read
+  ---
+  duration_ms: 8.477584
+  type: 'test'
+  ...
+# Subtest: conditional Condition wrong-type response is resolved only by an exact owner read
+ok 67 - conditional Condition wrong-type response is resolved only by an exact owner read
+  ---
+  duration_ms: 9.193083
+  type: 'test'
+  ...
+# Subtest: conditional Condition wrong-id response is resolved only by an exact owner read
+ok 68 - conditional Condition wrong-id response is resolved only by an exact owner read
+  ---
+  duration_ms: 8.751458
+  type: 'test'
+  ...
+# Subtest: conditional Condition wrong-scope response is resolved only by an exact owner read
+ok 69 - conditional Condition wrong-scope response is resolved only by an exact owner read
+  ---
+  duration_ms: 8.554584
+  type: 'test'
+  ...
+# Subtest: pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction
+ok 70 - pull re-read catches a raced exact OD diagnosis and returns its current reference without a transaction
+  ---
+  duration_ms: 8.490125
+  type: 'test'
+  ...
+# Subtest: pull does not treat an existing OD diagnosis as the requested OS identity
+ok 71 - pull does not treat an existing OD diagnosis as the requested OS identity
+  ---
+  duration_ms: 7.723666
+  type: 'test'
+  ...
+# Subtest: pull ignores a matching Condition that does not belong to the current Encounter
+ok 72 - pull ignores a matching Condition that does not belong to the current Encounter
+  ---
+  duration_ms: 9.405958
+  type: 'test'
+  ...
+# Subtest: pull treats a catalog stable key and recorded laterality as identity despite changed literal coding and text
+ok 73 - pull treats a catalog stable key and recorded laterality as identity despite changed literal coding and text
+  ---
+  duration_ms: 7.749958
+  type: 'test'
+  ...
+# Subtest: pull matches uncataloged literal coding text and laterality without a terminology mapping
+ok 74 - pull matches uncataloged literal coding text and laterality without a terminology mapping
+  ---
+  duration_ms: 7.935458
+  type: 'test'
+  ...
+# Subtest: pull keeps uncataloged diagnoses distinct when their literal text differs
+ok 75 - pull keeps uncataloged diagnoses distinct when their literal text differs
+  ---
+  duration_ms: 7.809334
+  type: 'test'
+  ...
+# Subtest: pull uses the recorded Condition bodySite instead of a stale catalog identifier laterality
+ok 76 - pull uses the recorded Condition bodySite instead of a stale catalog identifier laterality
+  ---
+  duration_ms: 8.117958
+  type: 'test'
+  ...
+# Subtest: pull rejects source Encounters that are not strictly prior full instants
+ok 77 - pull rejects source Encounters that are not strictly prior full instants
+  ---
+  duration_ms: 3.224875
+  type: 'test'
+  ...
+# Subtest: pull rejects a current Encounter without a valid full start instant before a transaction
+ok 78 - pull rejects a current Encounter without a valid full start instant before a transaction
+  ---
+  duration_ms: 1.573458
+  type: 'test'
+  ...
+# Subtest: pull rechecks the current Encounter start instant immediately before idempotency and the transaction
+ok 79 - pull rechecks the current Encounter start instant immediately before idempotency and the transaction
+  ---
+  duration_ms: 14.519459
+  type: 'test'
+  ...
+# Subtest: pull rejects source patient, diagnosis membership, and retracted-condition boundary failures
+ok 80 - pull rejects source patient, diagnosis membership, and retracted-condition boundary failures
+  ---
+  duration_ms: 2.525416
+  type: 'test'
+  ...
+# Subtest: standalone Condition failure maps precondition failures to 409
+ok 81 - standalone Condition failure maps precondition failures to 409
+  ---
+  duration_ms: 15.237542
+  type: 'test'
+  ...
+# Subtest: pull refuses malformed conditional owner lookup non-Bundle
+ok 82 - pull refuses malformed conditional owner lookup non-Bundle
+  ---
+  duration_ms: 6.841125
+  type: 'test'
+  ...
+# Subtest: pull refuses malformed conditional owner lookup non-searchset
+ok 83 - pull refuses malformed conditional owner lookup non-searchset
+  ---
+  duration_ms: 7.664416
+  type: 'test'
+  ...
+# Subtest: pull refuses malformed conditional owner lookup missing-resource
+ok 84 - pull refuses malformed conditional owner lookup missing-resource
+  ---
+  duration_ms: 6.98525
+  type: 'test'
+  ...
+# Subtest: pull refuses malformed conditional owner lookup missing-id
+ok 85 - pull refuses malformed conditional owner lookup missing-id
+  ---
+  duration_ms: 7.400208
+  type: 'test'
+  ...
+# Subtest: pull refuses malformed conditional owner lookup wrong-type
+ok 86 - pull refuses malformed conditional owner lookup wrong-type
+  ---
+  duration_ms: 7.103792
+  type: 'test'
+  ...
+# Subtest: pull refuses malformed conditional owner lookup duplicate-owner
+ok 87 - pull refuses malformed conditional owner lookup duplicate-owner
+  ---
+  duration_ms: 7.263125
+  type: 'test'
+  ...
+# Subtest: pull maps a missing current Encounter to a non-leaking 404
+ok 88 - pull maps a missing current Encounter to a non-leaking 404
+  ---
+  duration_ms: 1.375291
+  type: 'test'
+  ...
+# Subtest: pull maps a missing source Encounter to a non-leaking 404
+ok 89 - pull maps a missing source Encounter to a non-leaking 404
+  ---
+  duration_ms: 1.103792
+  type: 'test'
+  ...
+# Subtest: pull maps a missing source Condition to a non-leaking 404
+ok 90 - pull maps a missing source Condition to a non-leaking 404
+  ---
+  duration_ms: 0.954833
+  type: 'test'
+  ...
+# Subtest: pull maps a patient-compartment source read denial to a non-leaking 403
+ok 91 - pull maps a patient-compartment source read denial to a non-leaking 403
+  ---
+  duration_ms: 0.839958
+  type: 'test'
+  ...
+# Subtest: pull maps unavailable canonical source findings to a non-leaking 404
+ok 92 - pull maps unavailable canonical source findings to a non-leaking 404
+  ---
+  duration_ms: 7.241083
+  type: 'test'
+  ...
+# Subtest: pull maps a gone source Condition to the same non-leaking 404
+ok 93 - pull maps a gone source Condition to the same non-leaking 404
+  ---
+  duration_ms: 1.134917
+  type: 'test'
+  ...
+# Subtest: pull maps a current-identity Condition compartment denial to a non-leaking 403
+ok 94 - pull maps a current-identity Condition compartment denial to a non-leaking 403
+  ---
+  duration_ms: 7.676292
+  type: 'test'
+  ...
+# Subtest: pull rejects a source Encounter for another patient
+ok 95 - pull rejects a source Encounter for another patient
+  ---
+  duration_ms: 1.038375
+  type: 'test'
+  ...
+# Subtest: pull rejects a source Condition declaring another Encounter
+ok 96 - pull rejects a source Condition declaring another Encounter
+  ---
+  duration_ms: 0.764792
+  type: 'test'
+  ...
+# Subtest: pull rejects source evidence for another patient
+ok 97 - pull rejects source evidence for another patient
+  ---
+  duration_ms: 6.751125
+  type: 'test'
+  ...
+# Subtest: pull refuses a foreign-Encounter canonical fact returned by the source search
+ok 98 - pull refuses a foreign-Encounter canonical fact returned by the source search
+  ---
+  duration_ms: 8.325375
+  type: 'test'
+  ...
+# Subtest: pull rejects an entered-in-error source Condition
+ok 99 - pull rejects an entered-in-error source Condition
+  ---
+  duration_ms: 1.057708
+  type: 'test'
+  ...
+# Subtest: pull excludes an entered-in-error source Observation
+ok 100 - pull excludes an entered-in-error source Observation
+  ---
+  duration_ms: 7.917375
+  type: 'test'
+  ...
+# Subtest: pull rejects an entered-in-error source Encounter
+ok 101 - pull rejects an entered-in-error source Encounter
+  ---
+  duration_ms: 1.502459
+  type: 'test'
+  ...
+# Subtest: pull rejects an entered-in-error current Encounter
+ok 102 - pull rejects an entered-in-error current Encounter
+  ---
+  duration_ms: 1.217875
+  type: 'test'
+  ...
+# Subtest: pull rejects a current Encounter entering error on the mutation-time re-read
+ok 103 - pull rejects a current Encounter entering error on the mutation-time re-read
+  ---
+  duration_ms: 1.018542
+  type: 'test'
+  ...
+# Subtest: pull rejects a current patient change on the mutation-time re-read
+ok 104 - pull rejects a current patient change on the mutation-time re-read
+  ---
+  duration_ms: 0.858708
+  type: 'test'
+  ...
+# Subtest: pull rejects a current Encounter without a version
+ok 105 - pull rejects a current Encounter without a version
+  ---
+  duration_ms: 7.554417
+  type: 'test'
+  ...
+# Subtest: a repeated exact pull returns the current Condition without a transaction
+ok 106 - a repeated exact pull returns the current Condition without a transaction
+  ---
+  duration_ms: 7.146583
+  type: 'test'
+  ...
+# Subtest: a standalone link conflict re-read accepts the concurrently linked exact carried Condition
+ok 107 - a standalone link conflict re-read accepts the concurrently linked exact carried Condition
+  ---
+  duration_ms: 9.475625
+  type: 'test'
+  ...
+# Subtest: a standalone link conflict without the exact link returns 409 and preserves resumable plan
+ok 108 - a standalone link conflict without the exact link returns 409 and preserves resumable plan
+  ---
+  duration_ms: 7.485666
+  type: 'test'
+  ...
+# Subtest: a standalone link conflict with unreadable destination reports unconfirmed retained state
+ok 109 - a standalone link conflict with unreadable destination reports unconfirmed retained state
+  ---
+  duration_ms: 8.492042
+  type: 'test'
+  ...
+# Subtest: a conflict reread never returns an exact diagnosis from an entered-in-error current Encounter
+ok 110 - a conflict reread never returns an exact diagnosis from an entered-in-error current Encounter
+  ---
+  duration_ms: 7.181834
+  type: 'test'
+  ...
+# Subtest: live ordinary-clinician policy persists standalone carry and resumes an Encounter link conflict
+ok 111 - live ordinary-clinician policy persists standalone carry and resumes an Encounter link conflict
+  ---
+  duration_ms: 1056.455375
+  type: 'test'
+  ...
+# Subtest: synthetic cleanup attempts every exact reference and aggregates all failures
+ok 112 - synthetic cleanup attempts every exact reference and aggregates all failures
+  ---
+  duration_ms: 1.166209
+  type: 'test'
+  ...
+# Subtest: disposable client creation exposes its id before a later response assertion fails
+ok 113 - disposable client creation exposes its id before a later response assertion fails
+  ---
+  duration_ms: 6.3625
+  type: 'test'
+  ...
+# Subtest: early-failure cleanup rediscovers all unique auth artifacts and verifies every exact deletion
+ok 114 - early-failure cleanup rediscovers all unique auth artifacts and verifies every exact deletion
+  ---
+  duration_ms: 0.4075
+  type: 'test'
+  ...
+# Subtest: authorization cleanup still rediscovers memberships when another discovery search fails
+ok 115 - authorization cleanup still rediscovers memberships when another discovery search fails
+  ---
+  duration_ms: 0.266833
+  type: 'test'
+  ...
+# Subtest: synthetic cleanup verification attempts every read and rejects a resource that remains
+ok 116 - synthetic cleanup verification attempts every read and rejects a resource that remains
+  ---
+  duration_ms: 0.097916
+  type: 'test'
+  ...
+# Subtest: synthetic cleanup captures transaction resource ids and versioned locations
+ok 117 - synthetic cleanup captures transaction resource ids and versioned locations
+  ---
+  duration_ms: 0.151666
+  type: 'test'
+  ...
+# Subtest: proof cleanup arbitration preserves the original primary error when cleanup succeeds
+ok 118 - proof cleanup arbitration preserves the original primary error when cleanup succeeds
+  ---
+  duration_ms: 0.05325
+  type: 'test'
+  ...
+# Subtest: proof cleanup arbitration returns the cleanup error alone when the proof succeeds
+ok 119 - proof cleanup arbitration returns the cleanup error alone when the proof succeeds
+  ---
+  duration_ms: 0.044041
+  type: 'test'
+  ...
+# Subtest: proof cleanup arbitration preserves primary then every cleanup failure with primary cause
+ok 120 - proof cleanup arbitration preserves primary then every cleanup failure with primary cause
+  ---
+  duration_ms: 0.072208
+  type: 'test'
+  ...
+# Subtest: previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records
+ok 121 - previous exams preserves FHIR newest-first order across offsets and returns unbounded exact records
+  ---
+  duration_ms: 30.060125
+  type: 'test'
+  ...
+# Subtest: previous exams omits an entered-in-error Encounter from the GET page
+ok 122 - previous exams omits an entered-in-error Encounter from the GET page
+  ---
+  duration_ms: 19.732084
+  type: 'test'
+  ...
+# Subtest: previous exams omits a diagnosis whose Condition belongs to another Encounter
+ok 123 - previous exams omits a diagnosis whose Condition belongs to another Encounter
+  ---
+  duration_ms: 24.80725
+  type: 'test'
+  ...
+# Subtest: previous exams omits evidence whose Observation belongs to another Encounter
+ok 124 - previous exams omits evidence whose Observation belongs to another Encounter
+  ---
+  duration_ms: 23.867125
+  type: 'test'
+  ...
+# Subtest: previous exams enforces active visit and same-Encounter membership for diagnoses and evidence together
+ok 125 - previous exams enforces active visit and same-Encounter membership for diagnoses and evidence together
+  ---
+  duration_ms: 19.035291
+  type: 'test'
+  ...
+# Subtest: previous exams cursor loads the next four-encounter page without accepting a URL
+ok 126 - previous exams cursor loads the next four-encounter page without accepting a URL
+  ---
+  duration_ms: 29.694042
+  type: 'test'
+  ...
+# Subtest: previous exams rejects forged legacy and tampered cursor payloads before FHIR pagination
+ok 127 - previous exams rejects forged legacy and tampered cursor payloads before FHIR pagination
+  ---
+  duration_ms: 23.936917
+  type: 'test'
+  ...
+# Subtest: previous exams binds an issued cursor to the current Encounter, patient, and start instant
+ok 128 - previous exams binds an issued cursor to the current Encounter, patient, and start instant
+  ---
+  duration_ms: 24.005333
+  type: 'test'
+  ...
+# Subtest: previous exams maps initial Encounter and Patient FHIR access failures at the direct boundary
+ok 129 - previous exams maps initial Encounter and Patient FHIR access failures at the direct boundary
+  ---
+  duration_ms: 0.543583
+  type: 'test'
+  ...
+# Subtest: previous exams maps page Condition and Observation FHIR access failures at the direct boundary
+ok 130 - previous exams maps page Condition and Observation FHIR access failures at the direct boundary
+  ---
+  duration_ms: 92.482333
+  type: 'test'
+  ...
+# odos-mcp: previous exams next link is invalid: InvalidCursorError
+#     at validatedNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:806:15)
+#     at handlePreviousExamsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:199:23)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisCarryForward.test.ts:1792:20)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: previous exams next link is invalid: InvalidCursorError
+#     at validatedNextPath (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:806:15)
+#     at handlePreviousExamsReadRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:199:23)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisCarryForward.test.ts:1806:20)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: previous exams registered route maps cursor-page FHIR denials and missing history without a generic 500
+ok 131 - previous exams registered route maps cursor-page FHIR denials and missing history without a generic 500
+  ---
+  duration_ms: 50.771834
+  type: 'test'
+  ...
+# Subtest: previous exams rejects a cross-origin Bundle next link
+ok 132 - previous exams rejects a cross-origin Bundle next link
+  ---
+  duration_ms: 25.13
+  type: 'test'
+  ...
+# Subtest: previous exams rejects a scheme-relative cross-origin Bundle next link
+ok 133 - previous exams rejects a scheme-relative cross-origin Bundle next link
+  ---
+  duration_ms: 23.408375
+  type: 'test'
+  ...
+# Subtest: previous exams accepts a same-origin absolute Bundle next link
+ok 134 - previous exams accepts a same-origin absolute Bundle next link
+  ---
+  duration_ms: 29.235417
+  type: 'test'
+  ...
+# Subtest: comprehensive Encounter lifecycle records history and Provenance per state change
+ok 135 - comprehensive Encounter lifecycle records history and Provenance per state change
+  ---
+  duration_ms: 164.77975
+  type: 'test'
+  ...
+# Subtest: create_encounter MCP write tool integrates with Medplum
+    # Subtest: creates an ambulatory in-progress Encounter for a Patient
+    ok 1 - creates an ambulatory in-progress Encounter for a Patient
+      ---
+      duration_ms: 46.582916
+      type: 'test'
+      ...
+    # Subtest: creates Provenance when create_provenance is true
+    ok 2 - creates Provenance when create_provenance is true
+      ---
+      duration_ms: 24.113792
+      type: 'test'
+      ...
+    # Subtest: creates and reads an aesthetics-tagged Encounter
+    ok 3 - creates and reads an aesthetics-tagged Encounter
+      ---
+      duration_ms: 29.224959
+      type: 'test'
+      ...
+    # Subtest: rejects invalid class_code at Zod parse
+    ok 4 - rejects invalid class_code at Zod parse
+      ---
+      duration_ms: 0.959667
+      type: 'test'
+      ...
+    # Subtest: rejects CPT type_system regardless of case at Zod parse
+    ok 5 - rejects CPT type_system regardless of case at Zod parse
+      ---
+      duration_ms: 0.644667
+      type: 'test'
+      ...
+    # Subtest: rejects missing patient_id at Zod parse
+    ok 6 - rejects missing patient_id at Zod parse
+      ---
+      duration_ms: 0.524375
+      type: 'test'
+      ...
+    1..6
+ok 136 - create_encounter MCP write tool integrates with Medplum
+  ---
+  duration_ms: 3483.614792
+  type: 'test'
+  ...
+# Subtest: update_patient MCP write tool integrates with Medplum
+    # Subtest: updates gender only and preserves existing name and active
+    ok 1 - updates gender only and preserves existing name and active
+      ---
+      duration_ms: 28.422916
+      type: 'test'
+      ...
+    # Subtest: updates name only and preserves prior gender
+    ok 2 - updates name only and preserves prior gender
+      ---
+      duration_ms: 17.9195
+      type: 'test'
+      ...
+    # Subtest: rejects update with no fields
+    ok 3 - rejects update with no fields
+      ---
+      duration_ms: 0.800875
+      type: 'test'
+      ...
+    # Subtest: rejects invalid birth_date format at Zod parse
+    ok 4 - rejects invalid birth_date format at Zod parse
+      ---
+      duration_ms: 0.628875
+      type: 'test'
+      ...
+    # Subtest: rejects invalid uppercase gender at Zod parse
+    ok 5 - rejects invalid uppercase gender at Zod parse
+      ---
+      duration_ms: 0.722583
+      type: 'test'
+      ...
+    1..5
+ok 137 - update_patient MCP write tool integrates with Medplum
+  ---
+  duration_ms: 55886.03225
+  type: 'test'
+  ...
+# Subtest: profile validation accepts conformant v0.3 resources
+ok 138 - profile validation accepts conformant v0.3 resources
+  ---
+  duration_ms: 436.542708
+  type: 'test'
+  ...
+# Subtest: profile validation accepts standard Equivocal cup-disc interpretation
+ok 139 - profile validation accepts standard Equivocal cup-disc interpretation
+  ---
+  duration_ms: 13.010375
+  type: 'test'
+  ...
+# Subtest: profile validation rejects IOP with non-UCUM pressure unit
+ok 140 - profile validation rejects IOP with non-UCUM pressure unit
+  ---
+  duration_ms: 7.158542
+  type: 'test'
+  ...
+# Subtest: profile validation rejects Observation missing bodySite reference extension
+ok 141 - profile validation rejects Observation missing bodySite reference extension
+  ---
+  duration_ms: 17.087666
+  type: 'test'
+  ...
+# Subtest: profile validation rejects Observation missing encounter
+ok 142 - profile validation rejects Observation missing encounter
+  ---
+  duration_ms: 32.095042
+  type: 'test'
+  ...
+# Subtest: profile validation rejects axial length with non-mm UCUM code
+ok 143 - profile validation rejects axial length with non-mm UCUM code
+  ---
+  duration_ms: 7.446709
+  type: 'test'
+  ...
+# Subtest: profile validation rejects comprehensive Encounter with non-AMB class
+ok 144 - profile validation rejects comprehensive Encounter with non-AMB class
+  ---
+  duration_ms: 7.071417
+  type: 'test'
+  ...
+# Subtest: profile validation rejects finished Encounter without period.end
+ok 145 - profile validation rejects finished Encounter without period.end
+  ---
+  duration_ms: 8.399375
+  type: 'test'
+  ...
+# Subtest: clinical MCP write tools default Provenance ON
+ok 146 - clinical MCP write tools default Provenance ON
+  ---
+  duration_ms: 3475.718083
+  type: 'test'
+  ...
+# Subtest: executeTransaction rolls back created entries when a later transaction entry fails
+ok 147 - executeTransaction rolls back created entries when a later transaction entry fails
+  ---
+  duration_ms: 120.902875
+  type: 'test'
+  ...
+# Subtest: profile installer idempotently installs ODOS EpisodeOfCare terminology
+    # Subtest: CodeSystem is retrievable by canonical URL
+    ok 1 - CodeSystem is retrievable by canonical URL
+      ---
+      duration_ms: 10.879834
+      type: 'test'
+      ...
+    # Subtest: ValueSet is retrievable by canonical URL
+    ok 2 - ValueSet is retrievable by canonical URL
+      ---
+      duration_ms: 6.802458
+      type: 'test'
+      ...
+    # Subtest: local terminology artifacts stay in sync with canonical URLs
+    ok 3 - local terminology artifacts stay in sync with canonical URLs
+      ---
+      duration_ms: 1.232542
+      type: 'test'
+      ...
+    1..3
+ok 148 - profile installer idempotently installs ODOS EpisodeOfCare terminology
+  ---
+  duration_ms: 52189.29575
+  type: 'test'
+  ...
+# Subtest: v0.35 MCP write tools create version-aware FHIR resources with Provenance
+    # Subtest: create_episode_of_care writes EpisodeOfCare and Provenance
+    ok 1 - create_episode_of_care writes EpisodeOfCare and Provenance
+      ---
+      duration_ms: 42.732458
+      type: 'test'
+      ...
+    # Subtest: update_episode_of_care uses version-aware PATCH
+    ok 2 - update_episode_of_care uses version-aware PATCH
+      ---
+      duration_ms: 35.437
+      type: 'test'
+      ...
+    # Subtest: create_condition_with_tier creates encounter diagnosis and Encounter rank
+    ok 3 - create_condition_with_tier creates encounter diagnosis and Encounter rank
+      ---
+      duration_ms: 49.890417
+      type: 'test'
+      ...
+    # Subtest: update_condition_tier only updates Encounter.diagnosis.rank
+    ok 4 - update_condition_tier only updates Encounter.diagnosis.rank
+      ---
+      duration_ms: 43.555917
+      type: 'test'
+      ...
+    # Subtest: update_condition_body_site patches the standard Condition bodySite extension
+    ok 5 - update_condition_body_site patches the standard Condition bodySite extension
+      ---
+      duration_ms: 45.493459
+      type: 'test'
+      ...
+    # Subtest: update_condition_code captures prior code in Provenance entity
+    ok 6 - update_condition_code captures prior code in Provenance entity
+      ---
+      duration_ms: 37.679042
+      type: 'test'
+      ...
+    # Subtest: update_condition_status patches clinicalStatus
+    ok 7 - update_condition_status patches clinicalStatus
+      ---
+      duration_ms: 42.038917
+      type: 'test'
+      ...
+    # Subtest: mark_condition_entered_in_error preserves resource and marks verificationStatus
+    ok 8 - mark_condition_entered_in_error preserves resource and marks verificationStatus
+      ---
+      duration_ms: 61.032417
+      type: 'test'
+      ...
+    # Subtest: create_problem_list_condition creates longitudinal Condition
+    ok 9 - create_problem_list_condition creates longitudinal Condition
+      ---
+      duration_ms: 29.626333
+      type: 'test'
+      ...
+    # Subtest: update_condition_tier rejects problem-list category flips
+    ok 10 - update_condition_tier rejects problem-list category flips
+      ---
+      duration_ms: 10.1705
+      type: 'test'
+      ...
+    # Subtest: create_allergy_intolerance uses code-first no-known-allergy pattern
+    ok 11 - create_allergy_intolerance uses code-first no-known-allergy pattern
+      ---
+      duration_ms: 29.736084
+      type: 'test'
+      ...
+    # Subtest: create_smoking_status_observation writes LOINC 72166-2
+    ok 12 - create_smoking_status_observation writes LOINC 72166-2
+      ---
+      duration_ms: 44.687667
+      type: 'test'
+      ...
+    # Subtest: create_care_team prefers PractitionerRole references
+    ok 13 - create_care_team prefers PractitionerRole references
+      ---
+      duration_ms: 31.334416
+      type: 'test'
+      ...
+    # Subtest: create_procedure writes optional target BodyStructure extension
+    ok 14 - create_procedure writes optional target BodyStructure extension
+      ---
+      duration_ms: 31.343708
+      type: 'test'
+      ...
+    # Subtest: update_procedure_body_site patches procedure-targetBodyStructure extension
+    ok 15 - update_procedure_body_site patches procedure-targetBodyStructure extension
+      ---
+      duration_ms: 33.687541
+      type: 'test'
+      ...
+    1..15
+ok 149 - v0.35 MCP write tools create version-aware FHIR resources with Provenance
+  ---
+  duration_ms: 3761.956541
+  type: 'test'
+  ...
+# Subtest: Medplum Observation focus search conformance or documented fallback
+ok 150 - Medplum Observation focus search conformance or documented fallback
+  ---
+  duration_ms: 142.473125
+  type: 'test'
+  ...
+# Subtest: v0.4 foundation MCP write tools create FHIR resources with mandatory Provenance
+    # Subtest: create_substance writes Substance and Provenance
+    ok 1 - create_substance writes Substance and Provenance
+      ---
+      duration_ms: 38.000083
+      type: 'test'
+      ...
+    # Subtest: create_device_definition writes DeviceDefinition and Provenance
+    ok 2 - create_device_definition writes DeviceDefinition and Provenance
+      ---
+      duration_ms: 24.6085
+      type: 'test'
+      ...
+    # Subtest: create_concept_map writes ConceptMap and Provenance
+    ok 3 - create_concept_map writes ConceptMap and Provenance
+      ---
+      duration_ms: 26.661416
+      type: 'test'
+      ...
+    # Subtest: create_lens_device writes patient-specific Device and Provenance
+    ok 4 - create_lens_device writes patient-specific Device and Provenance
+      ---
+      duration_ms: 35.696083
+      type: 'test'
+      ...
+    # Subtest: update_lens_device_properties uses version-aware PATCH and Provenance
+    ok 5 - update_lens_device_properties uses version-aware PATCH and Provenance
+      ---
+      duration_ms: 47.298917
+      type: 'test'
+      ...
+    1..5
+ok 151 - v0.4 foundation MCP write tools create FHIR resources with mandatory Provenance
+  ---
+  duration_ms: 3346.286667
+  type: 'test'
+  ...
+# Subtest: v0.4b dry-eye MCP write tools create resources with mandatory Provenance
+    # Subtest: create_dry_eye_questionnaire_response writes QuestionnaireResponse, score Observation, and Provenance
+    ok 1 - create_dry_eye_questionnaire_response writes QuestionnaireResponse, score Observation, and Provenance
+      ---
+      duration_ms: 69.784166
+      type: 'test'
+      ...
+    # Subtest: create_meibography_observation writes DocumentReference-linked Observation and Provenance
+    ok 2 - create_meibography_observation writes DocumentReference-linked Observation and Provenance
+      ---
+      duration_ms: 56.878333
+      type: 'test'
+      ...
+    # Subtest: create_dry_eye_treatment_series writes parent and Procedure.partOf children
+    ok 3 - create_dry_eye_treatment_series writes parent and Procedure.partOf children
+      ---
+      duration_ms: 79.355792
+      type: 'test'
+      ...
+    # Subtest: create_dry_eye_treatment_procedure writes a single session
+    ok 4 - create_dry_eye_treatment_procedure writes a single session
+      ---
+      duration_ms: 38.913334
+      type: 'test'
+      ...
+    # Subtest: update_dry_eye_treatment_procedure_status uses version-aware PATCH and Provenance
+    ok 5 - update_dry_eye_treatment_procedure_status uses version-aware PATCH and Provenance
+      ---
+      duration_ms: 56.726917
+      type: 'test'
+      ...
+    # Subtest: create_ophthalmic_medication_statement writes MedicationStatement and Provenance
+    ok 6 - create_ophthalmic_medication_statement writes MedicationStatement and Provenance
+      ---
+      duration_ms: 29.60975
+      type: 'test'
+      ...
+    # Subtest: update_dry_eye_medication_status uses version-aware PATCH and Provenance
+    ok 7 - update_dry_eye_medication_status uses version-aware PATCH and Provenance
+      ---
+      duration_ms: 38.362542
+      type: 'test'
+      ...
+    # Subtest: create_dry_eye_adverse_event writes AdverseEvent and Provenance
+    ok 8 - create_dry_eye_adverse_event writes AdverseEvent and Provenance
+      ---
+      duration_ms: 32.193291
+      type: 'test'
+      ...
+    1..8
+ok 152 - v0.4b dry-eye MCP write tools create resources with mandatory Provenance
+  ---
+  duration_ms: 3552.2855
+  type: 'test'
+  ...
+# Subtest: v0.4c Ortho-K and myopia MCP write tools create resources with mandatory Provenance
+    # Subtest: create_ortho_k_lens_device writes Device-OrthoKLens
+    ok 1 - create_ortho_k_lens_device writes Device-OrthoKLens
+      ---
+      duration_ms: 45.632792
+      type: 'test'
+      ...
+    # Subtest: record_ortho_k_fitting_event writes Procedure.usedReference
+    ok 2 - record_ortho_k_fitting_event writes Procedure.usedReference
+      ---
+      duration_ms: 27.22525
+      type: 'test'
+      ...
+    # Subtest: record_ortho_k_trial writes child Procedure.partOf
+    ok 3 - record_ortho_k_trial writes child Procedure.partOf
+      ---
+      duration_ms: 25.454167
+      type: 'test'
+      ...
+    # Subtest: record_ortho_k_fit_observation writes Observation.focus
+    ok 4 - record_ortho_k_fit_observation writes Observation.focus
+      ---
+      duration_ms: 41.356125
+      type: 'test'
+      ...
+    # Subtest: update_ortho_k_lens_parameters uses version-aware PATCH
+    ok 5 - update_ortho_k_lens_parameters uses version-aware PATCH
+      ---
+      duration_ms: 45.469416
+      type: 'test'
+      ...
+    # Subtest: create_myopia_management_episode writes EpisodeOfCare
+    ok 6 - create_myopia_management_episode writes EpisodeOfCare
+      ---
+      duration_ms: 28.497375
+      type: 'test'
+      ...
+    # Subtest: create_atropine_medication_statement writes concentration doseAndRate
+    ok 7 - create_atropine_medication_statement writes concentration doseAndRate
+      ---
+      duration_ms: 29.295292
+      type: 'test'
+      ...
+    # Subtest: create_or_update_myopia_plan writes CarePlan.activity entries
+    ok 8 - create_or_update_myopia_plan writes CarePlan.activity entries
+      ---
+      duration_ms: 39.95025
+      type: 'test'
+      ...
+    # Subtest: create_or_update_myopia_plan patches an existing CarePlan
+    ok 9 - create_or_update_myopia_plan patches an existing CarePlan
+      ---
+      duration_ms: 46.080292
+      type: 'test'
+      ...
+    # Subtest: update_atropine_medication_status uses version-aware PATCH
+    ok 10 - update_atropine_medication_status uses version-aware PATCH
+      ---
+      duration_ms: 40.00075
+      type: 'test'
+      ...
+    # Subtest: record_eye_growth_axial_length_measurement writes mm Observation
+    ok 11 - record_eye_growth_axial_length_measurement writes mm Observation
+      ---
+      duration_ms: 50.008375
+      type: 'test'
+      ...
+    1..11
+ok 153 - v0.4c Ortho-K and myopia MCP write tools create resources with mandatory Provenance
+  ---
+  duration_ms: 51961.995833
+  type: 'test'
+  ...
+# Subtest: v0.5b audit event type ValueSet covers the required read, write, security, IB, and DR events
+ok 154 - v0.5b audit event type ValueSet covers the required read, write, security, IB, and DR events
+  ---
+  duration_ms: 0.644
+  type: 'test'
+  ...
+# Subtest: v0.5b SQL migration creates append-only odos_audit_events table with required indexes and guards
+ok 155 - v0.5b SQL migration creates append-only odos_audit_events table with required indexes and guards
+  ---
+  duration_ms: 0.18
+  type: 'test'
+  ...
+# Subtest: OCR-style 90-day audit query returns structured role, outcome, and IB context without enrichment
+ok 156 - OCR-style 90-day audit query returns structured role, outcome, and IB context without enrichment
+  ---
+  duration_ms: 5.284708
+  type: 'test'
+  ...
+# Subtest: denied AccessPolicy compartment isolation writes privacy IB exception and FHIR AuditEvent outcome=8
+ok 157 - denied AccessPolicy compartment isolation writes privacy IB exception and FHIR AuditEvent outcome=8
+  ---
+  duration_ms: 1.0485
+  type: 'test'
+  ...
+# Subtest: AuditEvent projection field placement uses agent.role, agent.who, agent.policy, outcome, and entity
+ok 158 - AuditEvent projection field placement uses agent.role, agent.who, agent.policy, outcome, and entity
+  ---
+  duration_ms: 0.173667
+  type: 'test'
+  ...
+# Subtest: originating PHI operation rolls back when odos_audit_events insert fails
+ok 159 - originating PHI operation rolls back when odos_audit_events insert fails
+  ---
+  duration_ms: 0.321084
+  type: 'test'
+  ...
+# Subtest: FHIR AuditEvent projection failure leaves DB row and queues retry without rolling back PHI operation
+ok 160 - FHIR AuditEvent projection failure leaves DB row and queues retry without rolling back PHI operation
+  ---
+  duration_ms: 0.198208
+  type: 'test'
+  ...
+# Subtest: append-only defenses reject UPDATE, DELETE, and TRUNCATE via permission and trigger guard
+ok 161 - append-only defenses reject UPDATE, DELETE, and TRUNCATE via permission and trigger guard
+  ---
+  duration_ms: 0.087375
+  type: 'test'
+  ...
+# Subtest: Information Blocking denial map classifies v0.5b denial reasons
+ok 162 - Information Blocking denial map classifies v0.5b denial reasons
+  ---
+  duration_ms: 0.229
+  type: 'test'
+  ...
+# Subtest: audit UI model is auditor/practice-admin gated and exports OCR query rows as CSV and JSON
+ok 163 - audit UI model is auditor/practice-admin gated and exports OCR query rows as CSV and JSON
+  ---
+  duration_ms: 0.54575
+  type: 'test'
+  ...
+# Subtest: restore integrity suite passes all five v0.5b post-restore checks
+ok 164 - restore integrity suite passes all five v0.5b post-restore checks
+  ---
+  duration_ms: 0.223584
+  type: 'test'
+  ...
+# Subtest: live MCP audit worker records actual read, write, and audit-only boundary denial with AuditEvent projection
+ok 165 - live MCP audit worker records actual read, write, and audit-only boundary denial with AuditEvent projection
+  ---
+  duration_ms: 6589.32125
+  type: 'test'
+  ...
+1..165
+# tests 218
+# suites 0
+# pass 218
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250493.040958

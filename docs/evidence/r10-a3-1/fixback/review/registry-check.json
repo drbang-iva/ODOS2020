@@ -1,0 +1,783 @@
+{
+  "failures": [],
+  "sites": [
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "handleBodyMeasurementsCaptureRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 211,
+      "expression": "staff.fhir.executeTransaction({\n    resourceType: \"Bundle\",\n    type: \"transaction\",\n    entry: [\n      { fullUrl: heightFullUrl, resource: height, request: { m"
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "handleBodyMeasurementsCaptureRequest",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 215,
+      "expression": "{ fullUrl: heightFullUrl, resource: height, request: { method: \"POST\", url: \"Observation\" } }"
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "handleBodyMeasurementsCaptureRequest",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "line": 221,
+      "expression": "{ fullUrl: weightFullUrl, resource: weight, request: { method: \"POST\", url: \"Observation\" } }"
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-vitals-endpoint.ts",
+      "function": "persistObservation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 340,
+      "expression": "fhir.create(observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/pretest-endpoint.ts",
+      "function": "persistCapture",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 870,
+      "expression": "fhir.create<Observation>(capture.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+      "function": "performDiagnosisPickRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 334,
+      "expression": "staff.fhir.executeTransaction(transactionBundle, {\n        ...DIAGNOSIS_PICK_WRITE_HEADERS,\n        Prefer: \"return=representation\",\n      }, { autoRollbackCrea"
+    },
+    {
+      "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "function": "executeTarget",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 242,
+      "expression": "deps.fhir.update<Observation>(\"Observation\",prior!.id!,next,{...WRITE_HEADERS,\"If-Match\":etag(prior!.meta!.versionId!)})"
+    },
+    {
+      "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "function": "executeTarget",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "line": 244,
+      "expression": "deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,\n        \"If-None-Exist\":`identifier=${currentFindingIdentifier(target.key).system}|${ownerId}`}"
+    },
+    {
+      "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "function": "executeRetire",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 343,
+      "expression": "deps.fhir.update<Observation>(\"Observation\",source.id!,next,{...WRITE_HEADERS,\"If-Match\":etag(source.meta!.versionId!)})"
+    },
+    {
+      "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "function": "executePanel",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 610,
+      "expression": "deps.fhir.update<Observation>(\"Observation\",owner.id!,next,{...WRITE_HEADERS,\"If-Match\":etag(owner.meta!.versionId!)})"
+    },
+    {
+      "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+      "function": "executePanel",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "line": 611,
+      "expression": "deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,\"If-None-Exist\":`identifier=${FINDING_PANEL_SYSTEM}|${findingPanelIdentifier(target.key).value}`"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHistoryReview",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 490,
+      "expression": "{ resource: attestation, request: { method: \"PUT\", url: `Observation/${existing.id}`, ...(existing.meta?.versionId ? { ifMatch: `W/\\\"${existing.meta.versionId}\\"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHistoryReview",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "line": 491,
+      "expression": "{ fullUrl, resource: attestation, request: { method: \"PUT\", url: `Observation?identifier=${HISTORY_REVIEW_ATTESTATION_IDENTIFIER_SYSTEM}|${identifierValue}` } }"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHistoryReview",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 495,
+      "expression": "staff.fhir.executeTransaction(transactionRequest, {\n    \"X-ODOS-Source\": \"mcp/review_history_no_change\",\n    Prefer: \"return=representation\",\n  })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "persistHistoryItemAct",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 567,
+      "expression": "{ fullUrl, resource: act, request: { method: \"PUT\", url: `Observation?identifier=${identifier.system}|${identifier.value}`, ifMatch: `W/\"${randomUUID()}\"` } }"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "persistHistoryItemAct",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 572,
+      "expression": "fhir.executeTransaction(request, { \"X-ODOS-Source\": \"mcp/review_history_items\", Prefer: \"return=representation\" })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 771,
+      "expression": "staff.fhir.executeTransaction(transactionRequest, {\n      ...WRITE_HEADERS,\n      Prefer: \"return=representation\",\n    })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 854,
+      "expression": "{\n      resource: { ...duplicate, status: \"entered-in-error\" as const },\n      request: {\n        method: \"PUT\" as const,\n        url: `Observation/${duplicate."
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "line": 865,
+      "expression": "{ resource: observation, request: { method: \"PUT\", url: `Observation/${canonical.id}`, ...(canonical.meta?.versionId ? { ifMatch: `W/\"${canonical.meta.versionId"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "observation-entry",
+      "ordinal": 3,
+      "line": 866,
+      "expression": "{ fullUrl: observationFullUrl, resource: observation, request: { method: \"PUT\", url: `Observation?identifier=${HPI_OBSERVATION_IDENTIFIER_SYSTEM}|${identifierVa"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "handleHpiCapture",
+      "kind": "transaction-submit",
+      "ordinal": 2,
+      "line": 888,
+      "expression": "staff.fhir.executeTransaction(transactionRequest, {\n    ...WRITE_HEADERS,\n    Prefer: \"return=representation\",\n  })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "prepareHistoryAnswerUpsert",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 956,
+      "expression": "{ resource, request: { method: \"PUT\" as const, url: `Observation/${existing.id}`, ...(existing.meta?.versionId ? { ifMatch: `W/\\\"${existing.meta.versionId}\\\"` }"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "prepareHistoryAnswerUpsert",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "line": 957,
+      "expression": "{ fullUrl: `urn:uuid:hpi-answer-${index}`, resource, request: { method: \"PUT\" as const, url: `Observation?identifier=${resource.identifier?.[0]?.system}|${answe"
+    },
+    {
+      "file": "mcp/src/clinical-graph/hpi-endpoint.ts",
+      "function": "prepareHistoryAnswerUpsert",
+      "kind": "observation-entry",
+      "ordinal": 3,
+      "line": 967,
+      "expression": "{\n    resource: { ...observation, status: \"entered-in-error\" as const },\n    request: {\n      method: \"PUT\" as const,\n      url: `Observation/${observation.id}`"
+    },
+    {
+      "file": "mcp/src/referral/referral-service.ts",
+      "function": "commitReferralSend",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 409,
+      "expression": "this.fhir.executeTransaction({\n        resourceType: \"Bundle\",\n        type: \"transaction\",\n        entry: [\n          {\n            resource: activeServiceRequ"
+    },
+    {
+      "file": "mcp/src/fhir/opticalOrderComposite.ts",
+      "function": "entry",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 122,
+      "expression": "{\n    fullUrl,\n    resource,\n    request: { method: \"POST\", url: resource.resourceType },\n  }"
+    },
+    {
+      "file": "mcp/src/optical-order-lifecycle-service.ts",
+      "function": "createOpticalCashOrder",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 26,
+      "expression": "fhir.executeTransaction(requestBundle)"
+    },
+    {
+      "file": "mcp/src/payments/payment-collection-handler.ts",
+      "function": "createCollection",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 266,
+      "expression": "fhir.executeTransaction(request)"
+    },
+    {
+      "file": "mcp/src/series-tracker/protocol-definition-store.ts",
+      "function": "save",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 90,
+      "expression": "this.fhir.executeTransaction(definitionTransaction(plan, activity))"
+    },
+    {
+      "file": "mcp/src/series-tracker/protocol-definition-store.ts",
+      "function": "archive",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 103,
+      "expression": "this.fhir.executeTransaction(definitionTransaction(plan, activity))"
+    },
+    {
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "function": "encounterSeries",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 299,
+      "expression": "staff.fhir.executeTransaction({\n        resourceType: \"Bundle\",\n        type: \"transaction\",\n        entry: [\n          ...migration.completedProcedures,\n      "
+    },
+    {
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "function": "signOffSeriesProcedures",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 512,
+      "expression": "staff.fhir.executeTransaction(updateTransaction([\n      ...changedProcedures.values(),\n      ...changedCarePlans.values(),\n    ]), { \"X-ODOS-Source\": \"series-tr"
+    },
+    {
+      "file": "mcp/src/series-tracker/series-tracker-endpoint.ts",
+      "function": "updateTransaction",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 546,
+      "expression": "{\n        resource,\n        request: { method: \"PUT\", url: `${resource.resourceType}/${resource.id}` },\n      }"
+    },
+    {
+      "file": "mcp/src/comms/suppression-gate.ts",
+      "function": "recordPatientSmsOptOut",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 270,
+      "expression": "fhir.executeTransactionAsActor(transaction, {\n      actorReference: input.actorReference,\n      actorRole: input.actorRole,\n      ...(input.policyUrl ? { policy"
+    },
+    {
+      "file": "mcp/src/comms/suppression-gate.ts",
+      "function": "clearPatientSmsOptOut",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 356,
+      "expression": "fhir.executeTransactionAsActor(\n    transaction,\n    {\n      actorReference: input.actorReference,\n      actorRole: input.actorRole,\n      ...(input.policyUrl ?"
+    },
+    {
+      "file": "mcp/src/comms/comms-preferences.ts",
+      "function": "writeCommsPreferences",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 45,
+      "expression": "fhir.executeTransactionAsActor(transaction, {\n    actorReference: actor.actorReference, actorRole: actor.actorRole, policyUrl: actor.policyUrl,\n    actionReason"
+    },
+    {
+      "file": "mcp/src/comms/comms-preferences.ts",
+      "function": "attachCommsConsentEvidence",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 138,
+      "expression": "fhir.executeTransactionAsActor(transaction, { actorReference: actor.actorReference, actorRole: actor.actorRole,\n    policyUrl: actor.policyUrl, actionReason: \"c"
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-link-operation.ts",
+      "function": "transaction",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 195,
+      "expression": "{ resource,\n      request: { method, url: method === \"POST\" ? resource.resourceType : reference(resource),\n        ...(expected ? { ifMatch: `W/\"${expected}\"` }"
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-link-operation.ts",
+      "function": "transaction",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 201,
+      "expression": "this.deps.serviceFhir.executeTransactionAsActor(bundle, {\n      actorReference: this.staff.staffReference, actorRole: this.staff.actorRole,\n      actionReason: "
+    },
+    {
+      "file": "mcp/src/clinic/patient-registration-endpoint.ts",
+      "function": "registerPatientFromDemographics",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 158,
+      "expression": "deps.serviceFhir.executeTransactionAsActor(\n      request,\n      {\n        actorReference: staff.staffReference,\n        actorRole: staff.actorRole,\n        act"
+    },
+    {
+      "file": "mcp/src/insurance/patient-insurance-handlers.ts",
+      "function": "handlePatientInsuranceWrite",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 99,
+      "expression": "auth.fhir.executeTransaction(submission, {}, { autoRollbackCreatedEntries: false })"
+    },
+    {
+      "file": "mcp/src/insurance/patient-insurance-handlers.ts",
+      "function": "handleVisionBenefitsWrite",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 151,
+      "expression": "auth.fhir.executeTransaction(bundle, {}, { autoRollbackCreatedEntries: false })"
+    },
+    {
+      "file": "mcp/src/claims/claimmd-handlers.ts",
+      "function": "recordResubmissionTouch",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 481,
+      "expression": "auth.fhir.executeTransaction(buildClaimTouchTransaction({\n      claim,\n      principal: { kind: \"human\", actorReference: auth.staffReference, actorRole: auth.ac"
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "runStatements",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 696,
+      "expression": "fhir.executeTransaction(transaction.startBundle)"
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "runStatements",
+      "kind": "transaction-submit",
+      "ordinal": 2,
+      "line": 709,
+      "expression": "fhir.executeTransaction(bundle)"
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "runStatements",
+      "kind": "transaction-submit",
+      "ordinal": 3,
+      "line": 725,
+      "expression": "fhir.executeTransaction(linkedBundles.completionBundle)"
+    },
+    {
+      "file": "mcp/src/statements/statements.ts",
+      "function": "deleteStatementChildren",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 770,
+      "expression": "fhir.executeTransaction({\n        resourceType: \"Bundle\",\n        type: \"transaction\",\n        entry: batchReferences.map((reference) => ({\n          request: {"
+    },
+    {
+      "file": "mcp/src/clinic/clinic-routes.ts",
+      "function": "handlePatientInactivationRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 68,
+      "expression": "deps.serviceFhir.executeTransactionAsActor(\n    patientUpdateTransaction([updated]),\n    {\n      actorReference: staff.staffReference,\n      actorRole: staff.ac"
+    },
+    {
+      "file": "mcp/src/clinic/clinic-routes.ts",
+      "function": "handlePatientMergeRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 112,
+      "expression": "deps.serviceFhir.executeTransactionAsActor(\n    patientUpdateTransaction([mergedSource, mergedTarget]),\n    {\n      actorReference: staff.staffReference,\n      "
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-search.ts",
+      "function": "createGuarantor",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 57,
+      "expression": "deps.serviceFhir.executeTransactionAsActor(bundle, { actorReference: staff.staffReference, actorRole: staff.actorRole, actionReason: \"guarantor.link create Pers"
+    },
+    {
+      "file": "mcp/src/clinic/guarantor-search.ts",
+      "function": "discardUnusedGuarantor",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 113,
+      "expression": "deps.serviceFhir.executeTransactionAsActor({ resourceType: \"Bundle\", type: \"transaction\", entry: [{\n      resource: { ...person, active: false }, request: { met"
+    },
+    {
+      "file": "mcp/src/inventory/frame-inventory-adjustment.ts",
+      "function": "handleFrameInventoryAdjustmentRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 96,
+      "expression": "deps.serviceFhir.executeTransaction({\n      resourceType: \"Bundle\",\n      type: \"transaction\",\n      entry: [\n        {\n          resource: jsonPatchBinary(stat"
+    },
+    {
+      "file": "mcp/src/clinical-graph/cup-disc-endpoint.ts",
+      "function": "handleCupDiscCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 190,
+      "expression": "staff.fhir.create<Observation>(item.captured.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/gonioscopy-endpoint.ts",
+      "function": "handleGonioscopyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 84,
+      "expression": "staff.fhir.create(buildGonioQuadrantObservation({\n      encounterReference: parsed.data.encounterReference,\n      patientReference: parsed.data.patientReference"
+    },
+    {
+      "file": "mcp/src/clinical-graph/gonioscopy-endpoint.ts",
+      "function": "handleGonioscopyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "line": 95,
+      "expression": "staff.fhir.create(simpleObservation(\"gonio_tm_pigmentation\", value!, parsed.data, staff.staffReference, recordedAt, eye), WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/gonioscopy-endpoint.ts",
+      "function": "handleGonioscopyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 3,
+      "line": 98,
+      "expression": "staff.fhir.create(simpleObservation(\"gonio_note\", parsed.data.note.trim(), parsed.data, staff.staffReference, recordedAt), WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+      "function": "commitFinding",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 936,
+      "expression": "staff.fhir.create(observation, { \"X-ODOS-Source\": \"protocol-module\" })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+      "function": "removeMaterialized",
+      "kind": "known-wrapper-call",
+      "ordinal": 1,
+      "line": 989,
+      "expression": "updateProjected(staff.fhir, \"Observation\", id, { ...resource, status: \"entered-in-error\" })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+      "function": "removeMaterialized",
+      "kind": "known-wrapper-call",
+      "ordinal": 2,
+      "line": 990,
+      "expression": "projectionRestore(staff.fhir, \"Observation\", id, resource, revoked.meta?.versionId,()=>assertProtocolMutation(staff,findingScope,[],[reference],mutationContext)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+      "function": "projectionRestore",
+      "kind": "known-wrapper-call",
+      "ordinal": 1,
+      "line": 1032,
+      "expression": "updateProjected(fhir, resourceType, id, resource, { \"If-Match\": `W/\"${revokedVersion}\"` })"
+    },
+    {
+      "file": "mcp/src/clinical-graph/imaging-endpoint.ts",
+      "function": "handleImagingStructureRefinementRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 351,
+      "expression": "staff.fhir.executeTransaction({\n    resourceType: \"Bundle\",\n    type: \"transaction\",\n    entry: [\n      {\n        resource: { ...current, bodySite },\n        re"
+    },
+    {
+      "file": "mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts",
+      "function": "handleDryEyeMeibographyCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 136,
+      "expression": "staff.fhir.create<Observation>(\n      {\n        ...observationInput,\n        derivedFrom: [reference(`DocumentReference/${documentReferenceId}`)],\n      },\n    "
+    },
+    {
+      "file": "mcp/src/clinical-graph/iop-endpoint.ts",
+      "function": "handleIopCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 191,
+      "expression": "staff.fhir.create<Observation>(item.iop.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/iop-endpoint.ts",
+      "function": "handleIopCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "line": 206,
+      "expression": "staff.fhir.create<Observation>(item.cornealHysteresis.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/refraction-endpoint.ts",
+      "function": "handleRefractionCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 151,
+      "expression": "staff.fhir.create<Observation>(item.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/contact-lens-endpoint.ts",
+      "function": "persistCapture",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 877,
+      "expression": "fhir.create<Observation>(capture.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/eye-growth-endpoint.ts",
+      "function": "persistGraph",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 757,
+      "expression": "fhir.create<Observation>(graph.observation, WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "function": "persistCapture",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 521,
+      "expression": "fhir.create({ ...captured.observation, ...(negativeAct ? { id: undefined } : {}) }, {\n    ...WRITE_HEADERS,\n    ...(identifier ? { \"If-None-Exist\": `identifier="
+    },
+    {
+      "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+      "function": "executeOcularNegative",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 746,
+      "expression": "writerDeps.fhir.createWithOutcome(resource, { ...WRITE_HEADERS, \"If-None-Exist\": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}` "
+    },
+    {
+      "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+      "function": "handleEncounterVoidRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 509,
+      "expression": "staff.fhir.executeTransaction(transaction, VOID_WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+      "function": "putEntry",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 792,
+      "expression": "{\n    resource,\n    request: {\n      method: \"PUT\",\n      url,\n      ...(versionId ? { ifMatch: `W/\"${versionId}\"` } : {}),\n    },\n  }"
+    },
+    {
+      "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+      "function": "handleEncounterUndoRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 249,
+      "expression": "staff.fhir.executeTransaction(transaction, UNDO_WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/dilation-endpoint.ts",
+      "function": "handleDilationCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 153,
+      "expression": "staff.fhir.create<Observation>({\n    ...withDocumentationElements(captured.observation, definition, documented),\n    partOf: administrationReferences.map((resou"
+    },
+    {
+      "file": "mcp/src/clinical-graph/eom-endpoint.ts",
+      "function": "handleEomCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 108,
+      "expression": "staff.fhir.create(withDocumentationElements(captured.observation, definition, data.state), WRITE_HEADERS)"
+    },
+    {
+      "file": "mcp/src/clinical-graph/cover-test-endpoint.ts",
+      "function": "handleCoverTestCaptureRequest",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 81,
+      "expression": "staff.fhir.create({\n    ...withDocumentationElements(captured.observation, definition, state),\n    note: [{ text: parsed.data.rows.map((row) => row.state === \"o"
+    },
+    {
+      "file": "mcp/src/claims/claim-follow-up-routes.ts",
+      "function": "commitPreparedClaimTouches",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 377,
+      "expression": "staff.fhir.executeTransaction({ resourceType: \"Bundle\", type: \"transaction\", entry: entries })"
+    },
+    {
+      "file": "mcp/src/fhir/scribeAttestation.ts",
+      "function": "buildAttestationTransaction",
+      "kind": "observation-json-patch-entry",
+      "ordinal": 1,
+      "line": 227,
+      "expression": "{\n        resource: jsonPatchBinaryResource(patchOperations),\n        request: versionAwareRequest(input.observation, \"PATCH\", observationReference(input.observ"
+    },
+    {
+      "file": "mcp/src/fhir/scribeAttestation.ts",
+      "function": "buildAmendmentTransaction",
+      "kind": "observation-json-patch-entry",
+      "ordinal": 1,
+      "line": 287,
+      "expression": "{\n        resource: jsonPatchBinaryResource(patchOperations),\n        request: versionAwareRequest(input.observation, \"PATCH\", observationReference(input.observ"
+    },
+    {
+      "file": "mcp/src/fhir/scribeAttestation.ts",
+      "function": "buildAppendObservationTransaction",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 352,
+      "expression": "{\n        resource: observation,\n        request: { method: \"PUT\", url: observationReference(observation) },\n      }"
+    },
+    {
+      "file": "mcp/src/fhir/ophthalmology/save-section-bundle.ts",
+      "function": "buildSectionSaveBundle",
+      "kind": "observation-entry",
+      "ordinal": 1,
+      "line": 127,
+      "expression": "{\n      fullUrl: observationFullUrl,\n      resource: observation,\n      request: {\n        method: \"POST\",\n        url: \"Observation\",\n      },\n    }"
+    },
+    {
+      "file": "mcp/src/fhir/ophthalmology/save-section-bundle.ts",
+      "function": "buildSectionSaveBundle",
+      "kind": "observation-entry",
+      "ordinal": 2,
+      "line": 136,
+      "expression": "{\n      fullUrl: `urn:uuid:prov-${input.section}-${laterality.toLowerCase()}`,\n      resource: buildCreateProvenance({\n        targetReference: observationFullU"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:create_observation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 2914,
+      "expression": "fhir.create(\n            observationBodySiteResult.observation,\n            CREATE_OBSERVATION_AUDIT_HEADERS,\n          )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:scribe_write_observation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 2989,
+      "expression": "fhir.update<Observation>(\n              \"Observation\",\n              observation.id!,\n              observation,\n              SCRIBE_WRITE_OBSERVATION_AUDIT_HE"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:clinician_attest_observation",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 3029,
+      "expression": "fhir.executeTransaction(\n                transaction.bundle,\n                CLINICIAN_ATTEST_OBSERVATION_AUDIT_HEADERS,\n              )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:amend_observation",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 3092,
+      "expression": "fhir.executeTransaction(transaction.bundle, AMEND_OBSERVATION_AUDIT_HEADERS)"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:append_observation_context",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 3144,
+      "expression": "fhir.executeTransaction(\n                transaction.bundle,\n                APPEND_OBSERVATION_CONTEXT_AUDIT_HEADERS,\n              )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:save_section_observations",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 3247,
+      "expression": "fhir.executeTransaction(\n            bundle,\n            CREATE_SECTION_OBSERVATIONS_AUDIT_HEADERS,\n          )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:mark_condition_entered_in_error",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "line": 3562,
+      "expression": "fhir.executeTransaction(\n                {\n                  resourceType: \"Bundle\",\n                  type: \"transaction\",\n                  entry: [\n         "
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:create_smoking_status_observation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 3674,
+      "expression": "fhir.create<Observation>(\n            observation,\n            auditHeaders(\"create_smoking_status_observation\"),\n          )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:create_dry_eye_questionnaire_response",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 3944,
+      "expression": "fhir.create<Observation>(\n            scoreObservation,\n            auditHeaders(\"create_dry_eye_questionnaire_response\"),\n          )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:create_meibography_observation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 4010,
+      "expression": "fhir.create<Observation>(\n            observation,\n            auditHeaders(\"create_meibography_observation\"),\n          )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:record_ortho_k_fit_observation",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 4317,
+      "expression": "fhir.create<Observation>(observation, auditHeaders(\"record_ortho_k_fit_observation\"))"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:record_eye_growth_axial_length_measurement",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 4516,
+      "expression": "fhir.create<Observation>(\n            graphs.axialLength.observation,\n            auditHeaders(\"record_eye_growth_axial_length_measurement\"),\n          )"
+    },
+    {
+      "file": "mcp/src/index.ts",
+      "function": "tool:record_eye_growth_axial_length_measurement",
+      "kind": "resource-write",
+      "ordinal": 2,
+      "line": 4533,
+      "expression": "fhir.create<Observation>(\n              graphs.cornealRadius.observation,\n              auditHeaders(\"record_eye_growth_axial_length_measurement\"),\n            "
+    },
+    {
+      "file": "mcp/src/__tests__/procedure-fee-import.test.ts",
+      "function": "createWithOutcome",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 68,
+      "expression": "this.create(resource)"
+    },
+    {
+      "file": "mcp/src/__tests__/procedure-fee-prerequisite.test.ts",
+      "function": "createWithOutcome",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 69,
+      "expression": "this.create(resource)"
+    },
+    {
+      "file": "mcp/src/__tests__/visit-billing-codes.test.ts",
+      "function": "createWithOutcome",
+      "kind": "resource-write",
+      "ordinal": 1,
+      "line": 84,
+      "expression": "this.create(resource, headers)"
+    }
+  ],
+  "mapped": 30,
+  "excluded": 67
+}

@@ -30,7 +30,7 @@ import { isLiveObservation } from "./observation-liveness.js";
 import { observationFindingDetails, observationNegativeAct, componentString, findingDetailComponentCode, hasFindingDetails, isClockHourExtent, negativeActSchema, NEGATIVE_ACT_IDENTIFIER_SYSTEM, type NegativeAct } from "./finding-section-helpers.js";
 
 import { collectAllFhirSearchPages } from "../fhir-search.js";
-import { isClosedEncounter } from "./encounter-sign-gate.js";
+import { isClosedEncounter , observePostCommandClosure } from "./encounter-sign-gate.js";
 import { loadDiagnosisFindingContext, findingTargetReadOnlyReason, projectRow, offeredRow, findingCommandResponse, type DiagnosisFindingContext } from "./diagnosis-findings-endpoint.js";
 import { currentFindingKeySchema, currentFindingPanelKeySchema, currentFindingIdentifier, findingPanelIdentifier, findingPanelTargetId, ownsFact, normalizeFindingPanelState, type CurrentFindingKey, type FindingPanelKey } from "./current-finding-identity.js";
 import { classifyReplay, executeFindingCommand, type FindingCommand, type FindingCommandDeps, type FindingCommandTarget, type FindingCommandResult, type FindingOutcome } from "./current-finding-writer.js";
@@ -725,8 +725,8 @@ async function saveOcularHealth(deps: CustomSectionEndpointDeps, staff: OcularSt
   }
   const result: FindingCommandResult = { commandId: command.commandId, complete: !stopped, executionOrder: outcomes.map((_, index) => index), outcomes };
   const response = findingCommandResponse(result);
-  const finalEncounter = await fhir.read<Encounter>("Encounter", body.encounterReference.slice(10));
-  return { ...response, body: { ...(response.body as object), ...(isClosedEncounter(finalEncounter) ? { encounterClosedDuringCommand: true } : {}) } };
+  const closure = await observePostCommandClosure(() => fhir.read<Encounter>("Encounter", body.encounterReference.slice(10)));
+  return { ...response, body: { ...(response.body as object), ...closure } };
 }
 
 async function executeOcularNegative(deps: CustomSectionEndpointDeps, writerDeps: FindingCommandDeps, context: DiagnosisFindingContext, definition: ClinicalFindingDefinition, step: Extract<OcularStep, { negative: unknown }>): Promise<FindingOutcome & { kind: "negative-act" }> {
@@ -777,12 +777,22 @@ function ocularHistoryEye(context: DiagnosisFindingContext, definition: Clinical
 async function readOcularHealth(deps: CustomSectionEndpointDeps, staff: OcularStaff, definition: ClinicalFindingDefinition, query: z.infer<typeof historyQuerySchema>): Promise<OcularResponse> {
   const fhir = ocularReadFhir(staff), definitions = deps.findingDefinitions?.() ?? [];
   let references = query.encounter ? [query.encounter] : [];
+  let unscopedCount = 0;
   if (!query.encounter) {
-    const first = await fhir.search<Observation>("Observation", { subject: query.patient, _count: "200" });
+    const codes = new Set([definition.stableKey, ...customFieldEntries(definition, true).flatMap(field => [
+      `${definition.stableKey}::${field.localCode}`,
+      ...(field.options ?? []).map(option => `${definition.stableKey}::${field.localCode}::${option.code}`),
+    ])]);
+    const first = await fhir.search<Observation>("Observation", { subject: query.patient, code: [...codes].join(","), _count: "200" });
     const observations = await collectAllFhirSearchPages(fhir, "Observation", first, fhir.baseUrl);
-    const contributing = observations.filter(o => o.code.coding?.some(c => c.code === definition.stableKey || c.code?.startsWith(`${definition.stableKey}::`)));
-    if (contributing.some(o => o.subject?.reference !== query.patient || !o.encounter?.reference?.match(/^Encounter\/[A-Za-z0-9.-]+$/))) return ocularError(409, "foreign-or-unscoped");
-    references = [...new Set(contributing.map(o => o.encounter!.reference!))];
+    const contributing = observations.filter(o => o.code.coding?.some(c => c.code && codes.has(c.code)));
+    if (contributing.some(o => o.subject?.reference !== query.patient)) return ocularError(409, "foreign-or-unscoped");
+    const scoped = contributing.filter(o => {
+      if (o.encounter?.reference?.match(/^Encounter\/[A-Za-z0-9.-]+$/)) return true;
+      unscopedCount++;
+      return false;
+    });
+    references = [...new Set(scoped.map(o => o.encounter!.reference!))];
   }
   const encounters = [];
   const rows: ReturnType<typeof snapshotHistoryRows> = [];
@@ -794,5 +804,5 @@ async function readOcularHealth(deps: CustomSectionEndpointDeps, staff: OcularSt
     if (context.projection.preRebuild) rows.push(...snapshotHistoryRows(context.state.observations.filter(o => o.code.coding?.some(c => c.code === definition.stableKey)), definition));
     encounters.push({ encounterReference: reference, recordedAt: context.encounter.period?.start ?? "", encounterEditable: !reason, ...(reason ? { readOnlyReason: reason } : {}), eyes: { OD: ocularHistoryEye(context, definition, "OD"), OS: ocularHistoryEye(context, definition, "OS") } });
   }
-  return { status: 200, body: query.encounter ? { ...encounters[0], rows } : { encounters, rows } };
+  return { status: 200, body: query.encounter ? { ...encounters[0], rows } : { encounters, rows, unscopedCount } };
 }

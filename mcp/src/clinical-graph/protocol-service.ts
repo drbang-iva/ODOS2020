@@ -710,6 +710,7 @@ export class ProtocolService {
 
   private async unapplyLocked(applicationId: string): Promise<{ removed: string[]; preserved: string[] }> {
     const application = await this.requireApplication(applicationId);
+    if (application.undoState !== "active") return { removed: [], preserved: [] };
     const removalFindings = (await this.findings.list()).filter(row=>row.protocolApplicationId === application.id);
     const removalActions = (await this.actions.list()).filter(row=>row.protocolApplicationId === application.id);
     await this.projection.validateMutation?.(application,[],[
@@ -723,7 +724,6 @@ export class ProtocolService {
         `Cannot un-apply: ${acceptedChargeCount} accepted charge${acceptedChargeCount === 1 ? "" : "s"} must be resolved first.`,
       );
     }
-    if (application.undoState !== "active") return { removed: [], preserved: [] };
     const encounterActions = (await this.actions.list()).filter((row) => row.encounterId === application.encounterId);
     const actions = encounterActions.filter((row) => row.protocolApplicationId === application.id);
     const followUps = encounterActions.filter((row) => row.actionType === "follow-up" && !["removed", "cancelled"].includes(row.state) &&

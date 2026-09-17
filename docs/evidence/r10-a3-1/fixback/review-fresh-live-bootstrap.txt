@@ -1,0 +1,194 @@
+
+> odos-mcp@0.1.0 test:live-integration
+> node scripts/run-tests.mjs --bootstrap-project tests/searchParamMedplumSmoke.test.ts tests/audit-header.test.ts tests/billingIdentityConfigParity.test.ts tests/body-structure-idempotency.test.ts tests/diagnosisCarryForward.test.ts tests/encounter-lifecycle.test.ts tests/encounter.test.ts tests/patient-update.test.ts tests/profile-validation.test.ts tests/provenance-defaults.test.ts tests/transaction-atomicity.test.ts tests/v035-terminology-install.test.ts tests/v035-write-tools.test.ts tests/v04-observation-focus-conformance.test.ts tests/v04-write-tools.test.ts tests/v04b-write-tools.test.ts tests/v04c-write-tools.test.ts tests/v05b-audit-ib-backup.test.ts
+
+TAP version 13
+# Subtest: Medplum 5.1.8 accepts ChargeItem occurrence range with sort search
+not ok 1 - Medplum 5.1.8 accepts ChargeItem occurrence range with sort search
+  ---
+  duration_ms: 8050.550459
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts Invoice subject with date sort search
+not ok 2 - Medplum 5.1.8 accepts Invoice subject with date sort search
+  ---
+  duration_ms: 3.404708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts Invoice date range search
+not ok 3 - Medplum 5.1.8 accepts Invoice date range search
+  ---
+  duration_ms: 0.081625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts PaymentReconciliation active status search
+not ok 4 - Medplum 5.1.8 accepts PaymentReconciliation active status search
+  ---
+  duration_ms: 0.049375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts PaymentReconciliation created range search
+not ok 5 - Medplum 5.1.8 accepts PaymentReconciliation created range search
+  ---
+  duration_ms: 0.153791
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts Claim patient with created sort search
+not ok 6 - Medplum 5.1.8 accepts Claim patient with created sort search
+  ---
+  duration_ms: 0.058666
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts ClaimResponse patient with created sort search
+not ok 7 - Medplum 5.1.8 accepts ClaimResponse patient with created sort search
+  ---
+  duration_ms: 0.042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts Task code and business status search
+not ok 8 - Medplum 5.1.8 accepts Task code and business status search
+  ---
+  duration_ms: 0.126125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts Basic code and identifier search
+not ok 9 - Medplum 5.1.8 accepts Basic code and identifier search
+  ---
+  duration_ms: 0.366833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts Provenance target with recorded sort search
+not ok 10 - Medplum 5.1.8 accepts Provenance target with recorded sort search
+  ---
+  duration_ms: 0.2595
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: Medplum 5.1.8 accepts AuditEvent patient and date search
+not ok 11 - Medplum 5.1.8 accepts AuditEvent patient and date search
+  ---
+  duration_ms: 0.042625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:4571'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+# Subtest: real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL
+not ok 12 - real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL
+  ---
+  duration_ms: 0.040917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:1:5208'
+  failureType: 'hookFailed'
+  error: 'Medplum contract newuser failed: 400 {"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"invalid","details":{"text":"fetch failed"}}],"extension":[{"url":"https://medplum.com/fhir/StructureDefinition/tracing","extension":[{"url":"requestId","valueId":"d148a6f0-8dca-4555-b59c-0326b4540728"},{"url":"traceId","valueId":"45af1e6c-03ae-4f05-8208-90b2a89ef65f"}]}]}'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ensureContractIdentity (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:441:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamMedplumSmoke.test.ts:74:3)
+    async TestHook.run (node:internal/test_runner/test:1054:7)
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 0
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8326.486666

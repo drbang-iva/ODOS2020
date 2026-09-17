@@ -1,0 +1,465 @@
+{
+  "baseline": "ef4882c726039e7c9b30e31cd510486e61d30add",
+  "ledger": [
+    {
+      "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+      "row": "W82 / W108",
+      "retained": 29,
+      "before": [
+        {
+          "line": 87,
+          "text": "assert.deepEqual(guardSearches, Array.from({ length: mode === \"tap\" ? 3 : 10 }, () =>\n    [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat())"
+        }
+      ],
+      "after": [
+        {
+          "line": 87,
+          "text": "assert.deepEqual(guardSearches, Array.from({ length: mode === \"tap\" ? 2 : 9 }, () =>\n    [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat())"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/customSectionEndpoint.test.ts",
+      "row": "V21",
+      "retained": 278,
+      "before": [],
+      "after": [],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/diagnosisFindings.test.ts",
+      "row": "V3 / W75",
+      "retained": 45,
+      "before": [
+        {
+          "line": 56,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 57,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 58,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 369,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 370,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 371,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 382,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 383,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 384,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 421,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 422,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 423,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 434,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 435,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 436,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 447,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 448,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 449,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 627,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 628,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 629,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 640,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 641,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 642,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 653,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 654,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 655,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        },
+        {
+          "line": 666,
+          "text": "assert.equal(response.status, 409)"
+        },
+        {
+          "line": 667,
+          "text": "assert.equal((response.body as { reason: string }).reason, \"pre-rebuild-test-encounter\")"
+        },
+        {
+          "line": 668,
+          "text": "assert.deepEqual(fhir.resources, before)"
+        }
+      ],
+      "after": [],
+      "disposition": "Ten duplicated refusal-only tests removed per adjudication #12; one refusal remains; canonical coverage named in source comment."
+    },
+    {
+      "file": "mcp/tests/r10A3Carry.test.ts",
+      "row": "W111",
+      "retained": 124,
+      "before": [],
+      "after": [
+        {
+          "line": 387,
+          "text": "assert.equal(expected.result.status,200,JSON.stringify(expected.result.body))"
+        },
+        {
+          "line": 387,
+          "text": "assert.equal((expected.result.body as any).lineageStep,'applied')"
+        },
+        {
+          "line": 389,
+          "text": "assert.deepEqual(failed.result,expected.result)"
+        },
+        {
+          "line": 389,
+          "text": "assert.equal(failed.faults,1)"
+        },
+        {
+          "line": 390,
+          "text": "assert.equal((failed.result.body as any).encounterClosedDuringCommand,undefined)"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10A3DoorGuards.test.ts",
+      "row": "W111 / W94",
+      "retained": 37,
+      "before": [],
+      "after": [
+        {
+          "line": 104,
+          "text": "assert.equal((await handler(deps,request)).status,200)"
+        },
+        {
+          "line": 108,
+          "text": "assert.deepEqual(await handler(deps,request),expected)"
+        },
+        {
+          "line": 113,
+          "text": "assert.deepEqual(await handler(deps,request),expected)"
+        },
+        {
+          "line": 114,
+          "text": "assert.equal(faults,1)"
+        },
+        {
+          "line": 115,
+          "text": "assert.equal((expected.body as any).encounterClosedDuringCommand,undefined)"
+        },
+        {
+          "line": 127,
+          "text": "assert.deepEqual(candidates,before)"
+        },
+        {
+          "line": 127,
+          "text": "assert.equal(rows.length,1)"
+        },
+        {
+          "line": 127,
+          "text": "assert.deepEqual(rows[0].supportingFacts,[support])"
+        },
+        {
+          "line": 127,
+          "text": "assert.notEqual(rows[0],first)"
+        },
+        {
+          "line": 163,
+          "text": "assert.equal(expected.result.status,200,JSON.stringify(expected.result.body))"
+        },
+        {
+          "line": 163,
+          "text": "assert.equal((expected.result.body as any).conditionStep,'applied')"
+        },
+        {
+          "line": 164,
+          "text": "assert.deepEqual(failed.result,expected.result)"
+        },
+        {
+          "line": 164,
+          "text": "assert.equal(failed.faults,1)"
+        },
+        {
+          "line": 164,
+          "text": "assert.equal((failed.result.body as any).encounterClosedDuringCommand,undefined)"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10A3Library.test.ts",
+      "row": "W95",
+      "retained": 81,
+      "before": [
+        {
+          "line": 84,
+          "text": "assert.rejects(executeFindingCommand({...context(m),definitions:[]},command([target()]) as FindingCommand),{status:400})"
+        }
+      ],
+      "after": [
+        {
+          "line": 84,
+          "text": "assert.rejects(executeFindingCommand({...context(m),definitions:[]},command([target()]) as FindingCommand),{status:400,code:'not-a-shared-finding',message:'not-a-shared-finding'})"
+        },
+        {
+          "line": 120,
+          "text": "assert.rejects(executeFindingCommand({...context(m),definitions:defs.map(d=>({...d,valueSchema:{...d.valueSchema,type:'section'}}))},command([target()]) as FindingCommand),{status:400,code:'not-a-shared-finding',message:'not-a-shared-finding'})"
+        },
+        {
+          "line": 121,
+          "text": "assert.equal(m.writes.length,0)"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10A3OcularDoor.test.ts",
+      "row": "V21 / W111",
+      "retained": 120,
+      "before": [],
+      "after": [
+        {
+          "line": 149,
+          "text": "assert.equal(result.status,200)"
+        },
+        {
+          "line": 149,
+          "text": "assert.equal(result.body.unscopedCount,1)"
+        },
+        {
+          "line": 149,
+          "text": "assert.equal(result.body.encounters.length,1)"
+        },
+        {
+          "line": 159,
+          "text": "assert.deepEqual(await save(f,request),expected)"
+        },
+        {
+          "line": 162,
+          "text": "assert.deepEqual(await save(f,request),expected)"
+        },
+        {
+          "line": 162,
+          "text": "assert.equal(faults,1)"
+        },
+        {
+          "line": 163,
+          "text": "assert.equal((expected.body as any).encounterClosedDuringCommand,undefined)"
+        },
+        {
+          "line": 173,
+          "text": "assert.equal(result.status,200)"
+        },
+        {
+          "line": 175,
+          "text": "assert.deepEqual(new Set(searched?.split(',')),new Set(expected))"
+        },
+        {
+          "line": 176,
+          "text": "assert.ok(searched?.includes(`${lens.stableKey}::CUSTOM_old::old-option`))"
+        },
+        {
+          "line": 177,
+          "text": "assert.equal(result.body.encounters.length,1)"
+        }
+      ],
+      "disposition": "F1 unscoped refusal superseded by adjudication #5: 200 with unscopedCount; foreign subject remains 409. Other additions cover W111 and exact inactive-inclusive search codes."
+    },
+    {
+      "file": "mcp/tests/r10A3Overview.test.ts",
+      "row": "W81 / V27",
+      "retained": 28,
+      "before": [],
+      "after": [
+        {
+          "line": 60,
+          "text": "assert.deepEqual(await missing(c),[])"
+        },
+        {
+          "line": 61,
+          "text": "assert.ok(loaded.includes('Encounter/e1'))"
+        },
+        {
+          "line": 61,
+          "text": "assert.ok(loaded.includes('Encounter/prior-evidence'))"
+        },
+        {
+          "line": 61,
+          "text": "assert.equal(loaded.includes('Encounter/irrelevant'),false)"
+        },
+        {
+          "line": 70,
+          "text": "assert.deepEqual(await missing(c),[])"
+        },
+        {
+          "line": 70,
+          "text": "assert.equal(peak,4)"
+        },
+        {
+          "line": 70,
+          "text": "assert.equal(active,0)"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10A3Protocols.test.ts",
+      "row": "W82 / W91 / W108",
+      "retained": 50,
+      "before": [],
+      "after": [
+        {
+          "line": 32,
+          "text": "assert.equal(applied.status,200)"
+        },
+        {
+          "line": 34,
+          "text": "assert.equal((await c.unapply(id)).status,200)"
+        },
+        {
+          "line": 37,
+          "text": "assert.deepEqual(await c.unapply(id),{status:200,body:{removed:[],preserved:[]}})"
+        },
+        {
+          "line": 38,
+          "text": "assert.equal(c.writes.length,0)"
+        },
+        {
+          "line": 47,
+          "text": "assert.equal(r.status,200,JSON.stringify(r.body))"
+        },
+        {
+          "line": 47,
+          "text": "assert.deepEqual(firstWriteLoads,[1,1])"
+        },
+        {
+          "line": 47,
+          "text": "assert.ok(definitionLoads>1)"
+        },
+        {
+          "line": 47,
+          "text": "assert.ok(projectionLoads>1)"
+        },
+        {
+          "line": 52,
+          "text": "assert.equal(loaded,true)"
+        },
+        {
+          "line": 52,
+          "text": "assert.equal(r.status,409,JSON.stringify(r.body))"
+        },
+        {
+          "line": 52,
+          "text": "assert.equal((r.body as any).error,'encounter-closed')"
+        },
+        {
+          "line": 52,
+          "text": "assert.equal(c.writes.some(w=>w.resource.resourceType==='Observation'),false)"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseChecker.test.ts",
+      "row": "W40",
+      "retained": 16,
+      "before": [],
+      "after": [
+        {
+          "line": 96,
+          "text": "assert.deepEqual(checker.examPdfConsumerCensus(root),['mcp/src/consumer.ts:1:const renderExamPdf = true;','Missing source root: ui/src','Missing source root: src'])"
+        }
+      ],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "row": "W111 / W40",
+      "retained": 65,
+      "before": [],
+      "after": [],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10DiagnosisDoorAuthzLive.test.ts",
+      "row": "V35",
+      "retained": 37,
+      "before": [],
+      "after": [],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    },
+    {
+      "file": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+      "row": "V35 / W115",
+      "retained": 127,
+      "before": [],
+      "after": [],
+      "disposition": "Assertions strengthened or added per CodeRabbit adjudication; no existing successful behavior assertion loosened."
+    }
+  ],
+  "unmapped": 0
+}

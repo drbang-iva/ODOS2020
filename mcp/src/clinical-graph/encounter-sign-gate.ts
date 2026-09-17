@@ -20,3 +20,12 @@ export const CLOSED_ENCOUNTER_EDIT_ERROR = "Signed or closed encounters cannot b
 export function isClosedEncounter(encounter: Pick<Encounter, "status">): boolean {
   return encounter.status !== undefined && CLOSED_ENCOUNTER_STATUSES.has(encounter.status);
 }
+
+export async function observePostCommandClosure(readEncounter: () => Promise<Encounter>): Promise<{ encounterClosedDuringCommand?: true }> {
+  try {
+    return isClosedEncounter(await readEncounter()) ? { encounterClosedDuringCommand: true } : {};
+  } catch {
+    // A diagnostic read cannot replace the outcome of an already executed command.
+    return {};
+  }
+}

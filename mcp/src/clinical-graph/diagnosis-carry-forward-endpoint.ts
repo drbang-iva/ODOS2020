@@ -9,7 +9,7 @@ import { buildEncounterDiagnosisComponent, buildEncounterDiagnosisCondition, FHI
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
-import { isClosedEncounter } from "./encounter-sign-gate.js";
+import { isClosedEncounter , observePostCommandClosure } from "./encounter-sign-gate.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { loadDiagnosisFindingContext, findingCommandResponse, findingTargetReadOnlyReason, type DiagnosisFindingContext } from "./diagnosis-findings-endpoint.js";
 import { executeFindingCommand, type FindingCommandDeps } from "./current-finding-writer.js";
@@ -485,8 +485,8 @@ export async function handleDiagnosisPullRequest(deps: DiagnosisCarryForwardEndp
             }
             progress.lineageStep = "applied";
         }
-        const after = await staff.fhir.read<Encounter>("Encounter", currentEncounterId);
-        return { status: 200, body: { ...progress, ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}) } };
+        const closure = await observePostCommandClosure(() => staff.fhir.read<Encounter>("Encounter", currentEncounterId));
+        return { status: 200, body: { ...progress, ...closure } };
     }
     catch (error) {
         if (error instanceof CarryIntegrityError)
