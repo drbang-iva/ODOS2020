@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: W146 Caddy parity rejects any non-port edit and names its line
+ok 1 - W146 Caddy parity rejects any non-port edit and names its line
+  ---
+  duration_ms: 0.713542
+  type: 'test'
+  ...
+# Subtest: response proxy drops exactly one matching response after upstream completion
+ok 2 - response proxy drops exactly one matching response after upstream completion
+  ---
+  duration_ms: 23.2815
+  type: 'test'
+  ...
+# Subtest: readiness child completes through a live parent HTTP server without blocking it
+ok 3 - readiness child completes through a live parent HTTP server without blocking it
+  ---
+  duration_ms: 62.234667
+  type: 'test'
+  ...
+# Subtest: W146 response proxy rejects URL authority escapes and preserves origin-form query paths
+not ok 4 - W146 response proxy rejects URL authority escapes and preserves origin-form query paths
+  ---
+  duration_ms: 6.004833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:52:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    No request may escape to the second local server
+    + actual - expected
+    
+    + [
+    +   '/absolute',
+    +   '/authority',
+    +   '/backslash'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: '/absolute'
+    1: '/authority'
+    2: '/backslash'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/harness.test.mjs:67:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 138.520542

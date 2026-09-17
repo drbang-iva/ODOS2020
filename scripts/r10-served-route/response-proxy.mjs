@@ -7,10 +7,14 @@ export async function startResponseProxy({ upstream, port, controlPort, logPath 
   let armed;
   const events = [];
   const proxy = createServer((incoming, outgoing) => {
-    const path = new URL(incoming.url, 'http://local').pathname;
+    const target = incoming.url;
+    if (typeof target !== 'string' || !target.startsWith('/') || target.startsWith('//') || target.includes('\\') || target.includes('#')) {
+      outgoing.writeHead(400); outgoing.end('Expected an origin-form request target.'); return;
+    }
+    const path = target.split('?')[0];
     const drop = armed?.method === incoming.method && armed.path === path;
     if (drop) armed = undefined;
-    const forwarded = request(new URL(incoming.url, destination), { method: incoming.method, headers: { ...incoming.headers, host: destination.host } }, response => {
+    const forwarded = request({ hostname: destination.hostname, port: destination.port, path: target, method: incoming.method, headers: { ...incoming.headers, host: destination.host } }, response => {
       const chunks = [];
       response.on('data', chunk => chunks.push(chunk));
       response.on('end', () => {

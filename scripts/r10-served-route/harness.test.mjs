@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { createServer, request } from 'node:http';
 import { generateCaddyfile, assertCaddyParity } from './caddy.mjs';
 import { startResponseProxy } from './response-proxy.mjs';
 
@@ -46,4 +46,33 @@ test('readiness child completes through a live parent HTTP server without blocki
     assert.equal(requests, 1);
     await assert.rejects(runReadinessChild(process.execPath, ['-e', 'process.exit(7)'], { stdio: 'ignore' }), /Readiness child failed \(7\)/);
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+});
+
+
+test('W146 response proxy rejects URL authority escapes and preserves origin-form query paths', async () => {
+  const upstreamTargets = [], escapedTargets = [];
+  const upstream = createServer((incoming, response) => { upstreamTargets.push(incoming.url); incoming.resume(); incoming.on('end', () => response.end('upstream')); });
+  const spy = createServer((incoming, response) => { escapedTargets.push(incoming.url); incoming.resume(); incoming.on('end', () => response.end('escaped')); });
+  await Promise.all([upstream, spy].map(server => new Promise(resolve => server.listen(0, '127.0.0.1', resolve))));
+  const proxy = await startResponseProxy({ upstream: `http://127.0.0.1:${upstream.address().port}`, port: 0, controlPort: 0 });
+  const raw = target => new Promise((resolve, reject) => {
+    const outgoing = request({ hostname: '127.0.0.1', port: proxy.port, method: 'GET', path: target }, response => { response.resume(); response.on('end', () => resolve(response.statusCode)); });
+    outgoing.on('error', reject); outgoing.end();
+  });
+  try {
+    const authority = `127.0.0.1:${spy.address().port}`;
+    const targets = [`http://${authority}/absolute`, `//${authority}/authority`, `/\\${authority}/backslash`, `\\\\${authority}/backslash-authority`, `${authority}/authority-form`, '*'];
+    const statuses = [];
+    for (const target of targets) statuses.push(await raw(target));
+    assert.deepEqual(escapedTargets, [], 'No request may escape to the second local server');
+    assert.deepEqual(upstreamTargets, [], 'Rejected targets must not reach the configured upstream');
+    assert.deepEqual(statuses, targets.map(() => 400));
+    const originForm = '/clinical-graph/example?next=http%3A%2F%2Flocalhost%2Fpath&eye=OD&eye=OS';
+    assert.equal(await raw(originForm), 200);
+    assert.deepEqual(upstreamTargets, [originForm]);
+    assert.deepEqual(escapedTargets, []);
+  } finally {
+    await proxy.close();
+    await Promise.all([upstream, spy].map(server => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); })));
+  }
 });
