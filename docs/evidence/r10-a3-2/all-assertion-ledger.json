@@ -1,6 +1,6 @@
 {
   "base": "a211b368",
-  "head": "6227fad8a10acb82d73567afda8e9e3e6c2ab376",
+  "head": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
   "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
   "files": [
     {
@@ -113,6 +113,131 @@
               "test": "'W147 inactive option is an unchanged witness while active panel Remarks save'",
               "line": 205,
               "text": "assert.equal(f.m.writes.length,writes)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "scripts/r10-served-route/harness.test.mjs",
+      "assertionCountBefore": 0,
+      "assertionCountAfter": 18,
+      "changedGroups": [
+        {
+          "test": "'W146 Caddy parity rejects any non-port edit and names its line'",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "'W146 Caddy parity rejects any non-port edit and names its line'",
+              "line": 13,
+              "text": "assert.doesNotThrow(() => assertCaddyParity(original, generated, ports))"
+            },
+            {
+              "test": "'W146 Caddy parity rejects any non-port edit and names its line'",
+              "line": 14,
+              "text": "assert.match(generated, /:28090 \\{/)"
+            },
+            {
+              "test": "'W146 Caddy parity rejects any non-port edit and names its line'",
+              "line": 15,
+              "text": "assert.match(generated, /reverse_proxy 127\\.0\\.0\\.1:28103/)"
+            },
+            {
+              "test": "'W146 Caddy parity rejects any non-port edit and names its line'",
+              "line": 16,
+              "text": "assert.match(generated, /reverse_proxy 127\\.0\\.0\\.1:23335/)"
+            },
+            {
+              "test": "'W146 Caddy parity rejects any non-port edit and names its line'",
+              "line": 19,
+              "text": "assert.throws(() => assertCaddyParity(original, mutated, ports), new RegExp(`line ${expectedLine}`))"
+            }
+          ]
+        },
+        {
+          "test": "'response proxy drops exactly one matching response after upstream completion'",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "'response proxy drops exactly one matching response after upstream completion'",
+              "line": 30,
+              "text": "assert.equal((await fetch(`${base}/other`)).status, 200)"
+            },
+            {
+              "test": "'response proxy drops exactly one matching response after upstream completion'",
+              "line": 31,
+              "text": "assert.rejects(fetch(`${base}/carry`, { method: 'POST', body: '{}' }))"
+            },
+            {
+              "test": "'response proxy drops exactly one matching response after upstream completion'",
+              "line": 32,
+              "text": "assert.equal(completed, 2)"
+            },
+            {
+              "test": "'response proxy drops exactly one matching response after upstream completion'",
+              "line": 33,
+              "text": "assert.deepEqual(await (await fetch(`${base}/carry`, { method: 'POST', body: '{}' })).json(), { completed: 3 })"
+            },
+            {
+              "test": "'response proxy drops exactly one matching response after upstream completion'",
+              "line": 34,
+              "text": "assert.equal(proxy.events.filter(event => event.dropped).length, 1)"
+            }
+          ]
+        },
+        {
+          "test": "'readiness child completes through a live parent HTTP server without blocking it'",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "'readiness child completes through a live parent HTTP server without blocking it'",
+              "line": 46,
+              "text": "assert.equal(requests, 1)"
+            },
+            {
+              "test": "'readiness child completes through a live parent HTTP server without blocking it'",
+              "line": 47,
+              "text": "assert.rejects(runReadinessChild(process.execPath, ['-e', 'process.exit(7)'], { stdio: 'ignore' }), /Readiness child failed \\(7\\)/)"
+            }
+          ]
+        },
+        {
+          "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+          "mapping": "W146 / section 10.4 served-route harness",
+          "before": [],
+          "after": [
+            {
+              "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+              "line": 67,
+              "text": "assert.deepEqual(escapedTargets, [], 'No request may escape to the second local server')"
+            },
+            {
+              "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+              "line": 68,
+              "text": "assert.deepEqual(upstreamTargets, [], 'Rejected targets must not reach the configured upstream')"
+            },
+            {
+              "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+              "line": 69,
+              "text": "assert.deepEqual(statuses, targets.map(() => 400))"
+            },
+            {
+              "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+              "line": 71,
+              "text": "assert.equal(await raw(originForm), 200)"
+            },
+            {
+              "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+              "line": 72,
+              "text": "assert.deepEqual(upstreamTargets, [originForm])"
+            },
+            {
+              "test": "'W146 response proxy rejects URL authority escapes and preserves origin-form query paths'",
+              "line": 73,
+              "text": "assert.deepEqual(escapedTargets, [])"
             }
           ]
         }

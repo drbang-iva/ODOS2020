@@ -1,4 +1,5 @@
 mcp/tests/r10A3OcularDoor.test.ts: 4 changed groups; 131 -> 147 assertions
+scripts/r10-served-route/harness.test.mjs: 4 changed groups; 0 -> 18 assertions
 ui/tests/customSections.test.tsx: 25 changed groups; 473 -> 494 assertions
 ui/tests/diagnosisCarryForward.test.tsx: 9 changed groups; 60 -> 102 assertions
 ui/tests/encounterUndo.test.tsx: 3 changed groups; 76 -> 85 assertions

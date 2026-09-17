@@ -1,13 +1,12 @@
 {
-  "servedHead": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+  "servedHead": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
   "productionTrees": {
     "ui/src": "1e18f86180b9b0372f9599db2e5627dacf72fc45",
     "ui/tests": "26a84a5b72615f9116ff6bedce389324bf80bf46",
     "mcp/src": "6cc4c5c1bb6b846b514fbd9554afaa3f94b76911",
     "mcp/tests": "2f1d0ba230402668513a625111049892f4d85c14"
   },
-  "note": "The served application is aefb6dbf. Harness-only pagination correction ran at6227fad8 without changing UI/MCP source or compiled artifacts. Final evidence-only commits preserve application and executed harness trees; no claim is made that a later evidence commit was served.",
-  "builtHarnessTree": "50d8f1b0d4dc0fb6a42591c803535e815698721e",
-  "executedHarnessHead": "6227fad8a10acb82d73567afda8e9e3e6c2ab376",
-  "executedHarnessTree": "0c0bd560ac61499448496f9748f00ea3e39642ec"
+  "executedHarnessHead": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
+  "executedHarnessTree": "a56f47bc065ebe40871e9408f0c515b00040cd01",
+  "note": "Final evidence-only commit must preserve these application and executed harness trees. Browser artifacts retain actual built SHA; later review/shutdown metadata is a post-head seal."
 }

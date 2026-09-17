@@ -1,6 +1,6 @@
 {
   "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
-  "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+  "head": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
   "dirty": true,
   "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049",
   "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
@@ -19,6 +19,6 @@
     "control": 23336
   },
   "project": "odos-r10-a3-2-served",
-  "mcpPid": 54151,
-  "caddyPid": 54164
+  "mcpPid": 63724,
+  "caddyPid": 63737
 }

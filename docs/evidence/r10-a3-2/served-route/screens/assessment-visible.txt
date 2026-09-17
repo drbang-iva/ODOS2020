@@ -38,6 +38,9 @@ Age-related nuclear cataract
 OD
 nuclear sclerosis: present · OD
 Sep 20, 2026 · Visit type not recorded
+Age-related nuclear cataract
+OD
+nuclear sclerosis: present · OD
 Sep 20, 2026 · Visit type not recorded
 Sep 20, 2026 · Visit type not recorded
 Sep 20, 2026 · Visit type not recorded
@@ -189,6 +192,6 @@ Clinic home and patients
 ▣
 Protocol Library
 author and manage clinical protocols
-Build aefb6db · drbang-iva/r10-a3-2
-Built 6m ago
+Build e0336aa · drbang-iva/r10-a3-2
+Built 2m ago
 CURRENT

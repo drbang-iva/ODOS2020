@@ -24,8 +24,12 @@ The final void-response capture matches request body `preview !== true`, because
 
 ## Accepted main-route artifacts
 
-- App build: `aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2`; final harness: `6227fad8a10acb82d73567afda8e9e3e6c2ab376`. The later harness change only resumes the same carry proof through actual Previous Exams pagination; no production source or served asset changed.
-- `final-result.json`: accepted completed steps b/c/d/e/h, zero page errors. Its later pagination failure remains present and is not rewritten as a green full run.
-- `g-only-result.json`: accepted g continuation on the same untouched destination, exit0, zero page errors. Carry request bytes match across the dropped reply and Retry. The committed section void id `0dc1a116-616a-46fb-9ed1-76ca9d028e8a` exactly matches the actual Undo request; Undo restores2 canonical facts with the same references.
+- App and harness build: `e0336aae102f4641a30f994ac306ed6cc1cbddb9`, including the fixed-destination proxy repair. `served-identity.json` records assets, MCP identity and Medplum image digest.
+- `final-result.json`: one complete exit0 run of b/c/d/e/g/h, zero page errors. Earlier failed and split continuation attempts remain preserved and are not relabeled as green full runs.
+- Carry request bytes match across the dropped reply and Retry. The committed section void id `705f494b-ede5-4b69-b0f7-bf10f14cbc1b` exactly matches the actual Undo request; Undo restores2 canonical facts with the same references.
 - `destination-resources.json` and `destination-audit.log`: read-only real FHIR audit confirms exactly1 Condition and2 Observations in the accepted carry destination after Undo, with resource contents and versions.
 - `proof-summary.json`: step-to-artifact map, build identities, canonical reference continuity and explicit limitations. Supplemental f/read-only proof is owned by the separate author-verification agent and is combined by the root bundle.
+
+The (a)/(b) comparison concerns the same OD/OS nuclear-sclerosis canonical references. Later final screenshots also contain the cortical-cataract fact used by the concurrency scenario; they do not claim every surrounding chart field is identical to the original before screenshot.
+
+The final void-response capture matches request body `preview !== true`, because preview and committed clear share the same POST URL. It asserts the committed response's `voidActionId` equals the subsequent actual Undo request's `voidActionId`.

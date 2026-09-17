@@ -409,5 +409,24 @@
       "afterSha256": "884fdc6fcde519d3c96375b51d630f9ea26ffa3bfbed5502af6456d4f078e418"
     }
   ],
-  "normalization": "Trailing line whitespace and excess terminal blank lines only; counts and diagnostics retained."
+  "normalization": "Trailing line whitespace and excess terminal blank lines only; counts and diagnostics retained.",
+  "additionalSnapshotNormalizations": [
+    [
+      {
+        "file": "harness/proxy-authority-red.tap",
+        "beforeSha256": "36f24685130ac0f52ad1543751dd50a2548ad67efef827ef0ea0b12398d5cc77",
+        "afterSha256": "8d74ab9cfeb032c879b9127f98ebe704ca4f6b3aee50b4d5cc461f2577258451"
+      },
+      {
+        "file": "harness/proxy-authority-mutation-red.tap",
+        "beforeSha256": "6a0bc94ae46492da6f781e0d59b716786d3c3255841bd3d9c29d37c2d853a202",
+        "afterSha256": "b3f7697262ef6d8c7d93d81fa534713447d053ee2b37bdc29209593b0e900bb8"
+      },
+      {
+        "file": "served-route/screens/assessment-visible.txt",
+        "beforeSha256": "5e15d2ae13245aa8c380956e58470b518ab145793f35657d4ee73a14601d1cd5",
+        "afterSha256": "b1efe5387a67339137c8e920e3ea49e3f7245e6cc5d28ace2deedf91f997111a"
+      }
+    ]
+  ]
 }

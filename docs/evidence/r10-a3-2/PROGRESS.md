@@ -1,21 +1,9 @@
-# R10 A3.2 active progress
+# R10 A3.2 author proof complete; PR review pending
 
-Author: Codex GPT-6, high effort. NOT EVALUATED. HELD OPEN; never merge.
+Codex GPT-6, high effort. NOT EVALUATED. HELD OPEN; never merge.
 
-Base: a211b36887b49139ab29cf2d811a5a30f261034d. Branch: drbang-iva/r10-a3-2.
-Production implementation through c587bf96; final harness through 1325c7b3.
+PR #621, source/harness e0336aae. Full UI1734/1734; MCP5952pass/0fail/53skip; scoped MCP62+14+16=92/92; unchanged workspace75/75; live authz73/73; strictT1–T22PASS. Hardened response proxy4/4 with vulnerable mutation3/1red then4/0restored.
 
-Both published §13 scope rulings are implemented: unchanged read-only loaded witnesses and extraction-only DiagnosisWorkspace. BLOCKED.md and RESUME-BUNDLE.md are historical snapshots, not current status.
+All(a)–(h) and supplemental screens passed on the hardened-proxy application.39accepted screenshots are indexed. The initial CI at1e891fa1 passed5jobs and live integration218/218 plus bootstrap12/12; final exact-head CI and bots remain pending. See SEALED-BUNDLE.md and the post-head seal in .odos/r10-a3-2-final/.
 
-- W147: five tests; both required mutants fail, restored pass. Scoped MCP 92/92.
-- Workspace assertions unchanged, 22/22; shared-helper mutation fails both workspace and picker, restored green.
-- W130–W146 mutation evidence is in editor, picker, carry, void-undo, and harness directories.
-- Full UI after Assessment correction: 1,734 passed, zero failures/skips/todos. Unchanged workspace suites: 75/75.
-- Carry integration: 25/25, including remount recovery and confirmed-change refresh.
-- Credentialed live authorization: 73/73, zero failures/skips; existing lifecycle Provenance limitation documented separately.
-- Strict release checker reports PASS for T1–T22.
-- MCP CI-equivalent raw command: 5,952 passed, zero failed, 53 skipped, exit 0 across 423 files. The prior npm wrapper still correctly exits 1 for ungated live skips; separate live lane is 73/73.
-- Served-route (a) passes at exact #619 head: diagnosis OU creates two canonical records absent from the old OH editor. Remaining steps are in progress. Harness runtime authorization, source boundary lint and synthetic project quota are repaired.
-- PR, CI, terminal bot review, final sealed bundle and container shutdown remain outstanding.
-
-Only synthetic disposable containers with prefix odos-r10-a3-2-served belong to this task. Preserve them until live proof completes, then stop without removing them.
+Owned Docker project odos-r10-a3-2-served remains running until final review/hand-off; stop without removal at delivery.
