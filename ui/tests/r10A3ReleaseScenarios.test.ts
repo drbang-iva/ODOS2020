@@ -209,3 +209,9 @@ test("T22 Ocular Health UI writes only canonical fact and panel identities",asyn
     assert.equal(h.requests[0].eyes.OD.selected.length,1);assert.equal("customFields" in h.requests[0].eyes.OD,false);
   }finally{h.close();}
 });
+
+
+test("W134 diagnosis door names the closed-encounter refusal", async () => {
+  const { findingReadOnlyLabel } = await import("../src/lib/diagnosis-findings");
+  assert.equal(findingReadOnlyLabel("encounter-closed"), "Signed or closed visit");
+});
