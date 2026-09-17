@@ -1,0 +1,19 @@
+[
+  {
+    "id": "review-pick-response-type",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+        "before": "({ conditionStep: \"applied\"; condition: Condition; encounter?: Encounter; encounterClosedDuringCommand?: true; provenanceReference?: string;",
+        "after": "({ conditionStep: \"applied\"; condition: Condition; encounter?: Encounter; provenanceReference?: string;"
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=W111 review applied pick response",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ],
+    "failurePattern": "Property 'encounterClosedDuringCommand' does not exist"
+  }
+]

@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: W111 review applied pick response exposes optional closure marker to typed consumers
+not ok 1 - W111 review applied pick response exposes optional closure marker to typed consumers
+  ---
+  duration_ms: 444.597459
+  type: 'test'
+  location: '<worktree>/docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + [
+    +   `Property 'encounterClosedDuringCommand' does not exist on type '{ result: "pick"; commandId?: string | undefined; link: "pending" | "not-applicable"; } & { conditionStep: "applied"; condition: Condition; encounter?: Encounter | undefined; provenanceReference?: string | undefined; error?: string | undefined; action: string; diagnosisVisitStatus?: DiagnosisVisitStatusRow | undefin...'.`
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: `Property 'encounterClosedDuringCommand' does not exist on type '{ result: "pick"; commandId?: string | undefined; link: "pending" | "not-applicable"; } & { conditionStep: "applied"; condition: Condition; encounter?: Encounter | undefined; provenanceReference?: string | undefined; error?: string | undefined; action: string; diagnosisVisitStatus?: DiagnosisVisitStatusRow | undefin...'.`
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs:49:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 633.342666

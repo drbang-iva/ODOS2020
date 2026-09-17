@@ -1,0 +1,13 @@
+[
+  {
+    "id": "review-pick-response-type",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--test",
+      "--test-name-pattern=W111 review applied pick response",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ]
+  }
+]

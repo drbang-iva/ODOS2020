@@ -1,0 +1,13 @@
+{
+  "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+  "baseline": "54badebf03d67f549736f0a1fabba64ec92491c5",
+  "emittedJavaScriptIdentical": true,
+  "sha256": "c74522682a3fb24f25f0fabb0c42fa9da845e83cf5f37871a341f2651ccb4612",
+  "assertion": {
+    "row": "W111",
+    "before": "No typed-consumer assertion",
+    "after": "Applied DiagnosisPickResponse permits reading the marker as true | undefined; semantic compiler diagnostics empty"
+  },
+  "red": "Property encounterClosedDuringCommand does not exist",
+  "green": "1/1 typed-consumer test"
+}

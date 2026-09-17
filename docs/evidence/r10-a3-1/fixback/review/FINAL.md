@@ -49,3 +49,13 @@ The already-repaired previous stack refused the initial bootstrap Patient create
 ## Publication status
 
 Local fixback complete; hosted CI and bot review pending the commit containing this bundle. Exact final head, CI counts, review dispositions and container stop list will be recorded in the PR and final handoff after those external checks finish. NOT EVALUATED; HELD OPEN.
+
+## Final CodeRabbit type correction
+
+CodeRabbit completed review5235939476 at54badebf with one outside-diff minor finding: the applied DiagnosisPickResponse omitted the closure marker already returned at runtime. Added `encounterClosedDuringCommand?: true` to that member only. [Compiler test and emission proof](type-contract-proof.json): removing the field fails with the missing-property diagnostic; restoring passes1/1; emitted JavaScript is byte-identical. This is mutation pair22; no existing assertion changed.
+
+Repeated full MCP:6,000tests,5,946pass,1base-reproducedWeasyPrintENOENT,53skip,0TODO. Repeated full UI:1,685tests,1,673pass,the same8carriedfailures,0skip,4TODO. Both builds and preflight complete exit0; checker remains16MCPgreen/9UIopen (expectedexit1). Logs are the `review-type-*` files beside this bundle. Full/isolated/mutation counts overlap.
+
+Hosted CI at the preceding54badebf: [MCP job](https://github.com/drbang-iva/ODOS2020/actions/runs/35222646153/job/105207130929) succeeded:6,000tests,5,947pass,0fail,53skip,0TODO; bootstrap12/12,integration218/218,authz73/73. [UI job](https://github.com/drbang-iva/ODOS2020/actions/runs/35222646153/job/105207130918) had exactly8approvedfailures. This hosted result belongs to54badebf; the final type-correction head will have separate hosted evidence in the PR/final handoff.
+
+Final type-correction live authorization rerun: **73tests,73pass,0fail,0skip,0TODO**. [Raw](../review-type-live-authz.txt), [latest identity and resource rows](type-live-results.json). Same CI-built synthetic project and bootstrap; newly provisioned service identity for this run.

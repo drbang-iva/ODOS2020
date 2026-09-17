@@ -428,7 +428,7 @@ async function performDiagnosisPickRequest(
 }
 
 export type DiagnosisPickResponse = ({ result: "pick"; commandId?: string; link: "pending" | "not-applicable" } & (
-  ({ conditionStep: "applied"; condition: Condition; encounter?: Encounter; provenanceReference?: string; error?: string; action: string;
+  ({ conditionStep: "applied"; condition: Condition; encounter?: Encounter; encounterClosedDuringCommand?: true; provenanceReference?: string; error?: string; action: string;
     diagnosisVisitStatus?: Awaited<ReturnType<DiagnosisVisitStatusStore["upsert"]>> } & DiagnosisDemotionImpact) |
   { conditionStep: "unconfirmed" | "failed"; error: string }
 )) |
