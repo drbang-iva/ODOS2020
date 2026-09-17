@@ -1,4 +1,4 @@
-import type { Encounter } from "@medplum/fhirtypes";
+import type { Encounter, Condition, Observation } from "@medplum/fhirtypes";
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
@@ -14,4 +14,14 @@ if(mode==='destination'&&!fixture.destination){
  fixture.destination=`Encounter/${encounter.id}`;
  writeFileSync(join(runtime,'fixture.json'),JSON.stringify(fixture,null,2)+'\n',{mode:0o600});
  console.log(JSON.stringify({destination:fixture.destination,version:encounter.meta?.versionId}));
+}
+
+if(mode==='audit'){
+ const conditions=await operator.fhir.search<Condition>('Condition',{subject:fixture.patientReference,encounter:fixture.destination,_count:'100'});
+ const observations=await operator.fhir.search<Observation>('Observation',{subject:fixture.patientReference,encounter:fixture.destination,_count:'100'});
+ const resources=[...(conditions.entry??[]),...(observations.entry??[])].flatMap(entry=>entry.resource?[entry.resource]:[]);
+ assert.equal(resources.filter(resource=>resource.resourceType==='Condition').length,1,'Exactly one carried destination Condition');
+ const evidence=resolve(runtime,'../../docs/evidence/r10-a3-2/served-route/destination-resources.json');
+ writeFileSync(evidence,JSON.stringify({encounterReference:fixture.destination,resources},null,2)+'\n');
+ console.log(JSON.stringify({conditions:conditions.entry?.length??0,observations:observations.entry?.length??0,evidence}));
 }
