@@ -23,3 +23,5 @@ Counts are pass / fail. Detailed mutations and exact test names remain in the li
 | W147 freshness | [4/1](w147-skip-witness-match-red.log) | [5/0](w147-skip-witness-match-restored.log) |
 
 W142/W143: [carry mutation counts and restoration](carry/assertion-ledger.md). W144: [three mutations and 74/74 restoration](void-undo/assertion-ledger.md). W146: [actual Caddy diff red/restored plus asynchronous readiness mutation](harness/setup-summary.md). Additional frozen-scope V21/V22: [both 0/1 red then 1/0 green](frozen-scope/README.md).
+
+W146 proxy authority boundary (CodeQL267): [3/1 red](harness/proxy-authority-red.tap), [4/0 repaired](harness/proxy-authority-green.tap), [3/1 vulnerable mutation](harness/proxy-authority-mutation-red.tap), [4/0 restored](harness/proxy-authority-restored-green.tap). [Exact assertion changes](harness/PROXY-W146-ASSERTION-LEDGER.md).

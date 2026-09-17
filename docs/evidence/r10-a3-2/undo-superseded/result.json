@@ -1,13 +1,13 @@
 {
-  "startedAt": "2026-09-17T18:31:58.353Z",
+  "startedAt": "2026-09-17T18:53:10.345Z",
   "build": {
     "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
-    "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+    "head": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
     "dirty": true,
     "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
   },
-  "encounterReference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d",
-  "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299",
+  "encounterReference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462",
+  "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894",
   "screenshots": [
     "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/undo-superseded/displayed-first-undo.png",
     "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/undo-superseded/superseded-no-retry.png",
@@ -37,19 +37,19 @@
     "sha256": "a2a981902d7280205b2e6441649253622f24a267d9b0ecae561a004516448944"
   },
   "displayedVoid": {
-    "voidActionId": "26637000-5fa5-4c5d-878b-d6f4e90145cf",
+    "voidActionId": "4689a03c-1c19-4f5f-ae08-ed7fe5628ada",
     "slot": {
-      "voidActionId": "26637000-5fa5-4c5d-878b-d6f4e90145cf",
+      "voidActionId": "4689a03c-1c19-4f5f-ae08-ed7fe5628ada",
       "voided": [
         {
-          "ref": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299",
+          "ref": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894",
           "priorStatus": "preliminary",
           "markerCommandId": null
         }
       ],
       "label": "Synthetic chart",
       "count": 1,
-      "at": "2026-09-17T18:31:59.726Z",
+      "at": "2026-09-17T18:53:11.727Z",
       "sectionKeys": [],
       "scope": "encounter"
     }
@@ -60,13 +60,13 @@
       "body": {
         "canWriteDiagnosis": true,
         "restored": [
-          "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
+          "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
         ],
         "count": 1,
         "skipped": [],
         "scope": "encounter",
         "ledger": {
-          "encounterId": "6085af2c-d3d0-4bbc-8e5e-a67497db991d",
+          "encounterId": "1254ef02-a59e-4e69-8b06-e2c113673462",
           "encounter": null,
           "sections": {}
         }
@@ -77,7 +77,7 @@
       "body": {
         "canWriteDiagnosis": true,
         "voided": [
-          "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
+          "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
         ],
         "count": 1,
         "sections": [
@@ -89,7 +89,7 @@
         ],
         "entries": [
           {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299",
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894",
             "sectionKey": "ocular-health:anterior:lens",
             "findingKey": "ocular-health:anterior:lens",
             "laterality": "OD"
@@ -97,31 +97,31 @@
         ],
         "preview": false,
         "ledger": {
-          "encounterId": "6085af2c-d3d0-4bbc-8e5e-a67497db991d",
+          "encounterId": "1254ef02-a59e-4e69-8b06-e2c113673462",
           "encounter": {
-            "voidActionId": "57e4c73e-672c-4289-b1e8-ca4bbf257c99",
+            "voidActionId": "176e1b5c-7382-403f-a13f-a59de1b6ece0",
             "voided": [
               {
-                "ref": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299",
+                "ref": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894",
                 "priorStatus": "preliminary",
                 "markerCommandId": null
               }
             ],
             "label": "Synthetic chart",
             "count": 1,
-            "at": "2026-09-17T18:32:01.473Z",
+            "at": "2026-09-17T18:53:13.224Z",
             "sectionKeys": [],
             "scope": "encounter"
           },
           "sections": {}
         },
-        "voidActionId": "57e4c73e-672c-4289-b1e8-ca4bbf257c99"
+        "voidActionId": "176e1b5c-7382-403f-a13f-a59de1b6ece0"
       }
     }
   },
   "request": {
     "scope": "encounter",
-    "voidActionId": "26637000-5fa5-4c5d-878b-d6f4e90145cf"
+    "voidActionId": "4689a03c-1c19-4f5f-ae08-ed7fe5628ada"
   },
   "refusal": {
     "error": "This void action is no longer current.",
@@ -145,7 +145,7 @@
         "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
       },
       "encounter": {
-        "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
+        "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
       },
       "effectiveDateTime": "2026-09-15T12:00:00.000Z",
       "extension": [
@@ -167,7 +167,7 @@
       "identifier": [
         {
           "system": "urn:odos:current-finding:v1",
-          "value": "9f7f098ed6d36cd3a750f7f8088ea2f2129170e2f54f261eaa026e36fa57b493"
+          "value": "db6c22dd422d1a31d74579f9f6bfd6b2e63630745cf783186b18bb8935e8546f"
         }
       ],
       "component": [
@@ -182,13 +182,13 @@
             ],
             "text": "R10_CURRENT_META"
           },
-          "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"6085af2c-d3d0-4bbc-8e5e-a67497db991d\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"1254ef02-a59e-4e69-8b06-e2c113673462\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
         }
       ],
-      "id": "5df8106e-fd2c-4c91-a47c-cd4e87d88299",
+      "id": "6b48db66-f29f-403a-9ae3-ce717b4e3894",
       "meta": {
-        "versionId": "60f6c12a-4d2b-470a-b391-cb4fdff68ac2",
-        "lastUpdated": "2026-09-17T18:32:01.479Z"
+        "versionId": "ac4cb468-51b2-452a-9fbb-2c5d9deb103c",
+        "lastUpdated": "2026-09-17T18:53:13.227Z"
       }
     },
     "encounter": {
@@ -201,7 +201,7 @@
         "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
       },
       "period": {
-        "start": "2026-09-17T18:31:58.328Z"
+        "start": "2026-09-17T18:53:10.316Z"
       },
       "participant": [
         {
@@ -210,21 +210,21 @@
           }
         }
       ],
-      "id": "6085af2c-d3d0-4bbc-8e5e-a67497db991d",
+      "id": "1254ef02-a59e-4e69-8b06-e2c113673462",
       "meta": {
-        "versionId": "cc940f4d-dc77-4902-ad93-c66d207c4708",
-        "lastUpdated": "2026-09-17T18:31:58.331Z"
+        "versionId": "320a3338-e3c3-4c01-8682-455a6d10577e",
+        "lastUpdated": "2026-09-17T18:53:10.320Z"
       }
     },
     "ledger": {
       "resourceType": "Basic",
-      "id": "b224dea4-d47e-4d9e-918b-07e4a8782504",
+      "id": "7f1b84c8-b656-450e-a62d-361cca3121c8",
       "meta": {
-        "versionId": "2b60c641-d398-4aa2-9385-cfd61a5e34c2",
-        "lastUpdated": "2026-09-17T18:32:01.487Z"
+        "versionId": "53450f6a-7ec3-47a0-8dbe-b729cf48d01f",
+        "lastUpdated": "2026-09-17T18:53:13.232Z"
       },
       "subject": {
-        "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
+        "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
       },
       "code": {
         "coding": [
@@ -239,7 +239,7 @@
       "extension": [
         {
           "url": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-undo-ledger-json",
-          "valueString": "{\"encounter\":{\"voidActionId\":\"57e4c73e-672c-4289-b1e8-ca4bbf257c99\",\"voided\":[{\"ref\":\"Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299\",\"priorStatus\":\"preliminary\",\"markerCommandId\":null}],\"label\":\"Synthetic chart\",\"count\":1,\"at\":\"2026-09-17T18:32:01.473Z\",\"sectionKeys\":[],\"scope\":\"encounter\"},\"sections\":{}}"
+          "valueString": "{\"encounter\":{\"voidActionId\":\"176e1b5c-7382-403f-a13f-a59de1b6ece0\",\"voided\":[{\"ref\":\"Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894\",\"priorStatus\":\"preliminary\",\"markerCommandId\":null}],\"label\":\"Synthetic chart\",\"count\":1,\"at\":\"2026-09-17T18:53:13.224Z\",\"sectionKeys\":[],\"scope\":\"encounter\"},\"sections\":{}}"
         }
       ]
     },
@@ -248,111 +248,17 @@
         "resourceType": "Provenance",
         "target": [
           {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
           },
           {
-            "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
-          },
-          {
-            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
-          }
-        ],
-        "recorded": "2026-09-17T18:32:01.473Z",
-        "occurredDateTime": "2026-09-17T18:32:01.473Z",
-        "activity": {
-          "coding": [
-            {
-              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
-              "code": "VOID",
-              "display": "Void before sign"
-            }
-          ],
-          "text": "Voided by clinician before sign."
-        },
-        "agent": [
-          {
-            "type": {
-              "coding": [
-                {
-                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
-                  "code": "author",
-                  "display": "Author"
-                }
-              ]
-            },
-            "who": {
-              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
-            }
-          }
-        ],
-        "id": "23e21c54-f634-4a4c-961c-8d037610e2ad",
-        "meta": {
-          "versionId": "65358d32-72da-4307-9df1-c5174caac6f2",
-          "lastUpdated": "2026-09-17T18:32:01.475Z"
-        }
-      },
-      {
-        "resourceType": "Provenance",
-        "target": [
-          {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
-          },
-          {
-            "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
+            "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
           },
           {
             "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
           }
         ],
-        "recorded": "2026-09-17T18:31:59.726Z",
-        "occurredDateTime": "2026-09-17T18:31:59.726Z",
-        "activity": {
-          "coding": [
-            {
-              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
-              "code": "VOID",
-              "display": "Void before sign"
-            }
-          ],
-          "text": "Voided by clinician before sign."
-        },
-        "agent": [
-          {
-            "type": {
-              "coding": [
-                {
-                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
-                  "code": "author",
-                  "display": "Author"
-                }
-              ]
-            },
-            "who": {
-              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
-            }
-          }
-        ],
-        "id": "6d6ef2e4-9cb9-460d-b7dc-336024c11abc",
-        "meta": {
-          "versionId": "15e722d8-f4d4-45d8-8b84-42dee2edb620",
-          "lastUpdated": "2026-09-17T18:31:59.729Z"
-        }
-      },
-      {
-        "resourceType": "Provenance",
-        "target": [
-          {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
-          },
-          {
-            "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
-          },
-          {
-            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
-          }
-        ],
-        "recorded": "2026-09-17T18:32:01.323Z",
-        "occurredDateTime": "2026-09-17T18:32:01.323Z",
+        "recorded": "2026-09-17T18:53:13.116Z",
+        "occurredDateTime": "2026-09-17T18:53:13.116Z",
         "activity": {
           "coding": [
             {
@@ -379,10 +285,104 @@
             }
           }
         ],
-        "id": "9e7752ad-b246-42cf-baf2-8e0e9447293b",
+        "id": "45eda9be-3243-4ffe-9caa-8a6e1c450446",
         "meta": {
-          "versionId": "418ed6bf-b20c-4179-8f03-55dd9db1b6cb",
-          "lastUpdated": "2026-09-17T18:32:01.324Z"
+          "versionId": "cd539f42-ff08-4cd0-8985-832d77673ea5",
+          "lastUpdated": "2026-09-17T18:53:13.118Z"
+        }
+      },
+      {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
+          },
+          {
+            "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
+          },
+          {
+            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+          }
+        ],
+        "recorded": "2026-09-17T18:53:13.224Z",
+        "occurredDateTime": "2026-09-17T18:53:13.224Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "VOID",
+              "display": "Void before sign"
+            }
+          ],
+          "text": "Voided by clinician before sign."
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ]
+            },
+            "who": {
+              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
+            }
+          }
+        ],
+        "id": "47062865-d8a1-4758-9bbd-e104124239dd",
+        "meta": {
+          "versionId": "40f56318-9843-481d-801d-5a0ff08ece21",
+          "lastUpdated": "2026-09-17T18:53:13.224Z"
+        }
+      },
+      {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
+          },
+          {
+            "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
+          },
+          {
+            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+          }
+        ],
+        "recorded": "2026-09-17T18:53:11.727Z",
+        "occurredDateTime": "2026-09-17T18:53:11.727Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "VOID",
+              "display": "Void before sign"
+            }
+          ],
+          "text": "Voided by clinician before sign."
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ]
+            },
+            "who": {
+              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
+            }
+          }
+        ],
+        "id": "b18c4081-4707-46fe-b94f-cd4e922ee1ce",
+        "meta": {
+          "versionId": "18b6a53a-c5bd-4de5-9e06-ef560abe2226",
+          "lastUpdated": "2026-09-17T18:53:11.729Z"
         }
       }
     ]
@@ -405,7 +405,7 @@
         "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
       },
       "encounter": {
-        "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
+        "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
       },
       "effectiveDateTime": "2026-09-15T12:00:00.000Z",
       "extension": [
@@ -427,7 +427,7 @@
       "identifier": [
         {
           "system": "urn:odos:current-finding:v1",
-          "value": "9f7f098ed6d36cd3a750f7f8088ea2f2129170e2f54f261eaa026e36fa57b493"
+          "value": "db6c22dd422d1a31d74579f9f6bfd6b2e63630745cf783186b18bb8935e8546f"
         }
       ],
       "component": [
@@ -442,13 +442,13 @@
             ],
             "text": "R10_CURRENT_META"
           },
-          "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"6085af2c-d3d0-4bbc-8e5e-a67497db991d\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"1254ef02-a59e-4e69-8b06-e2c113673462\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
         }
       ],
-      "id": "5df8106e-fd2c-4c91-a47c-cd4e87d88299",
+      "id": "6b48db66-f29f-403a-9ae3-ce717b4e3894",
       "meta": {
-        "versionId": "60f6c12a-4d2b-470a-b391-cb4fdff68ac2",
-        "lastUpdated": "2026-09-17T18:32:01.479Z"
+        "versionId": "ac4cb468-51b2-452a-9fbb-2c5d9deb103c",
+        "lastUpdated": "2026-09-17T18:53:13.227Z"
       }
     },
     "encounter": {
@@ -461,7 +461,7 @@
         "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
       },
       "period": {
-        "start": "2026-09-17T18:31:58.328Z"
+        "start": "2026-09-17T18:53:10.316Z"
       },
       "participant": [
         {
@@ -470,21 +470,21 @@
           }
         }
       ],
-      "id": "6085af2c-d3d0-4bbc-8e5e-a67497db991d",
+      "id": "1254ef02-a59e-4e69-8b06-e2c113673462",
       "meta": {
-        "versionId": "cc940f4d-dc77-4902-ad93-c66d207c4708",
-        "lastUpdated": "2026-09-17T18:31:58.331Z"
+        "versionId": "320a3338-e3c3-4c01-8682-455a6d10577e",
+        "lastUpdated": "2026-09-17T18:53:10.320Z"
       }
     },
     "ledger": {
       "resourceType": "Basic",
-      "id": "b224dea4-d47e-4d9e-918b-07e4a8782504",
+      "id": "7f1b84c8-b656-450e-a62d-361cca3121c8",
       "meta": {
-        "versionId": "2b60c641-d398-4aa2-9385-cfd61a5e34c2",
-        "lastUpdated": "2026-09-17T18:32:01.487Z"
+        "versionId": "53450f6a-7ec3-47a0-8dbe-b729cf48d01f",
+        "lastUpdated": "2026-09-17T18:53:13.232Z"
       },
       "subject": {
-        "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
+        "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
       },
       "code": {
         "coding": [
@@ -499,7 +499,7 @@
       "extension": [
         {
           "url": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-undo-ledger-json",
-          "valueString": "{\"encounter\":{\"voidActionId\":\"57e4c73e-672c-4289-b1e8-ca4bbf257c99\",\"voided\":[{\"ref\":\"Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299\",\"priorStatus\":\"preliminary\",\"markerCommandId\":null}],\"label\":\"Synthetic chart\",\"count\":1,\"at\":\"2026-09-17T18:32:01.473Z\",\"sectionKeys\":[],\"scope\":\"encounter\"},\"sections\":{}}"
+          "valueString": "{\"encounter\":{\"voidActionId\":\"176e1b5c-7382-403f-a13f-a59de1b6ece0\",\"voided\":[{\"ref\":\"Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894\",\"priorStatus\":\"preliminary\",\"markerCommandId\":null}],\"label\":\"Synthetic chart\",\"count\":1,\"at\":\"2026-09-17T18:53:13.224Z\",\"sectionKeys\":[],\"scope\":\"encounter\"},\"sections\":{}}"
         }
       ]
     },
@@ -508,111 +508,17 @@
         "resourceType": "Provenance",
         "target": [
           {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
           },
           {
-            "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
-          },
-          {
-            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
-          }
-        ],
-        "recorded": "2026-09-17T18:32:01.473Z",
-        "occurredDateTime": "2026-09-17T18:32:01.473Z",
-        "activity": {
-          "coding": [
-            {
-              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
-              "code": "VOID",
-              "display": "Void before sign"
-            }
-          ],
-          "text": "Voided by clinician before sign."
-        },
-        "agent": [
-          {
-            "type": {
-              "coding": [
-                {
-                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
-                  "code": "author",
-                  "display": "Author"
-                }
-              ]
-            },
-            "who": {
-              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
-            }
-          }
-        ],
-        "id": "23e21c54-f634-4a4c-961c-8d037610e2ad",
-        "meta": {
-          "versionId": "65358d32-72da-4307-9df1-c5174caac6f2",
-          "lastUpdated": "2026-09-17T18:32:01.475Z"
-        }
-      },
-      {
-        "resourceType": "Provenance",
-        "target": [
-          {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
-          },
-          {
-            "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
+            "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
           },
           {
             "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
           }
         ],
-        "recorded": "2026-09-17T18:31:59.726Z",
-        "occurredDateTime": "2026-09-17T18:31:59.726Z",
-        "activity": {
-          "coding": [
-            {
-              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
-              "code": "VOID",
-              "display": "Void before sign"
-            }
-          ],
-          "text": "Voided by clinician before sign."
-        },
-        "agent": [
-          {
-            "type": {
-              "coding": [
-                {
-                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
-                  "code": "author",
-                  "display": "Author"
-                }
-              ]
-            },
-            "who": {
-              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
-            }
-          }
-        ],
-        "id": "6d6ef2e4-9cb9-460d-b7dc-336024c11abc",
-        "meta": {
-          "versionId": "15e722d8-f4d4-45d8-8b84-42dee2edb620",
-          "lastUpdated": "2026-09-17T18:31:59.729Z"
-        }
-      },
-      {
-        "resourceType": "Provenance",
-        "target": [
-          {
-            "reference": "Observation/5df8106e-fd2c-4c91-a47c-cd4e87d88299"
-          },
-          {
-            "reference": "Encounter/6085af2c-d3d0-4bbc-8e5e-a67497db991d"
-          },
-          {
-            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
-          }
-        ],
-        "recorded": "2026-09-17T18:32:01.323Z",
-        "occurredDateTime": "2026-09-17T18:32:01.323Z",
+        "recorded": "2026-09-17T18:53:13.116Z",
+        "occurredDateTime": "2026-09-17T18:53:13.116Z",
         "activity": {
           "coding": [
             {
@@ -639,15 +545,109 @@
             }
           }
         ],
-        "id": "9e7752ad-b246-42cf-baf2-8e0e9447293b",
+        "id": "45eda9be-3243-4ffe-9caa-8a6e1c450446",
         "meta": {
-          "versionId": "418ed6bf-b20c-4179-8f03-55dd9db1b6cb",
-          "lastUpdated": "2026-09-17T18:32:01.324Z"
+          "versionId": "cd539f42-ff08-4cd0-8985-832d77673ea5",
+          "lastUpdated": "2026-09-17T18:53:13.118Z"
+        }
+      },
+      {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
+          },
+          {
+            "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
+          },
+          {
+            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+          }
+        ],
+        "recorded": "2026-09-17T18:53:13.224Z",
+        "occurredDateTime": "2026-09-17T18:53:13.224Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "VOID",
+              "display": "Void before sign"
+            }
+          ],
+          "text": "Voided by clinician before sign."
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ]
+            },
+            "who": {
+              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
+            }
+          }
+        ],
+        "id": "47062865-d8a1-4758-9bbd-e104124239dd",
+        "meta": {
+          "versionId": "40f56318-9843-481d-801d-5a0ff08ece21",
+          "lastUpdated": "2026-09-17T18:53:13.224Z"
+        }
+      },
+      {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Observation/6b48db66-f29f-403a-9ae3-ce717b4e3894"
+          },
+          {
+            "reference": "Encounter/1254ef02-a59e-4e69-8b06-e2c113673462"
+          },
+          {
+            "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+          }
+        ],
+        "recorded": "2026-09-17T18:53:11.727Z",
+        "occurredDateTime": "2026-09-17T18:53:11.727Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "VOID",
+              "display": "Void before sign"
+            }
+          ],
+          "text": "Voided by clinician before sign."
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ]
+            },
+            "who": {
+              "reference": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8"
+            }
+          }
+        ],
+        "id": "b18c4081-4707-46fe-b94f-cd4e922ee1ce",
+        "meta": {
+          "versionId": "18b6a53a-c5bd-4de5-9e06-ef560abe2226",
+          "lastUpdated": "2026-09-17T18:53:11.729Z"
         }
       }
     ]
   },
   "noUnintendedWrites": true,
   "complete": true,
-  "finishedAt": "2026-09-17T18:32:01.832Z"
+  "finishedAt": "2026-09-17T18:53:13.516Z"
 }

@@ -1,6 +1,6 @@
 # Supplemental served screens
 
-Author proof at `aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2`. `node --import tsx scripts/r10-served-route/screens-proof.mjs` exited 0. `result.json` records six successful scenarios and seven screenshots, the served asset/MCP identity, canonical IDs and versions, requests, and server responses. All seven final screenshots were visually inspected; actual Assessment origin text and all carry completion steps are visible.
+Author proof at `e0336aae102f4641a30f994ac306ed6cc1cbddb9`. `node --import tsx scripts/r10-served-route/screens-proof.mjs` exited 0. `result.json` records six successful scenarios and seven screenshots, the served asset/MCP identity, canonical IDs and versions, requests, and server responses. All seven final screenshots were visually inspected; actual Assessment origin text and all carry completion steps are visible.
 
 - Recorded absent: real provider canonical finding PUT seeds an absent fact, then the actual Lens UI displays Recorded absent.
 - Deferred: actual shipped Lens OS control saves and reloads; history confirms panel.deferred=true with canonical panel identity.

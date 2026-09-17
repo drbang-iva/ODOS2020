@@ -1,5 +1,5 @@
 {
-  "implementationHead": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+  "implementationHead": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
   "checks": [
     {
       "command": "npm --prefix ui test",
@@ -70,10 +70,10 @@
     },
     {
       "command": "node --test scripts/r10-served-route/harness.test.mjs",
-      "log": "harness/final-current.tap",
+      "log": "harness/proxy-authority-restored-green.tap",
       "exitCode": 0,
-      "tests": 3,
-      "pass": 3,
+      "tests": 4,
+      "pass": 4,
       "fail": 0
     },
     {

@@ -27,14 +27,14 @@ not ok 4 - W146 response proxy rejects URL authority escapes and preserves origi
   error: |-
     No request may escape to the second local server
     + actual - expected
-    
+
     + [
     +   '/absolute',
     +   '/authority',
     +   '/backslash'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

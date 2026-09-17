@@ -1,6 +1,6 @@
 # W144 actual-route superseded Undo proof
 
-Command: `node --import tsx scripts/r10-served-route/undo-superseded-proof.mjs`. Final exit 0, three screenshots, zero page errors. Served app aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2; build and served bundle identity are in result.json.
+Command: `node --import tsx scripts/r10-served-route/undo-superseded-proof.mjs`. Final exit 0, three screenshots, zero page errors. Served app e0336aae102f4641a30f994ac306ed6cc1cbddb9; build and served bundle identity are in result.json.
 
 A separate synthetic encounter and canonical preliminary fact are seeded through the verified operator. Two independent browser contexts log in as the actual provider. Context B uses authenticated server APIs to clear the encounter. Context A opens the real app route and shows its Undo slot. Context B restores that exact action, then clears again with a new action ID. Context A clicks its still-displayed actual Undo button.
 
@@ -12,6 +12,8 @@ The 1600px screenshot preserves actual header message compression; the wide scre
 
 Final serialized rerun on the Clear/Deferred build completed exit 0. Earlier artifacts are preserved in prior-ef3d276 and attempts directories. Authentication-refused attempts are historical and are not the current result.
 
-Latest same-app-head rerun: aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2, exit 0; complete result and screenshots regenerated after supplemental auth-slot release. No app restart, build or source modification during these runs.
+Latest same-app-head rerun: e0336aae102f4641a30f994ac306ed6cc1cbddb9, exit 0; complete result and screenshots regenerated after supplemental auth-slot release. No app restart, build or source modification during these runs.
 
 Final combined-head sequence: ran once after main proof released auth slot, exit 0. Current screenshots inspected for visible saved Remarks, locked encounter label, and superseded Undo message. Previous attempt files remain archived.
+
+Hardened-proxy final rerun: e0336aae102f4641a30f994ac306ed6cc1cbddb9, exit 0. This run exercises the hardened response proxy with unchanged production UI/MCP. Earlier attempts archived automatically.

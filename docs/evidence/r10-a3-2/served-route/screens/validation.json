@@ -1,6 +1,6 @@
 {
   "status": "PASS",
-  "servedHead": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+  "servedHead": "e0336aae102f4641a30f994ac306ed6cc1cbddb9",
   "scriptSha256": "9f20fa198dcd86f6381dc5c3f0f078a1c33bc65b2f1255ea3455ef9be65da727",
   "visuallyInspectedScreenshots": [
     "recorded-absent.png",
@@ -12,8 +12,8 @@
     "carry-replanned.png"
   ],
   "carryFactReferencesUnchanged": [
-    "Observation/a54c5327-b1fc-4697-913d-1b5edb09662e"
+    "Observation/12adbe1d-231d-4a74-b392-69cc84927d33"
   ],
-  "carryConditionReferenceUnchanged": "Condition/dbf23aca-5f4c-4cea-b0cf-52686966c517",
+  "carryConditionReferenceUnchanged": "Condition/19d8d0e2-4249-419c-9afa-5b88ba9ae809",
   "credentialValueMatches": 0
 }

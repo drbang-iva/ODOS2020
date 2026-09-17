@@ -10,7 +10,7 @@ Independent evaluator: a separate Claude Opus session. This is author evidence o
 
 The Ocular Health screen and diagnosis door use the same canonical findings. Saves retain loaded baselines, frozen retries and target-specific outcomes; panel Remarks and measurements remain separate. Unchanged signed/inactive facts are fresh-baseline witnesses, checked and locked in the editor. Carry, Assessment origin and void/undo action identity now consume the A3.1 contracts.
 
-Base: `a211b36887b49139ab29cf2d811a5a30f261034d`; branch `drbang-iva/r10-a3-2`. Production implementation through `c587bf96`; final harness through `aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2`.
+Base: `a211b36887b49139ab29cf2d811a5a30f261034d`; branch `drbang-iva/r10-a3-2`. Production implementation through `c587bf96`; hardened final harness and served application at `e0336aae102f4641a30f994ac306ed6cc1cbddb9`.
 
 [Files touched](files-touched.json). Allowed scope is kickoff §9 + §13, including the loaded-claim loop exception and extraction-only DiagnosisWorkspace. EncounterCharting changes only pass voidActionId through three callbacks. No other MCP production file changed. No new clinical codes, terminology bindings, regulatory claims or decisions were introduced; Mandate 14 ledger and companion decisions index need no new row. Independent evaluation and any release/deployment remain later work.
 
@@ -41,7 +41,9 @@ W147 test names:
 
 ## Served-route and screen proof
 
-Step (a) passes at exact #619 `1706d7c8417b04791471d4332b4ecd712883bf11`; [result](served-route/before-result.json) contains canonical resource ids/versions, served bundle hash and both before screenshots. The [served proof narrative](served-route/SERVED-PROOF.md), [main result](served-route/final-result.json), [read-only result](readonly/result.json), [superseded Undo result](undo-superseded/result.json), and [supplemental screens](served-route/screens/result.json) retain exact build identities and persistence evidence. Main cases b/c/d/e/h pass in the retained final attempt; its pagination failure is preserved. Case g passes in the separate [same-destination continuation](served-route/g-only-result.json), including actual void response identity and the matching Undo request. Both served the same aefb6dbf application. All (a)–(h) author proof steps are accepted with the stated limitations. Read-only and superseded Undo reruns passed on the same build. All six supplemental scenarios and seven screenshots passed on the same build; [screen proof](served-route/screens/proof-summary.md). [Accepted step index](served-route/proof-summary.json) separates successful checkpoints from failed historical attempts.
+[39 accepted screenshots with SHA-256 hashes](screenshot-index.json).
+
+Step (a) passes at exact #619 `1706d7c8417b04791471d4332b4ecd712883bf11`; [result](served-route/before-result.json) contains canonical resource ids/versions, served bundle hash and both before screenshots. The [served proof narrative](served-route/SERVED-PROOF.md), [main result](served-route/final-result.json), [read-only result](readonly/result.json), [superseded Undo result](undo-superseded/result.json), and [supplemental screens](served-route/screens/result.json) retain exact build identities and persistence evidence. All main cases b/c/d/e/g/h now pass in one complete final run through the hardened proxy at e0336aae; previous split attempts remain preserved. The accepted step index, read-only result and supplemental screen result record their actual application heads. [Accepted step index](served-route/proof-summary.json); [screen proof](served-route/screens/proof-summary.md).
 
 Harness: own `odos-r10-a3-2-served` project, Medplum5.1.30, subnet10.249.147.0/24, UI28090, Medplum28103, PostgreSQL25433, Redis26380, MCP23334, proxy23335/control23336. [Setup and W146 proof](harness/setup-summary.md). Runtime service and caller roles are separate; provider/staff stored policies were not relaxed.
 
@@ -62,7 +64,7 @@ Full UI:1734/1734, zero failure/skip/todo, exit0 at c587bf96. Strict T1–T22 pa
 
 ## PR, CI and review
 
-PENDING: PR number/final head, CI run URL and per-job counts, CodeRabbit terminal status plus delayed repoll, PR-Agent and every finding/thread disposition. No independent evaluation marker has been posted.
+PR #621 is OPEN against main and HELD OPEN. CI at initial head1e891fa1 passed all5jobs: UI1734/1734; MCP5952/6005 with53skips; bootstrap12/12; live integration218/218; live authorization73/73. CodeQL found one new harness URL-authority escape (267), fixed at e0336aae with W146 red/mutation/restored evidence. The same-head final CI and bot review remain in progress. Final post-head counts, review dispositions and container shutdown are recorded in the PR description and local .odos/r10-a3-2-final/SEALED-BUNDLE.md, without changing the reviewed source head. No independent evaluation marker is posted.
 
 ## Risks and follow-ups
 
