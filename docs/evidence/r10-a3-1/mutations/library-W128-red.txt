@@ -15,10 +15,10 @@ not ok 2 - W85 W128 fact 404 deletion conflicts before write or replay
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'target-deleted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'target-deleted'
@@ -38,10 +38,10 @@ not ok 3 - W85 W128 fact 410 deletion conflicts before write or replay
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'target-deleted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'target-deleted'
@@ -67,10 +67,10 @@ not ok 5 - W85 W128 panel 404 deletion conflicts before write or replay
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'target-deleted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'target-deleted'
@@ -90,10 +90,10 @@ not ok 6 - W85 W128 panel 410 deletion conflicts before write or replay
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'target-deleted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'target-deleted'
@@ -130,10 +130,10 @@ not ok 8 - W85 W128 reassert 404 deletion conflicts before write or replay
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'target-deleted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'target-deleted'
@@ -153,10 +153,10 @@ not ok 9 - W85 W128 reassert 410 deletion conflicts before write or replay
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'target-deleted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'target-deleted'

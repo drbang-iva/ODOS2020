@@ -339,9 +339,9 @@ not ok 53 - a signed Encounter refuses discard before changing the Condition or 
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /after the encounter is signed/. Input:
-    
+
     'Signed or closed encounters cannot be edited.'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -418,10 +418,10 @@ not ok 60 - mixed option definition preserves numeric panel context in current c
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'presbyopia'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'presbyopia'

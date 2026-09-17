@@ -9,10 +9,10 @@ not ok 1 - V18 custom capture route forwards 428 no-store command-precondition h
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'no-store'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'no-store'

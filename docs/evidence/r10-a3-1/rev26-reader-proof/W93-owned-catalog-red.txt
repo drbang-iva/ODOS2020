@@ -94,7 +94,7 @@ not ok 15 - compiled ocular structure field identities and atomic samples are pi
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           atomicIds: [
@@ -132,7 +132,7 @@ not ok 15 - compiled ocular structure field identities and atomic samples are pi
             'CUSTOM_ABNORMAL_FINDINGS_04',
             'CUSTOM_GRADE_A_V_RATIO'
           ],
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

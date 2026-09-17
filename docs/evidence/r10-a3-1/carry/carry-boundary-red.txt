@@ -8,9 +8,9 @@ not ok 1 - canonical frozen plan scope is checked before relinking or writing fa
   failureType: 'testCodeFailure'
   error: |-
     {"error":"FHIR diagnosis carry dependency failed."}
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

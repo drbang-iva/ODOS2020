@@ -8,9 +8,9 @@ not ok 1 - T17 supported Ocular Health pick links fact targets without Condition
   failureType: 'testCodeFailure'
   error: |-
     {"result":"pick","commandId":"dc1af221-451d-451c-abc6-2ef8384f5e3f","conditionStep":"unconfirmed","link":"pending","error":"Diagnosis pick FHIR transaction did not return the persisted Condition."}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -30,9 +30,9 @@ not ok 2 - T21 pre-rebuild Ocular Health history and capture remain read-only # 
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

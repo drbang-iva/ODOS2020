@@ -11,7 +11,7 @@
     },
     {
       "file": "T22-real-restore-protocol-red.tap",
-      "sha256": "aa15fd1141bcfae447698be4f0d71de9c196587819dbc783b360dddfb1c739d8",
+      "sha256": "4947bab63145f1e43567620b122b5afd11ca451eaca52685d427b68ec3d9dd63",
       "bytes": 5840
     },
     {
@@ -21,7 +21,7 @@
     },
     {
       "file": "V28-cleared-protocol-red.tap",
-      "sha256": "4817a49d34979bc982eb784318f2ecc1884320779f7fca5bf790359cc5e49954",
+      "sha256": "9cfad868f53dcf2a0796b29dd50fea2d6060cfe9d8744fbfad91e8e75c292b9e",
       "bytes": 5703
     },
     {
@@ -31,7 +31,7 @@
     },
     {
       "file": "V28-inactive-protocol-red.tap",
-      "sha256": "7338d540bf7338f308a2f9083477333e22fcbd6dad9ea119db5d5f1315367f27",
+      "sha256": "bcb36268c51bcc181ced5efa1e721008cc77d033f26231182e9b4b9e45906bdd",
       "bytes": 6578
     },
     {
@@ -41,7 +41,7 @@
     },
     {
       "file": "V28-shared-removal-protocol-red.tap",
-      "sha256": "3cae28e120af4533c2d1d58f4e95e9d3add206401bffc4aa6f8e405239efa0f0",
+      "sha256": "624306e64a08243db4dbe75817743b55d805726355460af6fcf5401fa00bf740",
       "bytes": 6869
     },
     {
@@ -51,7 +51,7 @@
     },
     {
       "file": "W107-eyes-protocol-red.tap",
-      "sha256": "dc4c50cfbced764c0d64ac4f1079af6bb28afdcc2e04c37538c1df6948f069e2",
+      "sha256": "e2c83ec9bbd5e01733a65bc48a7c63d0399e035c724e020182167d91bfad0394",
       "bytes": 5793
     },
     {
@@ -61,7 +61,7 @@
     },
     {
       "file": "W108-prebuild-protocol-red.tap",
-      "sha256": "2548a0c351b9b35b017cf7b54f6ad0e90b826eeebfd907a64d4774f12b2bb112",
+      "sha256": "dc037805ddaf892cec57a7ff2179406afec7bfaf524a58fab71546af42ce5700",
       "bytes": 7665
     },
     {
@@ -81,7 +81,7 @@
     },
     {
       "file": "W108-unapply-preflight-protocol-red.tap",
-      "sha256": "a6779bb5c07e6d696a97746a678365de7c567fb42e5e62cd9b1b4954f92b71b5",
+      "sha256": "1d5de0f3e65e2800145804d8c09435ae0c356b153bf4bbe9de25eeb8e0646171",
       "bytes": 6900
     },
     {
@@ -91,7 +91,7 @@
     },
     {
       "file": "W114-stored-protocol-red.tap",
-      "sha256": "280419651f018c671fd6d7b9a5855ed4c26a57678edf3ca6d345aa23fbbc820d",
+      "sha256": "de99bde6a629683f727c368583944df0461960a17326b6aad86c206fe6cde32d",
       "bytes": 7810
     },
     {
@@ -101,7 +101,7 @@
     },
     {
       "file": "W119-panel-protocol-red.tap",
-      "sha256": "5be8308be1c23306ea7cbb3e1caccd82b834b98060ae7cfbc4f1280858856f91",
+      "sha256": "13eeba0be7f7956bb40df8bbacfa88427847c0bea16abfeb76d60863a8e49722",
       "bytes": 5702
     },
     {
@@ -111,7 +111,7 @@
     },
     {
       "file": "W82-original-payload-protocol-red.tap",
-      "sha256": "77f4cbbbcf91c0acd7297540f015e5ebd81b26d3a5d77d0ecc9f418e970e644f",
+      "sha256": "d94e0b25df33a8b5312b660a2d7a25bc84c46e315bbbb5185d813add89ba982e",
       "bytes": 5699
     },
     {
@@ -121,7 +121,7 @@
     },
     {
       "file": "W82-preseed-protocol-red.tap",
-      "sha256": "a75224ee68a1181be6eab1243275b6660368009ef807c3b0a3e3a72577117fef",
+      "sha256": "c73e6493568f2826ada3a329f4c2bca3a23babe505f1a3db2b8a1f518334a7dd",
       "bytes": 6296
     },
     {
@@ -131,7 +131,7 @@
     },
     {
       "file": "W82-valued-protocol-red.tap",
-      "sha256": "306e7fa441b34701565efebb385a91abf9c9efede4ef6966dd5b981b31974df7",
+      "sha256": "86b66b2240f305d1919cd7fcbac4a3f35fae1804aa668de126e3553192fbe7ba",
       "bytes": 14868
     },
     {
@@ -141,7 +141,7 @@
     },
     {
       "file": "W91-closed-protocol-red.tap",
-      "sha256": "a954b2bfc8b21f295b0c8824f8c553032e9707a6f7cb518a79f25948172bcb2c",
+      "sha256": "093ca5b4737c943d5c68bfbe60ba4d1e6a5ff5038a7a9c0a0010bbcf6b24abc1",
       "bytes": 8283
     },
     {
@@ -156,7 +156,7 @@
     },
     {
       "file": "overview-protocol-build.txt",
-      "sha256": "79d812332743de9cbe0b1e9272d1388f2cdcf7d56abdac8397b03137a4312914",
+      "sha256": "f4a3e7c1853fb7b196a03ff575fbf4d2b86badcac7b13943b03775032c3c4c54",
       "bytes": 31
     },
     {
@@ -176,7 +176,7 @@
     },
     {
       "file": "protocol-eyes-red.tap",
-      "sha256": "db3dcd4e47054bf116ca50a32101b3598ea5445a47c7bdb800bfbc84f655ba15",
+      "sha256": "58f4960ef85cda65f234256c4e5e6a7af14399cc33e4a77bde8801b288a058b6",
       "bytes": 5446
     },
     {
@@ -191,12 +191,12 @@
     },
     {
       "file": "protocol-proposed-red.tap",
-      "sha256": "d909424d10749709decd33bcf462138c6797fc8327772c2d17b2fba32ef2a76d",
+      "sha256": "5239e39477a60d3f83f5ad14af969fb3d2801759c43d5b8b55b6e7e720f971bf",
       "bytes": 5544
     },
     {
       "file": "protocol-red.tap",
-      "sha256": "610e2c9c9adf71fd31ce0f3fee365bd1482610a546afbbaa777d0ee4c1261e46",
+      "sha256": "0add5f14435ba2d2439731ad32e43e207995f6bb35cf28680ec1e89c6e9b99fd",
       "bytes": 15133
     },
     {

@@ -10,13 +10,13 @@ not ok 1 - T22 every registered finding write path uses real handlers and emits 
     T22: registry door-put expected exactly once, found 0
     T22: unexpected path door-put-removed
     + actual - expected
-    
+
     + [
     +   'T22: registry door-put expected exactly once, found 0',
     +   'T22: unexpected path door-put-removed'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

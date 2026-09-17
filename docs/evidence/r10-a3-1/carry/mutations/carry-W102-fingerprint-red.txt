@@ -9,10 +9,10 @@ not ok 1 - W102 same command changed source fingerprint refuses zero further wri
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'carry-integrity'
     - 'command-reused'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'command-reused'

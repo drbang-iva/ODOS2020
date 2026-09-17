@@ -626,8 +626,10 @@ docs/evidence/r10-a3-1/rev27/container-stop.txt
 docs/evidence/r10-a3-1/rev27/diff-check.txt
 docs/evidence/r10-a3-1/rev27/live-authz.txt
 docs/evidence/r10-a3-1/rev27/live-results.json
+docs/evidence/r10-a3-1/rev27/log-normalization.json
 docs/evidence/r10-a3-1/rev27/mcp-test.txt
 docs/evidence/r10-a3-1/rev27/non-live-base-pair.json
+docs/evidence/r10-a3-1/rev27/original-logs.tar.gz
 docs/evidence/r10-a3-1/rev27/preflight.txt
 docs/evidence/r10-a3-1/rev27/registry-delta.json
 docs/evidence/r10-a3-1/rev27/registry-guards.json

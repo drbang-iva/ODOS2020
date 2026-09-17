@@ -14,9 +14,9 @@ not ok 2 - fixback warm whole seeds only its built-in and rules
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     6 !== 5
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 5

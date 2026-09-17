@@ -8,9 +8,9 @@ not ok 1 - W90 door-put refuses a closed encounter before clinical or audit writ
   failureType: 'testCodeFailure'
   error: |-
     {"result":"command","commandId":"8cd3fcdc-48f3-42ba-9803-5222159688ed","complete":true,"executionOrder":[0],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/fd6a813a-b6c7-4d1a-bffa-8eda586870dc","versionId":"2a04d039-c047-4176-9a29-ec23fdf8cd6e"}]}
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -30,9 +30,9 @@ not ok 2 - W90 door-audit-repair refuses a closed encounter before clinical or a
   failureType: 'testCodeFailure'
   error: |-
     {"result":"command","commandId":"2caa1817-a552-4aff-b549-823c18886174","complete":true,"executionOrder":[],"outcomes":[]}
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -52,9 +52,9 @@ not ok 3 - W90 pick refuses a closed encounter before Condition or Encounter wri
   failureType: 'testCodeFailure'
   error: |-
     {"result":"pick","conditionStep":"unconfirmed","link":"not-applicable","error":"Diagnosis pick FHIR transaction did not return the persisted Condition."}
-    
+
     502 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

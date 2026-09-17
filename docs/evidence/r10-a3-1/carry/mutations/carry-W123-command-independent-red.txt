@@ -8,9 +8,9 @@ not ok 1 - W123 two different commands race one conditional Condition owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

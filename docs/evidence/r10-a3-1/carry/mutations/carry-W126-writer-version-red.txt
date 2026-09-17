@@ -8,9 +8,9 @@ not ok 1 - W75 W126 void between facts and witness remains edited
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -30,9 +30,9 @@ not ok 2 - W75 W126 void-undo between facts and witness remains edited
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

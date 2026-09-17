@@ -10,7 +10,7 @@ not ok 1 - fixback warm tap seeds only its built-in and rules
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           _count: '200',
@@ -49,7 +49,7 @@ not ok 1 - fixback warm tap seeds only its built-in and rules
         {
           _count: '200',
           encounter: 'Encounter/e'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -120,7 +120,7 @@ not ok 2 - fixback warm whole seeds only its built-in and rules
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           _count: '200',
@@ -236,7 +236,7 @@ not ok 2 - fixback warm whole seeds only its built-in and rules
         {
           _count: '200',
           encounter: 'Encounter/e'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

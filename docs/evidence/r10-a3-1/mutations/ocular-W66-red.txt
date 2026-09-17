@@ -10,7 +10,7 @@ not ok 1 - W66 frozen loaded set preserves concurrent addition
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         code: {
           coding: [
@@ -38,7 +38,7 @@ not ok 1 - W66 frozen loaded set preserves concurrent addition
         },
         valueBoolean: true
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

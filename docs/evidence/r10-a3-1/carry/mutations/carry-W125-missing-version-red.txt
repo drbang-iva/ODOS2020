@@ -9,10 +9,10 @@ not ok 1 - W125 unchanged missing-version refuses witness at the real route
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'unconfirmed'
     - 'not-attempted'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'not-attempted'

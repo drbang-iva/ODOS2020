@@ -9,7 +9,7 @@ not ok 1 - OH-3 multi-select findings propose verified per-eye diagnoses and exp
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + undefined
     - [
     -   {
@@ -30,7 +30,7 @@ not ok 1 - OH-3 multi-select findings propose verified per-eye diagnoses and exp
     -     rowKey: 'finding:f3cb8194a60550b345afb725cf15c29ce54f579315a9ffa7680844d67dbec255'
     -   }
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -64,7 +64,7 @@ not ok 2 - posterior plain drusen returns an ordered leaf and staged family whil
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + undefined
     - [
     -   {
@@ -85,7 +85,7 @@ not ok 2 - posterior plain drusen returns an ordered leaf and staged family whil
     -     rowKey: 'finding:cff59bbb86e6540742b8b2ca974265dfcf13c3f68449cdd694794c086407c2bd'
     -   }
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

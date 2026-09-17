@@ -10,13 +10,13 @@ not ok 1 - W87a W87b W129 exact finding write registry covers every call site in
     T22: registry door-put expected exactly once, found 0
     T22: unexpected path door-put-removed
     + actual - expected
-    
+
     + [
     +   'T22: registry door-put expected exactly once, found 0',
     +   'T22: unexpected path door-put-removed'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

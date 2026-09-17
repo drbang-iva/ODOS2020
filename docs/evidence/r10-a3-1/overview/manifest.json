@@ -11,7 +11,7 @@
     },
     {
       "file": "V27-chart-change-overview-red.tap",
-      "sha256": "ec105b38feac76364022d1b7232521437de799a65b11b5f769f1ed0506281a85",
+      "sha256": "67309dd8d6a81fe98b77f1cdf33225329e3cd7c8e84c19f2dbe876fa7392fc98",
       "bytes": 4841
     },
     {
@@ -21,7 +21,7 @@
     },
     {
       "file": "V27-legacy-view-overview-red.tap",
-      "sha256": "4f8335dc7f375747561902eaea72930f05483eb347ce4c9f0cde2d74a07c8aa0",
+      "sha256": "476355420843d2db9b2f7bb81be7566d549ea7be3474c3424a8e74a8dfda4d64",
       "bytes": 4816
     },
     {
@@ -31,7 +31,7 @@
     },
     {
       "file": "V27-reassert-overview-red.tap",
-      "sha256": "4918ca8150b70d9872b66bb18e628e5ce59817fb463404717054f15fa6ad515d",
+      "sha256": "c16531b0e33e265976a7d690af4306e548bc8472e3fb9658bb10467b53e45abb",
       "bytes": 4839
     },
     {
@@ -41,7 +41,7 @@
     },
     {
       "file": "W114-overview-dependency-red.tap",
-      "sha256": "e10a06c5913ec873b4c7ce0858c6ef20637bcad1d0fb4ad456da93a1af70cb50",
+      "sha256": "80a6a66101fb6e740edd0cce6b9bff8cf0496f2cd3f6a697a168c21323bd75d6",
       "bytes": 1150
     },
     {
@@ -56,7 +56,7 @@
     },
     {
       "file": "W114-stored-overview-red.tap",
-      "sha256": "e02e1b8cd432f2e375ead2fe83eefbc924f9e8fbabdd5ca7bf74b59a2f80af7a",
+      "sha256": "04d3944c78ec63e9ae86b21b212e8017c262bb4695d35a52ef9769a4370fcd6f",
       "bytes": 5550
     },
     {
@@ -66,7 +66,7 @@
     },
     {
       "file": "W118-values-overview-red.tap",
-      "sha256": "4d86e31d7094501de0279120899d2a6abea0760cb8c94123315c72454c3618f8",
+      "sha256": "1cee53c36e57bb474864f8edf4c7cb2e4f001180beec059d87e9511ed1df38b7",
       "bytes": 6456
     },
     {
@@ -86,7 +86,7 @@
     },
     {
       "file": "W81-carry-overview-red.tap",
-      "sha256": "832a7f5ddec9a0e0898c2f26ea5e6edec5dc7fd81f862b00dac834c9474f8b68",
+      "sha256": "4a43b8d08f20cb29943d8ac3b6cde46b2f4fdcc56b90ea8091138c8fe9269376",
       "bytes": 6256
     },
     {
@@ -96,7 +96,7 @@
     },
     {
       "file": "W81-context-overview-red.tap",
-      "sha256": "31f154f78c7bee10eb83de3e3e0fa563d9e61f83e1268f22d1dd78e8d489ba71",
+      "sha256": "57e7f1db535cfd82e8f3c235c072dc1ea7a87bf9589d5d0cd2623a94869f287a",
       "bytes": 7174
     },
     {
@@ -106,7 +106,7 @@
     },
     {
       "file": "W81-inactive-overview-red.tap",
-      "sha256": "86652b6e661728d2f9df01d3836e356a5060346dee78bd0646333d42ae49bdb3",
+      "sha256": "a99e6f9bb01089a7349108a0b3c3f60b695232a2340cd2f6d6a551c51a129089",
       "bytes": 5018
     },
     {
@@ -131,7 +131,7 @@
     },
     {
       "file": "overview-legacy-red.tap",
-      "sha256": "797fdcd60ff6d285191d3f9acb7b74d86ba0e2b1c3cb9c72f58ff704eac08e95",
+      "sha256": "d059cb645507dd43f5f3b674dbf99e0aae379f4d4d19cf326f0d43ceff440fe9",
       "bytes": 4818
     },
     {
@@ -146,7 +146,7 @@
     },
     {
       "file": "overview-protocol-build.txt",
-      "sha256": "79d812332743de9cbe0b1e9272d1388f2cdcf7d56abdac8397b03137a4312914",
+      "sha256": "f4a3e7c1853fb7b196a03ff575fbf4d2b86badcac7b13943b03775032c3c4c54",
       "bytes": 31
     },
     {
@@ -166,7 +166,7 @@
     },
     {
       "file": "overview-red.tap",
-      "sha256": "25a7e6707b0a7b98cbff5e38fad91b5f69d7e6fe8006adba348c4b9697c477b8",
+      "sha256": "4331c3b9b2f2b54384f0d211c0149dee2eb8de6812a084b37a4fda0ed498465c",
       "bytes": 15505
     },
     {

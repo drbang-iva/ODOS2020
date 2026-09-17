@@ -8,9 +8,9 @@ not ok 1 - W82 selected valued shared default refuses before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"application":{"id":"f842dffd-262b-44aa-8877-ee40aca46dd1","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"e13354e8-fede-4714-b6f8-8d632e33a159","encounterId":"e1","patientId":"p1","protocolApplicationId":"f842dffd-262b-44aa-8877-ee40aca46dd1","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/7c211119-a6e2-4a1d-8269-a9e5f2eab999"},{"id":"30f7d717-dd90-4770-96bf-ebd08987398a","encounterId":"e1","patientId":"p1","protocolApplicationId":"f842dffd-262b-44aa-8877-ee40aca46dd1","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","value":"abnormal","editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/83cdcb09-394f-4ed7-9c3e-dc6b38f1580a"}],"actions":[],"charges":[]}
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -30,9 +30,9 @@ not ok 2 - W82 selected valued shared override refuses before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"application":{"id":"ffee66f8-1c00-4832-b31c-4da4a2d787e0","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-modified"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"91704a59-6ee1-48b4-a023-64a779e4f411","encounterId":"e1","patientId":"p1","protocolApplicationId":"ffee66f8-1c00-4832-b31c-4da4a2d787e0","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/e3690611-eb75-4e8b-8707-15552638fb00"},{"id":"25366c6c-f0d8-4a61-a580-f50994b26422","encounterId":"e1","patientId":"p1","protocolApplicationId":"ffee66f8-1c00-4832-b31c-4da4a2d787e0","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","editedBeforeCommit":true,"provenance":{"source":"clinician-entered","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"value":"abnormal","observationReference":"Observation/95acc074-5b0a-4a1b-962f-90aac807bab2"}],"actions":[],"charges":[]}
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -52,9 +52,9 @@ not ok 3 - W82 selected valued shared per-eye refuses before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"application":{"id":"de15b242-2f86-4550-93ee-641fee7cd728","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"145f5c4b-7d54-4aee-b8c2-13259425767f","encounterId":"e1","patientId":"p1","protocolApplicationId":"de15b242-2f86-4550-93ee-641fee7cd728","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/21c19f09-7437-49bd-8876-c00b984b0f4a"},{"id":"57c9ab91-1536-41e2-9293-1fbd5ebebc12","encounterId":"e1","patientId":"p1","protocolApplicationId":"de15b242-2f86-4550-93ee-641fee7cd728","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","value":"abnormal","editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/2c1be029-d413-4d67-b5ba-487a22ab90d4"}],"actions":[],"charges":[]}
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -208,9 +208,9 @@ not ok 24 - W82 built-in valued reject precedes seeding
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -230,9 +230,9 @@ not ok 25 - W114 stored local shared valued item refuses
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -264,9 +264,9 @@ not ok 28 - W82 prompt override cannot hide a valued shared proposed item
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422

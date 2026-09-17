@@ -536,7 +536,7 @@ not ok 86 - FHIR read grant CLI passes only with full coverage and always prints
     /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429
           throw new Error(
                 ^
-    
+
     Error: Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription — MCP process service client.. Remove or update the entry explicitly.
         at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429:13)
         at Array.map (<anonymous>)
@@ -546,12 +546,12 @@ not ok 86 - FHIR read grant CLI passes only with full coverage and always prints
         at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
         at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
         at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-    
+
     Node.js v22.22.3
-    
-    
+
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -583,9 +583,9 @@ not ok 87 - an ungranted FHIR create in mcp source makes the CLI fail with its i
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -609,9 +609,9 @@ not ok 88 - an ungranted FHIR create in ui tsx makes the CLI fail with its inter
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -635,9 +635,9 @@ not ok 89 - serviceFhir read of an ungranted non-plumbing resource makes the CLI
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /FHIR read grant check: FAIL/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -661,9 +661,9 @@ not ok 90 - an ungranted FHIR read in ui/src makes the CLI fail with its name
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /FHIR read grant check: FAIL/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -767,10 +767,10 @@ not ok 104 - v0.5d preflight pass 4 source-tree canonical-shape lint passes live
     mcp/src/clinical-graph/diagnosis-carry-provenance.ts:20 odos-extension-url-shape
     mcp/src/clinical-graph/diagnosis-carry-provenance.ts:21 odos-extension-url-shape
     + actual - expected
-    
+
     + 'hard-block'
     - 'pass'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'pass'
@@ -1256,10 +1256,10 @@ not ok 182 - the migration CLI scopes both reads to the resolved project and sta
   failureType: 'testCodeFailure'
   error: |-
     operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.
-    
-    
+
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -1281,15 +1281,15 @@ not ok 183 - the migration CLI refuses a mismatched access-token project before 
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Super Admin.*super-admin.*ODOS Local Practice.*practice-1/. Input:
-    
+
     'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\n'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual: |-
     operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.
-    
+
   operator: 'match'
   stack: |-
     withMigrationServer.sessionProjectId (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/migrate-three-role-model.test.ts:419:12)
@@ -1308,10 +1308,10 @@ not ok 184 - the migration CLI accepts only admin email and password through the
   failureType: 'testCodeFailure'
   error: |-
     operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.
-    
-    
+
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -2061,15 +2061,15 @@ not ok 292 - bootstrap service identity completes dry-run after the ordinary ope
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /FHIR GET \/fhir\/R4\/AccessPolicy \[AccessPolicy\] 403 Forbidden/. Input:
-    
+
     'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\n'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual: |-
     operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.
-    
+
   operator: 'match'
   stack: |-
     <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/sync-practice-role-policy-rules.test.ts:626:12)
@@ -2088,15 +2088,15 @@ not ok 293 - bootstrap service identity refuses a foreign-project policy before 
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /AccessPolicy\/provider-policy.*foreign-project.*practice-1/i. Input:
-    
+
     'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\n'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual: |-
     operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.
-    
+
   operator: 'match'
   stack: |-
     withPolicySyncServer.policyProjectId (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/sync-practice-role-policy-rules.test.ts:651:12)
@@ -2115,15 +2115,15 @@ not ok 294 - bootstrap service identity still refuses a non-local Medplum URL be
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /local or private HTTP\(S\) Medplum server/i. Input:
-    
+
     'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\n'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
   actual: |-
     operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.
-    
+
   operator: 'match'
   stack: |-
     TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/sync-practice-role-policy-rules.test.ts:663:10)
@@ -4675,9 +4675,9 @@ not ok 636 - age-of-majority singleton grants enforce all-role reads and Admin-o
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(patient?.id)
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -8781,10 +8781,10 @@ not ok 1298 - role markers dominate definition matching, conflicting markers are
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'invalid'
     - 'panel-context'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'panel-context'
@@ -8822,7 +8822,7 @@ not ok 1301 - compiled ocular structure field identities and atomic samples are 
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       [
         {
           atomicIds: [
@@ -8860,7 +8860,7 @@ not ok 1301 - compiled ocular structure field identities and atomic samples are 
             'CUSTOM_ABNORMAL_FINDINGS_04',
             'CUSTOM_GRADE_A_V_RATIO'
           ],
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -9125,12 +9125,12 @@ not ok 1303 - pending audit lookup uses one comma-OR tag search, all pages, and 
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'Observation/one',
         'Observation/two'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -9154,12 +9154,12 @@ not ok 1304 - review regression: an audit for a copied marker covers only its ac
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       [
     +   'Observation/first',
         'Observation/second'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -19285,7 +19285,7 @@ not ok 2843 - local Medplum seeds 5001 patient answers, paginates reviews, and e
   error: |-
     {"status":"429","outcome":{"resourceType":"OperationOutcome","id":"too-many-requests","issue":[{"severity":"error","code":"throttled","details":{"text":"Too Many Requests"},"diagnostics":"{\"_remainingPoints\":0,\"_msBeforeNext\":26280,\"_consumedPoints\":50059,\"_isFirstInDuration\":false,\"limit\":50000}"}]}}
     + actual - expected
-    
+
     + {
     +   response: {
     +     outcome: {
@@ -19306,7 +19306,7 @@ not ok 2843 - local Medplum seeds 5001 patient answers, paginates reviews, and e
     +   }
     + }
     - undefined
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   actual:
@@ -24413,7 +24413,7 @@ not ok 3645 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -24435,7 +24435,7 @@ not ok 3645 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverview
               recordedAt: '2026-08-16T12:00:00.000Z'
             },
             display: 'Lens',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -24609,7 +24609,7 @@ not ok 3646 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -24684,7 +24684,7 @@ not ok 3646 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverview
               ],
               recordedAt: '2026-08-16T12:00:00.000Z'
             },
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -24875,7 +24875,7 @@ not ok 3647 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -24910,7 +24910,7 @@ not ok 3647 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverview
             },
             display: 'Periphery',
             examination: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -25018,7 +25018,7 @@ not ok 3648 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -25053,7 +25053,7 @@ not ok 3648 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverview
             },
             display: 'Periphery',
             examination: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -25161,7 +25161,7 @@ not ok 3649 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -25175,7 +25175,7 @@ not ok 3649 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverview
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
                   value: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -25286,7 +25286,7 @@ not ok 3650 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -25306,7 +25306,7 @@ not ok 3650 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverview
                     value: true
                   }
                 }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -25404,7 +25404,7 @@ not ok 3651 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -25424,7 +25424,7 @@ not ok 3651 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverview
                     value: true
                   }
                 }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -25810,7 +25810,7 @@ not ok 3700 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverview
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -25832,7 +25832,7 @@ not ok 3700 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverview
                 {
                   code: 'EXAM_STATE',
                   display: 'Exam state',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -26641,11 +26641,11 @@ not ok 3811 - E1–E17 reproduce the original writer/read behaviors and assert t
     node:internal/modules/run_main:123
         triggerUncaughtException(
         ^
-    
+
     AssertionError [ERR_ASSERTION]: {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
         at capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
         at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {
       generatedMessage: false,
@@ -26655,9 +26655,9 @@ not ok 3811 - E1–E17 reproduce the original writer/read behaviors and assert t
       operator: 'strictEqual',
       diff: 'simple'
     }
-    
+
     Node.js v22.22.3
-    
+
   code: 'ERR_TEST_FAILURE'
   stack: |-
     capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
@@ -30784,9 +30784,9 @@ not ok 4471 - static audit rejects a mistyped dynamic override key
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Contract override referral-service\.encounter-resource has no matching call site/. Input:
-    
+
     'Error: src/clinical-graph/diagnosis-carry-provenance.ts:40 has unresolved search parameters and no search-contract marker'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

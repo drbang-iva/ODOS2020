@@ -9,10 +9,10 @@ not ok 1 - W65 ownership restricts catalog and section classification
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'legacy-section-snapshot'
     - 'unrelated'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'unrelated'

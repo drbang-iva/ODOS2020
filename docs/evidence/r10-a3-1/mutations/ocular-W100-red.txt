@@ -8,9 +8,9 @@ not ok 1 - W100 negative only audit failure is causal incomplete
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false

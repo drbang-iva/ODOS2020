@@ -15,9 +15,9 @@ not ok 2 - W127 void action UUID is persisted and delayed or consumed undo refus
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

@@ -8,9 +8,9 @@ not ok 1 - T17 supported Ocular Health pick links fact targets without Condition
   failureType: 'testCodeFailure'
   error: |-
     {"error":"This diagnosis requires laterality. Supply laterality explicitly.","result":"invalid","reason":"invalid-pick"}
-    
+
     422 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

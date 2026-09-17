@@ -8,9 +8,9 @@ not ok 1 - W114 effective stored practice definition resolves lifecycle identity
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Pre-rebuild test encounters are read-only.","code":"pre-rebuild-test-encounter"}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

@@ -9,10 +9,10 @@ not ok 1 - W71 strict panel identity rejects hash envelope mixed markers and dup
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'panel-context'
     - 'invalid'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'invalid'

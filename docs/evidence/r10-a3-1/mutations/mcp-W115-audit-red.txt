@@ -308,9 +308,9 @@ not ok 51 - W115 clinician_attest_observation repairs only selected debt before 
   failureType: 'testCodeFailure'
   error: |-
     only selected debt is repaired
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -331,10 +331,10 @@ not ok 52 - W115 clinician_attest_observation refuses mismatched audit
   error: |-
     {"content":[{"type":"text","text":"{\n  \"responseBundle\": {\n    \"resourceType\": \"Bundle\",\n    \"type\": \"transaction-response\",\n    \"entry\": [\n      {\n        \"response\": {\n          \"status\": \"200 OK\"\n        }\n      },\n      {\n        \"response\": {\n          \"status\": \"200 OK\"\n        }\n      }\n    ]\n  },\n  \"provenance\": {\n    \"resourceType\": \"Provenance\",\n    \"target\": [\n      {\n        \"reference\": \"Observation/b60a148e-c83a-496d-b5aa-59cd9ed40b85\"\n      },\n      {\n        \"reference\": \"Patient/p1\"\n      }\n    ],\n    \"recorded\": \"2026-09-17T01:56:26.720Z\",\n    \"policy\": [\n      \"https://odos2020.com/fhir/Policy/clinical-attestation\"\n    ],\n    \"activity\": {\n      \"coding\": [\n        {\n          \"system\": \"http://terminology.hl7.org/CodeSystem/v3-DataOperation\",\n          \"code\": \"CREATE\",\n          \"display\": \"Create\"\n        }\n      ],\n      \"text\": \"Create\"\n    },\n    \"agent\": [\n      {\n        \"type\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/provenance-participant-type\",\n              \"code\": \"author\",\n              \"display\": \"Author\"\n            }\n          ],\n          \"text\": \"Author\"\n        },\n        \"role\": [\n          {\n            \"text\": \"clinician\",\n            \"coding\": [\n              {\n                \"system\": \"https://odos2020.com/fhir/CodeSystem/role\",\n                \"code\": \"clinician\",\n                \"display\": \"clinician\"\n              }\n            ]\n          }\n        ],\n        \"who\": {\n          \"reference\": \"Practitioner/synthetic\"\n        }\n      }\n    ],\n    \"signature\": [\n      {\n        \"type\": [\n          {\n            \"system\": \"urn:iso-astm:E1762-95:2013\",\n            \"code\": \"1.2.840.10065.1.12.1.1\",\n            \"display\": \"Author's Signature\"\n          }\n        ],\n        \"when\": \"2026-09-17T01:56:26.720Z\",\n        \"who\": {\n          \"reference\": \"Practitioner/synthetic\"\n        },\n        \"sigFormat\": \"application/jose\",\n        \"data\": \"c3ludGhldGlj\"\n      }\n    ],\n    \"id\": \"2ffe8f1c-e1e9-46ed-8287-362727a78481\"\n  },\n  \"patchOperations\": [\n    {\n      \"op\": \"test\",\n      \"path\": \"/status\",\n      \"value\": \"preliminary\"\n    },\n    {\n      \"op\": \"replace\",\n      \"path\": \"/status\",\n      \"value\": \"final\"\n    }\n  ]\n}"}]}
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -353,9 +353,9 @@ not ok 53 - W115 amend_observation repairs only selected debt before lifecycle
   failureType: 'testCodeFailure'
   error: |-
     only selected debt is repaired
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -376,10 +376,10 @@ not ok 54 - W115 amend_observation refuses mismatched audit
   error: |-
     {"content":[{"type":"text","text":"{\n  \"responseBundle\": {\n    \"resourceType\": \"Bundle\",\n    \"type\": \"transaction-response\",\n    \"entry\": [\n      {\n        \"response\": {\n          \"status\": \"200 OK\"\n        }\n      },\n      {\n        \"response\": {\n          \"status\": \"200 OK\"\n        }\n      }\n    ]\n  },\n  \"provenance\": {\n    \"resourceType\": \"Provenance\",\n    \"target\": [\n      {\n        \"reference\": \"Observation/04f4c197-b85d-4ca8-9ba7-fcaa073f1fe9\"\n      },\n      {\n        \"reference\": \"Patient/p1\"\n      }\n    ],\n    \"recorded\": \"2026-09-17T01:56:26.753Z\",\n    \"policy\": [\n      \"https://odos2020.com/fhir/Policy/clinical-amendment\"\n    ],\n    \"activity\": {\n      \"coding\": [\n        {\n          \"system\": \"http://terminology.hl7.org/CodeSystem/v3-DataOperation\",\n          \"code\": \"UPDATE\",\n          \"display\": \"Update\"\n        }\n      ],\n      \"text\": \"Update\"\n    },\n    \"agent\": [\n      {\n        \"type\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/provenance-participant-type\",\n              \"code\": \"author\",\n              \"display\": \"Author\"\n            }\n          ],\n          \"text\": \"Author\"\n        },\n        \"role\": [\n          {\n            \"text\": \"clinician\",\n            \"coding\": [\n              {\n                \"system\": \"https://odos2020.com/fhir/CodeSystem/role\",\n                \"code\": \"clinician\",\n                \"display\": \"clinician\"\n              }\n            ]\n          }\n        ],\n        \"who\": {\n          \"reference\": \"Practitioner/synthetic\"\n        }\n      }\n    ],\n    \"signature\": [\n      {\n        \"type\": [\n          {\n            \"system\": \"urn:iso-astm:E1762-95:2013\",\n            \"code\": \"1.2.840.10065.1.12.1.1\",\n            \"display\": \"Author's Signature\"\n          }\n        ],\n        \"when\": \"2026-09-17T01:56:26.753Z\",\n        \"who\": {\n          \"reference\": \"Practitioner/synthetic\"\n        },\n        \"sigFormat\": \"application/jose\",\n        \"data\": \"c3ludGhldGlj\"\n      }\n    ],\n    \"id\": \"66681abc-c093-4526-be40-96f59e26b7fb\"\n  },\n  \"patchOperations\": [\n    {\n      \"op\": \"test\",\n      \"path\": \"/status\",\n      \"value\": \"final\"\n    },\n    {\n      \"op\": \"replace\",\n      \"path\": \"/status\",\n      \"value\": \"amended\"\n    },\n    {\n      \"op\": \"add\",\n      \"path\": \"/note\",\n      \"value\": [\n        {\n          \"time\": \"2026-09-17T01:56:26.753Z\",\n          \"authorReference\": {\n            \"reference\": \"Practitioner/synthetic\"\n          },\n          \"text\": \"Synthetic amendment\"\n        }\n      ]\n    }\n  ]\n}"}]}
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

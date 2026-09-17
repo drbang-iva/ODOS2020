@@ -9,10 +9,10 @@ not ok 1 - W85 fact baseline read 410 and empty owner
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'not-attempted'
     - 'conflict'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'conflict'

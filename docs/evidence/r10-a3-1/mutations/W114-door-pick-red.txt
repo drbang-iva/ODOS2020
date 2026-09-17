@@ -8,9 +8,9 @@ not ok 1 - W114 pick resolves a practice-only option through its real store depe
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"pre-rebuild-test-encounter","error":"Test data from before the rebuild is read-only."}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

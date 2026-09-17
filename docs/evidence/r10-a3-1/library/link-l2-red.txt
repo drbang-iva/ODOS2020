@@ -93,9 +93,9 @@ not ok 12 - OH-3 multi-select findings propose verified per-eye diagnoses and ex
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -116,9 +116,9 @@ not ok 13 - I1 complete ocular qualifiers resolve each selected finding to one d
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -140,9 +140,9 @@ not ok 14 - I2 absent or partial ocular qualifiers retain the specified safe fal
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -170,9 +170,9 @@ not ok 16 - I4 ocular records without findingDetails retain specific candidate l
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -194,9 +194,9 @@ not ok 17 - anterior-chamber ruled findings propose only their seeded diagnoses
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -218,9 +218,9 @@ not ok 18 - iris ruled findings propose only their seeded diagnoses
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -242,9 +242,9 @@ not ok 19 - vitreous ruled findings propose only their seeded diagnoses
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -266,9 +266,9 @@ not ok 20 - vessels ruled findings propose only their seeded diagnoses
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -290,9 +290,9 @@ not ok 21 - palpebral conjunctiva GPC proposes its seeded diagnosis
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -338,9 +338,9 @@ not ok 26 - unspecified ocular diagnosis keys never surface with qualifiers unse
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -368,9 +368,9 @@ not ok 28 - I6 allOf-wrapped option fallbacks are suppressed like bare option fa
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -415,9 +415,9 @@ not ok 33 - posterior plain drusen returns an ordered leaf and staged family whi
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","reason":"invalid"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

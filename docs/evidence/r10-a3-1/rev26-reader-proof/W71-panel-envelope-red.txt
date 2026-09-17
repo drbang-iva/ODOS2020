@@ -75,10 +75,10 @@ not ok 12 - role markers dominate definition matching, conflicting markers are i
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'panel-context'
     - 'invalid'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'invalid'

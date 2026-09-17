@@ -32,9 +32,9 @@ not ok 5 - T14 lifecycle refuses signed canonical facts without downgrading them
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422

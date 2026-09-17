@@ -8,9 +8,9 @@ not ok 1 - W73 W113 previous exams uses extension homes for both eyes with typed
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -30,9 +30,9 @@ not ok 2 - W74 W101 W113 carry uses standalone conditional steps and preserves s
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -52,9 +52,9 @@ not ok 3 - W101 lost Condition response resumes one conditional owner
   failureType: 'testCodeFailure'
   error: |-
     {"first":{"status":400,"body":{"error":"A current Encounter and source Encounter diagnosis are required."}},"second":{"status":400,"body":{"error":"A current Encounter and source Encounter diagnosis are required."}}}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -74,9 +74,9 @@ not ok 4 - W102 same command changed source fingerprint refuses zero further wri
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -96,9 +96,9 @@ not ok 5 - W103 W104 frozen retry stays stale and partial carry has no findings 
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -118,9 +118,9 @@ not ok 6 - W125 replan accepts unchanged already-completed target and records ex
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -140,9 +140,9 @@ not ok 7 - W124 resumes persisted Condition with failed plan
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -162,9 +162,9 @@ not ok 8 - W124 resumes persisted Condition with failed link
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -184,9 +184,9 @@ not ok 9 - W123 two different commands race one conditional Condition owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -206,9 +206,9 @@ not ok 10 - W75 W126 void between facts and witness remains edited
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -228,9 +228,9 @@ not ok 11 - W75 W126 void-undo between facts and witness remains edited
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -250,9 +250,9 @@ not ok 12 - W79 W91 refuses source before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -272,9 +272,9 @@ not ok 13 - W79 W91 refuses destination before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -294,9 +294,9 @@ not ok 14 - W79 W91 refuses closed before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"error":"A current Encounter and source Encounter diagnosis are required."}
-    
+
     400 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

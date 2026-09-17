@@ -9,12 +9,12 @@ not ok 1 - W87a W87b W129 exact finding write registry covers every call site in
   error: |-
     T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287
     + actual - expected
-    
+
     + [
     +   'T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

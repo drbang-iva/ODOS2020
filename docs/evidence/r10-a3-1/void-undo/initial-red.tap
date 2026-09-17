@@ -9,13 +9,13 @@ not ok 1 - W76 canonical section and finding identity include panels and preserv
   error: |-
     canonical identity selects expected owners
     + actual - expected
-    
+
       [
         'Observation/observation-1',
     -   'Observation/od',
     -   'Observation/os'
       ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -39,9 +39,9 @@ not ok 2 - W77 void fact repairs real debt before lifecycle and refuses failed r
   failureType: 'testCodeFailure'
   error: |-
     Void transaction indeterminate: the FHIR server did not answer usably; 4 entries were sent. audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_TEST_FAILURE'
   name: 'VoidTransactionError'
   stack: |-
@@ -60,9 +60,9 @@ not ok 3 - W77 void panel repairs real debt before lifecycle and refuses failed 
   failureType: 'testCodeFailure'
   error: |-
     Void transaction indeterminate: the FHIR server did not answer usably; 4 entries were sent. audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_TEST_FAILURE'
   name: 'VoidTransactionError'
   stack: |-
@@ -81,9 +81,9 @@ not ok 4 - W77 undo fact repairs real debt before lifecycle and refuses failed r
   failureType: 'testCodeFailure'
   error: |-
     audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -106,9 +106,9 @@ not ok 5 - W77 undo panel repairs real debt before lifecycle and refuses failed 
   failureType: 'testCodeFailure'
   error: |-
     audit precedes lifecycle
-    
+
     false !== true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -137,9 +137,9 @@ not ok 7 - W78 fact final signed refusal
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -159,9 +159,9 @@ not ok 8 - W78 panel final signed refusal
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -181,9 +181,9 @@ not ok 9 - W78 fact amended signed refusal
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -203,9 +203,9 @@ not ok 10 - W78 panel amended signed refusal
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -225,9 +225,9 @@ not ok 11 - W78 fact corrected signed refusal
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -247,9 +247,9 @@ not ok 12 - W78 panel corrected signed refusal
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -269,9 +269,9 @@ not ok 13 - W106 void repairs only selected debt
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     true !== false
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: false
@@ -306,9 +306,9 @@ not ok 15 - W105 fact writer supersession refuses whole undo
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -328,9 +328,9 @@ not ok 16 - W105 panel writer supersession refuses whole undo
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -367,9 +367,9 @@ not ok 18 - W127 missing void action is 400 zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 400
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 400
@@ -389,9 +389,9 @@ not ok 19 - V23 void prebuild refuses before any repair
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -411,9 +411,9 @@ not ok 20 - V23 undo prebuild refuses before any repair
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -469,9 +469,9 @@ not ok 27 - W114 effective stored practice definition resolves lifecycle identit
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -492,10 +492,10 @@ not ok 28 - canonical marker null and status-only content round trip
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - null
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: ~
@@ -514,9 +514,9 @@ not ok 29 - W105 marker absence transitions refuse without touching unrelated ow
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -543,7 +543,7 @@ not ok 31 - ledger preserves and validates action and marker identities
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         encounter: {
           at: 'synthetic',
@@ -564,7 +564,7 @@ not ok 31 - ledger preserves and validates action and marker identities
             }
           ]
         },
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

@@ -22,7 +22,7 @@ not ok 3 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -46,7 +46,7 @@ not ok 3 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewPro
               recordedAt: '2026-08-16T12:00:00.000Z'
             },
             display: 'Lens',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -222,7 +222,7 @@ not ok 4 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -246,7 +246,7 @@ not ok 4 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewPro
                 {
                   code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
                   display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -454,7 +454,7 @@ not ok 5 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -469,7 +469,7 @@ not ok 5 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewPro
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
                   display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -587,7 +587,7 @@ not ok 6 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -602,7 +602,7 @@ not ok 6 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewPro
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
                   display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -720,7 +720,7 @@ not ok 7 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -735,7 +735,7 @@ not ok 7 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewPro
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
                   value: {
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -847,7 +847,7 @@ not ok 8 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -862,7 +862,7 @@ not ok 8 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewPro
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
                   display: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -962,7 +962,7 @@ not ok 9 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewPro
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -977,7 +977,7 @@ not ok 9 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewPro
                 {
                   code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole',
                   display: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -1365,7 +1365,7 @@ not ok 58 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewPr
     Expected values to be strictly deep-equal:
     + actual - expected
     ... Skipped lines
-    
+
       {
         completeness: {
           documentationIssues: [],
@@ -1389,7 +1389,7 @@ not ok 58 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewPr
                 {
                   code: 'EXAM_STATE',
                   display: 'Exam state',
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

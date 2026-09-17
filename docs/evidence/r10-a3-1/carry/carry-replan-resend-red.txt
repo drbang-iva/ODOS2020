@@ -8,9 +8,9 @@ not ok 1 - W125 identical interrupted replan resend resumes its stored plan with
   failureType: 'testCodeFailure'
   error: |-
     {"reason":"command-reused","error":"command-reused"}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

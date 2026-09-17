@@ -27,10 +27,10 @@ not ok 4 - W111 door returns closure observed after a confirmed command
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

@@ -8,9 +8,9 @@ not ok 1 - T10 section void selects canonical facts and undo restores exact reco
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -30,9 +30,9 @@ not ok 2 - T11 finding void and undo preserve identity qualifiers homes and othe
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -52,9 +52,9 @@ not ok 3 - T12 encounter void and undo include canonical facts with exact counts
   failureType: 'testCodeFailure'
   error: |-
     {"error":"Required"}
-    
+
     400 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

@@ -70,7 +70,7 @@ not ok 9 - FHIR read grant CLI passes only with full coverage and always prints 
     <worktree>/scripts/fhir-read-grant-check.ts:429
           throw new Error(
                 ^
-    
+
     Error: Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription — MCP process service client.. Remove or update the entry explicitly.
         at <anonymous> (<worktree>/scripts/fhir-read-grant-check.ts:429:13)
         at Array.map (<anonymous>)
@@ -80,12 +80,12 @@ not ok 9 - FHIR read grant CLI passes only with full coverage and always prints 
         at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
         at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
         at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-    
+
     Node.js v22.22.3
-    
-    
+
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0
@@ -117,9 +117,9 @@ not ok 10 - an ungranted FHIR create in mcp source makes the CLI fail with its i
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -143,9 +143,9 @@ not ok 11 - an ungranted FHIR create in ui tsx makes the CLI fail with its inter
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -169,9 +169,9 @@ not ok 12 - serviceFhir read of an ungranted non-plumbing resource makes the CLI
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /FHIR read grant check: FAIL/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -195,9 +195,9 @@ not ok 13 - an ungranted FHIR read in ui/src makes the CLI fail with its name
   failureType: 'testCodeFailure'
   error: |-
     The input did not match the regular expression /FHIR read grant check: FAIL/. Input:
-    
+
     ''
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

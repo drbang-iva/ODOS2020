@@ -54,10 +54,10 @@ TAP version 13
       error: |-
         Expected values to be strictly equal:
         + actual - expected
-        
+
         + 'b4bd13e9-a825-4edd-aaca-e1967d59c28c'
         - '14e0ec2a-cc7f-4ce6-be82-49d9417f3e95'
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected: '14e0ec2a-cc7f-4ce6-be82-49d9417f3e95'

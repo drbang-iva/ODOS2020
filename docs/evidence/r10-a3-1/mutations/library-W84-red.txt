@@ -9,10 +9,10 @@ not ok 1 - W84 actor-bound reassertion rejects changed actor
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'command-reused'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'command-reused'

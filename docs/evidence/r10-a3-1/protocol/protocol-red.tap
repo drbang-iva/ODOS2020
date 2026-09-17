@@ -8,9 +8,9 @@ not ok 1 - W82 selected valued shared default refuses before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"application":{"id":"6d1a6a93-1464-485d-970b-0c61ad7bb635","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"2874898d-3d8b-4abe-968e-5f2a8f7fdafe","encounterId":"e1","patientId":"p1","protocolApplicationId":"6d1a6a93-1464-485d-970b-0c61ad7bb635","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/4a2e18c7-ffda-483d-9cc9-3181c9e14188"},{"id":"25a467aa-769f-4c78-ba3e-174800e6ca1a","encounterId":"e1","patientId":"p1","protocolApplicationId":"6d1a6a93-1464-485d-970b-0c61ad7bb635","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","value":"abnormal","editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/1b7c12aa-4254-4500-948d-3e813493ed16"}],"actions":[],"charges":[]}
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -30,9 +30,9 @@ not ok 2 - W82 selected valued shared override refuses before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"application":{"id":"5138836c-d6f7-4a33-9124-269f6e2da09c","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-modified"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"41708901-4fa8-43eb-8b52-fee844029010","encounterId":"e1","patientId":"p1","protocolApplicationId":"5138836c-d6f7-4a33-9124-269f6e2da09c","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/c56bcf6a-3b23-4064-8e64-3909d0b5a87e"},{"id":"f46b59b2-81c3-4af0-8c6b-e1a15ec672a2","encounterId":"e1","patientId":"p1","protocolApplicationId":"5138836c-d6f7-4a33-9124-269f6e2da09c","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","editedBeforeCommit":true,"provenance":{"source":"clinician-entered","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"value":"abnormal","observationReference":"Observation/2459e82c-56be-4e7b-8af1-8611986815f6"}],"actions":[],"charges":[]}
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -52,9 +52,9 @@ not ok 3 - W82 selected valued shared per-eye refuses before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"application":{"id":"b5f33294-adce-4320-a356-ab7f576f81fb","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"},{"itemKey":"finding-ocular-health:anterior:lens","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"8b005fbc-1882-47a4-b537-4fbff98f7a8f","encounterId":"e1","patientId":"p1","protocolApplicationId":"b5f33294-adce-4320-a356-ab7f576f81fb","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/c86ebea3-50ab-4042-8f01-795033aa2cdc"},{"id":"8d09e52d-b0d1-415e-9751-eac701030606","encounterId":"e1","patientId":"p1","protocolApplicationId":"b5f33294-adce-4320-a356-ab7f576f81fb","sourceItemKey":"finding-ocular-health:anterior:lens","findingDefKey":"ocular-health:anterior:lens","laterality":"OD","state":"committed","value":"abnormal","editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/d096e77d-60e4-4e9c-ac2c-cb9d71b61f84"}],"actions":[],"charges":[]}
-    
+
     200 !== 422
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 422
@@ -86,9 +86,9 @@ not ok 6 - W91 protocol apply closed zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -108,9 +108,9 @@ not ok 7 - W91 protocol apply pre-rebuild zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -130,9 +130,9 @@ not ok 8 - W108 protocol unapply closed zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -152,9 +152,9 @@ not ok 9 - W108 protocol unapply pre-rebuild zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -174,9 +174,9 @@ not ok 10 - V28 capture preliminary canonical prompt
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -196,9 +196,9 @@ not ok 11 - V28 capture final canonical prompt
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -218,9 +218,9 @@ not ok 12 - V28 capture amended canonical prompt
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -255,9 +255,9 @@ not ok 14 - W119 panel value capture
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -284,10 +284,10 @@ not ok 16 - W114 capture respects stored shared definition
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'promptOnly'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'promptOnly'

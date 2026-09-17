@@ -81,12 +81,12 @@ not ok 13 - W81 inactive canonical no credit
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'ocular-health:anterior:lens'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -108,12 +108,12 @@ not ok 14 - W114 stored practice option resolves in both consumers
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'ocular-health:anterior:lens'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

@@ -8,9 +8,9 @@ not ok 1 - W74 W101 W113 carry uses standalone conditional steps and preserves s
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(m.writes.find(w => w.resource.resourceType === 'Condition')!.headers['If-None-Exist']?.startsWith('identifier=urn%3Aodos%3Acarry-diagnosis%3Av1') || m.writes.find(w => w.resource.resourceType === 'Condition')!.headers['If-None-Exist']?.startsWith('identifier=urn:odos:carry-diagnosis:v1'))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -35,9 +35,9 @@ not ok 3 - W123 two different commands race one conditional Condition owner
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     2 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1

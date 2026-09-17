@@ -9,10 +9,10 @@ not ok 1 - W115 signed final panels and facts retain identity with zero ordinary
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'applied'
     - 'refused'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'refused'
@@ -33,10 +33,10 @@ not ok 2 - W115 signed amended panels and facts retain identity with zero ordina
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'applied'
     - 'refused'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'refused'
@@ -57,10 +57,10 @@ not ok 3 - W115 signed corrected panels and facts retain identity with zero ordi
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'applied'
     - 'refused'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'refused'

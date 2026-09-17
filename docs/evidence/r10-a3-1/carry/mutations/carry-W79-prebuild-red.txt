@@ -8,9 +8,9 @@ not ok 1 - W79 W91 refuses source before all writes
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"applied","conditionReference":"Condition/ea36c56c-82c8-4ad0-8c43-f89d1556e203","findings":{"result":"command","commandId":"116b2f06-a357-4125-b8d5-ec22cce0d2a5","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/ebe8f50b-c421-4d3a-9a59-68fa55e9694f","versionId":"415aab81-72c4-41f2-b823-5168c052b1a2"},{"clinicalWrite":"confirmed","status":"applied","target":"finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf","reference":"Observation/74d688ab-af92-4379-ac85-a588cc2a5d22","versionId":"1eb75769-b4da-4612-9d8c-58244e4af73a"}]}}
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -30,9 +30,9 @@ not ok 2 - W79 W91 refuses destination before all writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

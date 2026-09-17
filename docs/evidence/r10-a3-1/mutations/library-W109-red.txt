@@ -9,10 +9,10 @@ not ok 1 - W83 W109 rejects audit mixed
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - true
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

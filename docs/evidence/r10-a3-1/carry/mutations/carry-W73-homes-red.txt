@@ -8,9 +8,9 @@ not ok 1 - W73 W113 previous exams uses extension homes for both eyes with typed
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     0 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2
@@ -30,9 +30,9 @@ not ok 2 - T1 previous exams displays canonical finding linked by extension
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(facts.some((f:any)=>f.observationReference==="Observation/source-OD"))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true

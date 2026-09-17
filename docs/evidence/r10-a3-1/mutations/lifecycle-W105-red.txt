@@ -15,9 +15,9 @@ not ok 2 - W105 fact writer supersession refuses whole undo
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -37,9 +37,9 @@ not ok 3 - W105 panel writer supersession refuses whole undo
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -59,9 +59,9 @@ not ok 4 - W105 marker absence transitions refuse without touching unrelated own
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -81,9 +81,9 @@ not ok 5 - W105 forged audit or malformed operation cannot trigger undo repair b
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     503 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409

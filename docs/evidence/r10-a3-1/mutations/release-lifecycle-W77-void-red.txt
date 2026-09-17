@@ -26,9 +26,9 @@ not ok 4 - T13 lifecycle mutation repairs owed audit before replacing clinical s
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     1 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

@@ -28,10 +28,10 @@ not ok 2 - v0.5d preflight pass 4 source-tree canonical-shape lint passes live t
     mcp/src/clinical-graph/diagnosis-carry-provenance.ts:20 odos-extension-url-shape
     mcp/src/clinical-graph/diagnosis-carry-provenance.ts:21 odos-extension-url-shape
     + actual - expected
-    
+
     + 'hard-block'
     - 'pass'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'pass'

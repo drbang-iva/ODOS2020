@@ -15,9 +15,9 @@ not ok 2 - W77 preview never repairs actual debt
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     4 !== 2
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 2

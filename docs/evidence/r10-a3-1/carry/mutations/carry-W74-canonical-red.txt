@@ -8,9 +8,9 @@ not ok 1 - pull standalone steps preserve source clinical state, typed facts and
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"unconfirmed","conditionReference":"Condition/pulled-condition","findings":{"result":"command","commandId":"9d55bb08-b097-47e0-91e6-c9a2052784cf","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:a3a1db347b653054fe1adfe2f621227f146decd9d287f6ae051a32b6f43994ba","reference":"Observation/observation-a14bd99b-5617-4dd2-9459-651eb6d48e16","versionId":"78d9d2c9-a9e2-4687-8d7b-cf9016daa058"},{"clinicalWrite":"confirmed","status":"applied","target":"finding:924cd9ff5ad955a4b8ae0a015be5f2a9051871ebd976c50c46d12a4e4ecc5884","reference":"Observation/observation-0b6eb7e8-0666-4971-849a-effd37baa20f","versionId":"9ff90317-3ec9-4727-99f5-5b56c56c72aa"}]},"reason":"lineage-unconfirmed","error":"lineage-unconfirmed"}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -31,9 +31,9 @@ not ok 2 - pull excludes an entered-in-error source Observation
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"unconfirmed","conditionReference":"Condition/pulled-condition","findings":{"result":"command","commandId":"d70c7309-db6e-4bce-9eb3-4329b1b8ba04","complete":true,"executionOrder":[0],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:a3a1db347b653054fe1adfe2f621227f146decd9d287f6ae051a32b6f43994ba","reference":"Observation/observation-36bbdcc2-5e36-40a7-8a1b-d3f328488413","versionId":"9d33c688-1606-42fb-9701-7232c2e02bbc"}]},"reason":"lineage-unconfirmed","error":"lineage-unconfirmed"}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -54,9 +54,9 @@ not ok 3 - W74 W101 W113 carry uses standalone conditional steps and preserves s
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"unconfirmed","conditionReference":"Condition/4192aaff-a476-4fd0-b00b-9f085030e73a","findings":{"result":"command","commandId":"2471776a-5490-4874-a5e2-b746061cd1e4","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/98febd50-4608-47af-aa9d-2ef48bb108ed","versionId":"58ea3708-06a5-431e-974e-cb88912e260d"},{"clinicalWrite":"confirmed","status":"applied","target":"finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf","reference":"Observation/e729f560-869d-45aa-80a7-ddcbbae36c82","versionId":"c5346dab-83fc-4a5f-916d-c6e9be85431c"}]},"reason":"lineage-unconfirmed","error":"lineage-unconfirmed"}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -76,9 +76,9 @@ not ok 4 - T2 carry pull preserves canonical identity typed qualifiers and desti
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"unconfirmed","conditionReference":"Condition/089e96f1-b7e7-4ec1-b55c-27a75f11f2eb","findings":{"result":"command","commandId":"4f182e34-0fdb-4155-96b7-b6914f24a684","complete":true,"executionOrder":[0],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/f8a404a5-1606-44fc-83d7-411af35987c2","versionId":"e6779c7a-247b-4aaf-aac5-25a33e8990c0"}]},"reason":"lineage-unconfirmed","error":"lineage-unconfirmed"}
-    
+
     502 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

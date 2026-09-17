@@ -9,10 +9,10 @@ not ok 1 - W67 whole request prevalidates stale second eye
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + undefined
     - 'stale-baseline'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'stale-baseline'

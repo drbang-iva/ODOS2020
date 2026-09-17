@@ -8,9 +8,9 @@ not ok 1 - W114 repair resolves a practice-only option through its real store de
   failureType: 'testCodeFailure'
   error: |-
     {"result":"invalid","error":"pre-rebuild-test-encounter","reason":"pre-rebuild-test-encounter"}
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

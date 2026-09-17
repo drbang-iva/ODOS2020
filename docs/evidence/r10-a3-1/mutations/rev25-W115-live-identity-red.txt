@@ -54,7 +54,7 @@ TAP version 13
       error: |-
         Expected values to be strictly deep-equal:
         + actual - expected
-        
+
         + undefined
         - [
         -   {
@@ -62,7 +62,7 @@ TAP version 13
         -     value: '212591e788c250d97523994770c82e1b8aefdeffd6e63425dc7070084be5e25b'
         -   }
         - ]
-        
+
       code: 'ERR_ASSERTION'
       name: 'AssertionError'
       expected:

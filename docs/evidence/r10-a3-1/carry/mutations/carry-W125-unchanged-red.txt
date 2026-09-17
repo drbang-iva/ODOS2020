@@ -8,9 +8,9 @@ not ok 1 - W125 replan accepts unchanged already-completed target and records ex
   failureType: 'testCodeFailure'
   error: |-
     {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"not-attempted","conditionReference":"Condition/80b8dda5-50f8-4a19-b621-944cae4ded31","findings":{"result":"command","commandId":"746dd252-f80a-4c64-8b93-9137923dbb01","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"none","status":"unchanged","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/dbaddf13-da5a-4c3d-ae1d-8fde124a6693","versionId":"15b00d4d-d1c8-4ab8-841b-c58ab04ccd09"},{"clinicalWrite":"confirmed","status":"applied","target":"finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf","reference":"Observation/ae86d4d6-45f3-49b8-9188-8cbbf33ae4b2","versionId":"dd9eec55-3ddd-45fe-a135-83eda7069e5c"}]}}
-    
+
     503 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

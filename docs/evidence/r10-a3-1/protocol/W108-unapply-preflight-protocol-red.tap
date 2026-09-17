@@ -50,9 +50,9 @@ not ok 8 - W108 protocol unapply closed zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -72,9 +72,9 @@ not ok 9 - W108 protocol unapply pre-rebuild zero writes
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     200 !== 409
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 409
@@ -136,9 +136,9 @@ not ok 17 - V28 unapply shared target rejects before unrelated removals
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     6 !== 0
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 0

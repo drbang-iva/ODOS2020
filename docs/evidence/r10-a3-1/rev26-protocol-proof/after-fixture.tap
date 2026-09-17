@@ -106,9 +106,9 @@ not ok 17 - fixback warm tap seeds only its built-in and rules
   failureType: 'testCodeFailure'
   error: |-
     The expression evaluated to a falsy value:
-    
+
       assert.ok(searches.length <= (mode === "tap" ? 24 : 52))
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: true
@@ -128,9 +128,9 @@ not ok 18 - fixback warm whole seeds only its built-in and rules
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     6 !== 5
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 5
