@@ -1,0 +1,1226 @@
+TAP version 13
+# Subtest: W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+ok 1 - W11 absent create persists one strict canonical owner, separate operation marker, and self-targeted audit
+  ---
+  duration_ms: 5.174375
+  type: 'test'
+  ...
+# Subtest: adoption converts legacy GRADE, copies displayed homes, and keeps the resource id
+ok 2 - adoption converts legacy GRADE, copies displayed homes, and keeps the resource id
+  ---
+  duration_ms: 3.498208
+  type: 'test'
+  ...
+# Subtest: W5 materializes only one option, preserving source and sibling, and copies an inferred home
+ok 3 - W5 materializes only one option, preserving source and sibling, and copies an inferred home
+  ---
+  duration_ms: 3.240167
+  type: 'test'
+  ...
+# Subtest: W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+ok 4 - W6 a bare snapshot locator is refused when the addressed key and end state are otherwise valid
+  ---
+  duration_ms: 0.630917
+  type: 'test'
+  ...
+# Subtest: clear then revive keeps one canonical id; an unchanged current state writes nothing
+ok 5 - clear then revive keeps one canonical id; an unchanged current state writes nothing
+  ---
+  duration_ms: 3.219125
+  type: 'test'
+  ...
+# Subtest: W21 reassert writes only its activity-discriminated audit and resolves replay after a lost audit response
+ok 6 - W21 reassert writes only its activity-discriminated audit and resolves replay after a lost audit response
+  ---
+  duration_ms: 1.062667
+  type: 'test'
+  ...
+# Subtest: eye change is two facts; an occupied differing destination conflicts without overwriting it
+ok 7 - eye change is two facts; an occupied differing destination conflicts without overwriting it
+  ---
+  duration_ms: 3.094666
+  type: 'test'
+  ...
+# Subtest: UNKNOWN retirement follows OD destinations and replays via the source
+ok 8 - UNKNOWN retirement follows OD destinations and replays via the source
+  ---
+  duration_ms: 3.428166
+  type: 'test'
+  ...
+# Subtest: UNKNOWN retirement follows OD+OS destinations and replays via the source
+ok 9 - UNKNOWN retirement follows OD+OS destinations and replays via the source
+  ---
+  duration_ms: 5.668125
+  type: 'test'
+  ...
+# Subtest: W22 a destination refusal preserves the unresolved UNKNOWN source, even when retirement was submitted first
+ok 10 - W22 a destination refusal preserves the unresolved UNKNOWN source, even when retirement was submitted first
+  ---
+  duration_ms: 0.763625
+  type: 'test'
+  ...
+# Subtest: duplicates throw 400; missing baselines refuse; incomplete loads attempt no targets
+ok 11 - duplicates throw 400; missing baselines refuse; incomplete loads attempt no targets
+  ---
+  duration_ms: 0.558667
+  type: 'test'
+  ...
+# Subtest: W13 replay requires marker equality and a current-state rehash
+ok 12 - W13 replay requires marker equality and a current-state rehash
+  ---
+  duration_ms: 0.609458
+  type: 'test'
+  ...
+# Subtest: W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+ok 13 - W14 lost second write and failed reread return unconfirmed; unchanged replay resolves both exactly once
+  ---
+  duration_ms: 1.665667
+  type: 'test'
+  ...
+# Subtest: W15 unlink materializes only the addressed option and never attempts a Condition write
+ok 14 - W15 unlink materializes only the addressed option and never attempts a Condition write
+  ---
+  duration_ms: 1.407208
+  type: 'test'
+  ...
+# Subtest: W19 already-applied replay leaves exactly one mutation audit
+ok 15 - W19 already-applied replay leaves exactly one mutation audit
+  ---
+  duration_ms: 0.653041
+  type: 'test'
+  ...
+# Subtest: W20 repair-before-supersede preserves C1's frozen actor and expands self to the carrying record
+ok 16 - W20 repair-before-supersede preserves C1's frozen actor and expands self to the carrying record
+  ---
+  duration_ms: 0.9945
+  type: 'test'
+  ...
+# Subtest: failed prior-audit repair leaves the old marker and content intact
+ok 17 - failed prior-audit repair leaves the old marker and content intact
+  ---
+  duration_ms: 0.738917
+  type: 'test'
+  ...
+# Subtest: W23 conditional-create loser returns conflict and writes no mutation audit
+ok 18 - W23 conditional-create loser returns conflict and writes no mutation audit
+  ---
+  duration_ms: 0.964959
+  type: 'test'
+  ...
+# Subtest: W24 unchanged replay preserves a second-target version conflict
+ok 19 - W24 unchanged replay preserves a second-target version conflict
+  ---
+  duration_ms: 1.8155
+  type: 'test'
+  ...
+# Subtest: W25 reused command id with different content and a fresh baseline owes a distinct audit
+ok 20 - W25 reused command id with different content and a fresh baseline owes a distinct audit
+  ---
+  duration_ms: 1.0585
+  type: 'test'
+  ...
+# Subtest: invalid qualifiers and foreign or missing homes refuse before any write
+ok 21 - invalid qualifiers and foreign or missing homes refuse before any write
+  ---
+  duration_ms: 0.622291
+  type: 'test'
+  ...
+# Subtest: a retired UNKNOWN without this command marker cannot be retired again
+ok 22 - a retired UNKNOWN without this command marker cannot be retired again
+  ---
+  duration_ms: 1.515291
+  type: 'test'
+  ...
+# Subtest: an adoption replay locates its new canonical owner before rechecking the obsolete legacy locator
+ok 23 - an adoption replay locates its new canonical owner before rechecking the obsolete legacy locator
+  ---
+  duration_ms: 1.9485
+  type: 'test'
+  ...
+# Subtest: same key with different property order reuses its operation and audit
+ok 24 - same key with different property order reuses its operation and audit
+  ---
+  duration_ms: 0.716292
+  type: 'test'
+  ...
+# Subtest: absent baseline permits a retired-only legacy record without modifying it
+ok 25 - absent baseline permits a retired-only legacy record without modifying it
+  ---
+  duration_ms: 0.481833
+  type: 'test'
+  ...
+# Subtest: missing baseline is refused even for a matching marker; reassert cannot use an absent baseline
+ok 26 - missing baseline is refused even for a matching marker; reassert cannot use an absent baseline
+  ---
+  duration_ms: 0.627167
+  type: 'test'
+  ...
+# Subtest: canonical key extras are rejected before an invalid identity envelope can be persisted
+ok 27 - canonical key extras are rejected before an invalid identity envelope can be persisted
+  ---
+  duration_ms: 0.264292
+  type: 'test'
+  ...
+# Subtest: extent key order cannot change the persisted digest or duplicate its operation
+ok 28 - extent key order cannot change the persisted digest or duplicate its operation
+  ---
+  duration_ms: 1.264416
+  type: 'test'
+  ...
+# Subtest: a definitive audit refusal remains applied/pending and does not block a different target
+ok 29 - a definitive audit refusal remains applied/pending and does not block a different target
+  ---
+  duration_ms: 0.819584
+  type: 'test'
+  ...
+# Subtest: unchanged is reserved for no audit debt; a new command repairs debt before its planned write
+ok 30 - unchanged is reserved for no audit debt; a new command repairs debt before its planned write
+  ---
+  duration_ms: 0.971208
+  type: 'test'
+  ...
+# Subtest: a definitive reassert audit refusal stops later targets and exposes the known version
+ok 31 - a definitive reassert audit refusal stops later targets and exposes the known version
+  ---
+  duration_ms: 0.491958
+  type: 'test'
+  ...
+# Subtest: lost-response recovery refuses a marker on an owner whose canonical envelope changed
+ok 32 - lost-response recovery refuses a marker on an owner whose canonical envelope changed
+  ---
+  duration_ms: 0.439958
+  type: 'test'
+  ...
+# Subtest: a conditional-create loser includes the winner in its fresh projection
+ok 33 - a conditional-create loser includes the winner in its fresh projection
+  ---
+  duration_ms: 0.769125
+  type: 'test'
+  ...
+# Subtest: review regression: wrong-target audit stays pending and cannot permit marker supersession
+ok 34 - review regression: wrong-target audit stays pending and cannot permit marker supersession
+  ---
+  duration_ms: 1.264084
+  type: 'test'
+  ...
+# Subtest: review regression: a reassertion tag cannot confirm an audit targeting another Observation
+ok 35 - review regression: a reassertion tag cannot confirm an audit targeting another Observation
+  ---
+  duration_ms: 0.62875
+  type: 'test'
+  ...
+# Subtest: W38 executionOrder reports actual library ordering with legacy retirement submitted first
+ok 36 - W38 executionOrder reports actual library ordering with legacy retirement submitted first
+  ---
+  duration_ms: 0.567958
+  type: 'test'
+  ...
+# Subtest: W38 fact pair retains submitted execution order when second target conflicts
+ok 37 - W38 fact pair retains submitted execution order when second target conflicts
+  ---
+  duration_ms: 0.80825
+  type: 'test'
+  ...
+# Subtest: W44 refresh failure belongs to first unexecuted target after a confirmed write
+ok 38 - W44 refresh failure belongs to first unexecuted target after a confirmed write
+  ---
+  duration_ms: 0.395584
+  type: 'test'
+  ...
+# Subtest: W-h replay verifier distinguishes exact, new, reused-content and persisted-state mismatch
+ok 39 - W-h replay verifier distinguishes exact, new, reused-content and persisted-state mismatch
+  ---
+  duration_ms: 2.490958
+  type: 'test'
+  ...
+# Subtest: W-h reassert replay uses its new audit witness even after source drift
+ok 40 - W-h reassert replay uses its new audit witness even after source drift
+  ---
+  duration_ms: 1.481667
+  type: 'test'
+  ...
+# Subtest: W-h typed causes distinguish load, owner search, audit lookup and unknown clinical write
+ok 41 - W-h typed causes distinguish load, owner search, audit lookup and unknown clinical write
+  ---
+  duration_ms: 2.647875
+  type: 'test'
+  ...
+# Subtest: W-h successful clinical create remains confirmed when audit create and lookup fail
+ok 42 - W-h successful clinical create remains confirmed when audit create and lookup fail
+  ---
+  duration_ms: 0.382958
+  type: 'test'
+  ...
+# Subtest: W-h repairPendingAudits persists frozen debt and never attempts clinical writes
+ok 43 - W-h repairPendingAudits persists frozen debt and never attempts clinical writes
+  ---
+  duration_ms: 0.611917
+  type: 'test'
+  ...
+# Subtest: W-h reassert replay audit lookup failure has a typed cause
+ok 44 - W-h reassert replay audit lookup failure has a typed cause
+  ---
+  duration_ms: 0.252
+  type: 'test'
+  ...
+# Subtest: W-h repair failure preserves frozen debt and carries audit-repair with no clinical write
+ok 45 - W-h repair failure preserves frozen debt and carries audit-repair with no clinical write
+  ---
+  duration_ms: 0.390125
+  type: 'test'
+  ...
+# Subtest: W-h reassert verified source failure is verify-read and successful reassert writes no clinical data
+ok 46 - W-h reassert verified source failure is verify-read and successful reassert writes no clinical data
+  ---
+  duration_ms: 1.400166
+  type: 'test'
+  ...
+# Subtest: W-h load and refresh preserve typed 403 failure for response selection
+ok 47 - W-h load and refresh preserve typed 403 failure for response selection
+  ---
+  duration_ms: 0.635166
+  type: 'test'
+  ...
+# Subtest: W-h load and refresh preserve typed 404 failure for response selection
+ok 48 - W-h load and refresh preserve typed 404 failure for response selection
+  ---
+  duration_ms: 0.553542
+  type: 'test'
+  ...
+# Subtest: W45 reassert command witness rejects changed-baseline reuse without changing mutation audits
+ok 49 - W45 reassert command witness rejects changed-baseline reuse without changing mutation audits
+  ---
+  duration_ms: 1.199542
+  type: 'test'
+  ...
+# Subtest: W84 old reassert audits without both tags are rejected
+ok 50 - W84 old reassert audits without both tags are rejected
+  ---
+  duration_ms: 0.640791
+  type: 'test'
+  ...
+# Subtest: W90 door-put refuses a closed encounter before clinical or audit writes
+ok 51 - W90 door-put refuses a closed encounter before clinical or audit writes
+  ---
+  duration_ms: 3.257375
+  type: 'test'
+  ...
+# Subtest: W90 door-audit-repair refuses a closed encounter before clinical or audit writes
+ok 52 - W90 door-audit-repair refuses a closed encounter before clinical or audit writes
+  ---
+  duration_ms: 1.471291
+  type: 'test'
+  ...
+# Subtest: W90 pick refuses a closed encounter before Condition or Encounter writes
+ok 53 - W90 pick refuses a closed encounter before Condition or Encounter writes
+  ---
+  duration_ms: 0.641042
+  type: 'test'
+  ...
+# Subtest: W111 door returns closure observed after a confirmed command
+ok 54 - W111 door returns closure observed after a confirmed command
+  ---
+  duration_ms: 2.76725
+  type: 'test'
+  ...
+# Subtest: W65 W93 non-shared checkbox definition remains editable but its key is refused by the finding door
+ok 55 - W65 W93 non-shared checkbox definition remains editable but its key is refused by the finding door
+  ---
+  duration_ms: 1.064417
+  type: 'test'
+  ...
+# Subtest: W94 W117 stored select-panel-only mapping produces a candidate without finding supports or evidence reference
+ok 56 - W94 W117 stored select-panel-only mapping produces a candidate without finding supports or evidence reference
+  ---
+  duration_ms: 12.353083
+  type: 'test'
+  ...
+# Subtest: W94 W117 stored select-with-live-fact mapping produces a candidate without finding supports or evidence reference
+ok 57 - W94 W117 stored select-with-live-fact mapping produces a candidate without finding supports or evidence reference
+  ---
+  duration_ms: 10.922959
+  type: 'test'
+  ...
+# Subtest: W94 W117 stored numeric-TBUT-panel-only mapping produces a candidate without finding supports or evidence reference
+ok 58 - W94 W117 stored numeric-TBUT-panel-only mapping produces a candidate without finding supports or evidence reference
+  ---
+  duration_ms: 7.760042
+  type: 'test'
+  ...
+# Subtest: W93 finding GET searchIndex excludes shared select number and non-shared checkbox fields
+ok 59 - W93 finding GET searchIndex excludes shared select number and non-shared checkbox fields
+  ---
+  duration_ms: 1.446791
+  type: 'test'
+  ...
+# Subtest: W92 inactive historical fact remains a labelled read-only row through actual GET
+ok 60 - W92 inactive historical fact remains a labelled read-only row through actual GET
+  ---
+  duration_ms: 0.971791
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves door-put command response
+ok 61 - W111 review closure read failure preserves door-put command response
+  ---
+  duration_ms: 5.987125
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves door-audit-repair command response
+ok 62 - W111 review closure read failure preserves door-audit-repair command response
+  ---
+  duration_ms: 1.380667
+  type: 'test'
+  ...
+# Subtest: W94 review candidate dedupe preserves input objects and unions support
+ok 63 - W94 review candidate dedupe preserves input objects and unions support
+  ---
+  duration_ms: 0.229875
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves pick command response
+ok 64 - W111 review closure read failure preserves pick command response
+  ---
+  duration_ms: 6.589125
+  type: 'test'
+  ...
+# Subtest: W65 ownership restricts catalog and section classification
+ok 65 - W65 ownership restricts catalog and section classification
+  ---
+  duration_ms: 0.784625
+  type: 'test'
+  ...
+# Subtest: W92 inactive definition remains canonical read-only
+ok 66 - W92 inactive definition remains canonical read-only
+  ---
+  duration_ms: 1.889875
+  type: 'test'
+  ...
+# Subtest: W92 inactive field remains canonical read-only
+ok 67 - W92 inactive field remains canonical read-only
+  ---
+  duration_ms: 0.397417
+  type: 'test'
+  ...
+# Subtest: W92 inactive option remains canonical read-only
+ok 68 - W92 inactive option remains canonical read-only
+  ---
+  duration_ms: 1.243958
+  type: 'test'
+  ...
+# Subtest: W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+ok 69 - W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+  ---
+  duration_ms: 1.006916
+  type: 'test'
+  ...
+# Subtest: W95 panel rejects unknown owned inactive select and invalid typed values without writes
+ok 70 - W95 panel rejects unknown owned inactive select and invalid typed values without writes
+  ---
+  duration_ms: 1.284708
+  type: 'test'
+  ...
+# Subtest: W112 W117 panel writer roundtrip replay conflict and revive retain identity
+ok 71 - W112 W117 panel writer roundtrip replay conflict and revive retain identity
+  ---
+  duration_ms: 4.122958
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit agent
+ok 72 - W83 W109 rejects audit agent
+  ---
+  duration_ms: 1.519042
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit activity
+ok 73 - W83 W109 rejects audit activity
+  ---
+  duration_ms: 1.106583
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit system
+ok 74 - W83 W109 rejects audit system
+  ---
+  duration_ms: 1.581917
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit instant
+ok 75 - W83 W109 rejects audit instant
+  ---
+  duration_ms: 0.973083
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit targets
+ok 76 - W83 W109 rejects audit targets
+  ---
+  duration_ms: 0.788209
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit mixed
+ok 77 - W83 W109 rejects audit mixed
+  ---
+  duration_ms: 0.961958
+  type: 'test'
+  ...
+# Subtest: W83 equivalent recorded instants and duplicate targets accepted
+ok 78 - W83 equivalent recorded instants and duplicate targets accepted
+  ---
+  duration_ms: 0.695083
+  type: 'test'
+  ...
+# Subtest: W84 actor-bound reassertion rejects changed actor
+ok 79 - W84 actor-bound reassertion rejects changed actor
+  ---
+  duration_ms: 1.255958
+  type: 'test'
+  ...
+# Subtest: W106 W110 selected panel audit repair leaves other debt unchanged
+ok 80 - W106 W110 selected panel audit repair leaves other debt unchanged
+  ---
+  duration_ms: 2.323833
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact empty deletion conflicts before write or replay
+ok 81 - W85 W128 fact empty deletion conflicts before write or replay
+  ---
+  duration_ms: 1.385084
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 404 deletion conflicts before write or replay
+ok 82 - W85 W128 fact 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.958833
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 410 deletion conflicts before write or replay
+ok 83 - W85 W128 fact 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 2.092834
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel empty deletion conflicts before write or replay
+ok 84 - W85 W128 panel empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.346208
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 404 deletion conflicts before write or replay
+ok 85 - W85 W128 panel 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.387333
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 410 deletion conflicts before write or replay
+ok 86 - W85 W128 panel 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.324417
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert empty deletion conflicts before write or replay
+ok 87 - W85 W128 reassert empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.429542
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 404 deletion conflicts before write or replay
+ok 88 - W85 W128 reassert 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.473208
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 410 deletion conflicts before write or replay
+ok 89 - W85 W128 reassert 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.475667
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 404 and empty owner
+ok 90 - W85 fact baseline read 404 and empty owner
+  ---
+  duration_ms: 0.833125
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 410 and empty owner
+ok 91 - W85 fact baseline read 410 and empty owner
+  ---
+  duration_ms: 0.671833
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 502 and empty owner
+ok 92 - W85 fact baseline read 502 and empty owner
+  ---
+  duration_ms: 0.63475
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 404 and empty owner
+ok 93 - W85 panel baseline read 404 and empty owner
+  ---
+  duration_ms: 0.64375
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 410 and empty owner
+ok 94 - W85 panel baseline read 410 and empty owner
+  ---
+  duration_ms: 0.426208
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 502 and empty owner
+ok 95 - W85 panel baseline read 502 and empty owner
+  ---
+  duration_ms: 0.381916
+  type: 'test'
+  ...
+# Subtest: W85 fact confirmed write then deleted
+ok 96 - W85 fact confirmed write then deleted
+  ---
+  duration_ms: 0.315166
+  type: 'test'
+  ...
+# Subtest: W85 fact unknown write then deleted
+ok 97 - W85 fact unknown write then deleted
+  ---
+  duration_ms: 0.325583
+  type: 'test'
+  ...
+# Subtest: W85 panel confirmed write then deleted
+ok 98 - W85 panel confirmed write then deleted
+  ---
+  duration_ms: 0.157333
+  type: 'test'
+  ...
+# Subtest: W85 panel unknown write then deleted
+ok 99 - W85 panel unknown write then deleted
+  ---
+  duration_ms: 0.156084
+  type: 'test'
+  ...
+# Subtest: W83 initial mismatching audit result and lost response stay mismatch without overwrite
+ok 100 - W83 initial mismatching audit result and lost response stay mismatch without overwrite
+  ---
+  duration_ms: 0.612958
+  type: 'test'
+  ...
+# Subtest: W84 reassert initial forged audit and mixed response are command-reused
+ok 101 - W84 reassert initial forged audit and mixed response are command-reused
+  ---
+  duration_ms: 0.454916
+  type: 'test'
+  ...
+# Subtest: W92 direct writers reject inactive assertions even with historical catalog supplied
+ok 102 - W92 direct writers reject inactive assertions even with historical catalog supplied
+  ---
+  duration_ms: 0.377958
+  type: 'test'
+  ...
+# Subtest: W71 panel scalar storage rejects alternate clinical data and wrong typed payload
+ok 103 - W71 panel scalar storage rejects alternate clinical data and wrong typed payload
+  ---
+  duration_ms: 0.220709
+  type: 'test'
+  ...
+# Subtest: W95 panel missing effective definition is a 400 before any write
+ok 104 - W95 panel missing effective definition is a 400 before any write
+  ---
+  duration_ms: 0.110333
+  type: 'test'
+  ...
+# Subtest: W85 fact lost write then recovery direct read 410 stays unknown
+ok 105 - W85 fact lost write then recovery direct read 410 stays unknown
+  ---
+  duration_ms: 0.447958
+  type: 'test'
+  ...
+# Subtest: W85 panel lost write then recovery direct read 410 stays unknown
+ok 106 - W85 panel lost write then recovery direct read 410 stays unknown
+  ---
+  duration_ms: 0.259667
+  type: 'test'
+  ...
+# Subtest: W71 every panel identity dimension is checked
+ok 107 - W71 every panel identity dimension is checked
+  ---
+  duration_ms: 0.276875
+  type: 'test'
+  ...
+# Subtest: W112 panel stale baseline conflicts; replays classify same state and reject different payload
+ok 108 - W112 panel stale baseline conflicts; replays classify same state and reject different payload
+  ---
+  duration_ms: 0.639
+  type: 'test'
+  ...
+# Subtest: W84 classifyReplay actor binding includes both tags and target set
+ok 109 - W84 classifyReplay actor binding includes both tags and target set
+  ---
+  duration_ms: 0.518333
+  type: 'test'
+  ...
+# Subtest: W109 panel mixed valid and forged audits remains pending
+ok 110 - W109 panel mixed valid and forged audits remains pending
+  ---
+  duration_ms: 0.748959
+  type: 'test'
+  ...
+# Subtest: W95 panel scalar select and string values roundtrip normalized without facts
+ok 111 - W95 panel scalar select and string values roundtrip normalized without facts
+  ---
+  duration_ms: 0.568625
+  type: 'test'
+  ...
+# Subtest: W115 signed final panels and facts retain identity with zero ordinary writes
+ok 112 - W115 signed final panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.224208
+  type: 'test'
+  ...
+# Subtest: W115 signed amended panels and facts retain identity with zero ordinary writes
+ok 113 - W115 signed amended panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 2.7575
+  type: 'test'
+  ...
+# Subtest: W115 signed corrected panels and facts retain identity with zero ordinary writes
+ok 114 - W115 signed corrected panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.336125
+  type: 'test'
+  ...
+# Subtest: W95 review non-shared panel definition returns not-a-shared-finding before writes
+ok 115 - W95 review non-shared panel definition returns not-a-shared-finding before writes
+  ---
+  duration_ms: 0.114334
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-valid-panel
+ok 116 - W71 W112 W117 returned panel identity: foreign-valid-panel
+  ---
+  duration_ms: 0.423083
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: different-eye-valid-panel
+ok 117 - W71 W112 W117 returned panel identity: different-eye-valid-panel
+  ---
+  duration_ms: 0.236916
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-subject
+ok 118 - W71 W112 W117 returned panel identity: foreign-subject
+  ---
+  duration_ms: 0.145042
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-encounter
+ok 119 - W71 W112 W117 returned panel identity: foreign-encounter
+  ---
+  duration_ms: 0.134917
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: same-panel
+ok 120 - W71 W112 W117 returned panel identity: same-panel
+  ---
+  duration_ms: 0.472917
+  type: 'test'
+  ...
+# Subtest: W66 frozen loaded set preserves concurrent addition
+ok 121 - W66 frozen loaded set preserves concurrent addition
+  ---
+  duration_ms: 17.209625
+  type: 'test'
+  ...
+# Subtest: W67 whole request prevalidates stale second eye
+ok 122 - W67 whole request prevalidates stale second eye
+  ---
+  duration_ms: 7.978458
+  type: 'test'
+  ...
+# Subtest: W68 selected positive and scoped negative refuse before writes
+ok 123 - W68 selected positive and scoped negative refuse before writes
+  ---
+  duration_ms: 7.781208
+  type: 'test'
+  ...
+# Subtest: W69 fresh read prevents new negative after concurrent positive
+ok 124 - W69 fresh read prevents new negative after concurrent positive
+  ---
+  duration_ms: 10.682416
+  type: 'test'
+  ...
+# Subtest: W70 deferred preserves fact bytes and version
+ok 125 - W70 deferred preserves fact bytes and version
+  ---
+  duration_ms: 11.118166
+  type: 'test'
+  ...
+# Subtest: W72 current and prior projections hide clears as current
+ok 126 - W72 current and prior projections hide clears as current
+  ---
+  duration_ms: 11.2865
+  type: 'test'
+  ...
+# Subtest: W91 finished refuses save
+ok 127 - W91 finished refuses save
+  ---
+  duration_ms: 14.775333
+  type: 'test'
+  ...
+# Subtest: W91 cancelled refuses save
+ok 128 - W91 cancelled refuses save
+  ---
+  duration_ms: 8.347542
+  type: 'test'
+  ...
+# Subtest: W91 entered-in-error refuses save
+ok 129 - W91 entered-in-error refuses save
+  ---
+  duration_ms: 7.916375
+  type: 'test'
+  ...
+# Subtest: W96 TBUT panel typed values round trip
+ok 130 - W96 TBUT panel typed values round trip
+  ---
+  duration_ms: 9.82825
+  type: 'test'
+  ...
+# Subtest: W97 exact resend completes interrupted eye
+ok 131 - W97 exact resend completes interrupted eye
+  ---
+  duration_ms: 10.4195
+  type: 'test'
+  ...
+# Subtest: W98 intervening same target stale; unrelated target replay succeeds
+ok 132 - W98 intervening same target stale; unrelated target replay succeeds
+  ---
+  duration_ms: 17.4565
+  type: 'test'
+  ...
+# Subtest: W99 loaded present claim cannot match live absent
+ok 133 - W99 loaded present claim cannot match live absent
+  ---
+  duration_ms: 6.107583
+  type: 'test'
+  ...
+# Subtest: W100 negative only audit failure is causal incomplete
+ok 134 - W100 negative only audit failure is causal incomplete
+  ---
+  duration_ms: 7.163208
+  type: 'test'
+  ...
+# Subtest: W110 panel debt surfaces and repair clears it
+ok 135 - W110 panel debt surfaces and repair clears it
+  ---
+  duration_ms: 8.647208
+  type: 'test'
+  ...
+# Subtest: W114 practice option from stored definitions saves and reads
+ok 136 - W114 practice option from stored definitions saves and reads
+  ---
+  duration_ms: 19.867084
+  type: 'test'
+  ...
+# Subtest: W120 persisted negative repairs original audit despite new positive
+ok 137 - W120 persisted negative repairs original audit despite new positive
+  ---
+  duration_ms: 9.064125
+  type: 'test'
+  ...
+# Subtest: W121 same negative id second actor refuses zero writes
+ok 138 - W121 same negative id second actor refuses zero writes
+  ---
+  duration_ms: 7.307375
+  type: 'test'
+  ...
+# Subtest: W122 absent transition requires explicit flag; omission preserves
+ok 139 - W122 absent transition requires explicit flag; omission preserves
+  ---
+  duration_ms: 8.539166
+  type: 'test'
+  ...
+# Subtest: missing baseline 428 no-store and pre-rebuild zero write
+ok 140 - missing baseline 428 no-store and pre-rebuild zero write
+  ---
+  duration_ms: 12.70075
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: dry-eye:conjunctival-staining
+ok 141 - V18 canonical per-eye fields and qualifiers: dry-eye:conjunctival-staining
+  ---
+  duration_ms: 6.735209
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:periocular-adnexa
+ok 142 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:periocular-adnexa
+  ---
+  duration_ms: 30.401958
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lids-lashes
+ok 143 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lids-lashes
+  ---
+  duration_ms: 119.593375
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:palpebral-conjunctiva
+ok 144 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:palpebral-conjunctiva
+  ---
+  duration_ms: 19.634291
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:conjunctiva
+ok 145 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:conjunctiva
+  ---
+  duration_ms: 53.4645
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:tear-film
+ok 146 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:tear-film
+  ---
+  duration_ms: 12.589417
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:cornea
+ok 147 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:cornea
+  ---
+  duration_ms: 409.305666
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:anterior-chamber
+ok 148 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:anterior-chamber
+  ---
+  duration_ms: 19.988458
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:iris
+ok 149 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:iris
+  ---
+  duration_ms: 34.555083
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lens
+ok 150 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lens
+  ---
+  duration_ms: 57.310708
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vitreous
+ok 151 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vitreous
+  ---
+  duration_ms: 22.154625
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:fundus
+ok 152 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:fundus
+  ---
+  duration_ms: 53.884084
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:macula
+ok 153 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:macula
+  ---
+  duration_ms: 48.278042
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vessels
+ok 154 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vessels
+  ---
+  duration_ms: 21.804
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:periphery
+ok 155 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:periphery
+  ---
+  duration_ms: 35.775208
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+ok 156 - V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+  ---
+  duration_ms: 12.583167
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+ok 157 - V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+  ---
+  duration_ms: 12.3135
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:lens brunescent remains readable and refuses writes
+ok 158 - V18 W72 legacy anterior:lens brunescent remains readable and refuses writes
+  ---
+  duration_ms: 12.239333
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy posterior:macula macular-hole-full-lamellar remains readable and refuses writes
+ok 159 - V18 W72 legacy posterior:macula macular-hole-full-lamellar remains readable and refuses writes
+  ---
+  duration_ms: 11.937542
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy posterior:periphery operculated-hole+horseshoe-tear remains readable and refuses writes
+ok 160 - V18 W72 legacy posterior:periphery operculated-hole+horseshoe-tear remains readable and refuses writes
+  ---
+  duration_ms: 12.267
+  type: 'test'
+  ...
+# Subtest: V18 negative scope stays frozen after catalog grows and empty panel never implies a negative
+ok 161 - V18 negative scope stays frozen after catalog grows and empty panel never implies a negative
+  ---
+  duration_ms: 8.199125
+  type: 'test'
+  ...
+# Subtest: V18 negative malformed scope and changed payload refuse without replacement
+ok 162 - V18 negative malformed scope and changed payload refuse without replacement
+  ---
+  duration_ms: 30.0915
+  type: 'test'
+  ...
+# Subtest: V18 malformed persisted negative act fails closed on history
+ok 163 - V18 malformed persisted negative act fails closed on history
+  ---
+  duration_ms: 7.970791
+  type: 'test'
+  ...
+# Subtest: W96 select-only Surface Staining panel round trips without facts
+ok 164 - W96 select-only Surface Staining panel round trips without facts
+  ---
+  duration_ms: 6.546875
+  type: 'test'
+  ...
+# Subtest: W97 panel replay uses frozen original baseline
+ok 165 - W97 panel replay uses frozen original baseline
+  ---
+  duration_ms: 7.292834
+  type: 'test'
+  ...
+# Subtest: V18 invalid qualifiers and signed second target refuse the whole request
+ok 166 - V18 invalid qualifiers and signed second target refuse the whole request
+  ---
+  duration_ms: 12.544042
+  type: 'test'
+  ...
+# Subtest: V18 canonical capture retains ruled lens macula and periphery diagnosis proposals
+ok 167 - V18 canonical capture retains ruled lens macula and periphery diagnosis proposals
+  ---
+  duration_ms: 205.156
+  type: 'test'
+  ...
+# Subtest: V18 qualifier omission never fills sibling cells or flare
+ok 168 - V18 qualifier omission never fills sibling cells or flare
+  ---
+  duration_ms: 8.397333
+  type: 'test'
+  ...
+# Subtest: V18 panel selects and measurements reject invalid range step owned field and option
+ok 169 - V18 panel selects and measurements reject invalid range step owned field and option
+  ---
+  duration_ms: 7.918708
+  type: 'test'
+  ...
+# Subtest: V18 all four qualifier kinds stay independent across options and eyes
+ok 170 - V18 all four qualifier kinds stay independent across options and eyes
+  ---
+  duration_ms: 2.48225
+  type: 'test'
+  ...
+# Subtest: V18 historical aliases are scoped and explicit qualifiers take precedence
+ok 171 - V18 historical aliases are scoped and explicit qualifiers take precedence
+  ---
+  duration_ms: 13.03875
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+ok 172 - V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+  ---
+  duration_ms: 5.962625
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing foreign record follows scoped history policy
+ok 173 - V21 F1 patient-wide contributing foreign record follows scoped history policy
+  ---
+  duration_ms: 5.814666
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing unscoped record follows scoped history policy
+ok 174 - V21 F1 patient-wide contributing unscoped record follows scoped history policy
+  ---
+  duration_ms: 6.617375
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing malformed record follows scoped history policy
+ok 175 - V21 F1 patient-wide contributing malformed record follows scoped history policy
+  ---
+  duration_ms: 6.266708
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves ocular save command response
+ok 176 - W111 review closure read failure preserves ocular save command response
+  ---
+  duration_ms: 9.291875
+  type: 'test'
+  ...
+# Subtest: V21 review priors searches exact base field and option codes including inactive entries
+ok 177 - V21 review priors searches exact base field and option codes including inactive entries
+  ---
+  duration_ms: 0.615167
+  type: 'test'
+  ...
+# Subtest: W147 unchanged signed loaded witness permits Remarks without changing the fact
+ok 178 - W147 unchanged signed loaded witness permits Remarks without changing the fact
+  ---
+  duration_ms: 7.965667
+  type: 'test'
+  ...
+# Subtest: W147 signed deselect remains refused with zero writes
+ok 179 - W147 signed deselect remains refused with zero writes
+  ---
+  duration_ms: 6.254208
+  type: 'test'
+  ...
+# Subtest: W147 signed regrade remains refused with zero writes
+ok 180 - W147 signed regrade remains refused with zero writes
+  ---
+  duration_ms: 6.014125
+  type: 'test'
+  ...
+# Subtest: W147 unchanged signed witness with a moved fresh version refuses stale baseline
+ok 181 - W147 unchanged signed witness with a moved fresh version refuses stale baseline
+  ---
+  duration_ms: 6.820792
+  type: 'test'
+  ...
+# Subtest: W147 inactive option is an unchanged witness while active panel Remarks save
+ok 182 - W147 inactive option is an unchanged witness while active panel Remarks save
+  ---
+  duration_ms: 6.946583
+  type: 'test'
+  ...
+# Subtest: T1 previous exams displays canonical finding linked by extension
+ok 183 - T1 previous exams displays canonical finding linked by extension
+  ---
+  duration_ms: 12.306584
+  type: 'test'
+  ...
+# Subtest: T2 carry pull preserves canonical identity typed qualifiers and destination home
+ok 184 - T2 carry pull preserves canonical identity typed qualifiers and destination home
+  ---
+  duration_ms: 12.331416
+  type: 'test'
+  ...
+# Subtest: T3 later writer version after carry is read as edited
+ok 185 - T3 later writer version after carry is read as edited
+  ---
+  duration_ms: 11.761042
+  type: 'test'
+  ...
+# Subtest: T7 overview shows live canonical facts and excludes cleared facts
+ok 186 - T7 overview shows live canonical facts and excludes cleared facts
+  ---
+  duration_ms: 1.262834
+  type: 'test'
+  ...
+# Subtest: T8 overview evidence includes extension homes without Condition evidence
+ok 187 - T8 overview evidence includes extension homes without Condition evidence
+  ---
+  duration_ms: 9.318584
+  type: 'test'
+  ...
+# Subtest: T9 completeness credits live canonical facts but not cleared facts
+ok 188 - T9 completeness credits live canonical facts but not cleared facts
+  ---
+  duration_ms: 16.2375
+  type: 'test'
+  ...
+# Subtest: T10 section void selects canonical facts and undo restores exact records
+ok 189 - T10 section void selects canonical facts and undo restores exact records
+  ---
+  duration_ms: 4.156833
+  type: 'test'
+  ...
+# Subtest: T11 finding void and undo preserve identity qualifiers homes and other eye
+ok 190 - T11 finding void and undo preserve identity qualifiers homes and other eye
+  ---
+  duration_ms: 2.547084
+  type: 'test'
+  ...
+# Subtest: T12 encounter void and undo include canonical facts with exact counts
+ok 191 - T12 encounter void and undo include canonical facts with exact counts
+  ---
+  duration_ms: 2.376958
+  type: 'test'
+  ...
+# Subtest: T13 lifecycle mutation repairs owed audit before replacing clinical state
+ok 192 - T13 lifecycle mutation repairs owed audit before replacing clinical state
+  ---
+  duration_ms: 2.273083
+  type: 'test'
+  ...
+# Subtest: T14 lifecycle refuses signed canonical facts without downgrading them
+ok 193 - T14 lifecycle refuses signed canonical facts without downgrading them
+  ---
+  duration_ms: 0.565583
+  type: 'test'
+  ...
+# Subtest: T17 supported Ocular Health pick links fact targets without Condition evidence
+ok 194 - T17 supported Ocular Health pick links fact targets without Condition evidence
+  ---
+  duration_ms: 10.195833
+  type: 'test'
+  ...
+# Subtest: T19 protocol capture reads current canonical facts instead of raw exact-code rows
+ok 195 - T19 protocol capture reads current canonical facts instead of raw exact-code rows
+  ---
+  duration_ms: 8.845083
+  type: 'test'
+  ...
+# Subtest: T20 source census identifies any exam PDF consumer for canonical migration
+ok 196 - T20 source census identifies any exam PDF consumer for canonical migration
+  ---
+  duration_ms: 125.396958
+  type: 'test'
+  ...
+# Subtest: T21 pre-rebuild Ocular Health history and capture remain read-only
+ok 197 - T21 pre-rebuild Ocular Health history and capture remain read-only
+  ---
+  duration_ms: 2.602708
+  type: 'test'
+  ...
+# Subtest: T22 every registered finding write path uses real handlers and emits permitted Observations
+ok 198 - T22 every registered finding write path uses real handlers and emits permitted Observations
+  ---
+  duration_ms: 5382.221375
+  type: 'test'
+  ...
+# {"id":"door-put","scenarioId":"door-put-success","handler":"handleDiagnosisFindingsMutationRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"}],"rejection":{"scenarioId":"door-put-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"door-audit-repair","scenarioId":"door-audit-repair-success","handler":"handleDiagnosisFindingsAuditRepairRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"door-repair-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"pick-condition","scenarioId":"pick-condition-success","handler":"handleDiagnosisPickRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[],"rejection":{"scenarioId":"pick-condition-success","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-save-fact","scenarioId":"oh-save-fact-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"}],"rejection":{"scenarioId":"oh-save-fact-refusal","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-save-panel","scenarioId":"oh-save-panel-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"panel-context"}],"rejection":{"scenarioId":"oh-save-panel-refusal","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-negative-act","scenarioId":"oh-negative-act-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"negative-act"},{"stage":"persisted","reference":"Observation/observation-1","kind":"negative-act"}],"rejection":{"scenarioId":"oh-negative-act-refusal","status":409,"reason":"positive-in-negative-scope","attempted":0,"persisted":0}}
+# {"id":"void","scenarioId":"lifecycle-success","handler":"handleEncounterVoidRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-3","kind":"panel-context"}],"rejection":{"scenarioId":"void-signed","status":422,"reason":"signed-or-cancelled","attempted":0,"persisted":0}}
+# {"id":"undo","scenarioId":"lifecycle-success","handler":"handleEncounterUndoRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-3","kind":"panel-context"}],"rejection":{"scenarioId":"lifecycle-success","status":409,"reason":"undo-superseded","attempted":0,"persisted":0}}
+# {"id":"carry-condition","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-plan","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-link","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-facts","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/d851c54c-1299-4580-a908-0f385e396d3b","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/207fafe9-f4f4-42b0-86b7-03e460367867","kind":"canonical-fact"}],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-lineage","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"protocol-commit","scenarioId":"protocol-apply-unapply","handler":"handleProtocolApplyRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":5,"persisted":5,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/496742d4-2e14-4196-9351-ab784c5d8daf","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-commit-shared-reject","status":422,"reason":"shared-finding-charted-in-ocular-health","attempted":0,"persisted":0}}
+# {"id":"protocol-unapply","scenarioId":"protocol-apply-unapply","handler":"handleProtocolUnapplyRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/496742d4-2e14-4196-9351-ab784c5d8daf","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-unapply-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"protocol-restore","scenarioId":"protocol-restore-compensation","handler":"handleProtocolUnapplyRequest","responseStatus":500,"rejectionScope":"phase-only","attempted":1,"persisted":1,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/ca7f7244-202e-4783-8c16-f741b172a408","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-restore-late-close","status":409,"reason":"encounter-closed; zero restore writes, preceding unapply and Basic compensation retained separately","attempted":0,"persisted":0}}
+# {"id":"mcp-create-observation","scenarioId":"T22:mcp-create-observation","handler":"create_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/ef52c151-0bdf-4c38-9559-99a6bc2647c6","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-create-observation:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-scribe-write","scenarioId":"T22:mcp-scribe-write","handler":"scribe_write_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/852f7270-7a1d-45c0-93e6-69dc8f148762","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-scribe-write:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-save-section","scenarioId":"T22:mcp-save-section","handler":"save_section_observations","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/7a0f7d3b-6d06-436b-813b-46004984df25","kind":"unrelated"},{"stage":"persisted","reference":"Observation/9ae79a41-97fc-4824-bad8-cc4d0ed16b99","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-save-section:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-append-context","scenarioId":"T22:mcp-append-context","handler":"append_observation_context","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/41892070-90e6-4cf3-bc78-3f8faf0ae233","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-append-context:canonical-shared-source","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-attest","scenarioId":"T22:mcp-attest","handler":"clinician_attest_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"persisted","reference":"Observation/65674da3-e5ba-4c0f-9c82-f4eb11ef8804","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/1f38862c-920a-405f-891a-18ef21bf82e6","kind":"panel-context"}],"rejection":{"scenarioId":"T22:mcp-attest:legacy-target-refusal","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-amend","scenarioId":"T22:mcp-amend","handler":"amend_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"persisted","reference":"Observation/85830818-fc51-4014-b7fe-aeb044ab3cb2","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/eea9da8d-7937-4ec6-89bc-ab56f064aba5","kind":"panel-context"}],"rejection":{"scenarioId":"T22:mcp-amend:legacy-target-refusal","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-smoking-status","scenarioId":"T22:mcp-smoking-status","handler":"create_smoking_status_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/f9f5e77f-a9ba-4b80-b1f2-75f13e5fe8d7","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-smoking-status:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-dry-eye-questionnaire-score","scenarioId":"T22:mcp-dry-eye-questionnaire-score","handler":"create_dry_eye_questionnaire_response","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/70096f28-4f2c-4240-b6be-446e52d50c18","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-dry-eye-questionnaire-score:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-meibography","scenarioId":"T22:mcp-meibography","handler":"create_meibography_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/225c1328-bb35-4089-9ce2-fcd09effdeb8","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-meibography:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-ortho-k-fit","scenarioId":"T22:mcp-ortho-k-fit","handler":"record_ortho_k_fit_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/1f4ace74-7f89-48d4-8c40-9269fe91f621","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-ortho-k-fit:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-eye-growth","scenarioId":"T22:mcp-eye-growth","handler":"record_eye_growth_axial_length_measurement","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/finding-axial-length-od-2026-09-16t12-00-00-000z","kind":"unrelated"},{"stage":"persisted","reference":"Observation/finding-corneal-radius-od-2026-09-16t12-00-00-000z","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-eye-growth:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"census":{"paths":27,"sites":97,"mapped":30,"excluded":67}}
+1..198
+# tests 198
+# suites 0
+# pass 198
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6331.163541

@@ -1,0 +1,42 @@
+{
+  "currentFindingWriter": {
+    "exit": 0,
+    "tests": 50,
+    "pass": 50,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "r10A3Library": {
+    "exit": 0,
+    "tests": 56,
+    "pass": 56,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "r10A3OcularDoor": {
+    "exit": 0,
+    "tests": 62,
+    "pass": 62,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "r10A3DoorGuards": {
+    "exit": 0,
+    "tests": 14,
+    "pass": 14,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "r10A3ReleaseScenarios": {
+    "exit": 0,
+    "tests": 16,
+    "pass": 16,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+}

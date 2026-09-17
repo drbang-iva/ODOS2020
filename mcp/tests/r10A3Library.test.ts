@@ -120,3 +120,36 @@ test('W95 review non-shared panel definition returns not-a-shared-finding before
  await assert.rejects(executeFindingCommand({...context(m),definitions:defs.map(d=>({...d,valueSchema:{...d.valueSchema,type:'section'}}))},command([target()]) as FindingCommand),{status:400,code:'not-a-shared-finding',message:'not-a-shared-finding'});
  assert.equal(m.writes.length,0);
 });
+
+for(const mode of ['foreign-valid-panel','different-eye-valid-panel','foreign-subject','foreign-encounter','same-panel'] as const)test(`W71 W112 W117 returned panel identity: ${mode}`,async()=>{
+ const m=memoryFhir(),create=m.fhir.createWithOutcome.bind(m.fhir);let returned:Observation|undefined;let conditionalReturns=0;
+ m.fhir.createWithOutcome=(async(resource:any,headers:any)=>{
+  if(resource.resourceType!=='Observation')return create(resource,headers);
+  conditionalReturns++;const saved=structuredClone(resource) as Observation;saved.id='conditional-owner';saved.meta={versionId:'conditional-v1'};
+  if(mode==='foreign-valid-panel' || mode==='different-eye-valid-panel') {
+   const key=mode==='foreign-valid-panel'?{...panelKey,patientId:'other-patient',encounterId:'other-encounter'}:{...panelKey,eye:'OS' as const};
+   saved.identifier=[identity.findingPanelIdentifier(key)];saved.subject={reference:`Patient/${key.patientId}`};saved.encounter={reference:`Encounter/${key.encounterId}`};
+   saved.component!.find(c=>c.code.coding?.some(v=>v.code==='R10_PANEL_META'))!.valueString=JSON.stringify(key);
+   if(mode==='different-eye-valid-panel')saved.extension!.find(e=>e.valueCodeableConcept)?.valueCodeableConcept!.coding!.forEach(c=>{if(c.code==='OD')c.code='OS';});
+  }
+  if(mode==='foreign-subject')saved.subject={reference:'Patient/other-patient'};
+  if(mode==='foreign-encounter')saved.encounter={reference:'Encounter/other-encounter'};
+  returned=structuredClone(saved);m.resources.set(`Observation/${saved.id}`,saved);return {resource:saved,created:false};
+ }) as typeof m.fhir.createWithOutcome;
+ const c=command([target()]),result=await run(m,c);
+ assert.equal(identity.parseFindingPanelEnvelope(returned!).status,mode==='foreign-subject'||mode==='foreign-encounter'?'invalid':'valid');
+ if(mode==='same-panel') {
+  assert.equal(result.outcomes[0].status,'already-applied');
+  assert.equal((await run(m,c)).outcomes[0].status,'already-applied');
+  assert.equal(m.writes.filter(w=>w.resource.resourceType==='Provenance').length,1);
+  assert.equal(m.all('Provenance').length,1);
+ } else {
+  assert.equal(result.outcomes[0].status,'conflict');
+  assert.equal(result.outcomes[0].cause,'verify-read');
+  assert.equal(result.outcomes[0].reason,'Returned panel owner does not match the requested identity.');
+  assert.equal(m.writes.length,0);
+  assert.equal(m.all('Provenance').length,0);
+ }
+ assert.equal(conditionalReturns,1);
+ assert.deepEqual(m.all('Observation'),[returned]);
+});

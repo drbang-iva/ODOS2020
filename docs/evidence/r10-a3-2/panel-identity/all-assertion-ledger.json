@@ -1,0 +1,81 @@
+{
+  "base": "d6a98fee5483c6b5173ebb1fa2ae3e5b15ecea06",
+  "head": "working-tree",
+  "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
+  "files": [
+    {
+      "file": "mcp/tests/r10A3Library.test.ts",
+      "assertionCountBefore": 84,
+      "assertionCountAfter": 96,
+      "changedGroups": [
+        {
+          "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+          "mapping": "W71 / W112 / W117",
+          "before": [],
+          "after": [
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 140,
+              "text": "assert.equal(identity.parseFindingPanelEnvelope(returned!).status,mode==='foreign-subject'||mode==='foreign-encounter'?'invalid':'valid')"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 142,
+              "text": "assert.equal(result.outcomes[0].status,'already-applied')"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 143,
+              "text": "assert.equal((await run(m,c)).outcomes[0].status,'already-applied')"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 144,
+              "text": "assert.equal(m.writes.filter(w=>w.resource.resourceType==='Provenance').length,1)"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 145,
+              "text": "assert.equal(m.all('Provenance').length,1)"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 147,
+              "text": "assert.equal(result.outcomes[0].status,'conflict')"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 148,
+              "text": "assert.equal(result.outcomes[0].cause,'verify-read')"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 149,
+              "text": "assert.equal(result.outcomes[0].reason,'Returned panel owner does not match the requested identity.')"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 150,
+              "text": "assert.equal(m.writes.length,0)"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 151,
+              "text": "assert.equal(m.all('Provenance').length,0)"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 153,
+              "text": "assert.equal(conditionalReturns,1)"
+            },
+            {
+              "test": "`W71 W112 W117 returned panel identity: ${mode}`",
+              "line": 154,
+              "text": "assert.deepEqual(m.all('Observation'),[returned])"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

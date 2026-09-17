@@ -1,0 +1,110 @@
+TAP version 13
+# Subtest: W71 W112 W117 returned panel identity: foreign-valid-panel
+not ok 1 - W71 W112 W117 returned panel identity: foreign-valid-panel
+  ---
+  duration_ms: 5.165708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:1:17366'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'already-applied'
+    - 'conflict'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'conflict'
+  actual: 'already-applied'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:147:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W71 W112 W117 returned panel identity: different-eye-valid-panel
+not ok 2 - W71 W112 W117 returned panel identity: different-eye-valid-panel
+  ---
+  duration_ms: 0.97975
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:1:17366'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'already-applied'
+    - 'conflict'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'conflict'
+  actual: 'already-applied'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:147:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-subject
+not ok 3 - W71 W112 W117 returned panel identity: foreign-subject
+  ---
+  duration_ms: 0.369417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:1:17366'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'verify-read'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'verify-read'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:148:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-encounter
+not ok 4 - W71 W112 W117 returned panel identity: foreign-encounter
+  ---
+  duration_ms: 0.264416
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:1:17366'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'verify-read'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'verify-read'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/mcp/tests/r10A3Library.test.ts:148:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W71 W112 W117 returned panel identity: same-panel
+ok 5 - W71 W112 W117 returned panel identity: same-panel
+  ---
+  duration_ms: 1.269
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 285.793416

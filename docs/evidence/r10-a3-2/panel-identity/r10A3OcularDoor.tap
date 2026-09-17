@@ -1,0 +1,382 @@
+TAP version 13
+# Subtest: W66 frozen loaded set preserves concurrent addition
+ok 1 - W66 frozen loaded set preserves concurrent addition
+  ---
+  duration_ms: 14.9515
+  type: 'test'
+  ...
+# Subtest: W67 whole request prevalidates stale second eye
+ok 2 - W67 whole request prevalidates stale second eye
+  ---
+  duration_ms: 7.332166
+  type: 'test'
+  ...
+# Subtest: W68 selected positive and scoped negative refuse before writes
+ok 3 - W68 selected positive and scoped negative refuse before writes
+  ---
+  duration_ms: 6.921125
+  type: 'test'
+  ...
+# Subtest: W69 fresh read prevents new negative after concurrent positive
+ok 4 - W69 fresh read prevents new negative after concurrent positive
+  ---
+  duration_ms: 8.44175
+  type: 'test'
+  ...
+# Subtest: W70 deferred preserves fact bytes and version
+ok 5 - W70 deferred preserves fact bytes and version
+  ---
+  duration_ms: 6.976625
+  type: 'test'
+  ...
+# Subtest: W72 current and prior projections hide clears as current
+ok 6 - W72 current and prior projections hide clears as current
+  ---
+  duration_ms: 10.064666
+  type: 'test'
+  ...
+# Subtest: W91 finished refuses save
+ok 7 - W91 finished refuses save
+  ---
+  duration_ms: 6.462958
+  type: 'test'
+  ...
+# Subtest: W91 cancelled refuses save
+ok 8 - W91 cancelled refuses save
+  ---
+  duration_ms: 6.115792
+  type: 'test'
+  ...
+# Subtest: W91 entered-in-error refuses save
+ok 9 - W91 entered-in-error refuses save
+  ---
+  duration_ms: 6.296333
+  type: 'test'
+  ...
+# Subtest: W96 TBUT panel typed values round trip
+ok 10 - W96 TBUT panel typed values round trip
+  ---
+  duration_ms: 7.603
+  type: 'test'
+  ...
+# Subtest: W97 exact resend completes interrupted eye
+ok 11 - W97 exact resend completes interrupted eye
+  ---
+  duration_ms: 8.619666
+  type: 'test'
+  ...
+# Subtest: W98 intervening same target stale; unrelated target replay succeeds
+ok 12 - W98 intervening same target stale; unrelated target replay succeeds
+  ---
+  duration_ms: 17.098875
+  type: 'test'
+  ...
+# Subtest: W99 loaded present claim cannot match live absent
+ok 13 - W99 loaded present claim cannot match live absent
+  ---
+  duration_ms: 5.835958
+  type: 'test'
+  ...
+# Subtest: W100 negative only audit failure is causal incomplete
+ok 14 - W100 negative only audit failure is causal incomplete
+  ---
+  duration_ms: 6.684084
+  type: 'test'
+  ...
+# Subtest: W110 panel debt surfaces and repair clears it
+ok 15 - W110 panel debt surfaces and repair clears it
+  ---
+  duration_ms: 7.407125
+  type: 'test'
+  ...
+# Subtest: W114 practice option from stored definitions saves and reads
+ok 16 - W114 practice option from stored definitions saves and reads
+  ---
+  duration_ms: 17.812958
+  type: 'test'
+  ...
+# Subtest: W120 persisted negative repairs original audit despite new positive
+ok 17 - W120 persisted negative repairs original audit despite new positive
+  ---
+  duration_ms: 7.99275
+  type: 'test'
+  ...
+# Subtest: W121 same negative id second actor refuses zero writes
+ok 18 - W121 same negative id second actor refuses zero writes
+  ---
+  duration_ms: 6.687041
+  type: 'test'
+  ...
+# Subtest: W122 absent transition requires explicit flag; omission preserves
+ok 19 - W122 absent transition requires explicit flag; omission preserves
+  ---
+  duration_ms: 7.264917
+  type: 'test'
+  ...
+# Subtest: missing baseline 428 no-store and pre-rebuild zero write
+ok 20 - missing baseline 428 no-store and pre-rebuild zero write
+  ---
+  duration_ms: 11.360625
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: dry-eye:conjunctival-staining
+ok 21 - V18 canonical per-eye fields and qualifiers: dry-eye:conjunctival-staining
+  ---
+  duration_ms: 6.522125
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:periocular-adnexa
+ok 22 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:periocular-adnexa
+  ---
+  duration_ms: 27.815
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lids-lashes
+ok 23 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lids-lashes
+  ---
+  duration_ms: 109.335459
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:palpebral-conjunctiva
+ok 24 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:palpebral-conjunctiva
+  ---
+  duration_ms: 17.420792
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:conjunctiva
+ok 25 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:conjunctiva
+  ---
+  duration_ms: 49.088459
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:tear-film
+ok 26 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:tear-film
+  ---
+  duration_ms: 12.065916
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:cornea
+ok 27 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:cornea
+  ---
+  duration_ms: 359.173709
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:anterior-chamber
+ok 28 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:anterior-chamber
+  ---
+  duration_ms: 17.801458
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:iris
+ok 29 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:iris
+  ---
+  duration_ms: 31.386666
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lens
+ok 30 - V18 canonical per-eye fields and qualifiers: ocular-health:anterior:lens
+  ---
+  duration_ms: 55.540208
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vitreous
+ok 31 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vitreous
+  ---
+  duration_ms: 21.920709
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:fundus
+ok 32 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:fundus
+  ---
+  duration_ms: 50.868166
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:macula
+ok 33 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:macula
+  ---
+  duration_ms: 45.783041
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vessels
+ok 34 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:vessels
+  ---
+  duration_ms: 20.880625
+  type: 'test'
+  ...
+# Subtest: V18 canonical per-eye fields and qualifiers: ocular-health:posterior:periphery
+ok 35 - V18 canonical per-eye fields and qualifiers: ocular-health:posterior:periphery
+  ---
+  duration_ms: 32.32525
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+ok 36 - V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+  ---
+  duration_ms: 12.615416
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+ok 37 - V18 W72 legacy anterior:cornea superficial-punctate-keratitis-spk remains readable and refuses writes
+  ---
+  duration_ms: 11.799542
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy anterior:lens brunescent remains readable and refuses writes
+ok 38 - V18 W72 legacy anterior:lens brunescent remains readable and refuses writes
+  ---
+  duration_ms: 11.744292
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy posterior:macula macular-hole-full-lamellar remains readable and refuses writes
+ok 39 - V18 W72 legacy posterior:macula macular-hole-full-lamellar remains readable and refuses writes
+  ---
+  duration_ms: 12.076542
+  type: 'test'
+  ...
+# Subtest: V18 W72 legacy posterior:periphery operculated-hole+horseshoe-tear remains readable and refuses writes
+ok 40 - V18 W72 legacy posterior:periphery operculated-hole+horseshoe-tear remains readable and refuses writes
+  ---
+  duration_ms: 11.218292
+  type: 'test'
+  ...
+# Subtest: V18 negative scope stays frozen after catalog grows and empty panel never implies a negative
+ok 41 - V18 negative scope stays frozen after catalog grows and empty panel never implies a negative
+  ---
+  duration_ms: 8.237834
+  type: 'test'
+  ...
+# Subtest: V18 negative malformed scope and changed payload refuse without replacement
+ok 42 - V18 negative malformed scope and changed payload refuse without replacement
+  ---
+  duration_ms: 29.759458
+  type: 'test'
+  ...
+# Subtest: V18 malformed persisted negative act fails closed on history
+ok 43 - V18 malformed persisted negative act fails closed on history
+  ---
+  duration_ms: 7.37725
+  type: 'test'
+  ...
+# Subtest: W96 select-only Surface Staining panel round trips without facts
+ok 44 - W96 select-only Surface Staining panel round trips without facts
+  ---
+  duration_ms: 6.184083
+  type: 'test'
+  ...
+# Subtest: W97 panel replay uses frozen original baseline
+ok 45 - W97 panel replay uses frozen original baseline
+  ---
+  duration_ms: 7.020917
+  type: 'test'
+  ...
+# Subtest: V18 invalid qualifiers and signed second target refuse the whole request
+ok 46 - V18 invalid qualifiers and signed second target refuse the whole request
+  ---
+  duration_ms: 11.67125
+  type: 'test'
+  ...
+# Subtest: V18 canonical capture retains ruled lens macula and periphery diagnosis proposals
+ok 47 - V18 canonical capture retains ruled lens macula and periphery diagnosis proposals
+  ---
+  duration_ms: 198.1855
+  type: 'test'
+  ...
+# Subtest: V18 qualifier omission never fills sibling cells or flare
+ok 48 - V18 qualifier omission never fills sibling cells or flare
+  ---
+  duration_ms: 8.712791
+  type: 'test'
+  ...
+# Subtest: V18 panel selects and measurements reject invalid range step owned field and option
+ok 49 - V18 panel selects and measurements reject invalid range step owned field and option
+  ---
+  duration_ms: 7.028667
+  type: 'test'
+  ...
+# Subtest: V18 all four qualifier kinds stay independent across options and eyes
+ok 50 - V18 all four qualifier kinds stay independent across options and eyes
+  ---
+  duration_ms: 2.259
+  type: 'test'
+  ...
+# Subtest: V18 historical aliases are scoped and explicit qualifiers take precedence
+ok 51 - V18 historical aliases are scoped and explicit qualifiers take precedence
+  ---
+  duration_ms: 12.438167
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+ok 52 - V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+  ---
+  duration_ms: 6.549667
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing foreign record follows scoped history policy
+ok 53 - V21 F1 patient-wide contributing foreign record follows scoped history policy
+  ---
+  duration_ms: 5.222917
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing unscoped record follows scoped history policy
+ok 54 - V21 F1 patient-wide contributing unscoped record follows scoped history policy
+  ---
+  duration_ms: 5.97275
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing malformed record follows scoped history policy
+ok 55 - V21 F1 patient-wide contributing malformed record follows scoped history policy
+  ---
+  duration_ms: 6.191333
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves ocular save command response
+ok 56 - W111 review closure read failure preserves ocular save command response
+  ---
+  duration_ms: 9.419334
+  type: 'test'
+  ...
+# Subtest: V21 review priors searches exact base field and option codes including inactive entries
+ok 57 - V21 review priors searches exact base field and option codes including inactive entries
+  ---
+  duration_ms: 0.579
+  type: 'test'
+  ...
+# Subtest: W147 unchanged signed loaded witness permits Remarks without changing the fact
+ok 58 - W147 unchanged signed loaded witness permits Remarks without changing the fact
+  ---
+  duration_ms: 7.568917
+  type: 'test'
+  ...
+# Subtest: W147 signed deselect remains refused with zero writes
+ok 59 - W147 signed deselect remains refused with zero writes
+  ---
+  duration_ms: 6.794375
+  type: 'test'
+  ...
+# Subtest: W147 signed regrade remains refused with zero writes
+ok 60 - W147 signed regrade remains refused with zero writes
+  ---
+  duration_ms: 5.498083
+  type: 'test'
+  ...
+# Subtest: W147 unchanged signed witness with a moved fresh version refuses stale baseline
+ok 61 - W147 unchanged signed witness with a moved fresh version refuses stale baseline
+  ---
+  duration_ms: 5.780583
+  type: 'test'
+  ...
+# Subtest: W147 inactive option is an unchanged witness while active panel Remarks save
+ok 62 - W147 inactive option is an unchanged witness while active panel Remarks save
+  ---
+  duration_ms: 7.551625
+  type: 'test'
+  ...
+1..62
+# tests 62
+# suites 0
+# pass 62
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1643.789792
