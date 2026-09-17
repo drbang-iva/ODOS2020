@@ -35,7 +35,7 @@ export async function requestOcucoGatekeeperPinCredentials(
 
   let response: Response;
   try {
-    response = await (input.fetchImpl ?? fetch)(url, { method: "GET" });
+    response = await (input.fetchImpl ?? fetch)(url, { method: "GET", redirect: "error" });
   } catch {
     throw new Error("Ocuco Gatekeeper PIN exchange failed before a response was received.");
   }

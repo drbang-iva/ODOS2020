@@ -255,10 +255,10 @@ unset OCUCO_GATEKEEPER_PIN
 
 The command makes the unauthenticated `lab_access_with_pin` request once and stores
 only the returned `jwt_key` and `jwt_secret` as `OCUCO_GATEKEEPER_JWT_KEY` and
-`OCUCO_GATEKEEPER_JWT_SECRET` in the ignored root `.env` with mode `0600`. It refuses
-an existing credential pair before calling Ocuco. It does not save or print the PIN,
-the JWT pair, or the other fields in Ocuco's response. Load the updated `.env` into
-the MCP service environment when restarting that service. Keep
+`OCUCO_GATEKEEPER_JWT_SECRET` by appending to the ignored root `.env` with mode
+`0600`. It refuses an existing credential pair before calling Ocuco. It does not
+save or print the PIN, the JWT pair, or the other fields in Ocuco's response.
+Load the updated `.env` into the MCP service environment when restarting it. Keep
 `ODOS_LAB_ORDER_VENDOR_DEFAULT=manual` until the separate live transport gates are
 cleared. If a failure after the exchange reports a private recovery file, recover
 the returned credentials from that file before trying the one-time PIN again.

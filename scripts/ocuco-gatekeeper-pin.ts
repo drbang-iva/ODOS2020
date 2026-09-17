@@ -1,10 +1,13 @@
 #!/usr/bin/env tsx
 import { randomUUID } from "node:crypto";
 import {
+  closeSync,
+  constants,
+  fchmodSync,
+  fsyncSync,
   mkdirSync,
+  openSync,
   readFileSync,
-  renameSync,
-  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -20,8 +23,7 @@ export interface OcucoGatekeeperBootstrapInput extends OcucoGatekeeperPinRequest
 }
 
 export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstrapInput): Promise<void> {
-  const original = readEnv(input.envPath);
-  assertUnconfigured(original, input.baseUrl);
+  assertUnconfigured(readEnv(input.envPath), input.baseUrl);
 
   const recoveryDirectory = join(dirname(input.envPath), ".odos");
   mkdirSync(recoveryDirectory, { recursive: true, mode: 0o700 });
@@ -35,25 +37,31 @@ export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstra
     unlinkSync(temporaryPath);
     throw error;
   }
-  let saved: string;
+  let settings: string;
   try {
-    saved = updateEnv(original, input.baseUrl, credentials.jwtKey, credentials.jwtSecret);
+    settings = renderEnvSettings(input.baseUrl, credentials.jwtKey, credentials.jwtSecret);
   } catch {
     writeFileSync(temporaryPath, JSON.stringify(credentials), { mode: 0o600 });
     throw new Error(`Ocuco Gatekeeper credentials could not be encoded for .env; they remain in private recovery file ${temporaryPath}.`);
   }
-  writeFileSync(temporaryPath, saved, { mode: 0o600 });
-  if (readEnv(input.envPath) !== original) {
-    throw new Error(`Ocuco Gatekeeper .env changed during the PIN exchange; credentials remain in private recovery file ${temporaryPath}.`);
-  }
+  writeFileSync(temporaryPath, settings, { mode: 0o600 });
   try {
-    renameSync(temporaryPath, input.envPath);
+    assertUnconfigured(readEnv(input.envPath), input.baseUrl);
+    const fd = openSync(input.envPath, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT, 0o600);
+    try {
+      fchmodSync(fd, 0o600);
+      writeFileSync(fd, `\n${settings}`);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    if (!readEnv(input.envPath).includes(settings)) {
+      throw new Error("The env file changed while credentials were being saved.");
+    }
   } catch {
     throw new Error(`Ocuco Gatekeeper credentials could not be installed; they remain in private recovery file ${temporaryPath}.`);
   }
-  if ((statSync(input.envPath).mode & 0o777) !== 0o600) {
-    throw new Error("Ocuco Gatekeeper credential file permissions are not private.");
-  }
+  unlinkSync(temporaryPath);
 }
 
 function readEnv(path: string): string {
@@ -85,23 +93,13 @@ function envValues(content: string, name: string): string[] {
     .filter((value): value is string => value !== undefined);
 }
 
-function updateEnv(content: string, baseUrl: string, jwtKey: string, jwtSecret: string): string {
-  const lines = content ? content.replace(/\n$/, "").split(/\r?\n/) : [];
-  const settings = new Map([
-    ["OCUCO_GATEKEEPER_BASE_URL", encodeEnvValue(baseUrl)],
-    ["OCUCO_GATEKEEPER_JWT_KEY", encodeEnvValue(jwtKey)],
-    ["OCUCO_GATEKEEPER_JWT_SECRET", encodeEnvValue(jwtSecret)],
-  ]);
-  for (let index = 0; index < lines.length; index += 1) {
-    const name = lines[index].match(/^\s*(?:export\s+)?(OCUCO_GATEKEEPER_(?:BASE_URL|JWT_KEY|JWT_SECRET))\s*=/)?.[1];
-    if (!name) continue;
-    if (settings.has(name)) {
-      lines[index] = `${name}=${settings.get(name)}`;
-      settings.delete(name);
-    }
-  }
-  for (const [name, value] of settings) lines.push(`${name}=${value}`);
-  return `${lines.join("\n")}\n`;
+function renderEnvSettings(baseUrl: string, jwtKey: string, jwtSecret: string): string {
+  return [
+    `OCUCO_GATEKEEPER_BASE_URL=${encodeEnvValue(baseUrl)}`,
+    `OCUCO_GATEKEEPER_JWT_KEY=${encodeEnvValue(jwtKey)}`,
+    `OCUCO_GATEKEEPER_JWT_SECRET=${encodeEnvValue(jwtSecret)}`,
+    "",
+  ].join("\n");
 }
 
 function encodeEnvValue(value: string): string {
