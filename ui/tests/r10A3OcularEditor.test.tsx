@@ -97,3 +97,9 @@ test("W136 blank optional panel text is omitted; fresh offered option becomes a 
    assert.deepEqual(eye.loaded,[]);assert.equal(eye.selected.length,1);assert.equal(eye.selected[0].baseline.kind,"absent");assert.deepEqual(eye.selected[0].homes,[]);
  }finally{h.close();}
 });
+
+
+test("W134 diagnosis door names the closed-encounter refusal", async () => {
+  const { findingReadOnlyLabel } = await import("../src/lib/diagnosis-findings");
+  assert.equal(findingReadOnlyLabel("encounter-closed"), "Signed or closed visit");
+});
