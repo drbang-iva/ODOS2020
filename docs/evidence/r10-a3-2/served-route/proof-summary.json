@@ -1,0 +1,103 @@
+{
+  "testedAppHead": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+  "harnessHead": "6227fad8a10acb82d73567afda8e9e3e6c2ab376",
+  "beforeHead": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "acceptedSteps": [
+    {
+      "step": "a",
+      "status": "PASS",
+      "file": "before-result.json",
+      "head": "1706d7c8417b04791471d4332b4ecd712883bf11"
+    },
+    {
+      "step": "b",
+      "status": "PASS",
+      "file": "final-result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    },
+    {
+      "step": "c",
+      "status": "PASS",
+      "file": "final-result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    },
+    {
+      "step": "d",
+      "status": "PASS",
+      "file": "final-result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    },
+    {
+      "step": "e",
+      "status": "PASS",
+      "file": "final-result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    },
+    {
+      "step": "f",
+      "status": "PASS",
+      "file": "../readonly/result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    },
+    {
+      "step": "g",
+      "status": "PASS",
+      "file": "g-only-result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    },
+    {
+      "step": "h",
+      "status": "PASS",
+      "file": "final-result.json",
+      "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2"
+    }
+  ],
+  "failedContinuationPreserved": {
+    "message": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Load older encounters', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"button\" aria-busy=\"true\" class=\"odos-previous-exams-more\" aria-label=\"Load older encounters\">Loading older encounters\u2026</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 \u00d7 waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is not enabled\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n",
+    "stack": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Load older encounters', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button disabled type=\"button\" aria-busy=\"true\" class=\"odos-previous-exams-more\" aria-label=\"Load older encounters\">Loading older encounters\u2026</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 \u00d7 waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is not enabled\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n    at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:152:321"
+  },
+  "beforeAfterSameCanonicalReferences": [
+    "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+    "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592"
+  ],
+  "pageErrors": [],
+  "carryCondition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+  "carried": [
+    {
+      "kind": "canonical",
+      "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+      "versionId": "66298c8c-0935-48d5-b415-40696160f198"
+    },
+    {
+      "kind": "canonical",
+      "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+      "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df"
+    }
+  ],
+  "restored": [
+    {
+      "kind": "canonical",
+      "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+      "versionId": "a5c13d5a-f556-474e-959f-e0ae5cbecda6"
+    },
+    {
+      "kind": "canonical",
+      "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+      "versionId": "80eaf522-a843-4bdd-869d-9f20984b6b69"
+    }
+  ],
+  "voidActionId": "0dc1a116-616a-46fb-9ed1-76ca9d028e8a",
+  "undoRequest": {
+    "scope": "section",
+    "sectionKey": "ocular-health:anterior:periocular-adnexa",
+    "voidActionId": "0dc1a116-616a-46fb-9ed1-76ca9d028e8a"
+  },
+  "undoCount": 2,
+  "undoActivation": {
+    "method": "keyboard focus and Enter on actual enabled section Undo button",
+    "pointerLimitation": "Existing Add section group absolute-positioned control intercepts pointer clicks; g-undo-control.png retains the obstruction. No layout change or force click."
+  },
+  "completenessLimitation": "Shipped nuclear cataract has no configured keyFindings; exact missing-requirement arrays remain empty, so this scenario does not prove a diagnosis-completeness transition. Findings remain explicitly uncredited throughout; after Undo their advanced versions read current/edited per W75/W126.",
+  "status": "PASS a\u2013h author proof, with documented pointer and completeness limitations",
+  "supplementalUndo": "../undo-superseded/result.json"
+}

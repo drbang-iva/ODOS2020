@@ -1,0 +1,1847 @@
+{
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "97fe47994c15944f367bc13117ed17bf87929c29",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049",
+    "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+    "servedAssets": {
+      "/assets/index-B6n-Vchx.js": "5a1158a74120e25886bc71dbea0aff308aed9e925535285bb1d8e309b143ecf5",
+      "/assets/index-DF84U2Dz.css": "9ae30a7aac6735d2220cd62fdf6da90190f414fbd6eb303d8882c44c2b5782be"
+    },
+    "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+    "ports": {
+      "frontdoor": 28090,
+      "medplum": 28103,
+      "postgres": 25433,
+      "redis": 26380,
+      "mcp": 23334,
+      "proxy": 23335,
+      "control": 23336
+    },
+    "project": "odos-r10-a3-2-served",
+    "mcpPid": 44289,
+    "caddyPid": 44302
+  },
+  "encounterReference": "Encounter/4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+  "initialVersion": "0bf90850-406e-4e84-b17c-9423c1692d96",
+  "steps": [
+    {
+      "name": "Recorded absent",
+      "facts": [
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "anterior-polar",
+          "display": "anterior polar",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "anterior-polar",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "anterior-polar",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "anterior-polar",
+          "display": "anterior polar",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "anterior-polar",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "anterior-polar",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "anterior-subcapsular",
+          "display": "anterior subcapsular",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_anterior_subcapsular"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "anterior-subcapsular",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "anterior-subcapsular",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "anterior-subcapsular",
+          "display": "anterior subcapsular",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_anterior_subcapsular"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "anterior-subcapsular",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "anterior-subcapsular",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "aphakia",
+          "display": "aphakia",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [
+            "aphakia"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "aphakia",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "aphakia",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "aphakia",
+          "display": "aphakia",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [
+            "aphakia"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "aphakia",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "aphakia",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "cortical-cataract",
+          "display": "cortical cataract",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_cortical"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "cortical-cataract",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "cortical-cataract",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "cortical-cataract",
+          "display": "cortical cataract",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_cortical"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "cortical-cataract",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "cortical-cataract",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::dislocated-lens-iol",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "dislocated-lens-iol",
+          "display": "dislocated lens/IOL",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::dislocated-lens-iol:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "dislocated-lens-iol",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "dislocated-lens-iol",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::dislocated-lens-iol",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "dislocated-lens-iol",
+          "display": "dislocated lens/IOL",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::dislocated-lens-iol:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "dislocated-lens-iol",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "dislocated-lens-iol",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::iol-deposits",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "iol-deposits",
+          "display": "IOL deposits",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::iol-deposits:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "iol-deposits",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "iol-deposits",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::iol-deposits",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "iol-deposits",
+          "display": "IOL deposits",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::iol-deposits:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "iol-deposits",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "iol-deposits",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mature-cataract",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "mature-cataract",
+          "display": "mature cataract",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mature-cataract:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "mature-cataract",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "mature-cataract",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mature-cataract",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "mature-cataract",
+          "display": "mature cataract",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mature-cataract:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "mature-cataract",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "mature-cataract",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mixed",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "mixed",
+          "display": "Mixed",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_combined_forms"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mixed:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "mixed",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "mixed",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mixed",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "mixed",
+          "display": "Mixed",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_combined_forms"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::mixed:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "mixed",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "mixed",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:7e05bff885c367611de0091c7530b5e0592bf19680261a8502ae9ff03740ee90",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "eye": "OD",
+          "laterality": "OD",
+          "presence": "absent",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [],
+          "homeSources": [],
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+            "versionId": "38c2ac26-dfe8-4cb0-bd72-43040fc07076"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+              "versionId": "38c2ac26-dfe8-4cb0-bd72-43040fc07076",
+              "effectiveDateTime": "2026-09-17T18:10:19.712Z",
+              "kind": "canonical-fact"
+            }
+          ]
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "nuclear-sclerosis",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::phacodonesis",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "phacodonesis",
+          "display": "phacodonesis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::phacodonesis:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "phacodonesis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "phacodonesis",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::phacodonesis",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "phacodonesis",
+          "display": "phacodonesis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::phacodonesis:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "phacodonesis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "phacodonesis",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::polychromatic-christmas-tree",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "polychromatic-christmas-tree",
+          "display": "polychromatic (Christmas-tree)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::polychromatic-christmas-tree:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "polychromatic-christmas-tree",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "polychromatic-christmas-tree",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::polychromatic-christmas-tree",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "polychromatic-christmas-tree",
+          "display": "polychromatic (Christmas-tree)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::polychromatic-christmas-tree:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "polychromatic-christmas-tree",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "polychromatic-christmas-tree",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-capsular-opacification-pco",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "posterior-capsular-opacification-pco",
+          "display": "posterior capsular opacification (PCO) (after cataract)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_posterior_capsular_opacification"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-capsular-opacification-pco:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "posterior-capsular-opacification-pco",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "posterior-capsular-opacification-pco",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-capsular-opacification-pco",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "posterior-capsular-opacification-pco",
+          "display": "posterior capsular opacification (PCO) (after cataract)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_posterior_capsular_opacification"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-capsular-opacification-pco:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "posterior-capsular-opacification-pco",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "posterior-capsular-opacification-pco",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-polar",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "posterior-polar",
+          "display": "posterior polar",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-polar:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "posterior-polar",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "posterior-polar",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-polar",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "posterior-polar",
+          "display": "posterior polar",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-polar:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "posterior-polar",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "posterior-polar",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "posterior-subcapsular-psc",
+          "display": "posterior subcapsular (PSC)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_posterior_subcapsular"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "posterior-subcapsular-psc",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "posterior-subcapsular-psc",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "posterior-subcapsular-psc",
+          "display": "posterior subcapsular (PSC)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+"
+          ],
+          "diagnosisKeys": [
+            "cataract_posterior_subcapsular"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "posterior-subcapsular-psc",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "posterior-subcapsular-psc",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudoexfoliation",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "pseudoexfoliation",
+          "display": "pseudoexfoliation",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [
+            "pseudoexfoliation_lens"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudoexfoliation:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "pseudoexfoliation",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "pseudoexfoliation",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudoexfoliation",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "pseudoexfoliation",
+          "display": "pseudoexfoliation",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [
+            "pseudoexfoliation_lens"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudoexfoliation:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "pseudoexfoliation",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "pseudoexfoliation",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-aciol",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "pseudophakia-aciol",
+          "display": "pseudophakia (ACIOL)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-aciol:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "pseudophakia-aciol",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "pseudophakia-aciol",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-aciol",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "pseudophakia-aciol",
+          "display": "pseudophakia (ACIOL)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-aciol:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "pseudophakia-aciol",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "pseudophakia-aciol",
+              "eye": "OS"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-pciol",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "pseudophakia-pciol",
+          "display": "pseudophakia (PCIOL)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [
+            "pseudophakia"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-pciol:OD",
+          "kind": "offered",
+          "eye": "OD",
+          "laterality": "OD",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "pseudophakia-pciol",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "pseudophakia-pciol",
+              "eye": "OD"
+            }
+          }
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-pciol",
+          "findingDefinitionId": "c0a6f087-4fb2-4b4c-b22d-7bf00a2765d6",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "pseudophakia-pciol",
+          "display": "pseudophakia (PCIOL)",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [],
+          "diagnosisKeys": [
+            "pseudophakia"
+          ],
+          "origin": "shipped",
+          "rowKey": "offered:ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-pciol:OS",
+          "kind": "offered",
+          "eye": "OS",
+          "laterality": "OS",
+          "status": "offered",
+          "editable": true,
+          "qualifiers": {},
+          "homes": [],
+          "homeSources": [],
+          "contributors": [],
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "pseudophakia-pciol",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "pseudophakia-pciol",
+              "eye": "OS"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deferred",
+      "status": "PASS",
+      "panel": {
+        "deferred": true,
+        "values": {},
+        "baseline": {
+          "kind": "canonical",
+          "reference": "Observation/35ebb1ae-40b2-4bf1-8215-ae3b4058abfb",
+          "versionId": "d266e3eb-ac15-4a5b-97f1-a49e8fe1e579"
+        },
+        "editable": true
+      }
+    },
+    {
+      "name": "Picker proposal",
+      "proposalLabel": "Propose Age-related nuclear cataract",
+      "facts": [
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "593ff464-ba3f-44c8-a738-888a5a5df6ab",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:7e05bff885c367611de0091c7530b5e0592bf19680261a8502ae9ff03740ee90",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "eye": "OD",
+          "laterality": "OD",
+          "presence": "present",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [
+            "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f"
+          ],
+          "homeSources": [
+            {
+              "condition": "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f",
+              "sources": [
+                {
+                  "kind": "finding-extension",
+                  "contributor": {
+                    "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+                    "versionId": "4d8d55b3-f828-4a5f-870c-c18027c411c2"
+                  }
+                }
+              ]
+            }
+          ],
+          "conditionReference": "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f",
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+            "versionId": "4d8d55b3-f828-4a5f-870c-c18027c411c2"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+              "versionId": "4d8d55b3-f828-4a5f-870c-c18027c411c2",
+              "effectiveDateTime": "2026-09-17T18:10:29.180Z",
+              "kind": "canonical-fact"
+            }
+          ]
+        }
+      ],
+      "diagnoses": [
+        {
+          "conditionReference": "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f",
+          "diagnosisKey": "cataract_nuclear_sclerosis",
+          "display": "Age-related nuclear cataract",
+          "laterality": "OD"
+        }
+      ]
+    },
+    {
+      "name": "Diagnosis workspace origin",
+      "facts": [
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "593ff464-ba3f-44c8-a738-888a5a5df6ab",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:7e05bff885c367611de0091c7530b5e0592bf19680261a8502ae9ff03740ee90",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "eye": "OD",
+          "laterality": "OD",
+          "presence": "present",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [
+            "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f"
+          ],
+          "homeSources": [
+            {
+              "condition": "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f",
+              "sources": [
+                {
+                  "kind": "finding-extension",
+                  "contributor": {
+                    "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+                    "versionId": "4d8d55b3-f828-4a5f-870c-c18027c411c2"
+                  }
+                }
+              ]
+            }
+          ],
+          "conditionReference": "Condition/0b4a66db-bd0e-46cb-9122-cc9520f4ce3f",
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+            "versionId": "4d8d55b3-f828-4a5f-870c-c18027c411c2"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+              "versionId": "4d8d55b3-f828-4a5f-870c-c18027c411c2",
+              "effectiveDateTime": "2026-09-17T18:10:29.180Z",
+              "kind": "canonical-fact"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    "recorded-absent.png",
+    "deferred.png",
+    "picker-proposal.png",
+    "diagnosis-origin.png",
+    "failure.png"
+  ],
+  "phase": "Assessment section",
+  "absentSeed": {
+    "request": {
+      "commandId": "30c5a301-28ee-4ffe-adf3-5a893da8e58e",
+      "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+      "operation": "assert",
+      "targets": [
+        {
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "absent",
+            "key": {
+              "v": 1,
+              "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+              "encounterId": "4fc4638b-b1c2-4846-b06d-83faeb4cf976",
+              "stableKey": "ocular-health:anterior:lens",
+              "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+              "optionCode": "nuclear-sclerosis",
+              "eye": "OD"
+            }
+          },
+          "state": {
+            "status": "live",
+            "presence": "absent",
+            "qualifiers": {},
+            "homes": []
+          }
+        }
+      ]
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "result": "command",
+        "commandId": "30c5a301-28ee-4ffe-adf3-5a893da8e58e",
+        "complete": true,
+        "executionOrder": [
+          0
+        ],
+        "outcomes": [
+          {
+            "clinicalWrite": "confirmed",
+            "status": "applied",
+            "target": "finding:7e05bff885c367611de0091c7530b5e0592bf19680261a8502ae9ff03740ee90",
+            "reference": "Observation/ec64258b-bc3d-4247-ac55-392bc8f8a106",
+            "versionId": "38c2ac26-dfe8-4cb0-bd72-43040fc07076"
+          }
+        ]
+      }
+    }
+  },
+  "status": "FAIL",
+  "error": "TimeoutError: browser proof failed at Assessment section",
+  "diagnostic": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText(/← from nuclear sclerosis/).first() to be visible\u001b[22m\n"
+}

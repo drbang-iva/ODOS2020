@@ -1,0 +1,70 @@
+{
+  "mode": "final",
+  "startedAt": "2026-09-17T17:55:51.470Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "ef3d276864a3535ca855a5481f1111df84f4444b",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [
+    {
+      "name": "b",
+      "status": "PASS",
+      "facts": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "fdd9854f-794f-4672-9817-ddf6466ab7bf"
+          },
+          "homes": [
+            "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+          ]
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "d08783aa-358e-4817-8397-eb31699b83c6"
+          },
+          "homes": [
+            "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+          ]
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/b-final-ocular-OU.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/final-failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-INv-UM74.js",
+    "sha256": "3e1a94b919810a866ae40f42cdb2b3207e03ff43f4031fdd8cead5df710be108"
+  },
+  "failure": {
+    "message": "Expected values to be strictly equal:\n\nundefined !== '2+'\n",
+    "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== '2+'\n\n    at file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:75:39"
+  },
+  "finishedAt": "2026-09-17T17:55:57.376Z"
+}

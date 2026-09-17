@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "body": {
+    "encounterReference": "Encounter/2a773f64-2fb2-4d67-8657-1efd47ae6846",
+    "diagnoses": []
+  }
+}

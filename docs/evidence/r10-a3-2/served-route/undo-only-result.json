@@ -1,0 +1,29 @@
+{
+  "mode": "undo-only",
+  "startedAt": "2026-09-17T18:17:08.410Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "97fe47994c15944f367bc13117ed17bf87929c29",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-undo-control.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/undo-only-failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-B6n-Vchx.js",
+    "sha256": "5a1158a74120e25886bc71dbea0aff308aed9e925535285bb1d8e309b143ecf5"
+  },
+  "undoActivation": {
+    "method": "keyboard focus and Enter on actual enabled section Undo button",
+    "pointerLimitation": "Existing Add section group absolute-positioned control intercepts pointer clicks; g-undo-control.png retains the obstruction. No layout change or force click."
+  },
+  "failure": {
+    "message": "Expected values to be strictly equal:\n\n0 !== 2\n",
+    "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:193:209"
+  },
+  "finishedAt": "2026-09-17T18:17:15.020Z"
+}

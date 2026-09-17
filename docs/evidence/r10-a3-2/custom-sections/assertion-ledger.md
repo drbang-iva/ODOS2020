@@ -666,3 +666,8 @@ assert.deepEqual(posts[1]!.body.eyes.OS?.panel.state.values, { CUSTOM_GRADE_VAN_
 - W144 void/undo proof is in the neighboring `void-undo/` evidence directory.
 
 Changed assertion groups: 16. Raw outputs below this directory.
+
+
+## Operator-approved W138 visibility follow-up
+
+The existing flag-only Deferred visibility test is renamed to `W138 canonical ocular panels expose Deferred independently of the legacy definition flag`. Its one exact count assertion changes from2 to4 controls across two bilateral definitions. The user explicitly approved exposing canonical Deferred despite the legacy flag. See ../deferred-visibility-approval.md. No other assertion in this test changes. Before implementation the updated test failed0/1; after implementation the combined customSections/editor suite passed106/106.

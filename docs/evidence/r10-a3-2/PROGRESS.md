@@ -3,14 +3,14 @@
 Author: Codex GPT-6, high effort. NOT EVALUATED. HELD OPEN; never merge.
 
 Base: a211b36887b49139ab29cf2d811a5a30f261034d. Branch: drbang-iva/r10-a3-2.
-Implementation commits: 3eaba076951d86562fe1287044f3485b0f480703 and f9e4bc0f (closed-encounter shared label).
+Production implementation through c587bf96; final harness through 1325c7b3.
 
 Both published §13 scope rulings are implemented: unchanged read-only loaded witnesses and extraction-only DiagnosisWorkspace. BLOCKED.md and RESUME-BUNDLE.md are historical snapshots, not current status.
 
 - W147: five tests; both required mutants fail, restored pass. Scoped MCP 92/92.
 - Workspace assertions unchanged, 22/22; shared-helper mutation fails both workspace and picker, restored green.
 - W130–W146 mutation evidence is in editor, picker, carry, void-undo, and harness directories.
-- Prior full UI: 1,727 passed, zero failures/skips/todos. A new W134 closed-label guard passed after failing first; full UI is rerunning for the extra test.
+- Full UI after Assessment correction: 1,734 passed, zero failures/skips/todos. Unchanged workspace suites: 75/75.
 - Carry integration: 25/25, including remount recovery and confirmed-change refresh.
 - Credentialed live authorization: 73/73, zero failures/skips; existing lifecycle Provenance limitation documented separately.
 - Strict release checker reports PASS for T1–T22.

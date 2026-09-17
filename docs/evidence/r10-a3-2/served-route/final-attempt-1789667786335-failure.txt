@@ -1,0 +1,945 @@
+ODOS 20/20
+Clinic
+›
+Encounter
+Find a patient
+▦
+Schedule
+＋ New…
+Sections
+🔔
+RA
+PATIENT
+R10 Synthetic Served Proof
+DOB 1980-01-01 · in-progress
+Exam sections: Not configured
+0 unassigned
+Visit — none
+●
+Blackout
+Sign & finish
+Role
+Doctor
+▾
+Abandon encounter
+By diagnosis
+By structure
+Back to exam overview
+SHARED ENCOUNTER FINDINGS
+Findings in this section
+nuclear sclerosis
+Present · OD
+Shared finding
+nuclear sclerosis
+Present · OS
+Shared finding
+Add section group…
+▾
+OCULAR HEALTH
+Anterior & Posterior Segments
+
+Record what is present. Normal requires an explicit negative assertion.
+
+Anterior All Normal
+Fundus All Normal
+
+Some older records could not be placed on a visit
+
+STRUCTURES
+ANTERIOR SEGMENT
+Periocular Adnexa
+blank
+Lids & Lashes
+blank
+Palpebral Conjunctiva
+blank
+Conjunctiva
+blank
+Tear Film
+blank
+Cornea
+blank
+Anterior Chamber
+blank
+Iris
+blank
+Lens
+2 findings
+POSTERIOR SEGMENT
+Vitreous
+blank
+Fundus
+blank
+Macula
+blank
+Vessels
+blank
+Periphery
+blank
+Prev
+Next
+ANTERIOR SEGMENT
+Periocular Adnexa
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Periorbital region normal; no lesions, edema, or asymmetry.
+
+WHAT IS PRESENT
+Dermatochalasis
+Periorbital Edema
+Facial Asymmetry
+Brow Ptosis
+Proptosis
+Enophthalmos
+Preauricular Node
+Orbital Mass
+Ecchymosis
+Dermatitis
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Periorbital region normal; no lesions, edema, or asymmetry.
+
+WHAT IS PRESENT
+Dermatochalasis
+Periorbital Edema
+Facial Asymmetry
+Brow Ptosis
+Proptosis
+Enophthalmos
+Preauricular Node
+Orbital Mass
+Ecchymosis
+Dermatitis
+OTHER
+Remarks
+Lids & Lashes
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Normal lid position and lashes; no MGD, blepharitis, or lesions.
+
+WHAT IS PRESENT
+Demodex
+Anterior Blepharitis
+Posterior Blepharitis
+Meibomian Gland Dysfunction
+Chalazion
+Trichiasis
+Hordeolum
+Ptosis
+Ectropion
+Entropion
+Madarosis
+Lagophthalmos
+Lid Lesion
+Dermatochalasis
+Floppy Eyelid
+Telangiectasia
+Lid Margin Keratinization
+Poliosis
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Normal lid position and lashes; no MGD, blepharitis, or lesions.
+
+WHAT IS PRESENT
+Demodex
+Anterior Blepharitis
+Posterior Blepharitis
+Meibomian Gland Dysfunction
+Chalazion
+Trichiasis
+Hordeolum
+Ptosis
+Ectropion
+Entropion
+Madarosis
+Lagophthalmos
+Lid Lesion
+Dermatochalasis
+Floppy Eyelid
+Telangiectasia
+Lid Margin Keratinization
+Poliosis
+OTHER
+Remarks
+Palpebral Conjunctiva
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Palpebral conjunctiva normal; no papillae or follicles.
+
+WHAT IS PRESENT
+Papillae
+Follicles
+Giant Papillae (GPC)
+Concretions
+Symblepharon
+Scarring
+Membrane/Pseudomembrane
+Hyperemia
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Palpebral conjunctiva normal; no papillae or follicles.
+
+WHAT IS PRESENT
+Papillae
+Follicles
+Giant Papillae (GPC)
+Concretions
+Symblepharon
+Scarring
+Membrane/Pseudomembrane
+Hyperemia
+OTHER
+Remarks
+Conjunctiva
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+White and quiet; no injection or discharge.
+
+WHAT IS PRESENT
+Injection
+Pinguecula
+Pterygium
+Chemosis
+Subconjunctival Hemorrhage
+Nevus
+Pigmentation
+Concretion
+Conjunctivochalasis
+Episcleritis
+Scleritis
+Phlyctenule
+Lymphangiectasia
+Scleral Thinning
+Nodule
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+White and quiet; no injection or discharge.
+
+WHAT IS PRESENT
+Injection
+Pinguecula
+Pterygium
+Chemosis
+Subconjunctival Hemorrhage
+Nevus
+Pigmentation
+Concretion
+Conjunctivochalasis
+Episcleritis
+Scleritis
+Phlyctenule
+Lymphangiectasia
+Scleral Thinning
+Nodule
+OTHER
+Remarks
+Tear Film
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Adequate tear film; normal meniscus and break-up.
+
+TBUT
+s
+↕
+TBUT METHOD
+Select
+▾
+WHAT IS PRESENT
+Reduced Tear Meniscus
+Rapid TBUT
+Debris In Tear Film
+Mucus Strands
+Foam/Frothing
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Adequate tear film; normal meniscus and break-up.
+
+TBUT
+s
+↕
+TBUT METHOD
+Select
+▾
+WHAT IS PRESENT
+Reduced Tear Meniscus
+Rapid TBUT
+Debris In Tear Film
+Mucus Strands
+Foam/Frothing
+OTHER
+Remarks
+Cornea
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Clear, no staining; normal thickness and clarity.
+
+VITAL DYE
+Select
+▾
+WHAT IS PRESENT
+Superficial Punctate Keratitis (SPK)
+Dry Eye Keratopathy
+Arcus
+Scar
+Keratoconus
+Guttata
+Pterygium (Encroaching)
+Neovascularization
+Infiltrate
+Abrasion
+Dendrite
+Edema
+Foreign Body
+Filaments
+Erosion
+RCES (Recurrent Erosion)
+EBMD (Map-Dot-Fingerprint)
+Fuchs' Endothelial Dystrophy
+Band Keratopathy
+Salzmann's Nodule
+Keratic Precipitates
+Ulcer
+Haze
+Opacification
+Pannus
+Nodules
+Phlyctenule
+Descemet Folds
+Krukenberg Spindle
+Iron Line
+Vogt Striae
+Vortex Keratopathy (Verticillata)
+Thygeson's SPK
+Lipid Keratopathy
+Mooren's Ulcer
+Terrien's Marginal Degeneration
+Peripheral Thinning
+Central Thinning
+Hydrops
+Pigment On Endothelium
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Clear, no staining; normal thickness and clarity.
+
+VITAL DYE
+Select
+▾
+WHAT IS PRESENT
+Superficial Punctate Keratitis (SPK)
+Dry Eye Keratopathy
+Arcus
+Scar
+Keratoconus
+Guttata
+Pterygium (Encroaching)
+Neovascularization
+Infiltrate
+Abrasion
+Dendrite
+Edema
+Foreign Body
+Filaments
+Erosion
+RCES (Recurrent Erosion)
+EBMD (Map-Dot-Fingerprint)
+Fuchs' Endothelial Dystrophy
+Band Keratopathy
+Salzmann's Nodule
+Keratic Precipitates
+Ulcer
+Haze
+Opacification
+Pannus
+Nodules
+Phlyctenule
+Descemet Folds
+Krukenberg Spindle
+Iron Line
+Vogt Striae
+Vortex Keratopathy (Verticillata)
+Thygeson's SPK
+Lipid Keratopathy
+Mooren's Ulcer
+Terrien's Marginal Degeneration
+Peripheral Thinning
+Central Thinning
+Hydrops
+Pigment On Endothelium
+OTHER
+Remarks
+Anterior Chamber
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Deep and quiet; no cells or flare.
+
+VAN HERICK
+Select
+▾
+WHAT IS PRESENT
+Cells
+Flare
+Shallow AC
+Hyphema
+Hypopyon
+Peripheral Anterior Synechiae
+Pigment
+Narrow Angle (By Exam)
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Deep and quiet; no cells or flare.
+
+VAN HERICK
+Select
+▾
+WHAT IS PRESENT
+Cells
+Flare
+Shallow AC
+Hyphema
+Hypopyon
+Peripheral Anterior Synechiae
+Pigment
+Narrow Angle (By Exam)
+OTHER
+Remarks
+Iris
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Flat and intact; round reactive pupil.
+
+WHAT IS PRESENT
+Nevus
+Transillumination Defect
+Posterior Synechiae
+Atrophy
+Neovascularization (Rubeosis)
+Coloboma
+Heterochromia
+Iridodonesis
+Nodules
+Sphincter Tears
+Plateau Iris
+Irregular Pupil
+Sectoral Atrophy
+Pseudoexfoliation Material On Pupil Margin
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Flat and intact; round reactive pupil.
+
+WHAT IS PRESENT
+Nevus
+Transillumination Defect
+Posterior Synechiae
+Atrophy
+Neovascularization (Rubeosis)
+Coloboma
+Heterochromia
+Iridodonesis
+Nodules
+Sphincter Tears
+Plateau Iris
+Irregular Pupil
+Sectoral Atrophy
+Pseudoexfoliation Material On Pupil Margin
+OTHER
+Remarks
+Lens
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Clear; no cataract.
+
+WHAT IS PRESENT
+Nuclear Sclerosis
+Cortical Cataract
+Posterior Subcapsular (PSC)
+Pseudophakia (PCIOL)
+Posterior Capsular Opacification (PCO) (After Cataract)
+Mixed
+Anterior Polar
+Posterior Polar
+Anterior Subcapsular
+Mature Cataract
+Pseudophakia (ACIOL)
+Aphakia
+Phacodonesis
+Pseudoexfoliation
+Dislocated Lens/IOL
+IOL Deposits
+Polychromatic (Christmas-Tree)
+DESCRIBE EACH
+Nuclear Sclerosis
+Grade
+1+
+2+
+3+
+4+
+Colour
+1+ (Pale Yellow)
+2+ (Yellow)
+3+ (Dark Yellow/Amber)
+4+ (Dark Brown/Black; Brunescent)
+×
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Clear; no cataract.
+
+WHAT IS PRESENT
+Nuclear Sclerosis
+Cortical Cataract
+Posterior Subcapsular (PSC)
+Pseudophakia (PCIOL)
+Posterior Capsular Opacification (PCO) (After Cataract)
+Mixed
+Anterior Polar
+Posterior Polar
+Anterior Subcapsular
+Mature Cataract
+Pseudophakia (ACIOL)
+Aphakia
+Phacodonesis
+Pseudoexfoliation
+Dislocated Lens/IOL
+IOL Deposits
+Polychromatic (Christmas-Tree)
+DESCRIBE EACH
+Nuclear Sclerosis
+Grade
+1+
+2+
+3+
+4+
+Colour
+1+ (Pale Yellow)
+2+ (Yellow)
+3+ (Dark Yellow/Amber)
+4+ (Dark Brown/Black; Brunescent)
+×
+OTHER
+Remarks
+SUGGESTED DIAGNOSES
+Age-related nuclear cataractH25.11Age-related nuclear cataractH25.12
+Full diagnosis catalog
+POSTERIOR SEGMENT
+Vitreous
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+No vitreal hemorrhage, cells, or pigment.
+
+WHAT IS PRESENT
+Posterior Vitreous Detachment (PVD)
+Syneresis
+Floaters
+Asteroid Hyalosis
+Vitreous Hemorrhage
+Vitreous Cells
+Shafer's Sign (Tobacco Dust)
+Vitreous Opacities
+Anterior Hyaloid
+Synchysis
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+No vitreal hemorrhage, cells, or pigment.
+
+WHAT IS PRESENT
+Posterior Vitreous Detachment (PVD)
+Syneresis
+Floaters
+Asteroid Hyalosis
+Vitreous Hemorrhage
+Vitreous Cells
+Shafer's Sign (Tobacco Dust)
+Vitreous Opacities
+Anterior Hyaloid
+Synchysis
+OTHER
+Remarks
+Fundus
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Normal retinal appearance; healthy background, no lesions.
+
+WHAT IS PRESENT
+Diabetic Retinopathy (Background/NPDR)
+Hypertensive Retinopathy
+Dot/Blot Hemorrhage
+Hard Exudate
+Cotton-Wool Spot
+Choroidal Nevus
+Chorioretinal Scar
+Microaneurysm
+Proliferative Diabetic Retinopathy (PDR)
+Neovascularization Elsewhere (NVE)
+Preretinal Hemorrhage
+Choroidal Lesion
+RPE Atrophy
+Roth Spot
+Myelinated Nerve Fiber
+Drusen
+Occasional Drusen
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Normal retinal appearance; healthy background, no lesions.
+
+WHAT IS PRESENT
+Diabetic Retinopathy (Background/NPDR)
+Hypertensive Retinopathy
+Dot/Blot Hemorrhage
+Hard Exudate
+Cotton-Wool Spot
+Choroidal Nevus
+Chorioretinal Scar
+Microaneurysm
+Proliferative Diabetic Retinopathy (PDR)
+Neovascularization Elsewhere (NVE)
+Preretinal Hemorrhage
+Choroidal Lesion
+RPE Atrophy
+Roth Spot
+Myelinated Nerve Fiber
+Drusen
+Occasional Drusen
+OTHER
+Remarks
+Macula
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Healthy foveal reflex; no drusen, edema, or exudate.
+
+WHAT IS PRESENT
+Drusen
+RPE Changes
+Dry AMD
+Epiretinal Membrane (ERM)
+Pigment Mottling
+Wet AMD
+CNVM
+Geographic Atrophy
+Macular Hole
+Lamellar Macular Hole
+Macular Pseudohole
+Cystoid Macular Edema (CME)
+Diabetic Macular Edema
+Vitreomacular Traction
+Subretinal Fluid
+Macular Edema
+Pigment Clumping
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Healthy foveal reflex; no drusen, edema, or exudate.
+
+WHAT IS PRESENT
+Drusen
+RPE Changes
+Dry AMD
+Epiretinal Membrane (ERM)
+Pigment Mottling
+Wet AMD
+CNVM
+Geographic Atrophy
+Macular Hole
+Lamellar Macular Hole
+Macular Pseudohole
+Cystoid Macular Edema (CME)
+Diabetic Macular Edema
+Vitreomacular Traction
+Subretinal Fluid
+Macular Edema
+Pigment Clumping
+OTHER
+Remarks
+Vessels
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Normal caliber without tortuosity, AV nicking, or crossing changes.
+
+A/V RATIO
+Select
+▾
+WHAT IS PRESENT
+AV Nicking
+Arteriolar Attenuation
+Tortuosity
+AV Crossing Changes
+Sclerotic (Copper/Silver-Wire) Changes
+Hollenhorst Plaque
+Retinal Embolus
+Vascular Sheathing
+Venous Beading
+Neovascularization Of The Disc (NVD)
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Normal caliber without tortuosity, AV nicking, or crossing changes.
+
+A/V RATIO
+Select
+▾
+WHAT IS PRESENT
+AV Nicking
+Arteriolar Attenuation
+Tortuosity
+AV Crossing Changes
+Sclerotic (Copper/Silver-Wire) Changes
+Hollenhorst Plaque
+Retinal Embolus
+Vascular Sheathing
+Venous Beading
+Neovascularization Of The Disc (NVD)
+OTHER
+Remarks
+Periphery
+OD
+Copy to OS →
+
+No explicit negative assertion recorded
+
+Normal peripheral retina without tears, breaks, holes, or detachment.
+
+WHAT IS PRESENT
+Lattice Degeneration
+Cobblestone/Paving-Stone Degeneration
+Retinal Hole
+White-Without-Pressure
+Chorioretinal Scar
+Retinal Tear
+Retinal Detachment
+Retinoschisis
+Retinal Tuft
+Pigmentary Changes
+Cystoid Degeneration
+Drusen
+Occasional Drusen
+OTHER
+Remarks
+OS
+← Copy to OD
+
+No explicit negative assertion recorded
+
+Normal peripheral retina without tears, breaks, holes, or detachment.
+
+WHAT IS PRESENT
+Lattice Degeneration
+Cobblestone/Paving-Stone Degeneration
+Retinal Hole
+White-Without-Pressure
+Chorioretinal Scar
+Retinal Tear
+Retinal Detachment
+Retinoschisis
+Retinal Tuft
+Pigmentary Changes
+Cystoid Degeneration
+Drusen
+Occasional Drusen
+OTHER
+Remarks
+1/14 ocular-health structures saved
+Save Ocular Health
+CHART SIDEBAR
+0 active chart lists
+Active Programs
+FULL
+No active programs.
+Allergies
+FULL
+No allergies recorded.
+Allergy / RxNorm
+Add allergy
+Mark no known allergies
+Tobacco Use
+FULL
+No tobacco use status recorded.
+Current every day smoker
+Current some day smoker
+Former smoker
+Never smoker
+Smoker, current status unknown
+Unknown if ever smoked
+Current Heavy tobacco smoker
+Current Light tobacco smoker
+Update tobacco use
+Product Timeline
+FULL
+No products recorded.
+Care Team
+FULL
+No care team recorded.
+Primary care physician
+Ophthalmologist
+Endocrinologist
+Neurologist
+Caregiver
+Care-team member
+Add team member
+Problem List
+FULL
+No active longitudinal problems.
+Problem / SNOMED
+Add problem
+Longitudinal imaging
+
+Clinical photos across visits
+
+Timeline
+Compare
+
+Two photos are needed for comparison.
+
+Capture or import photo
+×
+Sections
+
+Every working surface, one slide away.
+
+EVERY DAY
+✓
+Consent evidence
+preference gaps by tier
+▤
+Education review
+held steps and staff handouts
+▦
+Schedule
+day grid, all providers
+⌂
+Front desk
+schedule and floor
+⇄
+Work
+reason-grouped billing work
+◫
+Reports / A-R
+production and aging
+▤
+Statements
+patient statement runs
+◇
+Lab orders
+optical orders in flight
+CATALOG & OPERATIONS
+⌗
+Catalog & pricing
+frames catalog and pricing
+▥
+Inventory
+frames inventory
+⚭
+Integrations
+Frames Data
+PRACTICE
+≡
+Audit log
+every access and change
+◉
+Clinic
+Clinic home and patients
+▣
+Protocol Library
+author and manage clinical protocols
+Build ef3d276 · drbang-iva/r10-a3-2
+Built 2m ago
+CURRENT

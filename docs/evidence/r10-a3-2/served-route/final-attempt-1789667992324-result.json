@@ -1,0 +1,199 @@
+{
+  "mode": "final",
+  "startedAt": "2026-09-17T17:58:48.025Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "ef3d276864a3535ca855a5481f1111df84f4444b",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [
+    {
+      "name": "b",
+      "status": "PASS",
+      "facts": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "9d0c380e-f610-4128-bde9-d5fae00db83a"
+          },
+          "homes": [
+            "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+          ]
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "e88e0082-69f0-49cd-9068-42895bc04e43"
+          },
+          "homes": [
+            "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "c",
+      "status": "PASS",
+      "graded": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "1653fea0-a2ad-4507-9e7c-58feea7cb4af"
+          },
+          "qualifiers": {
+            "grade": "3+"
+          }
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "e88e0082-69f0-49cd-9068-42895bc04e43"
+          },
+          "qualifiers": {}
+        }
+      ],
+      "reasserted": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "1653fea0-a2ad-4507-9e7c-58feea7cb4af"
+          }
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "9fd8e907-3c69-4130-95a7-885136255df0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "e",
+      "status": "PASS",
+      "identicalRequest": true,
+      "panelAfterDrop": {
+        "kind": "canonical",
+        "reference": "Observation/c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+        "versionId": "280d6687-e699-4532-939f-ecda14c72306"
+      },
+      "panelAfterRetry": {
+        "kind": "canonical",
+        "reference": "Observation/c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+        "versionId": "280d6687-e699-4532-939f-ecda14c72306"
+      },
+      "commandId": "b8c99196-d7b1-42c1-8917-6e5d3cedc3ec",
+      "facts": [
+        {
+          "kind": "canonical",
+          "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+          "versionId": "1653fea0-a2ad-4507-9e7c-58feea7cb4af"
+        },
+        {
+          "kind": "canonical",
+          "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+          "versionId": "9fd8e907-3c69-4130-95a7-885136255df0"
+        }
+      ],
+      "drop": {
+        "dropped": 2
+      }
+    },
+    {
+      "name": "h",
+      "status": "PASS",
+      "panel": {
+        "deferred": false,
+        "values": {
+          "CUSTOM_GRADE_TBUT": 8
+        },
+        "baseline": {
+          "kind": "canonical",
+          "reference": "Observation/b473d4e1-015a-4a88-ba34-fcf106ab51b3",
+          "versionId": "bb9cfcde-2413-41e9-999d-b3b39b5b4b3c"
+        },
+        "editable": true
+      }
+    }
+  ],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/b-final-ocular-OU.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/c-diagnosis-split.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/c-diagnosis-split-wide.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/c-ocular-OS-cleared.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/e-unconfirmed-retry.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/h-TBUT-reloaded.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/d-pending-unrelated-deselect.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/final-failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-INv-UM74.js",
+    "sha256": "3e1a94b919810a866ae40f42cdb2b3207e03ff43f4031fdd8cead5df710be108"
+  },
+  "failure": {
+    "message": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Save Ocular Health', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" class=\"rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45\">Save Ocular Health</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"odos-confirm-backdrop\" data-entry-sheet-pristine-action=\"true\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"odos-confirm-backdrop\" data-entry-sheet-pristine-action=\"true\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    29 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"odos-confirm-backdrop\" data-entry-sheet-pristine-action=\"true\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+    "stack": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Save Ocular Health', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" class=\"rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45\">Save Ocular Health</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"odos-confirm-backdrop\" data-entry-sheet-pristine-action=\"true\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"odos-confirm-backdrop\" data-entry-sheet-pristine-action=\"true\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    29 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"odos-confirm-backdrop\" data-entry-sheet-pristine-action=\"true\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:132:73"
+  },
+  "finishedAt": "2026-09-17T17:59:23.641Z"
+}

@@ -1,0 +1,879 @@
+{
+  "mode": "final",
+  "startedAt": "2026-09-17T17:59:52.325Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "ef3d276864a3535ca855a5481f1111df84f4444b",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [
+    {
+      "name": "b",
+      "status": "PASS",
+      "facts": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "1653fea0-a2ad-4507-9e7c-58feea7cb4af"
+          },
+          "homes": [
+            "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+          ]
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "9fd8e907-3c69-4130-95a7-885136255df0"
+          },
+          "homes": [
+            "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "c",
+      "status": "PASS",
+      "graded": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "abf29f17-7665-4750-94db-d39d527d9c28"
+          },
+          "qualifiers": {
+            "grade": "2+"
+          }
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "9fd8e907-3c69-4130-95a7-885136255df0"
+          },
+          "qualifiers": {}
+        }
+      ],
+      "reasserted": [
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+            "versionId": "abf29f17-7665-4750-94db-d39d527d9c28"
+          }
+        },
+        {
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+            "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d"
+          }
+        }
+      ]
+    },
+    {
+      "name": "e",
+      "status": "PASS",
+      "identicalRequest": true,
+      "panelAfterDrop": {
+        "kind": "canonical",
+        "reference": "Observation/c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+        "versionId": "96e0121b-e2c2-497c-87c8-a92d96a45d12"
+      },
+      "panelAfterRetry": {
+        "kind": "canonical",
+        "reference": "Observation/c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+        "versionId": "96e0121b-e2c2-497c-87c8-a92d96a45d12"
+      },
+      "commandId": "388d2363-de20-4053-87a8-22334e72afb4",
+      "facts": [
+        {
+          "kind": "canonical",
+          "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+          "versionId": "abf29f17-7665-4750-94db-d39d527d9c28"
+        },
+        {
+          "kind": "canonical",
+          "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+          "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d"
+        }
+      ],
+      "drop": {
+        "dropped": 3
+      }
+    },
+    {
+      "name": "h",
+      "status": "PASS",
+      "panel": {
+        "deferred": false,
+        "values": {
+          "CUSTOM_GRADE_TBUT": 9
+        },
+        "baseline": {
+          "kind": "canonical",
+          "reference": "Observation/b473d4e1-015a-4a88-ba34-fcf106ab51b3",
+          "versionId": "323b9e95-9c26-4ea9-b111-222ab09b3f84"
+        },
+        "editable": true
+      }
+    },
+    {
+      "name": "d",
+      "status": "PASS",
+      "contexts": 2,
+      "addition": {
+        "kind": "canonical",
+        "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+        "versionId": "17a2d620-1b20-414c-a04e-b71d2cffa1e2"
+      },
+      "afterUnrelatedDeselect": {
+        "kind": "canonical",
+        "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+        "versionId": "17a2d620-1b20-414c-a04e-b71d2cffa1e2"
+      },
+      "laterValue": {
+        "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract",
+        "findingDefinitionId": "29324798-4cba-45a8-9a0a-dab53ddd90b1",
+        "findingDefinitionKey": "ocular-health:anterior:lens",
+        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+        "optionCode": "cortical-cataract",
+        "display": "cortical cataract",
+        "sectionKey": "ocular-health:anterior:lens",
+        "gradeScale": [
+          "1+",
+          "2+",
+          "3+",
+          "4+"
+        ],
+        "diagnosisKeys": [
+          "cataract_cortical"
+        ],
+        "origin": "shipped",
+        "rowKey": "finding:411ddd2bed3547d54ad8bdf7dfa8cd130e4ccb5bb74322244513d9b56fb973d4",
+        "kind": "fact",
+        "key": {
+          "v": 1,
+          "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+          "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+          "stableKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "cortical-cataract",
+          "eye": "OD"
+        },
+        "eye": "OD",
+        "laterality": "OD",
+        "presence": "present",
+        "qualifiers": {
+          "grade": "3+"
+        },
+        "grade": "3+",
+        "status": "live",
+        "editable": true,
+        "homes": [],
+        "homeSources": [],
+        "baseline": {
+          "kind": "canonical",
+          "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+          "versionId": "c1f48be2-3b0d-4176-85d0-0b21ea8e4f72"
+        },
+        "contributors": [
+          {
+            "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+            "versionId": "c1f48be2-3b0d-4176-85d0-0b21ea8e4f72",
+            "effectiveDateTime": "2026-09-17T18:00:27.583Z",
+            "kind": "canonical-fact"
+          }
+        ]
+      },
+      "conflict": {
+        "result": "invalid",
+        "reason": "stale-baseline",
+        "fresh": {
+          "preRebuild": false,
+          "currentFacts": [
+            {
+              "key": {
+                "v": 1,
+                "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                "stableKey": "ocular-health:anterior:lens",
+                "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                "optionCode": "cortical-cataract",
+                "eye": "OD"
+              },
+              "projectionKey": "finding:411ddd2bed3547d54ad8bdf7dfa8cd130e4ccb5bb74322244513d9b56fb973d4",
+              "eye": "OD",
+              "status": "live",
+              "legacy": false,
+              "contributors": [
+                {
+                  "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+                  "versionId": "c1f48be2-3b0d-4176-85d0-0b21ea8e4f72",
+                  "effectiveDateTime": "2026-09-17T18:00:27.583Z",
+                  "kind": "canonical-fact"
+                }
+              ],
+              "homes": [],
+              "homeSources": [],
+              "baseline": {
+                "kind": "canonical",
+                "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+                "versionId": "c1f48be2-3b0d-4176-85d0-0b21ea8e4f72"
+              },
+              "editable": true,
+              "effectiveDateTime": "2026-09-17T18:00:27.583Z",
+              "presence": "present",
+              "qualifiers": {
+                "grade": "3+"
+              }
+            },
+            {
+              "key": {
+                "v": 1,
+                "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                "stableKey": "ocular-health:anterior:lens",
+                "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                "optionCode": "nuclear-sclerosis",
+                "eye": "OD"
+              },
+              "projectionKey": "finding:f504205e5fc6dddd3657db3fca5f4e47cbd8632a7a05da0a94691948a84c0184",
+              "eye": "OD",
+              "status": "retired",
+              "legacy": false,
+              "contributors": [
+                {
+                  "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+                  "versionId": "2f857566-2096-4f0d-952e-f69c95eefb0e",
+                  "effectiveDateTime": "2026-09-17T18:00:21.730Z",
+                  "kind": "canonical-fact"
+                }
+              ],
+              "homes": [
+                "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+              ],
+              "homeSources": [
+                {
+                  "condition": "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74",
+                  "sources": [
+                    {
+                      "kind": "finding-extension",
+                      "contributor": {
+                        "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+                        "versionId": "2f857566-2096-4f0d-952e-f69c95eefb0e"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "baseline": {
+                "kind": "canonical",
+                "reference": "Observation/85cfbcef-75c9-430d-85f9-68d2b1b2b592",
+                "versionId": "2f857566-2096-4f0d-952e-f69c95eefb0e"
+              },
+              "editable": true,
+              "effectiveDateTime": "2026-09-17T18:00:21.730Z",
+              "presence": "present",
+              "qualifiers": {
+                "grade": "2+"
+              }
+            },
+            {
+              "key": {
+                "v": 1,
+                "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                "stableKey": "ocular-health:anterior:lens",
+                "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                "optionCode": "nuclear-sclerosis",
+                "eye": "OS"
+              },
+              "projectionKey": "finding:a451966706b4c16acfbb4433b5a09fcc359069f3dd0f8f0107a89376dbb5e557",
+              "eye": "OS",
+              "status": "live",
+              "legacy": false,
+              "contributors": [
+                {
+                  "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+                  "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d",
+                  "effectiveDateTime": "2026-09-17T18:00:06.314Z",
+                  "kind": "canonical-fact"
+                }
+              ],
+              "homes": [
+                "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74"
+              ],
+              "homeSources": [
+                {
+                  "condition": "Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74",
+                  "sources": [
+                    {
+                      "kind": "finding-extension",
+                      "contributor": {
+                        "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+                        "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "baseline": {
+                "kind": "canonical",
+                "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+                "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d"
+              },
+              "editable": true,
+              "effectiveDateTime": "2026-09-17T18:00:06.314Z",
+              "presence": "present",
+              "qualifiers": {}
+            }
+          ],
+          "panels": [
+            {
+              "stableKey": "ocular-health:anterior:lens",
+              "eye": "OD",
+              "snapshots": [
+                {
+                  "source": {
+                    "reference": "Observation/c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+                    "versionId": "96e0121b-e2c2-497c-87c8-a92d96a45d12",
+                    "kind": "panel-context"
+                  },
+                  "status": "live",
+                  "observation": {
+                    "resourceType": "Observation",
+                    "status": "preliminary",
+                    "code": {
+                      "coding": [
+                        {
+                          "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                          "code": "ocular-health:anterior:lens",
+                          "display": "ocular-health:anterior:lens"
+                        }
+                      ],
+                      "text": "ocular-health:anterior:lens"
+                    },
+                    "subject": {
+                      "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                    },
+                    "encounter": {
+                      "reference": "Encounter/09c043b9-c705-4487-9365-5e47567636d1"
+                    },
+                    "identifier": [
+                      {
+                        "system": "urn:odos:finding-panel:v1",
+                        "value": "a6d00d9b8ea4bcbf47ca55eabf5e3a576e43ef438d64c1e750a1cb4e439a2ec8"
+                      }
+                    ],
+                    "extension": [
+                      {
+                        "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+                        "valueCodeableConcept": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "OD",
+                              "display": "Right eye"
+                            }
+                          ],
+                          "text": "Right eye"
+                        }
+                      }
+                    ],
+                    "component": [
+                      {
+                        "code": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "R10_PANEL_META",
+                              "display": "R10_PANEL_META"
+                            }
+                          ],
+                          "text": "R10_PANEL_META"
+                        },
+                        "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"09c043b9-c705-4487-9365-5e47567636d1\",\"stableKey\":\"ocular-health:anterior:lens\",\"eye\":\"OD\"}"
+                      },
+                      {
+                        "code": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "REMARKS",
+                              "display": "REMARKS"
+                            }
+                          ],
+                          "text": "REMARKS"
+                        },
+                        "valueString": "Synthetic dropped reply proof 1789668009646"
+                      },
+                      {
+                        "code": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "R10_OPERATION",
+                              "display": "R10_OPERATION"
+                            }
+                          ],
+                          "text": "R10_OPERATION"
+                        },
+                        "valueString": "{\"commandId\":\"388d2363-de20-4053-87a8-22334e72afb4\",\"target\":\"panel:a6d00d9b8ea4bcbf47ca55eabf5e3a576e43ef438d64c1e750a1cb4e439a2ec8\",\"digest\":\"f0ff1589e71b2164e31d06567f20b13a78eae40a16d9a33e6cf813adb79467b8\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8\",\"recorded\":\"2026-09-17T18:00:09.806Z\",\"activity\":\"UPDATE\",\"targetReferences\":[\"self\",\"Patient/37513ad0-ec6b-4495-b78f-2901841e5e32\"]}}"
+                      }
+                    ],
+                    "id": "c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+                    "meta": {
+                      "versionId": "96e0121b-e2c2-497c-87c8-a92d96a45d12",
+                      "lastUpdated": "2026-09-17T18:00:09.806Z"
+                    }
+                  },
+                  "remarks": "Synthetic dropped reply proof 1789668009646"
+                }
+              ],
+              "negativeActs": [],
+              "deferred": false,
+              "values": {},
+              "editable": true,
+              "panelBaseline": {
+                "kind": "canonical",
+                "reference": "Observation/c3cc422c-a45a-4b64-9ea1-ebf91d8cb8e2",
+                "versionId": "96e0121b-e2c2-497c-87c8-a92d96a45d12"
+              },
+              "remarks": "Synthetic dropped reply proof 1789668009646"
+            },
+            {
+              "stableKey": "ocular-health:anterior:tear-film",
+              "eye": "OD",
+              "snapshots": [
+                {
+                  "source": {
+                    "reference": "Observation/b473d4e1-015a-4a88-ba34-fcf106ab51b3",
+                    "versionId": "323b9e95-9c26-4ea9-b111-222ab09b3f84",
+                    "kind": "panel-context"
+                  },
+                  "status": "live",
+                  "observation": {
+                    "resourceType": "Observation",
+                    "status": "preliminary",
+                    "code": {
+                      "coding": [
+                        {
+                          "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                          "code": "ocular-health:anterior:tear-film",
+                          "display": "ocular-health:anterior:tear-film"
+                        }
+                      ],
+                      "text": "ocular-health:anterior:tear-film"
+                    },
+                    "subject": {
+                      "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                    },
+                    "encounter": {
+                      "reference": "Encounter/09c043b9-c705-4487-9365-5e47567636d1"
+                    },
+                    "identifier": [
+                      {
+                        "system": "urn:odos:finding-panel:v1",
+                        "value": "dd77b287aacabc29a3bb66d27e64b52625beca003ec704f98e4cadd6fb96ffbd"
+                      }
+                    ],
+                    "extension": [
+                      {
+                        "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+                        "valueCodeableConcept": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "OD",
+                              "display": "Right eye"
+                            }
+                          ],
+                          "text": "Right eye"
+                        }
+                      }
+                    ],
+                    "component": [
+                      {
+                        "code": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "R10_PANEL_META",
+                              "display": "R10_PANEL_META"
+                            }
+                          ],
+                          "text": "R10_PANEL_META"
+                        },
+                        "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"09c043b9-c705-4487-9365-5e47567636d1\",\"stableKey\":\"ocular-health:anterior:tear-film\",\"eye\":\"OD\"}"
+                      },
+                      {
+                        "code": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "CUSTOM_GRADE_TBUT",
+                              "display": "CUSTOM_GRADE_TBUT"
+                            }
+                          ],
+                          "text": "CUSTOM_GRADE_TBUT"
+                        },
+                        "valueQuantity": {
+                          "value": 9
+                        }
+                      },
+                      {
+                        "code": {
+                          "coding": [
+                            {
+                              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                              "code": "R10_OPERATION",
+                              "display": "R10_OPERATION"
+                            }
+                          ],
+                          "text": "R10_OPERATION"
+                        },
+                        "valueString": "{\"commandId\":\"717d7407-9247-4999-994f-ae7153848607\",\"target\":\"panel:dd77b287aacabc29a3bb66d27e64b52625beca003ec704f98e4cadd6fb96ffbd\",\"digest\":\"b497137dba3f0cf176dd8ac72bc1cc54e3d8c25342ab4b747ba278bf53ec21a1\",\"audit\":{\"kind\":\"mutation\",\"actor\":\"Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8\",\"recorded\":\"2026-09-17T18:00:12.606Z\",\"activity\":\"UPDATE\",\"targetReferences\":[\"self\",\"Patient/37513ad0-ec6b-4495-b78f-2901841e5e32\"]}}"
+                      }
+                    ],
+                    "id": "b473d4e1-015a-4a88-ba34-fcf106ab51b3",
+                    "meta": {
+                      "versionId": "323b9e95-9c26-4ea9-b111-222ab09b3f84",
+                      "lastUpdated": "2026-09-17T18:00:12.606Z"
+                    }
+                  }
+                }
+              ],
+              "negativeActs": [],
+              "deferred": false,
+              "values": {
+                "CUSTOM_GRADE_TBUT": 9
+              },
+              "editable": true,
+              "panelBaseline": {
+                "kind": "canonical",
+                "reference": "Observation/b473d4e1-015a-4a88-ba34-fcf106ab51b3",
+                "versionId": "323b9e95-9c26-4ea9-b111-222ab09b3f84"
+              }
+            }
+          ],
+          "definitionViews": [
+            {
+              "resourceType": "Observation",
+              "status": "preliminary",
+              "effectiveDateTime": "2026-09-17T18:00:27.583Z",
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                    "code": "ocular-health:anterior:lens",
+                    "display": "Lens"
+                  }
+                ],
+                "text": "Lens"
+              },
+              "subject": {
+                "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+              },
+              "encounter": {
+                "reference": "Encounter/09c043b9-c705-4487-9365-5e47567636d1"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+                  "valueCodeableConcept": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OD",
+                        "display": "Right eye"
+                      }
+                    ],
+                    "text": "Right eye"
+                  }
+                }
+              ],
+              "component": [
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract",
+                        "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract"
+                      }
+                    ],
+                    "text": "OD_CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract"
+                  },
+                  "valueBoolean": true
+                },
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract::grade",
+                        "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract::grade"
+                      }
+                    ],
+                    "text": "OD_CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract::grade"
+                  },
+                  "valueCodeableConcept": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "3+",
+                        "display": "3+"
+                      }
+                    ],
+                    "text": "3+"
+                  }
+                }
+              ],
+              "meta": {
+                "versionId": "c1f48be2-3b0d-4176-85d0-0b21ea8e4f72",
+                "lastUpdated": "2026-09-17T18:00:27.585Z"
+              },
+              "projectionKey": "definition:[\"ocular-health:anterior:lens\",\"OD\"]",
+              "contributors": [
+                {
+                  "reference": "Observation/f7634ec6-d3de-4d72-92cc-f620ff37e25f",
+                  "versionId": "c1f48be2-3b0d-4176-85d0-0b21ea8e4f72",
+                  "effectiveDateTime": "2026-09-17T18:00:27.583Z",
+                  "kind": "canonical-fact"
+                }
+              ],
+              "interpretation": [
+                {
+                  "coding": [
+                    {
+                      "code": "A"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "resourceType": "Observation",
+              "status": "preliminary",
+              "effectiveDateTime": "2026-09-17T18:00:06.314Z",
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                    "code": "ocular-health:anterior:lens",
+                    "display": "Lens"
+                  }
+                ],
+                "text": "Lens"
+              },
+              "subject": {
+                "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+              },
+              "encounter": {
+                "reference": "Encounter/09c043b9-c705-4487-9365-5e47567636d1"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+                  "valueCodeableConcept": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OS",
+                        "display": "Left eye"
+                      }
+                    ],
+                    "text": "Left eye"
+                  }
+                }
+              ],
+              "component": [
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+                        "display": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+                      }
+                    ],
+                    "text": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+                  },
+                  "valueBoolean": true
+                }
+              ],
+              "meta": {
+                "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d",
+                "lastUpdated": "2026-09-17T18:00:06.322Z"
+              },
+              "projectionKey": "definition:[\"ocular-health:anterior:lens\",\"OS\"]",
+              "contributors": [
+                {
+                  "reference": "Observation/36d413ba-a3fe-4c61-9a34-3539cbb9886c",
+                  "versionId": "c2da9980-7fa2-41e7-b902-b20f40cf1b9d",
+                  "effectiveDateTime": "2026-09-17T18:00:06.314Z",
+                  "kind": "canonical-fact"
+                }
+              ],
+              "interpretation": [
+                {
+                  "coding": [
+                    {
+                      "code": "A"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "resourceType": "Observation",
+              "status": "preliminary",
+              "code": {
+                "coding": [
+                  {
+                    "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                    "code": "ocular-health:anterior:tear-film",
+                    "display": "ocular-health:anterior:tear-film"
+                  }
+                ],
+                "text": "ocular-health:anterior:tear-film"
+              },
+              "subject": {
+                "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+              },
+              "encounter": {
+                "reference": "Encounter/09c043b9-c705-4487-9365-5e47567636d1"
+              },
+              "extension": [
+                {
+                  "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+                  "valueCodeableConcept": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "OD",
+                        "display": "Right eye"
+                      }
+                    ],
+                    "text": "Right eye"
+                  }
+                }
+              ],
+              "component": [
+                {
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                        "code": "CUSTOM_GRADE_TBUT",
+                        "display": "CUSTOM_GRADE_TBUT"
+                      }
+                    ],
+                    "text": "CUSTOM_GRADE_TBUT"
+                  },
+                  "valueQuantity": {
+                    "value": 9
+                  }
+                }
+              ],
+              "meta": {
+                "versionId": "323b9e95-9c26-4ea9-b111-222ab09b3f84",
+                "lastUpdated": "2026-09-17T18:00:12.606Z"
+              },
+              "projectionKey": "definition:[\"ocular-health:anterior:tear-film\",\"OD\"]",
+              "contributors": [
+                {
+                  "reference": "Observation/b473d4e1-015a-4a88-ba34-fcf106ab51b3",
+                  "versionId": "323b9e95-9c26-4ea9-b111-222ab09b3f84",
+                  "kind": "panel-context"
+                }
+              ]
+            }
+          ],
+          "conflicts": [],
+          "unresolved": []
+        }
+      }
+    }
+  ],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/b-final-ocular-OU.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/c-diagnosis-split.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/c-diagnosis-split-wide.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/c-ocular-OS-cleared.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/e-unconfirmed-retry.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/h-TBUT-reloaded.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/d-pending-unrelated-deselect.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/d-two-context-stale-conflict.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-carry-unconfirmed.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/final-failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-INv-UM74.js",
+    "sha256": "3e1a94b919810a866ae40f42cdb2b3207e03ff43f4031fdd8cead5df710be108"
+  },
+  "failure": {
+    "message": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /^(Open Lens editor|Edit Lens)$/ })\u001b[22m\n",
+    "stack": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /^(Open Lens editor|Edit Lens)$/ })\u001b[22m\n\n    at openOcular (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:48:73)\n    at async file:///Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:169:3"
+  },
+  "finishedAt": "2026-09-17T18:00:50.543Z"
+}

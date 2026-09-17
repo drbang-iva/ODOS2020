@@ -66,3 +66,9 @@ Additional assertion ledger:
 | W147 UI | Active signed fact lock only | An inactive option with a live present read-only fact remains visible, checked and locked. |
 
 Final focused count supersedes the earlier 13-test count. The earlier 11 mutation red/restored-green pairs remain the recorded mutation runs; the two new assertions were observed red immediately before their fixes and green after. No later mutation remains applied. No other screen or old fixture migration was added.
+
+
+## Served-route integration follow-ups
+
+- V36 Clear visibility: legacy snapshot rows missed canonical-only visits. Six new cases cover live present, live absent, persisted panel, live negative, retired-only and empty history. Before:2 pass/4 fail; after:23/23 editor tests. The Clear control uses canonical history and still asks the server for its authoritative preview/count before writing.
+- W138 visibility: operator explicitly approved canonical Deferred regardless of the legacy definition flag; no server/seed change. Existing static count assertion2→4 is mapped in ../deferred-visibility-approval.md. Red0/1; restored combined custom/editor106/106.

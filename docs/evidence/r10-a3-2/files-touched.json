@@ -1,9 +1,25 @@
 {
   "base": "a211b36887b49139ab29cf2d811a5a30f261034d",
-  "implementationHead": "3eaba076951d86562fe1287044f3485b0f480703",
+  "implementationHead": "6227fad8a10acb82d73567afda8e9e3e6c2ab376",
   "files": [
     "mcp/src/clinical-graph/custom-section-endpoint.ts",
     "mcp/tests/r10A3OcularDoor.test.ts",
+    "scripts/r10-served-route/README.md",
+    "scripts/r10-served-route/bootstrap.ts",
+    "scripts/r10-served-route/browser-fixtures.ts",
+    "scripts/r10-served-route/browser-proof.mjs",
+    "scripts/r10-served-route/caddy.mjs",
+    "scripts/r10-served-route/check-caddy.mjs",
+    "scripts/r10-served-route/harness.test.mjs",
+    "scripts/r10-served-route/login.ts",
+    "scripts/r10-served-route/readiness-child.mjs",
+    "scripts/r10-served-route/readonly-proof.mjs",
+    "scripts/r10-served-route/response-proxy.mjs",
+    "scripts/r10-served-route/screens-proof.mjs",
+    "scripts/r10-served-route/seed-ui.ts",
+    "scripts/r10-served-route/stack.mjs",
+    "scripts/r10-served-route/undo-superseded-proof.mjs",
+    "scripts/r10-served-route/verify-ready.ts",
     "ui/src/components/charting/AssessmentSection.tsx",
     "ui/src/components/charting/DiagnosisPicker.tsx",
     "ui/src/components/charting/DiagnosisWorkspace.tsx",
@@ -37,5 +53,6 @@
     "Harness and evidence additions are separately authorized by section9.",
     "No terminology or regulatory bindings added; no new Mandate14 ledger rows required.",
     "No new decision authored; companion decisions index unchanged."
-  ]
+  ],
+  "evidenceDirectory": "docs/evidence/r10-a3-2/"
 }

@@ -1,0 +1,20 @@
+{
+  "mode": "inspect-destination",
+  "startedAt": "2026-09-17T18:18:01.366Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "97fe47994c15944f367bc13117ed17bf87929c29",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/destination-overview-inspection.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-B6n-Vchx.js",
+    "sha256": "5a1158a74120e25886bc71dbea0aff308aed9e925535285bb1d8e309b143ecf5"
+  },
+  "finishedAt": "2026-09-17T18:18:04.412Z"
+}

@@ -1,0 +1,53 @@
+[
+  {
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/r10A3OcularDoor.test.ts"
+    ],
+    "cwd": "mcp",
+    "log": "r10A3OcularDoor-final.log",
+    "exitCode": 0,
+    "tests": 62,
+    "pass": 62,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/r10A3DoorGuards.test.ts"
+    ],
+    "cwd": "mcp",
+    "log": "r10A3DoorGuards-final.log",
+    "exitCode": 0,
+    "tests": 14,
+    "pass": 14,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  {
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "cwd": "mcp",
+    "log": "r10A3ReleaseScenarios-final.log",
+    "exitCode": 0,
+    "tests": 16,
+    "pass": 16,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0
+  }
+]

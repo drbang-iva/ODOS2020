@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-09-17T18:09:30.327Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "97fe47994c15944f367bc13117ed17bf87929c29",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "encounterReference": "Encounter/62d2cfc0-f46e-47ba-b7a6-dedc0cd70891",
+  "reference": "Observation/5700cd61-54ae-4d43-a8c8-82b49fa14aef",
+  "screenshots": [],
+  "errors": [],
+  "failure": {
+    "message": "Synthetic authentication failed; credential-bearing details omitted."
+  },
+  "finishedAt": "2026-09-17T18:09:51.003Z"
+}

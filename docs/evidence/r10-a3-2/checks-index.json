@@ -2078,7 +2078,8 @@
     "W147 inactive option is an unchanged witness while active panel Remarks save"
   ],
   "workspaceUnchanged": {
-    "ui/tests/diagnosisWorkspace.test.tsx": true
+    "ui/tests/diagnosisWorkspace.test.tsx": true,
+    "ui/tests/r10DiagnosisWorkspace.test.tsx": true
   },
   "workspaceEvidence": [
     "picker/workspace-before.txt",
@@ -2086,6 +2087,10 @@
   ],
   "limitations": [
     "Existing live-authz lifecycle Provenance PUT404 is tolerated by its test, not proven successful.",
-    "Missing explicit process exits remain null; parent should record its active raw CI MCP run upon completion."
-  ]
+    "Historical unrecorded process exits remain null; completed full runs have explicit exits in final-checks.json."
+  ],
+  "workspaceEvidenceNote": "The22-test before/extracted logs are r10DiagnosisWorkspace.test.tsx. Both that file and the general diagnosisWorkspace.test.tsx are byte-unchanged from base.",
+  "finalChecks": "final-checks.json",
+  "latestCountsReference": "final-checks.json",
+  "note": "This historical inventory includes failed and superseded attempts. Use final-checks.json and SEALED-BUNDLE.md for accepted results."
 }

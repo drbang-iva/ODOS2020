@@ -1,0 +1,134 @@
+TAP version 13
+# Subtest: T1 previous exams displays canonical finding linked by extension
+ok 1 - T1 previous exams displays canonical finding linked by extension
+  ---
+  duration_ms: 13.699666
+  type: 'test'
+  ...
+# Subtest: T2 carry pull preserves canonical identity typed qualifiers and destination home
+ok 2 - T2 carry pull preserves canonical identity typed qualifiers and destination home
+  ---
+  duration_ms: 12.156375
+  type: 'test'
+  ...
+# Subtest: T3 later writer version after carry is read as edited
+ok 3 - T3 later writer version after carry is read as edited
+  ---
+  duration_ms: 11.871584
+  type: 'test'
+  ...
+# Subtest: T7 overview shows live canonical facts and excludes cleared facts
+ok 4 - T7 overview shows live canonical facts and excludes cleared facts
+  ---
+  duration_ms: 1.268167
+  type: 'test'
+  ...
+# Subtest: T8 overview evidence includes extension homes without Condition evidence
+ok 5 - T8 overview evidence includes extension homes without Condition evidence
+  ---
+  duration_ms: 9.670166
+  type: 'test'
+  ...
+# Subtest: T9 completeness credits live canonical facts but not cleared facts
+ok 6 - T9 completeness credits live canonical facts but not cleared facts
+  ---
+  duration_ms: 16.9915
+  type: 'test'
+  ...
+# Subtest: T10 section void selects canonical facts and undo restores exact records
+ok 7 - T10 section void selects canonical facts and undo restores exact records
+  ---
+  duration_ms: 4.719208
+  type: 'test'
+  ...
+# Subtest: T11 finding void and undo preserve identity qualifiers homes and other eye
+ok 8 - T11 finding void and undo preserve identity qualifiers homes and other eye
+  ---
+  duration_ms: 2.198417
+  type: 'test'
+  ...
+# Subtest: T12 encounter void and undo include canonical facts with exact counts
+ok 9 - T12 encounter void and undo include canonical facts with exact counts
+  ---
+  duration_ms: 2.292416
+  type: 'test'
+  ...
+# Subtest: T13 lifecycle mutation repairs owed audit before replacing clinical state
+ok 10 - T13 lifecycle mutation repairs owed audit before replacing clinical state
+  ---
+  duration_ms: 2.348166
+  type: 'test'
+  ...
+# Subtest: T14 lifecycle refuses signed canonical facts without downgrading them
+ok 11 - T14 lifecycle refuses signed canonical facts without downgrading them
+  ---
+  duration_ms: 0.58575
+  type: 'test'
+  ...
+# Subtest: T17 supported Ocular Health pick links fact targets without Condition evidence
+ok 12 - T17 supported Ocular Health pick links fact targets without Condition evidence
+  ---
+  duration_ms: 10.508917
+  type: 'test'
+  ...
+# Subtest: T19 protocol capture reads current canonical facts instead of raw exact-code rows
+ok 13 - T19 protocol capture reads current canonical facts instead of raw exact-code rows
+  ---
+  duration_ms: 8.8305
+  type: 'test'
+  ...
+# Subtest: T20 source census identifies any exam PDF consumer for canonical migration
+ok 14 - T20 source census identifies any exam PDF consumer for canonical migration
+  ---
+  duration_ms: 109.863417
+  type: 'test'
+  ...
+# Subtest: T21 pre-rebuild Ocular Health history and capture remain read-only
+ok 15 - T21 pre-rebuild Ocular Health history and capture remain read-only
+  ---
+  duration_ms: 2.729459
+  type: 'test'
+  ...
+# Subtest: T22 every registered finding write path uses real handlers and emits permitted Observations
+ok 16 - T22 every registered finding write path uses real handlers and emits permitted Observations
+  ---
+  duration_ms: 5796.751542
+  type: 'test'
+  ...
+# {"id":"door-put","scenarioId":"door-put-success","handler":"handleDiagnosisFindingsMutationRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"}],"rejection":{"scenarioId":"door-put-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"door-audit-repair","scenarioId":"door-audit-repair-success","handler":"handleDiagnosisFindingsAuditRepairRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"door-repair-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"pick-condition","scenarioId":"pick-condition-success","handler":"handleDiagnosisPickRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[],"rejection":{"scenarioId":"pick-condition-success","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-save-fact","scenarioId":"oh-save-fact-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"}],"rejection":{"scenarioId":"oh-save-fact-refusal","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-save-panel","scenarioId":"oh-save-panel-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"panel-context"}],"rejection":{"scenarioId":"oh-save-panel-refusal","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"oh-negative-act","scenarioId":"oh-negative-act-success","handler":"handleCustomSectionCaptureRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"negative-act"},{"stage":"persisted","reference":"Observation/observation-1","kind":"negative-act"}],"rejection":{"scenarioId":"oh-negative-act-refusal","status":409,"reason":"positive-in-negative-scope","attempted":0,"persisted":0}}
+# {"id":"void","scenarioId":"lifecycle-success","handler":"handleEncounterVoidRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-3","kind":"panel-context"}],"rejection":{"scenarioId":"void-signed","status":422,"reason":"signed-or-cancelled","attempted":0,"persisted":0}}
+# {"id":"undo","scenarioId":"lifecycle-success","handler":"handleEncounterUndoRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"panel-context"},{"stage":"persisted","reference":"Observation/observation-1","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/observation-3","kind":"panel-context"}],"rejection":{"scenarioId":"lifecycle-success","status":409,"reason":"undo-superseded","attempted":0,"persisted":0}}
+# {"id":"carry-condition","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-plan","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-link","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-facts","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"attempted","kind":"canonical-fact"},{"stage":"attempted","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/07cb8c37-a4f6-48a0-ba57-b601cb30c4fc","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/b83bd674-55f8-4f3c-847d-cbec69b1b7ba","kind":"canonical-fact"}],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"carry-lineage","scenarioId":"carry-success","handler":"handleDiagnosisPullRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[],"rejection":{"scenarioId":"carry-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"protocol-commit","scenarioId":"protocol-apply-unapply","handler":"handleProtocolApplyRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":5,"persisted":5,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/75243f3a-843a-4145-9f4e-2231296b3a23","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-commit-shared-reject","status":422,"reason":"shared-finding-charted-in-ocular-health","attempted":0,"persisted":0}}
+# {"id":"protocol-unapply","scenarioId":"protocol-apply-unapply","handler":"handleProtocolUnapplyRequest","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/75243f3a-843a-4145-9f4e-2231296b3a23","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-unapply-closed","status":409,"reason":"encounter-closed","attempted":0,"persisted":0}}
+# {"id":"protocol-restore","scenarioId":"protocol-restore-compensation","handler":"handleProtocolUnapplyRequest","responseStatus":500,"rejectionScope":"phase-only","attempted":1,"persisted":1,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/672237eb-a6af-4023-9f7e-86de0efb80f8","kind":"unrelated"}],"rejection":{"scenarioId":"protocol-restore-late-close","status":409,"reason":"encounter-closed; zero restore writes, preceding unapply and Basic compensation retained separately","attempted":0,"persisted":0}}
+# {"id":"mcp-create-observation","scenarioId":"T22:mcp-create-observation","handler":"create_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/c2bd392e-00dc-41ad-8fdc-4224eb3fff13","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-create-observation:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-scribe-write","scenarioId":"T22:mcp-scribe-write","handler":"scribe_write_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":1,"persisted":1,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/1389bd83-68ae-4003-9b61-56d6ef40ed2d","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-scribe-write:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-save-section","scenarioId":"T22:mcp-save-section","handler":"save_section_observations","responseStatus":200,"rejectionScope":"whole-request","attempted":6,"persisted":6,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/ad7f734d-b3ed-4428-a6a0-2be2b7422d6c","kind":"unrelated"},{"stage":"persisted","reference":"Observation/bd6c3d16-76ea-4039-950f-41e5bb2fad79","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-save-section:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-append-context","scenarioId":"T22:mcp-append-context","handler":"append_observation_context","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/a1f3a5c3-2d36-48a2-b421-f4fc565169cc","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-append-context:canonical-shared-source","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-attest","scenarioId":"T22:mcp-attest","handler":"clinician_attest_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"persisted","reference":"Observation/d74a5ad3-0b41-4633-af46-37f8f51a0cac","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/3fb9527e-1783-4881-aeda-0cc93fb35b5e","kind":"panel-context"}],"rejection":{"scenarioId":"T22:mcp-attest:legacy-target-refusal","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-amend","scenarioId":"T22:mcp-amend","handler":"amend_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"persisted","reference":"Observation/605b222f-7463-43cc-a445-7917b6d3f25d","kind":"canonical-fact"},{"stage":"persisted","reference":"Observation/f6897f68-0e8e-4936-8db5-361b26813283","kind":"panel-context"}],"rejection":{"scenarioId":"T22:mcp-amend:legacy-target-refusal","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors; legacy targets are read-only\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-smoking-status","scenarioId":"T22:mcp-smoking-status","handler":"create_smoking_status_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/21374f68-7f62-43c7-9ca9-198088b40a17","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-smoking-status:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-dry-eye-questionnaire-score","scenarioId":"T22:mcp-dry-eye-questionnaire-score","handler":"create_dry_eye_questionnaire_response","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/f3290b5c-e5f7-413f-b9e1-da40b1905659","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-dry-eye-questionnaire-score:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-meibography","scenarioId":"T22:mcp-meibography","handler":"create_meibography_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":3,"persisted":3,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/54732556-a2b0-4c28-8c26-f12890304ae0","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-meibography:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-ortho-k-fit","scenarioId":"T22:mcp-ortho-k-fit","handler":"record_ortho_k_fit_observation","responseStatus":200,"rejectionScope":"whole-request","attempted":2,"persisted":2,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/55d162b3-76bd-4e4e-b914-dcbfc2f7d077","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-ortho-k-fit:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"id":"mcp-eye-growth","scenarioId":"T22:mcp-eye-growth","handler":"record_eye_growth_axial_length_measurement","responseStatus":200,"rejectionScope":"whole-request","attempted":4,"persisted":4,"observations":[{"stage":"attempted","kind":"unrelated"},{"stage":"attempted","kind":"unrelated"},{"stage":"persisted","reference":"Observation/finding-axial-length-od-2026-09-16t12-00-00-000z","kind":"unrelated"},{"stage":"persisted","reference":"Observation/finding-corneal-radius-od-2026-09-16t12-00-00-000z","kind":"unrelated"}],"rejection":{"scenarioId":"T22:mcp-eye-growth:adversarial-canonical-output","status":409,"reason":"{\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"Error: Shared findings are charted in the finding doors\\"}],\\"isError\\":true}","attempted":0,"persisted":0}}
+# {"census":{"paths":27,"sites":97,"mapped":30,"excluded":67}}
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6663.908291
