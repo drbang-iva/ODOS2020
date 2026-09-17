@@ -66,7 +66,7 @@ interface HistoryRow {
 
 interface CanonicalEye {
   encounterEditable: boolean; readOnlyReason?: string; facts: EncounterFindingRow[];
-  panel: { deferred: boolean; other?: string; remarks?: string; values: Record<string, number | string>; baseline: unknown; editable: boolean };
+  panel: { deferred: boolean; other?: string; remarks?: string; values: Record<string, number | string>; baseline: { kind: "absent" | "canonical" }; editable: boolean };
   negativeActs: Array<{ scope: NegativeAct; status: "live" | "retired" }>;
 }
 interface CanonicalHistory { eyes?: Record<Eye, CanonicalEye>; rows?: HistoryRow[]; unscopedCount?: number; encounters?: Array<{ recordedAt: string; eyes: Record<Eye, CanonicalEye> }>; error?: string }
@@ -493,7 +493,7 @@ export function OcularHealthSection({
               encounterReference={encounterReference}
               sectionKey={definitions.map((definition) => definition.stableKey)}
               label="Ocular Health"
-              hasRecorded={Object.values(currentHistory?.rowsByStableKey ?? {}).some((rows) => rows.length > 0)}
+              hasRecorded={Object.values(canonical).some((eyes) => EYES.some((eye) => eyes[eye].facts.some((fact) => fact.status === "live") || eyes[eye].panel.baseline.kind === "canonical" || eyes[eye].negativeActs.some((act) => act.status === "live")))}
               fetchImpl={fetchImpl}
               onCleared={(result) => {
                 setMessage(null);

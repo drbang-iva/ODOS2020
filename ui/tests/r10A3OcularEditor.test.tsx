@@ -103,3 +103,16 @@ test("W134 diagnosis door names the closed-encounter refusal", async () => {
   const { findingReadOnlyLabel } = await import("../src/lib/diagnosis-findings");
   assert.equal(findingReadOnlyLabel("encounter-closed"), "Signed or closed visit");
 });
+
+
+for (const recorded of ["fact", "absent", "panel", "negative", "retired", "empty"]) test(`V36 canonical ${recorded} controls section Clear visibility`, async () => {
+ const current = history(recorded === "fact" || recorded === "absent" || recorded === "retired" ? [fact("OD", "scar", recorded === "absent" ? "absent" : "present")] : []);
+ if (recorded === "retired") current.eyes.OD.facts[0].status = "retired";
+ if (recorded === "panel") current.eyes.OD.panel.baseline = { kind: "canonical", reference: "Observation/panel", versionId: "1" } as any;
+ if (recorded === "negative") current.eyes.OD.negativeActs = [{ status: "live", scope: { id: "negative", eye: "OD", optionCodes: ["scar"], exclusions: [], assertedAt: "2026-09-17" } }] as any;
+ const h = await mount(current);
+ try {
+  assert.equal(h.renderer.root.findAllByProps({ "aria-label": "Clear Ocular Health" }).length, ["retired", "empty"].includes(recorded) ? 0 : 1);
+  assert.equal(h.posts.length, 0);
+ } finally { h.close(); }
+});
