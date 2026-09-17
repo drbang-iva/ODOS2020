@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: W40 review preflight usage names service-gate
+ok 1 - W40 review preflight usage names service-gate
+  ---
+  duration_ms: 0.530834
+  type: 'test'
+  ...
+# Subtest: W40 review T20 root expression decodes spaces
+ok 2 - W40 review T20 root expression decodes spaces
+  ---
+  duration_ms: 0.193583
+  type: 'test'
+  ...
+# Subtest: V21 review legacy staining exclusion names canonical write coverage
+ok 3 - V21 review legacy staining exclusion names canonical write coverage
+  ---
+  duration_ms: 0.199417
+  type: 'test'
+  ...
+# Subtest: V35 review r10OcularHealthDoorAuthzLive.test.ts preserves body failure alongside cleanup
+ok 4 - V35 review r10OcularHealthDoorAuthzLive.test.ts preserves body failure alongside cleanup
+  ---
+  duration_ms: 19.475625
+  type: 'test'
+  ...
+# Subtest: V35 review r10DiagnosisDoorAuthzLive.test.ts preserves body failure alongside cleanup
+ok 5 - V35 review r10DiagnosisDoorAuthzLive.test.ts preserves body failure alongside cleanup
+  ---
+  duration_ms: 3.192084
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 209.776334

@@ -273,7 +273,7 @@ export function deduplicateDiagnosisCandidates(candidates: readonly OrderedCandi
     const key = diagnosisCandidateKey(candidate);
     const current = byDiagnosisKey.get(key);
     const supports = unionSupports([...(current?.supportingFacts ?? []), ...(candidate.supportingFacts ?? [])]);
-    if (supports.length) { candidate = { ...candidate, supportingFacts: supports }; if (current) current.supportingFacts = supports; }
+    if (supports.length) { candidate = { ...candidate, supportingFacts: supports }; if (current) byDiagnosisKey.set(key, { ...current, supportingFacts: supports }); }
     if (!current || candidate.source === "rule" && current.source !== "rule") {
       byDiagnosisKey.set(key, candidate);
       continue;

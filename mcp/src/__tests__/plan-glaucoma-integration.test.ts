@@ -84,7 +84,7 @@ for (const mode of ["tap", "whole"] as const) test(`fixback warm ${mode} seeds o
   const guardDefinitionQuery = { code: "https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition", _count: "200" };
   const guardEncounterQuery = { encounter: "Encounter/e", _count: "200" };
   const guardSearches = searches.filter(p => p?.code === guardDefinitionQuery.code || p?.encounter === "Encounter/e");
-  assert.deepEqual(guardSearches, Array.from({ length: mode === "tap" ? 3 : 10 }, () =>
+  assert.deepEqual(guardSearches, Array.from({ length: mode === "tap" ? 2 : 9 }, () =>
     [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat());
   const protocolSearches = searches.filter(p => !(guardSearches as typeof searches).includes(p));
   const ruleSearches = protocolSearches.filter(p => p?.code?.endsWith("odos-procedure-charge-rule"));

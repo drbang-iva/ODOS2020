@@ -1,0 +1,455 @@
+TAP version 13
+# Subtest: W111 review closure read failure preserves carry pull command response
+not ok 1 - W111 review closure read failure preserves carry pull command response
+  ---
+  duration_ms: 33.382167
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:1:17024'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        body: {
+    +     error: 'FHIR diagnosis carry dependency failed.'
+    -     alreadyPresent: false,
+    -     conditionReference: 'Condition/stable-1',
+    -     conditionStep: 'applied',
+    -     findings: {
+    -       commandId: '47e40036-12c5-4ed8-8b54-83826e301765',
+    -       complete: true,
+    -       executionOrder: [
+    -         0,
+    -         1
+    -       ],
+    -       outcomes: [
+    -         {
+    -           clinicalWrite: 'confirmed',
+    -           reference: 'Observation/stable-6',
+    -           status: 'applied',
+    -           target: 'finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0',
+    -           versionId: 'v7'
+    -         },
+    -         {
+    -           clinicalWrite: 'confirmed',
+    -           reference: 'Observation/stable-10',
+    -           status: 'applied',
+    -           target: 'finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf',
+    -           versionId: 'v11'
+    -         }
+    -       ],
+    -       result: 'command'
+    -     },
+    -     lineageStep: 'applied',
+    -     linkStep: 'applied',
+    -     planStep: 'applied'
+        },
+    +   status: 502
+    -   status: 200
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 200
+    body:
+      alreadyPresent: false
+      conditionStep: 'applied'
+      planStep: 'applied'
+      linkStep: 'applied'
+      lineageStep: 'applied'
+      conditionReference: 'Condition/stable-1'
+      findings:
+        result: 'command'
+        commandId: '47e40036-12c5-4ed8-8b54-83826e301765'
+        complete: true
+        executionOrder:
+          0: 0
+          1: 1
+        outcomes:
+          0:
+            clinicalWrite: 'confirmed'
+            status: 'applied'
+            target: 'finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0'
+            reference: 'Observation/stable-6'
+            versionId: 'v7'
+          1:
+            clinicalWrite: 'confirmed'
+            status: 'applied'
+            target: 'finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf'
+            reference: 'Observation/stable-10'
+            versionId: 'v11'
+  actual:
+    status: 502
+    body:
+      error: 'FHIR diagnosis carry dependency failed.'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:389:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W111 review closure read failure preserves door-put command response
+not ok 2 - W111 review closure read failure preserves door-put command response
+  ---
+  duration_ms: 13.492583
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3DoorGuards.test.ts:1:12482'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        body: {
+    +     error: 'Encounter findings could not be loaded.',
+    +     kind: 'upstream',
+    +     result: 'unavailable'
+    -     commandId: '97f1b81f-5a8b-4361-a084-340cfd48b335',
+    -     complete: true,
+    -     executionOrder: [
+    -       0
+    -     ],
+    -     outcomes: [
+    -       {
+    -         clinicalWrite: 'confirmed',
+    -         reference: 'Observation/02ad0818-4d87-44ef-9313-a5353b9d5b62',
+    -         status: 'already-applied',
+    -         target: 'finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0',
+    -         versionId: '982d80b3-6e52-47c2-92d1-a2c5c1590745'
+    -       }
+    -     ],
+    -     result: 'command'
+        },
+    +   status: 502
+    -   status: 200
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 200
+    body:
+      result: 'command'
+      commandId: '97f1b81f-5a8b-4361-a084-340cfd48b335'
+      complete: true
+      executionOrder:
+        0: 0
+      outcomes:
+        0:
+          clinicalWrite: 'confirmed'
+          status: 'already-applied'
+          target: 'finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0'
+          reference: 'Observation/02ad0818-4d87-44ef-9313-a5353b9d5b62'
+          versionId: '982d80b3-6e52-47c2-92d1-a2c5c1590745'
+  actual:
+    status: 502
+    body:
+      result: 'unavailable'
+      kind: 'upstream'
+      error: 'Encounter findings could not be loaded.'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3DoorGuards.test.ts:113:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W111 review closure read failure preserves door-audit-repair command response
+not ok 3 - W111 review closure read failure preserves door-audit-repair command response
+  ---
+  duration_ms: 3.362917
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3DoorGuards.test.ts:1:12482'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        body: {
+    +     error: 'Encounter findings could not be loaded.',
+    +     kind: 'upstream',
+    +     result: 'unavailable'
+    -     commandId: 'cdf39b31-da4f-4805-bf0f-850ee78c2ed7',
+    -     complete: true,
+    -     executionOrder: [],
+    -     outcomes: [],
+    -     result: 'command'
+        },
+    +   status: 502
+    -   status: 200
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 200
+    body:
+      result: 'command'
+      commandId: 'cdf39b31-da4f-4805-bf0f-850ee78c2ed7'
+      complete: true
+      executionOrder:
+      outcomes:
+  actual:
+    status: 502
+    body:
+      result: 'unavailable'
+      kind: 'upstream'
+      error: 'Encounter findings could not be loaded.'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3DoorGuards.test.ts:113:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W111 review closure read failure preserves pick command response
+not ok 4 - W111 review closure read failure preserves pick command response
+  ---
+  duration_ms: 3.080125
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3DoorGuards.test.ts:1:15711'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+        body: {
+    +     error: 'Diagnosis pick context could not be loaded.',
+    +     kind: 'upstream',
+    +     result: 'unavailable'
+    -     action: 'confirm',
+    -     condition: {
+    -       category: [
+    -         {
+    -           coding: [
+    -             {
+    -               code: 'encounter-diagnosis',
+    -               display: 'Encounter Diagnosis',
+    -               system: 'http://terminology.hl7.org/CodeSystem/condition-category'
+    -             }
+    -           ],
+    -           text: 'Encounter Diagnosis'
+    -         }
+    -       ],
+    -       clinicalStatus: {
+    -         coding: [
+    -           {
+    -             code: 'active',
+    -             display: 'Active',
+    -             system: 'http://terminology.hl7.org/CodeSystem/condition-clinical'
+    -           }
+    -         ],
+    -         text: 'Active'
+    -       },
+    -       code: {
+    -         coding: [
+    -           {
+    -             code: 'H25.11',
+    -             display: 'Age-related nuclear cataract',
+    -             system: 'http://hl7.org/fhir/sid/icd-10-cm'
+    -           }
+    -         ],
+    -         text: 'Age-related nuclear cataract'
+    -       },
+    -       encounter: {
+    -         reference: 'Encounter/e1'
+    -       },
+    -       id: 'condition-1',
+    -       identifier: [
+    -         {
+    -           system: 'https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key',
+    -           value: 'e1::cataract_nuclear_sclerosis::right'
+    -         }
+    -       ],
+    -       meta: {
+    -         versionId: '1'
+    -       },
+    -       recordedDate: '2026-09-16T12:00:00Z',
+    -       resourceType: 'Condition',
+    -       subject: {
+    -         reference: 'Patient/p1'
+    -       },
+    -       verificationStatus: {
+    -         coding: [
+    -           {
+    -             code: 'confirmed',
+    -             display: 'Confirmed',
+    -             system: 'http://terminology.hl7.org/CodeSystem/condition-ver-status'
+    -           }
+    -         ],
+    -         text: 'Confirmed'
+    -       }
+    -     },
+    -     conditionStep: 'applied',
+    -     encounter: {
+    -       class: {
+    -         code: 'AMB',
+    -         system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode'
+    -       },
+    -       diagnosis: [
+    -         {
+    -           condition: {
+    -             reference: 'Condition/condition-1'
+    -           },
+    -           rank: 1,
+    -           use: {
+    -             coding: [
+    -               {
+    -                 code: 'billing',
+    -                 display: 'Billing',
+    -                 system: 'http://terminology.hl7.org/CodeSystem/diagnosis-role'
+    -               }
+    -             ],
+    -             text: 'Billing'
+    -           }
+    -         }
+    -       ],
+    -       id: 'e1',
+    -       meta: {
+    -         versionId: '2'
+    -       },
+    -       resourceType: 'Encounter',
+    -       status: 'in-progress',
+    -       subject: {
+    -         reference: 'Patient/p1'
+    -       }
+    -     },
+    -     link: 'not-applicable',
+    -     provenanceReference: 'Provenance/provenance-2',
+    -     result: 'pick',
+    -     strandedCharges: [],
+    -     strandedChargesComputed: true,
+    -     unaffectedChargeCount: 0
+        },
+    +   status: 502
+    -   status: 200
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    status: 200
+    body:
+      result: 'pick'
+      conditionStep: 'applied'
+      link: 'not-applicable'
+      condition:
+        resourceType: 'Condition'
+        meta:
+          versionId: '1'
+        category:
+          0:
+            coding:
+              0:
+                system: 'http://terminology.hl7.org/CodeSystem/condition-category'
+                code: 'encounter-diagnosis'
+                display: 'Encounter Diagnosis'
+            text: 'Encounter Diagnosis'
+        code:
+          coding:
+            0:
+              system: 'http://hl7.org/fhir/sid/icd-10-cm'
+              code: 'H25.11'
+              display: 'Age-related nuclear cataract'
+          text: 'Age-related nuclear cataract'
+        subject:
+          reference: 'Patient/p1'
+        encounter:
+          reference: 'Encounter/e1'
+        clinicalStatus:
+          coding:
+            0:
+              system: 'http://terminology.hl7.org/CodeSystem/condition-clinical'
+              code: 'active'
+              display: 'Active'
+          text: 'Active'
+        verificationStatus:
+          coding:
+            0:
+              system: 'http://terminology.hl7.org/CodeSystem/condition-ver-status'
+              code: 'confirmed'
+              display: 'Confirmed'
+          text: 'Confirmed'
+        identifier:
+          0:
+            system: 'https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key'
+            value: 'e1::cataract_nuclear_sclerosis::right'
+        recordedDate: '2026-09-16T12:00:00Z'
+        id: 'condition-1'
+      encounter:
+        resourceType: 'Encounter'
+        id: 'e1'
+        status: 'in-progress'
+        class:
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode'
+          code: 'AMB'
+        subject:
+          reference: 'Patient/p1'
+        meta:
+          versionId: '2'
+        diagnosis:
+          0:
+            condition:
+              reference: 'Condition/condition-1'
+            use:
+              coding:
+                0:
+                  system: 'http://terminology.hl7.org/CodeSystem/diagnosis-role'
+                  code: 'billing'
+                  display: 'Billing'
+              text: 'Billing'
+            rank: 1
+      provenanceReference: 'Provenance/provenance-2'
+      action: 'confirm'
+      strandedCharges:
+      unaffectedChargeCount: 0
+      strandedChargesComputed: true
+  actual:
+    status: 502
+    body:
+      result: 'unavailable'
+      kind: 'upstream'
+      error: 'Diagnosis pick context could not be loaded.'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3DoorGuards.test.ts:164:48)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W111 review closure read failure preserves ocular save command response
+not ok 5 - W111 review closure read failure preserves ocular save command response
+  ---
+  duration_ms: 19.111208
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:1:31661'
+  failureType: 'testCodeFailure'
+  error: 'post-command Encounter unavailable'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.f.m.hooks.beforeRead (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:161:89)
+    Object.read (<worktree>/mcp/tests/fixtures/r10/writer-harness.ts:52:13)
+    <anonymous> (<worktree>/mcp/src/clinical-graph/custom-section-endpoint.ts:728:62)
+    observePostCommandClosure (<worktree>/mcp/src/clinical-graph/encounter-sign-gate.ts:26:36)
+    saveOcularHealth (<worktree>/mcp/src/clinical-graph/custom-section-endpoint.ts:728:25)
+    async TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:162:19)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..0
+# Subtest: mcp/tests/r10A3ReleaseScenarios.test.ts
+ok 4 - mcp/tests/r10A3ReleaseScenarios.test.ts
+  ---
+  duration_ms: 598.119291
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 1
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 605.461542

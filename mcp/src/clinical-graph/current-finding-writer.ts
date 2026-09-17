@@ -52,7 +52,10 @@ export async function executeFindingCommand(deps: FindingCommandDeps, command: F
   for (const target of command.targets) {
     if(target.kind === "legacy-retire") continue;
     const definition=deps.definitions.find(d=>d.stableKey===target.key.stableKey);
-    if(target.kind === "panel") { normalizeFindingPanelState(target.state,definition!); continue; }
+    if(target.kind === "panel") {
+      if(!definition || definition.valueSchema.type !== "ocular-health-structure") throw Object.assign(new Error("not-a-shared-finding"),{status:400,code:"not-a-shared-finding"});
+      normalizeFindingPanelState(target.state,definition); continue;
+    }
     const field=definition && customFieldEntries(definition,true).find(f=>f.localCode===target.key.fieldCode);
     if(!definition || !field || !ownsFact(definition,field)) throw Object.assign(new Error("not-a-shared-finding"),{status:400,code:"not-a-shared-finding"});
   }

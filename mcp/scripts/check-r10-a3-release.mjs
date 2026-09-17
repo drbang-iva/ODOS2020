@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync, readdirSync } from 'node:fs';
+import { readFileSync, realpathSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -21,7 +21,11 @@ export function examPdfConsumerCensus(root) {
       }
     }
   }
-  for (const directory of ['mcp/src','ui/src','src']) visit(resolve(root,directory));
+  for (const directory of ['mcp/src','ui/src','src']) {
+    const path = resolve(root,directory);
+    if (!existsSync(path)) matches.push(`Missing source root: ${directory}`);
+    else visit(path);
+  }
   return matches;
 }
 

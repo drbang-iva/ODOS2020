@@ -102,6 +102,7 @@ test("R10 A3 Ocular Health saves and lifecycle enforce stored role policies and 
   const practitioner = track(await seederFhir.create<Practitioner>({resourceType:"Practitioner",active:true,name:[{family:"R10A3SyntheticProvider"}]}));
   const practitionerReference=resourceRef(practitioner);
   let providerProof: {fact:Observation;encounter:Encounter;policyReference:string;patientReference:string;preRebuildFact:Observation;preRebuildEncounter:Encounter} | undefined;
+  let bodyFailure: unknown;
   try {
     for(const role of ["staff","provider"] as const) await t.test(role,async roleTest=>{
       const matching=policies.filter(policy=>{const tags=policy.meta?.tag?.filter(tag=>tag.system===ODOS_PRACTICE_ROLE_SYSTEM)??[];return tags.length===1&&tags[0].code===role;});
@@ -285,9 +286,12 @@ test("R10 A3 Ocular Health saves and lifecycle enforce stored role policies and 
         }
       }
     });
+  } catch (error) {
+    bodyFailure = error;
+    throw error;
   } finally {
     const errors:unknown[]=[];
     for(const [token,refs] of [[callerAccessToken,[...cleanup].filter(ref=>ref.startsWith("ProjectMembership/"))],[seederAccessToken,[...cleanup].filter(ref=>!ref.startsWith("ProjectMembership/"))]] as const) {try{await cleanupReferences(baseUrl,token,refs);}catch(error){errors.push(error);}}
-    if(errors.length)throw new AggregateError(errors,"Synthetic R10 A3 live-proof cleanup failed");
+    if(errors.length)throw new AggregateError(bodyFailure === undefined ? errors : [bodyFailure, ...errors],"Synthetic R10 A3 live-proof cleanup failed");
   }
 });

@@ -1,0 +1,47 @@
+TAP version 13
+# Subtest: W111 review closure read failure preserves carry pull command response
+ok 1 - W111 review closure read failure preserves carry pull command response
+  ---
+  duration_ms: 30.461167
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves door-put command response
+ok 2 - W111 review closure read failure preserves door-put command response
+  ---
+  duration_ms: 12.053292
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves door-audit-repair command response
+ok 3 - W111 review closure read failure preserves door-audit-repair command response
+  ---
+  duration_ms: 2.858667
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves pick command response
+ok 4 - W111 review closure read failure preserves pick command response
+  ---
+  duration_ms: 2.916042
+  type: 'test'
+  ...
+# Subtest: W111 review closure read failure preserves ocular save command response
+ok 5 - W111 review closure read failure preserves ocular save command response
+  ---
+  duration_ms: 19.016458
+  type: 'test'
+  ...
+1..0
+# Subtest: mcp/tests/r10A3ReleaseScenarios.test.ts
+ok 4 - mcp/tests/r10A3ReleaseScenarios.test.ts
+  ---
+  duration_ms: 593.892334
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 601.297416

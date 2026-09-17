@@ -1,4 +1,4 @@
-import { isClosedEncounter } from "./encounter-sign-gate.js";
+import { isClosedEncounter , observePostCommandClosure } from "./encounter-sign-gate.js";
 import { ownsFact } from "./current-finding-identity.js";
 import type { Bundle, Condition, Encounter, Resource } from '@medplum/fhirtypes';
 import { z } from 'zod';
@@ -511,8 +511,8 @@ export async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFind
             }
         }
         const response = findingCommandResponse(await executeFindingCommand(writerDeps, command));
-        const after = await staff.fhir.read<Encounter>('Encounter', params.data.encounterId);
-        return { ...response, body: { ...(response.body as object), ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}) } };
+        const closure = await observePostCommandClosure(() => staff.fhir.read<Encounter>('Encounter', params.data.encounterId));
+        return { ...response, body: { ...(response.body as object), ...closure } };
     }
     catch (error) {
         return unavailable(dependencyState(error));
@@ -587,8 +587,8 @@ export async function handleDiagnosisFindingsAuditRepairRequest(deps: DiagnosisF
         if (context.projection.preRebuild)
             return invalid('pre-rebuild-test-encounter');
         const response = findingCommandResponse(await repairPendingAudits(commandDependencies(staff, context, deps), { ...body.data, encounterReference: context.state.encounterReference }));
-        const after = await staff.fhir.read<Encounter>('Encounter', params.data.encounterId);
-        return { ...response, body: { ...(response.body as object), ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}) } };
+        const closure = await observePostCommandClosure(() => staff.fhir.read<Encounter>('Encounter', params.data.encounterId));
+        return { ...response, body: { ...(response.body as object), ...closure } };
     }
     catch (error) {
         return unavailable(dependencyState(error));

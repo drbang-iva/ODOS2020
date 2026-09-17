@@ -1,0 +1,394 @@
+[
+  {
+    "id": "review-closure",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-sign-gate.ts",
+        "before": "  } catch {\n    // A diagnostic read cannot replace the outcome of an already executed command.\n    return {};",
+        "after": "  } catch (error) {\n    throw error;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review closure",
+      "mcp/tests/r10A3DoorGuards.test.ts",
+      "mcp/tests/r10A3OcularDoor.test.ts",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-history-count",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "      unscopedCount++;",
+        "after": "      void unscopedCount;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=F1",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-history-foreign",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "    if (contributing.some(o => o.subject?.reference !== query.patient)) return ocularError(409, \"foreign-or-unscoped\");",
+        "after": "    void contributing;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=F1",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-history-codes",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "code: [...codes].join(\",\"), _count: \"200\"",
+        "after": "_count: \"200\""
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review priors",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-history-inactive",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "...customFieldEntries(definition, true).flatMap(field => [",
+        "after": "...customFieldEntries(definition).flatMap(field => ["
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review priors",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-completeness-candidates",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+        "before": "classifyFindingObservation(observation, definitions, findingCatalog, aliases).kind !== \"unrelated\"",
+        "after": "true"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review completeness loads",
+      "mcp/tests/r10A3Overview.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-completeness-bound",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+        "before": "offset += 4",
+        "after": "offset += 1000"
+      },
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+        "before": "slice(offset, offset + 4)",
+        "after": "slice(offset, offset + 1000)"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review completeness bounds",
+      "mcp/tests/r10A3Overview.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-protocol-cache",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+        "before": ": context.evidence ??= protocolCaptureFindings(staff,encounter));",
+        "after": ": protocolCaptureFindings(staff,encounter));"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review whole",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-protocol-live-lock",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+        "before": "if (isClosedEncounter(encounter)) throw new ProtocolFindingWriteRefusal(409,\"encounter-closed\");",
+        "after": "if (false) throw new ProtocolFindingWriteRefusal(409,\"encounter-closed\");"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review protocol closure",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-unapply-noop",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-service.ts",
+        "before": "    if (application.undoState !== \"active\") return { removed: [], preserved: [] };\n",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review inactive",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-panel-kind",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+        "before": "      if(!definition || definition.valueSchema.type !== \"ocular-health-structure\") throw Object.assign(new Error(\"not-a-shared-finding\"),{status:400,code:\"not-a-shared-finding\"});\n",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=missing effective|review non-shared",
+      "mcp/tests/r10A3Library.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-census-root",
+    "edits": [
+      {
+        "file": "mcp/scripts/check-r10-a3-release.mjs",
+        "before": "if (!existsSync(path)) matches.push(`Missing source root: ${directory}`);\n    else visit(path);",
+        "after": "visit(path);"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review census",
+      "mcp/tests/r10A3ReleaseChecker.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-candidate-copy",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts",
+        "before": "if (current) byDiagnosisKey.set(key, { ...current, supportingFacts: supports });",
+        "after": "if (current) current.supportingFacts = supports;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review candidate",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-cleanup-r10OcularHealthDoorAuthzLive",
+    "edits": [
+      {
+        "file": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+        "before": "bodyFailure === undefined ? errors : [bodyFailure, ...errors]",
+        "after": "errors"
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-cleanup-r10DiagnosisDoorAuthzLive",
+    "edits": [
+      {
+        "file": "mcp/tests/r10DiagnosisDoorAuthzLive.test.ts",
+        "before": "bodyFailure === undefined ? failures : [bodyFailure, ...failures]",
+        "after": "failures"
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-usage",
+    "edits": [
+      {
+        "file": "mcp/scripts/r10-a3-preflight.mjs",
+        "before": "Usage: up|start|seed|gate|resume-gate|service-gate",
+        "after": "Usage: up|start|seed|gate|resume-gate"
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-T20-path",
+    "edits": [
+      {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "before": "const root=fileURLToPath(new URL(\"../../\",import.meta.url));\n  const census=",
+        "after": "const root=new URL(\"../../\",import.meta.url).pathname;\n  const census="
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-staining-comment",
+    "edits": [
+      {
+        "file": "mcp/tests/customSectionEndpoint.test.ts",
+        "before": "  // Conjunctival staining is shared Ocular Health; canonical save coverage lives in r10A3OcularDoor.test.ts (W96), not this legacy capture loop.\n",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-pre-rebuild-kept",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "        if (context.projection.preRebuild)\n            return invalid('pre-rebuild-test-encounter');\n        const writerDeps =",
+        "after": "        const writerDeps ="
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=V3 pre-rebuild diagnosis door",
+      "mcp/tests/diagnosisFindings.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-rollback-cache",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+        "before": "await (context.writesStarted\n    ? protocolCaptureFindings(staff,encounter)",
+        "after": "await (false\n    ? protocolCaptureFindings(staff,encounter)"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=W108 actual unapply rollback pre-rebuild",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ],
+    "failurePattern": "not ok"
+  },
+  {
+    "id": "review-warm-query-counts",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+        "before": ": context.evidence ??= protocolCaptureFindings(staff,encounter));",
+        "after": ": protocolCaptureFindings(staff,encounter));"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=fixback warm",
+      "mcp/src/__tests__/plan-glaucoma-integration.test.ts"
+    ],
+    "failurePattern": "not ok"
+  }
+]

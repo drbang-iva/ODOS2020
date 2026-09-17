@@ -1,0 +1,254 @@
+TAP version 13
+# Subtest: fixback warm tap seeds only its built-in and rules
+not ok 1 - fixback warm tap seeds only its built-in and rules
+  ---
+  duration_ms: 36.761125
+  type: 'test'
+  location: '<worktree>/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:5017'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      [
+        {
+          _count: '200',
+          code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+        },
+    ...
+        },
+    +   {
+    +     _count: '200',
+    +     code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+    +   },
+    +   {
+    +     _count: '200',
+    +     encounter: 'Encounter/e'
+    +   },
+    +   {
+    +     _count: '200',
+    +     encounter: 'Encounter/e'
+    +   }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    1:
+      encounter: 'Encounter/e'
+      _count: '200'
+    2: <Circular>
+    3: <Circular>
+    4: <Circular>
+    5: <Circular>
+  actual:
+    0:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    1:
+      encounter: 'Encounter/e'
+      _count: '200'
+    2:
+      encounter: 'Encounter/e'
+      _count: '200'
+    3:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    4:
+      encounter: 'Encounter/e'
+      _count: '200'
+    5:
+      encounter: 'Encounter/e'
+      _count: '200'
+    6:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    7:
+      encounter: 'Encounter/e'
+      _count: '200'
+    8:
+      encounter: 'Encounter/e'
+      _count: '200'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/src/__tests__/plan-glaucoma-integration.test.ts:87:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: fixback warm whole seeds only its built-in and rules
+not ok 2 - fixback warm whole seeds only its built-in and rules
+  ---
+  duration_ms: 68.1095
+  type: 'test'
+  location: '<worktree>/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:5017'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      [
+        {
+          _count: '200',
+          code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+        },
+    ...
+        },
+    +   {
+    +     _count: '200',
+    +     code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+    +   },
+    +   {
+    +     _count: '200',
+    +     encounter: 'Encounter/e'
+    +   },
+    +   {
+    +     _count: '200',
+    +     encounter: 'Encounter/e'
+    +   }
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    1:
+      encounter: 'Encounter/e'
+      _count: '200'
+    2: <Circular>
+    3: <Circular>
+    4: <Circular>
+    5: <Circular>
+    6: <Circular>
+    7: <Circular>
+    8: <Circular>
+    9: <Circular>
+    10: <Circular>
+    11: <Circular>
+    12: <Circular>
+    13: <Circular>
+    14: <Circular>
+    15: <Circular>
+    16: <Circular>
+    17: <Circular>
+    18: <Circular>
+    19: <Circular>
+    20: <Circular>
+    21: <Circular>
+    22: <Circular>
+    23: <Circular>
+    24: <Circular>
+    25: <Circular>
+    26: <Circular>
+  actual:
+    0:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    1:
+      encounter: 'Encounter/e'
+      _count: '200'
+    2:
+      encounter: 'Encounter/e'
+      _count: '200'
+    3:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    4:
+      encounter: 'Encounter/e'
+      _count: '200'
+    5:
+      encounter: 'Encounter/e'
+      _count: '200'
+    6:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    7:
+      encounter: 'Encounter/e'
+      _count: '200'
+    8:
+      encounter: 'Encounter/e'
+      _count: '200'
+    9:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    10:
+      encounter: 'Encounter/e'
+      _count: '200'
+    11:
+      encounter: 'Encounter/e'
+      _count: '200'
+    12:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    13:
+      encounter: 'Encounter/e'
+      _count: '200'
+    14:
+      encounter: 'Encounter/e'
+      _count: '200'
+    15:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    16:
+      encounter: 'Encounter/e'
+      _count: '200'
+    17:
+      encounter: 'Encounter/e'
+      _count: '200'
+    18:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    19:
+      encounter: 'Encounter/e'
+      _count: '200'
+    20:
+      encounter: 'Encounter/e'
+      _count: '200'
+    21:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    22:
+      encounter: 'Encounter/e'
+      _count: '200'
+    23:
+      encounter: 'Encounter/e'
+      _count: '200'
+    24:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    25:
+      encounter: 'Encounter/e'
+      _count: '200'
+    26:
+      encounter: 'Encounter/e'
+      _count: '200'
+    27:
+      code: 'https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition'
+      _count: '200'
+    28:
+      encounter: 'Encounter/e'
+      _count: '200'
+    29:
+      encounter: 'Encounter/e'
+      _count: '200'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/src/__tests__/plan-glaucoma-integration.test.ts:87:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 307.97875

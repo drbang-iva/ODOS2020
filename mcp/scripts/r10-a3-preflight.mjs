@@ -381,5 +381,5 @@ try {
     for(const role of ['provider','staff'])await probe(role,'G-f',()=>gateF(role));
     await probe('provider','G-g',gateG);
     await probe('provider','G-h',gateH);
-  } else throw Error('Usage: up|start|seed|gate|resume-gate');
+  } else throw Error('Usage: up|start|seed|gate|resume-gate|service-gate');
 } catch(error) {console.error(sanitizePublishedText(error.message));process.exitCode=1;}

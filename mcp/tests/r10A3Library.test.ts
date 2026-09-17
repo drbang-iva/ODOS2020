@@ -81,7 +81,7 @@ test('W92 direct writers reject inactive assertions even with historical catalog
 test('W71 panel scalar storage rejects alternate clinical data and wrong typed payload',()=>{
  for(const bad of [{...panel(),valueBoolean:false},{...panel(),component:[...panel().component!,comp('unknown',3)]},{...panel(),component:[...panel().component!,comp('CUSTOM_measure',3)]},{...panel(),component:[comp('R10_PANEL_META',JSON.stringify(panelKey)),comp('CUSTOM_measure','2.5')]}])assert.equal(identity.classifyFindingObservation(bad,defs,[],new Map()).kind,'invalid');
 });
-test('W95 panel missing effective definition is a 400 before any write',async()=>{const m=memoryFhir();await assert.rejects(executeFindingCommand({...context(m),definitions:[]},command([target()]) as FindingCommand),{status:400});assert.equal(m.writes.length,0);});
+test('W95 panel missing effective definition is a 400 before any write',async()=>{const m=memoryFhir();await assert.rejects(executeFindingCommand({...context(m),definitions:[]},command([target()]) as FindingCommand),{status:400,code:'not-a-shared-finding',message:'not-a-shared-finding'});assert.equal(m.writes.length,0);});
 for(const kind of ['fact','panel'])test(`W85 ${kind} lost write then recovery direct read 410 stays unknown`,async()=>{
  const m=memoryFhir();let lost=false;m.hooks.afterWrite=(w,o)=>{if(o.resourceType==='Observation'){lost=true;throw Error('lost response');}};m.hooks.beforeRead=()=>{if(lost)throw httpError(410);};
  const r=await run(m,command([kind==='fact'?factTarget():target()]));assert.equal(r.outcomes[0].status,'unconfirmed');assert.equal(r.outcomes[0].clinicalWrite,'unknown');assert.equal(m.all('Provenance').length,0);
@@ -113,4 +113,10 @@ for(const status of ['final','amended','corrected'] as const)test(`W115 signed $
  assert.equal(p.preRebuild,false);if(kind==='panel'){assert.equal(p.panels[0].editable,false);assert.equal(p.panels[0].readOnlyReason,'signed-observation');assert.deepEqual(p.panels[0].values,{CUSTOM_measure:2.5});}else assert.equal(p.currentFacts[0].editable,false);
  const baseline={kind:'canonical',reference:`Observation/${o.id}`,versionId:signed.meta!.versionId};const before=m.writes.length;const r=await run(m,command([kind==='fact'?factTarget(keyFor(),baseline):target(baseline)]));assert.equal(r.outcomes[0].status,'refused');assert.equal(m.writes.length,before);
  }
+});
+
+test('W95 review non-shared panel definition returns not-a-shared-finding before writes',async()=>{
+ const m=memoryFhir();
+ await assert.rejects(executeFindingCommand({...context(m),definitions:defs.map(d=>({...d,valueSchema:{...d.valueSchema,type:'section'}}))},command([target()]) as FindingCommand),{status:400,code:'not-a-shared-finding',message:'not-a-shared-finding'});
+ assert.equal(m.writes.length,0);
 });

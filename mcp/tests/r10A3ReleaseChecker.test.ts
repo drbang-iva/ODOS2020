@@ -87,3 +87,12 @@ test("W40 F3 Node census finds nested mixed-case exam PDF consumers in every sou
   }
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test("W40 review census names missing source roots and retains planted consumer",()=>{
+ const root=mkdtempSync(join(tmpdir(),'r10-a3-pdf space-'));
+ try {
+  mkdirSync(join(root,'mcp/src'),{recursive:true});
+  writeFileSync(join(root,'mcp/src/consumer.ts'),'const renderExamPdf = true;');
+  assert.deepEqual(checker.examPdfConsumerCensus(root),['mcp/src/consumer.ts:1:const renderExamPdf = true;','Missing source root: ui/src','Missing source root: src']);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});

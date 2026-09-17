@@ -1,6 +1,8 @@
+import { materializeAtomicFindingCatalog } from "./diagnosis-findings-endpoint.js";
+import { buildFindingReadAliases } from "./finding-read-aliases.js";
 import { loadOverviewFindingEvidence } from "./exam-overview-endpoint.js";
 import { sharedFindingEvidence } from "./exam-overview-projection.js";
-import { parseCurrentFindingEnvelope, parseFindingPanelEnvelope } from "./current-finding-identity.js";
+import { parseCurrentFindingEnvelope, classifyFindingObservation } from "./current-finding-identity.js";
 import type { Basic, Bundle, Condition, Encounter, Observation, Resource } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import { searchAll } from "../fhir-search.js";
@@ -87,10 +89,18 @@ export async function handleDiagnosisCompletenessRequest(
   const sharedCredits = new Set<string>();
   const sharedDefinitions = definitions.filter(d=>d.valueSchema.type === "ocular-health-structure");
   if (sharedDefinitions.length && isRelativeFhirReference(patientReference,"Patient")) {
-    const encounterReferences = new Set([encounterReference,...historyObservations.flatMap(o=>o.encounter?.reference ? [o.encounter.reference] : [])]);
-    for (const reference of encounterReferences) {
-      const evidence = await loadOverviewFindingEvidence(staff.fhir,patientReference,reference,definitions);
-      for (const ref of sharedFindingEvidence(evidence.projection,definitions,evidence.carriedWithoutCurrentEvidence)) sharedCredits.add(ref);
+    const findingCatalog = materializeAtomicFindingCatalog(definitions);
+    const aliases = buildFindingReadAliases(definitions, findingCatalog);
+    const candidates = historyObservations.filter(observation =>
+      classifyFindingObservation(observation, definitions, findingCatalog, aliases).kind !== "unrelated");
+    const encounterReferences = [...new Set([encounterReference, ...candidates.flatMap(observation =>
+      isRelativeFhirReference(observation.encounter?.reference, "Encounter") ? [observation.encounter!.reference!] : [])])];
+    for (let offset = 0; offset < encounterReferences.length; offset += 4) {
+      const evidenceBatch = await Promise.all(encounterReferences.slice(offset, offset + 4).map(reference =>
+        loadOverviewFindingEvidence(staff.fhir, patientReference, reference, definitions)));
+      for (const evidence of evidenceBatch) {
+        for (const ref of sharedFindingEvidence(evidence.projection, definitions, evidence.carriedWithoutCurrentEvidence)) sharedCredits.add(ref);
+      }
     }
   }
   const diagnoses = confirmed.flatMap((condition): DiagnosisCompletenessRow[] => {

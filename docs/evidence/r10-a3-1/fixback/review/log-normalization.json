@@ -1,0 +1,107 @@
+[
+  {
+    "file": "docs/evidence/r10-a3-1/fixback/review/github-checks.txt",
+    "original": "c8e0ec2c9c3f398a5b1a3eec13f30fca44e335326b7fae67ac2079f0b602a8bf",
+    "readable": "56ca7985986d049dd78d5c0dd2e2eb23c535ecdad3c2410118d77c17f3f8fe33"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/fixback/review/mcp-build.txt",
+    "original": "79d812332743de9cbe0b1e9272d1388f2cdcf7d56abdac8397b03137a4312914",
+    "readable": "f4a3e7c1853fb7b196a03ff575fbf4d2b86badcac7b13943b03775032c3c4c54"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-T20-path-red.txt",
+    "original": "81fe3a9e1ed23e4c375fc6acbe0231ec4d3acaa1b6b3bd6974a927efd704e892",
+    "readable": "0c8024a6112582921da997b95ea8b9387c9e7d1408216944500f3bb94e05c935"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-candidate-copy-red.txt",
+    "original": "23ba798d913dcefda4be842fb1da108573d0ce70cbab8499af5d5d08891756df",
+    "readable": "bbd8e9c0bf7f7c97554bd0e7b9550dbe10b07ee53ef8be1a677feee8418360ed"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-cleanup-r10DiagnosisDoorAuthzLive-red.txt",
+    "original": "3c2c99b26653f296dfc51e66142e49c7f021fc9d800632c621292a80ac590fd9",
+    "readable": "f5e965d1e0916c416824d13973dcf688ec9848da800ad418cdd8eb8826b26137"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-cleanup-r10OcularHealthDoorAuthzLive-red.txt",
+    "original": "037d5e11a1f2c89048c5bd3462cb4f0f9fc800d354317a99cc2704e58b973ce5",
+    "readable": "82e85c737b23d448a9a07561c73227b428afec07efb9397995408d72b3d7bb0f"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-closure-red.txt",
+    "original": "41c110d3e047acfe79087348b98239b2b3c299c40e8bbd75d48318bfb5c1a8d8",
+    "readable": "61edebab93070b45f0cebc88db08bb51c8542cc8be37e79368cdfdf09c25c1a6"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-completeness-bound-red.txt",
+    "original": "fb0a8eec976237a8e3f7d1503f50cea898f092f90f4f1ba038ab0cc83a8e5aa6",
+    "readable": "35c82aa6a3853a5f3f90045a72376559e894492bce1cd904576c3bda0539cc12"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-completeness-candidates-red.txt",
+    "original": "9518c3b0da4c5630b7e8be864aeec3f124325f783307383f5095688fe4bf06cf",
+    "readable": "c978be5b6d7c1e796da609b79b01cb480e387c8f5a83374fd5d7763cd2ec4cc0"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-history-codes-red.txt",
+    "original": "7b0f7887c0ce2b7303f808656c3f60d7eab8382cbbe8d2cacdda824be5d2266d",
+    "readable": "3e52cc5c1501e896d5185af0bd8d5ea11049e4fc83b3d4bce6159152f3b2bac6"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-history-count-red.txt",
+    "original": "024a5b566b1b116e16358f4fe853b3614b0707654e217607962fafe8036eee18",
+    "readable": "4dd8d242749b6f180d44f8bf624632deaa978ad5f7a1bc0a30b472c7ec75c06b"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-history-foreign-red.txt",
+    "original": "709af6b24aee46ce5825dd3797b5db9ef0ed692010663458f285d94f82bdd5f0",
+    "readable": "6ce71155e5cbb36aea8d03992afa3ff8a1e451d1d77665101a8f812fa4855a01"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-history-inactive-red.txt",
+    "original": "25d5b62791344ed494cef49a393d246f28d0de2f7af6ecc7e006f654044ec123",
+    "readable": "b31ed844e68fff6316ecd56151ad8ddc71cf3876fe6097438eb0174e10d5499b"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-panel-kind-red.txt",
+    "original": "a97e4a1dbbbffae723007fc63688ade6fc194c107e3b0dc9e9110135ba9f657d",
+    "readable": "ebbbb04e20893ec7b48c528c6d460aa1b044b3165a1674d940979c2a4ddd7f15"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-pre-rebuild-kept-red.txt",
+    "original": "318359b3de47efa5cf0b084ee894b01cfdabfb91665cbd5fb8a4199a01dbb399",
+    "readable": "85315072ab0586f715755502481084abee85e2958f535931975b48fe15bc25b4"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-protocol-cache-red.txt",
+    "original": "c7b692a91eed22b1a29d7f5eeb94909e72c24113550e3bef3f7aa7d14bb43773",
+    "readable": "2dab787b82f40f6332fc7d214aabdafd87b7dc3bd7539a2c60da55e1669f817e"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-protocol-live-lock-red.txt",
+    "original": "1ce0196bae1e1eac8eb4e5fd242904702ec980571575793b52929ec97844a437",
+    "readable": "ed6ec76ef4313efd77e148e6b8240618285753b282f4f4f8dab056f96ef63f7c"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-staining-comment-red.txt",
+    "original": "759bca150564c26fbcef3b315d965ea99212b120dc82dbb61a3c75e76853cb16",
+    "readable": "a9bc858c095ef27c8746efedf2c8ad71d747ff7ff0017af366a2f2b573fd2f33"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-unapply-noop-red.txt",
+    "original": "347d721931333f81e3e114e86e143f91705ccffdb0914df650fae41bc6ca6cbc",
+    "readable": "6920f3c9d75b6a7b0a9ef35ba55bc8f835f18062e865f0fbcca2dc55f6e28547"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-usage-red.txt",
+    "original": "3ccfa7b175a82e0e9aa04750a2b4688874b61cb73c364efbd6614938f54ae219",
+    "readable": "609fd28e4101f5abb5abd407ce5f2b4902c56b414830668b92827b2099955ee5"
+  },
+  {
+    "file": "docs/evidence/r10-a3-1/mutations/review-warm-query-counts-red.txt",
+    "original": "8e9e612d4c0c6927280420e8adb72eeb614c60ff54d84202505bbf1f077292b6",
+    "readable": "a98e98c9db2ecb7c9b7d54be5424d9462655ff6d6ffaec98f9aaa88c0ab6f7d8"
+  }
+]

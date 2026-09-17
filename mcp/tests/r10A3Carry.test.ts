@@ -368,3 +368,24 @@ test('empty carry plan completes Condition plan link and skips findings witness'
     assert.equal((await pull(m, r)).status, 200);
     assert.equal(m.writes.length, before);
 });
+
+test('W111 review closure read failure preserves carry pull command response',async()=>{
+ const r=request();
+ const run=async(faultAt?:number)=>{
+  const m=fixture();let sequence=0,reads=0,faults=0;
+  const stabilize=(resource:Resource,keepId=false)=>{
+   const old=`${resource.resourceType}/${resource.id}`;
+   const stable={...resource,id:keepId||resource.id?.startsWith('stable-')?resource.id:`stable-${++sequence}`,meta:{...resource.meta,versionId:`v${++sequence}`}};
+   m.resources.delete(old);m.resources.set(`${stable.resourceType}/${stable.id}`,structuredClone(stable));return stable;
+  };
+  const create=m.fhir.createWithOutcome.bind(m.fhir),update=m.fhir.update.bind(m.fhir);
+  m.fhir.createWithOutcome=async(resource:any,headers:any)=>{const result=await create(resource,headers);return {...result,resource:result.created?stabilize(result.resource):result.resource} as any;};
+  m.fhir.update=async(type:any,id:any,resource:any,headers:any)=>stabilize(await update(type,id,resource,headers),true) as any;
+  m.hooks.beforeRead=type=>{if(type==='Encounter'&&++reads===faultAt){faults++;throw Error('post-command Encounter unavailable');}};
+  const result=await pull(m,r);return {result,reads,faults};
+ };
+ const expected=await run();assert.equal(expected.result.status,200,JSON.stringify(expected.result.body));assert.equal((expected.result.body as any).lineageStep,'applied');
+ const failed=await run(expected.reads);
+ assert.deepEqual(failed.result,expected.result);assert.equal(failed.faults,1);
+ assert.equal((failed.result.body as any).encounterClosedDuringCommand,undefined);
+});

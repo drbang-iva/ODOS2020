@@ -1,4 +1,4 @@
-import { isClosedEncounter } from "./encounter-sign-gate.js";
+import { isClosedEncounter , observePostCommandClosure } from "./encounter-sign-gate.js";
 import { diagnosisDefinitionViews } from "./diagnosis-candidates-endpoint.js";
 import { currentFindingKeySchema, currentFindingIdentifier, ownsFact } from "./current-finding-identity.js";
 import { customFieldEntries } from "./custom-fields.js";
@@ -407,11 +407,11 @@ async function performDiagnosisPickRequest(
     }
   }
 
-  const after = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  const closure = await observePostCommandClosure(() => staff.fhir.read<Encounter>("Encounter", encounterId));
   return {
     status: 200,
     body: {
-      ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}),
+      ...closure,
       result: "pick",
       ...(parsed.data.commandId ? { commandId: parsed.data.commandId } : {}),
       conditionStep: "applied",

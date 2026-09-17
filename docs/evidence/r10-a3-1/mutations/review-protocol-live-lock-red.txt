@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W91 review protocol closure after projection load still refuses
+not ok 1 - W91 review protocol closure after projection load still refuses
+  ---
+  duration_ms: 30.742583
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Protocols.test.ts:1:10178'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"application":{"id":"7c30728a-3f43-45aa-8dfe-b55bac9e2792","encounterId":"e1","patientId":"p1","protocolId":"synthetic-r10-protocol","protocolVersion":1,"appliedBy":"Practitioner/synthetic","appliedAt":"2026-09-16T12:00:00Z","stackedWith":[],"dispositions":[{"itemKey":"finding-cup_disc_ratio","outcome":"applied-default"}],"dedupResolutions":[],"undoState":"active","confirmed":true,"scope":"whole"},"findings":[{"id":"3f1bce12-7860-4f16-821a-3fcf4dfe664c","encounterId":"e1","patientId":"p1","protocolApplicationId":"7c30728a-3f43-45aa-8dfe-b55bac9e2792","sourceItemKey":"finding-cup_disc_ratio","findingDefKey":"cup_disc_ratio","laterality":"OD","state":"committed","value":0.5,"editedBeforeCommit":false,"provenance":{"source":"protocol-default","actor":"Practitioner/synthetic","at":"2026-09-16T12:00:00Z","protocolId":"synthetic-r10-protocol","protocolVersion":1},"observationReference":"Observation/35ffbbb4-0636-458e-a216-608efabcb417"}],"actions":[],"charges":[]}
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Protocols.test.ts:52:59)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 260.538666

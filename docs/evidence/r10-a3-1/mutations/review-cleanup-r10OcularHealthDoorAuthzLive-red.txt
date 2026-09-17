@@ -1,0 +1,54 @@
+TAP version 13
+# Subtest: W40 review preflight usage names service-gate
+ok 1 - W40 review preflight usage names service-gate
+  ---
+  duration_ms: 1.250292
+  type: 'test'
+  ...
+# Subtest: W40 review T20 root expression decodes spaces
+ok 2 - W40 review T20 root expression decodes spaces
+  ---
+  duration_ms: 0.235375
+  type: 'test'
+  ...
+# Subtest: V21 review legacy staining exclusion names canonical write coverage
+ok 3 - V21 review legacy staining exclusion names canonical write coverage
+  ---
+  duration_ms: 1.098792
+  type: 'test'
+  ...
+# Subtest: V35 review r10OcularHealthDoorAuthzLive.test.ts preserves body failure alongside cleanup
+not ok 4 - V35 review r10OcularHealthDoorAuthzLive.test.ts preserves body failure alongside cleanup
+  ---
+  duration_ms: 20.289541
+  type: 'test'
+  location: '<worktree>/docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs:23:96'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+
+    Caught error:
+
+    AggregateError: Synthetic R10 A3 live-proof cleanup failed
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (file://<worktree>/docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs:32:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V35 review r10DiagnosisDoorAuthzLive.test.ts preserves body failure alongside cleanup
+ok 5 - V35 review r10DiagnosisDoorAuthzLive.test.ts preserves body failure alongside cleanup
+  ---
+  duration_ms: 3.630791
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 216.586208

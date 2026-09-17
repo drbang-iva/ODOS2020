@@ -367,13 +367,14 @@ export async function handleProtocolApplyRequest(
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = applySchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol application." } };
-  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
+  const mutationContext: ProtocolMutationContext = {};
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog, mutationContext);
   const definition = await service.definitions.get(parsed.data.protocolId) ?? BUILTIN_PROTOCOLS.find(p=>p.id === parsed.data.protocolId);
   const validation = await validateProtocolDiagnosis(staff, service, parsed.data, definition);
   if ("response" in validation) return validation.response;
   const { protocol } = validation;
   try {
-    await assertProtocolMutation(staff,parsed.data,selectedProtocolItems(protocol.items,parsed.data.selections ?? []));
+    await assertProtocolMutation(staff,parsed.data,selectedProtocolItems(protocol.items,parsed.data.selections ?? []),[],mutationContext);
   } catch(error) { if(error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}}; throw error; }
   await ensureBuiltInProtocol(service, parsed.data.protocolId);
   if ((await service.applications.list()).some((application) =>
@@ -419,7 +420,7 @@ export async function handleProtocolApplyRequest(
     actor: staff.staffReference,
     selections: offeredSelections,
   });
-    await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog).commit(
+    await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog, mutationContext).commit(
       opened.application.id,
       offeredSelections,
       [parsed.data.diagnosis.reference],
@@ -457,8 +458,9 @@ export async function handleProtocolItemAddRequest(
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = itemAddSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol item add." } };
-  const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
-  try { await assertProtocolMutation(staff,parsed.data); }
+  const mutationContext: ProtocolMutationContext = {};
+  const service = liveService(staff, deps.now, undefined, deps.educationCatalog, mutationContext);
+  try { await assertProtocolMutation(staff,parsed.data,[],[],mutationContext); }
   catch(error) { if(error instanceof ProtocolFindingWriteRefusal) return {status:error.status,body:{error:error.message}}; throw error; }
   await ensureBuiltInProtocol(service, parsed.data.protocolId);
   const validation = await validateProtocolDiagnosis(staff, service, parsed.data);
@@ -473,7 +475,7 @@ export async function handleProtocolItemAddRequest(
   }
   const seriesResolution = await resolveSeriesProtocols(deps, [item]);
   if ("response" in seriesResolution) return seriesResolution.response;
-  const itemService = liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog);
+  const itemService = liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog, mutationContext);
   let added;
   try {
     added = await itemService.addItem(parsed.data.protocolId, parsed.data.itemKey, {
@@ -907,12 +909,27 @@ function liveService(
   now?: () => string,
   seriesProtocols: ReadonlyMap<string, SeriesProtocolDefinition> = new Map(),
   educationCatalog?: EducationCatalogReader,
+  mutationContext: ProtocolMutationContext = {},
 ): ProtocolService {
+  staff = { ...staff, fhir: new Proxy(staff.fhir, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (typeof value !== "function") return value;
+      if (["create", "createWithOutcome", "update", "patch", "executeTransaction"].includes(String(property))) {
+        return (...args: unknown[]) => {
+          // A lost write response may still have persisted; subsequent guards must read fresh evidence.
+          mutationContext.writesStarted = true;
+          return Reflect.apply(value, target, args);
+        };
+      }
+      return value.bind(target);
+    },
+  }) };
   return new ProtocolService(staff.fhir, {
-    validateMutation: (scope,items,references)=>assertProtocolMutation(staff,scope,items,references),
+    validateMutation: (scope,items,references)=>assertProtocolMutation(staff,scope,items,references,mutationContext),
     async commitFinding(finding) {
       if (finding.value === undefined) return undefined;
-      await assertProtocolMutation(staff,finding,[{item:{itemKey:finding.sourceItemKey,itemType:"finding-seed",defaultSelected:true,lateralityMode:"inherit-dx",payload:{}},payload:{findingDefKey:finding.findingDefKey,defaultValue:finding.value}}]);
+      await assertProtocolMutation(staff,finding,[{item:{itemKey:finding.sourceItemKey,itemType:"finding-seed",defaultSelected:true,lateralityMode:"inherit-dx",payload:{}},payload:{findingDefKey:finding.findingDefKey,defaultValue:finding.value}}],[],mutationContext);
       const observation = finding.findingDefKey === "gonio_angle_structures"
         ? protocolFindingToGonioObservation(finding)
         : protocolFindingObservation(finding);
@@ -920,7 +937,7 @@ function liveService(
       return saved.id ? `Observation/${saved.id}` : undefined;
     },
     async materializeAction(action) {
-      await assertProtocolMutation(staff,action);
+      await assertProtocolMutation(staff,action,[],[],mutationContext);
       if (action.actionType === "series-prescription") {
         const seriesProtocolId = String(action.payload.seriesProtocolId ?? "");
         const protocol = seriesProtocols.get(seriesProtocolId);
@@ -964,21 +981,21 @@ function liveService(
     async removeMaterialized(reference, scope) {
       const [resourceType, id] = reference.split("/");
       if (!id || !["Observation", "ServiceRequest", "CarePlan"].includes(resourceType ?? "")) return;
-      if (scope) await assertProtocolMutation(staff,scope,[],[reference]);
+      if (scope) await assertProtocolMutation(staff,scope,[],[reference],mutationContext);
       if (resourceType === "Observation") {
         const resource = await staff.fhir.read<Observation>("Observation", id);
         const findingScope = scope ?? {encounterId:resource.encounter?.reference?.slice(10) ?? "",patientId:resource.subject?.reference?.slice(8) ?? ""};
-        await assertProtocolMutation(staff,findingScope,[],[reference]);
+        if (!scope) await assertProtocolMutation(staff,findingScope,[],[reference],mutationContext);
         const revoked = await updateProjected(staff.fhir, "Observation", id, { ...resource, status: "entered-in-error" });
-        return projectionRestore(staff.fhir, "Observation", id, resource, revoked.meta?.versionId,()=>assertProtocolMutation(staff,findingScope,[],[reference]));
+        return projectionRestore(staff.fhir, "Observation", id, resource, revoked.meta?.versionId,()=>assertProtocolMutation(staff,findingScope,[],[reference],mutationContext));
       } else if (resourceType === "ServiceRequest") {
         const resource = await staff.fhir.read<ServiceRequest>("ServiceRequest", id);
         const revoked = await updateProjected(staff.fhir, "ServiceRequest", id, { ...resource, status: "revoked" });
-        return projectionRestore(staff.fhir, "ServiceRequest", id, resource, revoked.meta?.versionId,scope ? ()=>assertProtocolMutation(staff,scope,[],[reference]) : undefined);
+        return projectionRestore(staff.fhir, "ServiceRequest", id, resource, revoked.meta?.versionId,scope ? ()=>assertProtocolMutation(staff,scope,[],[reference],mutationContext) : undefined);
       } else {
         const resource = await staff.fhir.read<CarePlan>("CarePlan", id);
         const revoked = await updateProjected(staff.fhir, "CarePlan", id, { ...resource, status: "revoked" });
-        return projectionRestore(staff.fhir, "CarePlan", id, resource, revoked.meta?.versionId,scope ? ()=>assertProtocolMutation(staff,scope,[],[reference]) : undefined);
+        return projectionRestore(staff.fhir, "CarePlan", id, resource, revoked.meta?.versionId,scope ? ()=>assertProtocolMutation(staff,scope,[],[reference],mutationContext) : undefined);
       }
     },
   }, now);
@@ -1184,16 +1201,20 @@ async function protocolCaptureFindings(staff: Staff, encounter: Encounter) {
   if (state.incomplete) throw new Error(state.reason);
   return {findingDefinitions,sharedProjection:projectCurrentFindings(state)};
 }
-async function assertProtocolMutation(staff: Staff, scope:{encounterId:string;patientId:string}, items: readonly {item:ProtocolItem;payload:Record<string,unknown>}[] = [], references: readonly string[] = []): Promise<void> {
+type ProtocolMutationContext = { evidence?: ReturnType<typeof protocolCaptureFindings>; writesStarted?: boolean; validatedReferences?: Set<string> };
+async function assertProtocolMutation(staff: Staff, scope:{encounterId:string;patientId:string}, items: readonly {item:ProtocolItem;payload:Record<string,unknown>}[] = [], references: readonly string[] = [], context: ProtocolMutationContext = {}): Promise<void> {
   const encounter = await staff.fhir.read<Encounter>("Encounter",scope.encounterId);
   if (isClosedEncounter(encounter)) throw new ProtocolFindingWriteRefusal(409,"encounter-closed");
   if (encounter.subject?.reference !== `Patient/${scope.patientId}`) throw new ProtocolFindingWriteRefusal(409,"encounter-patient-mismatch");
-  const {findingDefinitions,sharedProjection} = await protocolCaptureFindings(staff,encounter);
+  const {findingDefinitions,sharedProjection} = await (context.writesStarted
+    ? protocolCaptureFindings(staff,encounter)
+    : context.evidence ??= protocolCaptureFindings(staff,encounter));
   if (sharedProjection.preRebuild) throw new ProtocolFindingWriteRefusal(409,"pre-rebuild-test-encounter");
   assertProtocolFindingSelections(items,findingDefinitions);
-  for (const reference of references) if (reference.startsWith("Observation/")) {
+  for (const reference of references) if (reference.startsWith("Observation/") && (context.writesStarted || !context.validatedReferences?.has(reference))) {
     const observation = await staff.fhir.read<Observation>("Observation",reference.slice(12));
     try { assertNotSharedFindingWrite(observation,findingDefinitions); }
     catch { throw new ProtocolFindingWriteRefusal(422,"shared-finding-charted-in-ocular-health"); }
+    (context.validatedReferences ??= new Set()).add(reference);
   }
 }

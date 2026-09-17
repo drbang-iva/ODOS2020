@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+ok 1 - V21 F1 patient-wide priors ignore encounter-less smoking status and retain canonical facts
+  ---
+  duration_ms: 10.220208
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing foreign record follows scoped history policy
+not ok 2 - V21 F1 patient-wide contributing foreign record follows scoped history policy
+  ---
+  duration_ms: 10.570834
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:1:30630'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:148:31)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V21 F1 patient-wide contributing unscoped record follows scoped history policy
+ok 3 - V21 F1 patient-wide contributing unscoped record follows scoped history policy
+  ---
+  duration_ms: 6.550209
+  type: 'test'
+  ...
+# Subtest: V21 F1 patient-wide contributing malformed record follows scoped history policy
+ok 4 - V21 F1 patient-wide contributing malformed record follows scoped history policy
+  ---
+  duration_ms: 6.6195
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 220.75375

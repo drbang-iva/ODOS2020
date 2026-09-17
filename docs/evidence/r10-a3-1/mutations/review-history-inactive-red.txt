@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: V21 review priors searches exact base field and option codes including inactive entries
+not ok 1 - V21 review priors searches exact base field and option codes including inactive entries
+  ---
+  duration_ms: 6.597209
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:1:32315'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+    + Set(19) {
+    - Set(21) {
+        'ocular-health:anterior:lens',
+        'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09',
+        'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar',
+        'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular',
+        'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia',
+    ...
+        'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::pseudophakia-pciol',
+    -   'ocular-health:anterior:lens::CUSTOM_old',
+    -   'ocular-health:anterior:lens::CUSTOM_old::old-option'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:175:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 192.783459

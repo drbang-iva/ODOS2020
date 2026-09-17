@@ -179,7 +179,7 @@ test("T19 protocol capture reads current canonical facts instead of raw exact-co
   assert.deepEqual(result.items[0].payload.expand.eyes,["OD"]);
 });
 test("T20 source census identifies any exam PDF consumer for canonical migration",()=>{
-  const root=new URL("../../",import.meta.url).pathname;
+  const root=fileURLToPath(new URL("../../",import.meta.url));
   const census=examPdfConsumerCensus(root);
   assert.deepEqual(census,[],`Exam PDF consumer requires an executable canonical-data scenario: ${census.join("\n")}`);
 });

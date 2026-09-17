@@ -1,0 +1,263 @@
+[
+  {
+    "id": "review-closure",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review closure",
+      "mcp/tests/r10A3DoorGuards.test.ts",
+      "mcp/tests/r10A3OcularDoor.test.ts",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "review-history-count",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=F1",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "review-history-foreign",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=F1",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "review-history-codes",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review priors",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "review-history-inactive",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review priors",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ]
+  },
+  {
+    "id": "review-completeness-candidates",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review completeness loads",
+      "mcp/tests/r10A3Overview.test.ts"
+    ]
+  },
+  {
+    "id": "review-completeness-bound",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review completeness bounds",
+      "mcp/tests/r10A3Overview.test.ts"
+    ]
+  },
+  {
+    "id": "review-protocol-cache",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review whole",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ]
+  },
+  {
+    "id": "review-protocol-live-lock",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review protocol closure",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ]
+  },
+  {
+    "id": "review-unapply-noop",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review inactive",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ]
+  },
+  {
+    "id": "review-panel-kind",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=missing effective|review non-shared",
+      "mcp/tests/r10A3Library.test.ts"
+    ]
+  },
+  {
+    "id": "review-census-root",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review census",
+      "mcp/tests/r10A3ReleaseChecker.test.ts"
+    ]
+  },
+  {
+    "id": "review-candidate-copy",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=review candidate",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ]
+  },
+  {
+    "id": "review-cleanup-r10OcularHealthDoorAuthzLive",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ]
+  },
+  {
+    "id": "review-cleanup-r10DiagnosisDoorAuthzLive",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ]
+  },
+  {
+    "id": "review-usage",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ]
+  },
+  {
+    "id": "review-T20-path",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ]
+  },
+  {
+    "id": "review-staining-comment",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--test",
+      "docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs"
+    ]
+  },
+  {
+    "id": "review-pre-rebuild-kept",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=V3 pre-rebuild diagnosis door",
+      "mcp/tests/diagnosisFindings.test.ts"
+    ]
+  },
+  {
+    "id": "review-rollback-cache",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=W108 actual unapply rollback pre-rebuild",
+      "mcp/tests/r10A3Protocols.test.ts"
+    ]
+  },
+  {
+    "id": "review-warm-query-counts",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=fixback warm",
+      "mcp/src/__tests__/plan-glaucoma-integration.test.ts"
+    ]
+  }
+]

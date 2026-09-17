@@ -44,3 +44,28 @@ test('W114 overview stored definition dependency resolves practice option label 
   assert.deepEqual(finding?.sheetFindings,[{display:'Practice option',qualifiers:[]}]);
   assert.equal(finding?.creditsCompleteness,true);
 });
+
+for(const kind of ['canonical','panel','negative'] as const)test(`W81 review completeness loads only candidate encounters and retains ${kind} credit`,async()=>{
+ const c=overviewFixture(kind==='panel'?tear:lens);
+ for(const resource of c.all('Basic'))c.save(JSON.parse(JSON.stringify(resource).replaceAll('this-encounter','any-on-file')));
+ for(const resource of c.all('Observation'))c.resources.delete(`Observation/${resource.id}`);
+ const original=kind==='panel'?panel({CUSTOM_GRADE_TBUT:4}):kind==='negative'?negative():canonicalFact();
+ const prior={...original,encounter:{reference:'Encounter/prior-evidence'}};
+ if(kind==='canonical'){const key={...keyFor(),encounterId:'prior-evidence'};prior.identifier=[currentFindingIdentifier(key)];prior.component=[comp('R10_CURRENT_META',JSON.stringify(key))];}
+ if(kind==='panel'){const key={v:1 as const,patientId:'p1',encounterId:'prior-evidence',stableKey:tear.stableKey,eye:'OD' as const};prior.identifier=[findingPanelIdentifier(key)];prior.component=prior.component!.map(component=>component.code.coding?.some(code=>code.code==='R10_PANEL_META')?comp('R10_PANEL_META',JSON.stringify(key)):component);}
+ c.save(prior);
+ c.save({...canonicalFact('irrelevant'),identifier:undefined,component:undefined,code:{text:'Synthetic unrelated result'},encounter:{reference:'Encounter/irrelevant'}});
+ const loaded:string[]=[];const search=c.fhir.search;
+ c.fhir.search=async(type:any,params:any={})=>{if(type==='Observation'&&params.encounter)loaded.push(params.encounter);return search(type,params);};
+ assert.deepEqual(await missing(c),[]);
+ assert.ok(loaded.includes('Encounter/e1'));assert.ok(loaded.includes('Encounter/prior-evidence'));assert.equal(loaded.includes('Encounter/irrelevant'),false);
+});
+
+test('W81 review completeness bounds concurrent history evidence loads at four',async()=>{
+ const c=overviewFixture();
+ for(const resource of c.all('Basic'))c.save(JSON.parse(JSON.stringify(resource).replaceAll('this-encounter','any-on-file')));
+ for(let i=0;i<9;i++){const key={...keyFor(),encounterId:`prior-${i}`};c.save({...canonicalFact(`prior-${i}`),encounter:{reference:`Encounter/prior-${i}`},identifier:[currentFindingIdentifier(key)],component:[comp('R10_CURRENT_META',JSON.stringify(key))]});}
+ let active=0,peak=0;const search=c.fhir.search;
+ c.fhir.search=async(type:any,params:any={})=>{if(type!=='Observation'||!params.encounter)return search(type,params);active++;peak=Math.max(peak,active);try{await new Promise(resolve=>setImmediate(resolve));return await search(type,params);}finally{active--;}};
+ assert.deepEqual(await missing(c),[]);assert.equal(peak,4);assert.equal(active,0);
+});

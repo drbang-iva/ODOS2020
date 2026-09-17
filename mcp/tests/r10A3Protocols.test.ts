@@ -27,3 +27,27 @@ test('W107 committed bilateral prompt without explicit eye expansion supplies bo
 test('V28 capture excludes cleared canonical and retains unrelated value',async()=>{const c=await protocolFixture([findingItem('cup_disc_ratio',.5)]);assert.equal((await c.apply()).status,200);c.save({...canonicalFact(),status:'entered-in-error'});const r=await c.capture();const items=(r.body as any).protocol.items;assert.equal(items.length,1);assert.equal(items[0].payload.findingDefKey,'cup_disc_ratio');assert.equal(items[0].payload.defaultValue,.5);});
 test('W82 prompt override cannot hide a valued shared proposed item',async()=>{const item=findingItem(lens.stableKey,'abnormal');const c=await protocolFixture([item]);const r=await c.apply({selections:[{itemKey:item.itemKey,selected:true,payload:{findingDefKey:lens.stableKey,mode:'promptOnly'}}]});assert.equal(r.status,422);assert.equal(c.writes.length,0);});
 test('V28 inactive shared capture cannot seed',async()=>{const c=await protocolFixture();await new FhirFindingDefinitionStore(c.fhir).deactivate(lens.stableKey,lens.provenance);c.save(canonicalFact());const r=await c.capture();assert.deepEqual((r.body as any).protocol.items,[]);});
+
+for(const mode of ['closed','pre-rebuild'] as const)test(`W108 review inactive unapply ${mode} is a zero-write no-op`,async()=>{
+ const c=await protocolFixture();const applied=await c.apply();assert.equal(applied.status,200);
+ const id=(applied.body as any).application.id;
+ assert.equal((await c.unapply(id)).status,200);
+ if(mode==='closed')c.close();else c.save(snapshot());
+ c.writes.length=0;
+ assert.deepEqual(await c.unapply(id),{status:200,body:{removed:[],preserved:[]}});
+ assert.equal(c.writes.length,0);
+});
+
+test('W82 review whole protocol loads shared definitions and projection once before first write',async()=>{
+ const c=await protocolFixture([findingItem('cup_disc_ratio',.5),{...findingItem('cup_disc_ratio',.4),itemKey:'second'}]);
+ let definitionLoads=0,projectionLoads=0,firstWriteLoads: number[]|undefined;
+ c.hooks.beforeWrite=()=>{firstWriteLoads ??= [definitionLoads,projectionLoads];};
+ const search=c.fhir.search;
+ c.fhir.search=async(type:any,params:any={})=>{if(type==='Basic'&&params.code?.includes('finding-definition'))definitionLoads++;if(type==='Observation'&&params.encounter==='Encounter/e1')projectionLoads++;return search(type,params);};
+ const r=await c.apply();assert.equal(r.status,200,JSON.stringify(r.body));assert.deepEqual(firstWriteLoads,[1,1]);assert.ok(definitionLoads>1);assert.ok(projectionLoads>1);
+});
+test('W91 review protocol closure after projection load still refuses',async()=>{
+ const c=await protocolFixture([findingItem('cup_disc_ratio',.5)]);const search=c.fhir.search;let loaded=false;
+ c.fhir.search=async(type:any,params:any={})=>{const result=await search(type,params);if(type==='Observation'&&params.encounter==='Encounter/e1'){loaded=true;c.close();}return result;};
+ const r=await c.apply();assert.equal(loaded,true);assert.equal(r.status,409,JSON.stringify(r.body));assert.equal((r.body as any).error,'encounter-closed');assert.equal(c.writes.some(w=>w.resource.resourceType==='Observation'),false);
+});

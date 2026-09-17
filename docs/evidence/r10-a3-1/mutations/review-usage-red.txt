@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: W40 review preflight usage names service-gate
+not ok 1 - W40 review preflight usage names service-gate
+  ---
+  duration_ms: 2.753834
+  type: 'test'
+  location: '<worktree>/docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs:9:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(usage?.split('|').includes('service-gate'))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/docs/evidence/r10-a3-1/fixback/review/small-fixes.test.mjs:11:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: W40 review T20 root expression decodes spaces
+ok 2 - W40 review T20 root expression decodes spaces
+  ---
+  duration_ms: 0.241333
+  type: 'test'
+  ...
+# Subtest: V21 review legacy staining exclusion names canonical write coverage
+ok 3 - V21 review legacy staining exclusion names canonical write coverage
+  ---
+  duration_ms: 0.250583
+  type: 'test'
+  ...
+# Subtest: V35 review r10OcularHealthDoorAuthzLive.test.ts preserves body failure alongside cleanup
+ok 4 - V35 review r10OcularHealthDoorAuthzLive.test.ts preserves body failure alongside cleanup
+  ---
+  duration_ms: 21.616417
+  type: 'test'
+  ...
+# Subtest: V35 review r10DiagnosisDoorAuthzLive.test.ts preserves body failure alongside cleanup
+ok 5 - V35 review r10DiagnosisDoorAuthzLive.test.ts preserves body failure alongside cleanup
+  ---
+  duration_ms: 3.237417
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 225.884

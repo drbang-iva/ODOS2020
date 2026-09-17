@@ -1,0 +1,29 @@
+TAP version 13
+# Subtest: W40 review census names missing source roots and retains planted consumer
+not ok 1 - W40 review census names missing source roots and retains planted consumer
+  ---
+  duration_ms: 3.358334
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseChecker.test.ts:1:5851'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, scandir '/var/folders/6h/z2xtt68j36x9g9f33tkw11580000gq/T/r10-a3-pdf space-OCLQxh/ui/src'"
+  code: 'ENOENT'
+  stack: |-
+    readdirSync (node:fs:1590:26)
+    visit (file://<worktree>/mcp/scripts/check-r10-a3-release.mjs:12:25)
+    Module.examPdfConsumerCensus (file://<worktree>/mcp/scripts/check-r10-a3-release.mjs:26:5)
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3ReleaseChecker.test.ts:96:28)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 464.295417

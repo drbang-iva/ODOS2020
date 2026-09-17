@@ -16,6 +16,7 @@ function fixture(initial:Resource[]=[],defs=buildFindingDefinitionSeeds()){
  const m=memoryFhir([encounter(),...initial]);const search=m.fhir.search.bind(m.fhir);
  m.fhir.search=async(type:any,params:any={})=>{
   if(type==='Basic')return {resourceType:'Bundle',type:'searchset',entry:m.all('Basic').filter((r:any)=>!params.code||r.code?.coding?.some((c:any)=>`${c.system}|${c.code}`===params.code)).map(resource=>({resource}))} as any;
+  if(type==='Observation'&&params.code) { const codes=params.code.split(','); return {resourceType:'Bundle',type:'searchset',entry:m.all<Observation>('Observation').filter(o=>o.subject?.reference===params.subject && o.code.coding?.some(c=>codes.includes(c.code))).map(resource=>({resource}))} as any; }
   if(type==='Provenance'&&params.target)return {resourceType:'Bundle',type:'searchset',entry:m.all('Provenance').filter((p:any)=>p.target.some((t:any)=>t.reference===params.target)).map(resource=>({resource}))} as any;
   return search(type,params);
  };
@@ -137,11 +138,41 @@ test('V21 F1 patient-wide priors ignore encounter-less smoking status and retain
  assert.equal(result.body.encounters[0].eyes.OD.facts.filter((row:any)=>row.status==='live').length,1);
  assert.equal(f.m.writes.length,0);
 });
-for(const scope of ['foreign','unscoped'] as const)test(`V21 F1 patient-wide contributing ${scope} record is refused`,async()=>{
- const bad=canonicalFact('bad');if(scope==='foreign')bad.subject={reference:'Patient/other'};else delete bad.encounter;
+for(const scope of ['foreign','unscoped','malformed'] as const)test(`V21 F1 patient-wide contributing ${scope} record follows scoped history policy`,async()=>{
+ const bad=canonicalFact('bad');if(scope==='foreign')bad.subject={reference:'Patient/other'};else if(scope==='unscoped')delete bad.encounter;else bad.encounter={reference:'not-an-encounter'};
  const f=fixture([canonicalFact()]);const search=f.deps.authenticate;
  f.deps.authenticate=async()=>{const staff=await search();const original=staff.fhir.search.bind(staff.fhir);return {...staff,fhir:{...staff.fhir,search:async(type:any,params:any)=>{
   const result=await original(type,params);if(type==='Observation'&&params.subject&&!params.encounter)result.entry=[...(result.entry??[]),{resource:bad}];return result;
  }}} as any;};
- const result:any=await read(f,lens.stableKey,null);assert.equal(result.status,409);assert.equal(result.body.reason,'foreign-or-unscoped');assert.equal(f.m.writes.length,0);
+ const result:any=await read(f,lens.stableKey,null);
+ if(scope==='foreign'){assert.equal(result.status,409);assert.equal(result.body.reason,'foreign-or-unscoped');}
+ else {assert.equal(result.status,200);assert.equal(result.body.unscopedCount,1);assert.equal(result.body.encounters.length,1);}
+ assert.equal(f.m.writes.length,0);
+});
+
+test('W111 review closure read failure preserves ocular save command response',async()=>{
+ const f=fixture(),request=body({OD:{loaded:[],selected:[claim()]}});
+ ok(await save(f,request));
+ const expected=await save(f,request);
+ let reads=0;
+ f.m.hooks.beforeRead=type=>{if(type==='Encounter')reads++;};
+ assert.deepEqual(await save(f,request),expected);
+ const finalRead=reads;reads=0;let faults=0;
+ f.m.hooks.beforeRead=type=>{if(type==='Encounter'&&++reads===finalRead){faults++;throw Error('post-command Encounter unavailable');}};
+ assert.deepEqual(await save(f,request),expected);assert.equal(faults,1);
+ assert.equal((expected.body as any).encounterClosedDuringCommand,undefined);
+});
+
+test('V21 review priors searches exact base field and option codes including inactive entries',async()=>{
+ const definition=structuredClone(lens);
+ const fields=definition.valueSchema.fields as any;
+ fields.CUSTOM_old={localCode:'CUSTOM_old',display:'Historical field',origin:'practice',valueType:'multi-select',active:false,order:999,options:[{code:'old-option',display:'Historical option',active:false}]};
+ const f=fixture([canonicalFact()],[definition]);let searched:string|undefined;
+ const authenticate=f.deps.authenticate;
+ f.deps.authenticate=async()=>{const staff=await authenticate();const original=staff.fhir.search;return {...staff,fhir:{...staff.fhir,search:async(type:any,params:any)=>{if(type==='Observation'&&params.subject&&!params.encounter)searched=params.code;return original(type,params);}}} as any;};
+ const result:any=await read(f,lens.stableKey,null);assert.equal(result.status,200);
+ const expected=[definition.stableKey,...customFieldEntries(definition,true).flatMap(field=>[`${definition.stableKey}::${field.localCode}`,...(field.options??[]).map(option=>`${definition.stableKey}::${field.localCode}::${option.code}`)])];
+ assert.deepEqual(new Set(searched?.split(',')),new Set(expected));
+ assert.ok(searched?.includes(`${lens.stableKey}::CUSTOM_old::old-option`));
+ assert.equal(result.body.encounters.length,1);
 });
