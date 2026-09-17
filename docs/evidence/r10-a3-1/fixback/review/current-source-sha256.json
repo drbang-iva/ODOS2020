@@ -8,7 +8,7 @@
   "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts": "e425d65e9e16248c82a22ada0912dabdd01ec4fccfbff6503f76c1fff06a20d1",
   "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts": "437a31b84225dcd582c2597b1d09f181f50c6dbfd242b3842b8a4f1423dde711",
   "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts": "21c6ebb5e8ee6a55a03fd69fbf166b3f85136944700c8e59e28dbd4556f47a05",
-  "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts": "5c04bcd92c43347d458cade6aa4cecd345366aeaf76d780a1135d629d5582c2e",
+  "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts": "403696b1c6dbacf93191916d462c3ca328b3d7da495aafff058b3166c36328af",
   "mcp/src/clinical-graph/encounter-sign-gate.ts": "902d55dfbefe95a261cadffe0834a2361546a9f18eca0b2a6ba15b6c87c682d7",
   "mcp/src/clinical-graph/protocol-endpoint.ts": "01c0c555d97055417c94da61e46848ca990fce91014933a582afb7fd1b230af7",
   "mcp/src/clinical-graph/protocol-service.ts": "3e72261bcc1bf7d9c9745cdc6a9ca21f410ec1cf2189da7d0db057f3f77860fa",

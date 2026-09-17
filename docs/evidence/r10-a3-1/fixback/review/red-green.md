@@ -25,3 +25,7 @@ All 21 designated mutations failed (exit 1); byte-restored checks passed (exit 0
 | review-pre-rebuild-kept | V3 pre-rebuild diagnosis door refuses before any clinical or audit write | tests 1, pass 0, fail 1, skipped 0, todo 0 | tests 1, pass 1, fail 0, skipped 0, todo 0 |
 | review-rollback-cache | W108 actual unapply rollback pre-rebuild refuses Observation restore | tests 1, pass 0, fail 1, skipped 0, todo 0 | tests 1, pass 1, fail 0, skipped 0, todo 0 |
 | review-warm-query-counts | fixback warm tap seeds only its built-in and rules<br>fixback warm whole seeds only its built-in and rules | tests 2, pass 0, fail 2, skipped 0, todo 0 | tests 2, pass 2, fail 0, skipped 0, todo 0 |
+
+## Final review: typed closure marker
+
+CodeRabbit review5235939476 outside-diff finding is fixed with an optional `true` property on the applied pick response. `W111 review applied pick response exposes optional closure marker to typed consumers`: removed field **1test,0pass,1fail** (TypeScript reports missing property); restored **1test,1pass,0fail**. [Manifest](type-mutation.json), [results](type-mutation-result.json), [runtime emission and assertion ledger](type-contract-proof.json). This is the22nd independent mutation pair; emitted JavaScript is byte-identical.

@@ -33,3 +33,18 @@ for(const file of ['r10OcularHealthDoorAuthzLive.test.ts','r10DiagnosisDoorAuthz
  await assert.rejects(run(bodyError,async()=>{}),error=>error===bodyError);
  await assert.rejects(run(undefined,async()=>{throw cleanupError;}),error=>error instanceof AggregateError&&error.errors.length===2&&error.errors.every(item=>item===cleanupError));
 });
+test('W111 review applied pick response exposes optional closure marker to typed consumers',()=>{
+ const file=resolve(root,'mcp/tests/review-pick-response-consumer.ts');
+ const content=`import type { DiagnosisPickResponse } from '../src/clinical-graph/diagnosis-pick-endpoint.js';
+ export function closure(response: DiagnosisPickResponse): true | undefined {
+   if (response.result === 'pick' && response.conditionStep === 'applied') return response.encounterClosedDuringCommand;
+   return undefined;
+ }`;
+ const config=ts.readConfigFile(resolve(root,'mcp/tsconfig.json'),ts.sys.readFile);
+ const options={...ts.parseJsonConfigFileContent(config.config,ts.sys,resolve(root,'mcp')).options,noEmit:true};
+ const host=ts.createCompilerHost(options),getSourceFile=host.getSourceFile.bind(host);
+ host.getSourceFile=(name,languageVersion,onError,shouldCreateNewSourceFile)=>name===file?ts.createSourceFile(name,content,languageVersion,true):getSourceFile(name,languageVersion,onError,shouldCreateNewSourceFile);
+ const program=ts.createProgram([file],options,host);
+ const diagnostics=program.getSemanticDiagnostics(program.getSourceFile(file));
+ assert.deepEqual(diagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[]);
+});
