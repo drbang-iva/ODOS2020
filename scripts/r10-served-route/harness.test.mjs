@@ -34,3 +34,16 @@ test('response proxy drops exactly one matching response after upstream completi
     assert.equal(proxy.events.filter(event => event.dropped).length, 1);
   } finally { await proxy.close(); await new Promise(resolve => upstream.close(resolve)); }
 });
+
+test('readiness child completes through a live parent HTTP server without blocking it', async () => {
+  const { runReadinessChild } = await import('./readiness-child.mjs');
+  let requests = 0;
+  const server = createServer((_request, response) => { requests++; response.end('ready'); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const url = `http://127.0.0.1:${server.address().port}`;
+    await runReadinessChild(process.execPath, ['--input-type=module', '-e', `const r = await fetch(${JSON.stringify(url)}, { signal: AbortSignal.timeout(1500) }); if (await r.text() !== 'ready') process.exit(1);`], { stdio: 'ignore' });
+    assert.equal(requests, 1);
+    await assert.rejects(runReadinessChild(process.execPath, ['-e', 'process.exit(7)'], { stdio: 'ignore' }), /Readiness child failed \(7\)/);
+  } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+});

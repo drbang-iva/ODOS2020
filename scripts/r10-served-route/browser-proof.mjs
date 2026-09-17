@@ -42,7 +42,7 @@ async function route(page,encounter=fixture.current) {
 async function openOcular(page) {
  await page.getByRole('button',{name:'By structure',exact:true}).click();
  const summary=page.locator('summary').filter({hasText:'Ocular Health'});
- if(await summary.count()) await summary.first().click();
+ if(await summary.count() && !await summary.first().evaluate(element=>element.parentElement.open)) await summary.first().click();
  await page.locator('[data-editor-section-id="ocular-health:anterior:lens"]').click();
  await page.getByRole('heading',{name:'Anterior & Posterior Segments'}).waitFor();
 }
