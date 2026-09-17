@@ -1,0 +1,15 @@
+{
+  "name": "identifier",
+  "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+  "anchor": "!saved.identifier?.some(identifier=>identifier.system===expectedIdentifier.system && identifier.value===expectedIdentifier.value) ||\n          ",
+  "replacement": "",
+  "cwd": "mcp",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=returned panel identity",
+    "tests/r10A3Library.test.ts"
+  ]
+}

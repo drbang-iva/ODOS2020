@@ -1,0 +1,15 @@
+{
+  "name": "subject-encounter",
+  "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+  "anchor": "saved.subject?.reference!==command.patientReference || saved.encounter?.reference!==command.encounterReference)\n          return {clinicalWrite:\"none\",cause:\"verify-read\",status:\"conflict\",target:id,reason:\"Returned panel owner does not match the requested identity.\"};",
+  "replacement": "false)\n          return {clinicalWrite:\"none\",cause:\"verify-read\",status:\"conflict\",target:id,reason:\"Returned panel owner does not match the requested identity.\"};",
+  "cwd": "mcp",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=returned panel identity",
+    "tests/r10A3Library.test.ts"
+  ]
+}

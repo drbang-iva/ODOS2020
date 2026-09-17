@@ -609,7 +609,12 @@ async function executePanel(deps:FindingCommandDeps,command:FindingCommand,targe
   try {
     if(owner)saved=await deps.fhir.update<Observation>("Observation",owner.id!,next,{...WRITE_HEADERS,"If-Match":etag(owner.meta!.versionId!)});
     else {const result=await deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,"If-None-Exist":`identifier=${FINDING_PANEL_SYSTEM}|${findingPanelIdentifier(target.key).value}`});saved=result.resource;
-      if(!result.created) {const marker=parseFindingOperation(saved);if(marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && parseFindingPanelEnvelope(saved).status==="valid" &&
+      if(!result.created) {
+        const expectedIdentifier=findingPanelIdentifier(target.key);
+        if(!saved.identifier?.some(identifier=>identifier.system===expectedIdentifier.system && identifier.value===expectedIdentifier.value) ||
+          saved.subject?.reference!==command.patientReference || saved.encounter?.reference!==command.encounterReference)
+          return {clinicalWrite:"none",cause:"verify-read",status:"conflict",target:id,reason:"Returned panel owner does not match the requested identity."};
+        const marker=parseFindingOperation(saved);if(marker?.commandId===command.commandId && marker.target===id && marker.digest===digest && parseFindingPanelEnvelope(saved).status==="valid" &&
         saved.status==="preliminary" && sha(readFindingPanelState(saved,definition))===digest)return ensureReplayAudit(deps,id,saved,marker);
         return {clinicalWrite:"none",status:"conflict",target:id,reason:"Another command owns this panel."};}}
   } catch(error) {

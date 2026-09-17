@@ -1,0 +1,346 @@
+TAP version 13
+# Subtest: W65 ownership restricts catalog and section classification
+ok 1 - W65 ownership restricts catalog and section classification
+  ---
+  duration_ms: 0.733125
+  type: 'test'
+  ...
+# Subtest: W92 inactive definition remains canonical read-only
+ok 2 - W92 inactive definition remains canonical read-only
+  ---
+  duration_ms: 1.75625
+  type: 'test'
+  ...
+# Subtest: W92 inactive field remains canonical read-only
+ok 3 - W92 inactive field remains canonical read-only
+  ---
+  duration_ms: 1.435209
+  type: 'test'
+  ...
+# Subtest: W92 inactive option remains canonical read-only
+ok 4 - W92 inactive option remains canonical read-only
+  ---
+  duration_ms: 0.3515
+  type: 'test'
+  ...
+# Subtest: W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+ok 5 - W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+  ---
+  duration_ms: 0.878875
+  type: 'test'
+  ...
+# Subtest: W95 panel rejects unknown owned inactive select and invalid typed values without writes
+ok 6 - W95 panel rejects unknown owned inactive select and invalid typed values without writes
+  ---
+  duration_ms: 1.022958
+  type: 'test'
+  ...
+# Subtest: W112 W117 panel writer roundtrip replay conflict and revive retain identity
+ok 7 - W112 W117 panel writer roundtrip replay conflict and revive retain identity
+  ---
+  duration_ms: 3.8295
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit agent
+ok 8 - W83 W109 rejects audit agent
+  ---
+  duration_ms: 1.482875
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit activity
+ok 9 - W83 W109 rejects audit activity
+  ---
+  duration_ms: 1.1155
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit system
+ok 10 - W83 W109 rejects audit system
+  ---
+  duration_ms: 1.102
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit instant
+ok 11 - W83 W109 rejects audit instant
+  ---
+  duration_ms: 0.878
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit targets
+ok 12 - W83 W109 rejects audit targets
+  ---
+  duration_ms: 0.753417
+  type: 'test'
+  ...
+# Subtest: W83 W109 rejects audit mixed
+ok 13 - W83 W109 rejects audit mixed
+  ---
+  duration_ms: 0.903875
+  type: 'test'
+  ...
+# Subtest: W83 equivalent recorded instants and duplicate targets accepted
+ok 14 - W83 equivalent recorded instants and duplicate targets accepted
+  ---
+  duration_ms: 0.658291
+  type: 'test'
+  ...
+# Subtest: W84 actor-bound reassertion rejects changed actor
+ok 15 - W84 actor-bound reassertion rejects changed actor
+  ---
+  duration_ms: 0.718584
+  type: 'test'
+  ...
+# Subtest: W106 W110 selected panel audit repair leaves other debt unchanged
+ok 16 - W106 W110 selected panel audit repair leaves other debt unchanged
+  ---
+  duration_ms: 2.044666
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact empty deletion conflicts before write or replay
+ok 17 - W85 W128 fact empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.766542
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 404 deletion conflicts before write or replay
+ok 18 - W85 W128 fact 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 1.857833
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 410 deletion conflicts before write or replay
+ok 19 - W85 W128 fact 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.603375
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel empty deletion conflicts before write or replay
+ok 20 - W85 W128 panel empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.286083
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 404 deletion conflicts before write or replay
+ok 21 - W85 W128 panel 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.392625
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 410 deletion conflicts before write or replay
+ok 22 - W85 W128 panel 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.314792
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert empty deletion conflicts before write or replay
+ok 23 - W85 W128 reassert empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.384
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 404 deletion conflicts before write or replay
+ok 24 - W85 W128 reassert 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.438042
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 410 deletion conflicts before write or replay
+ok 25 - W85 W128 reassert 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.440958
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 404 and empty owner
+ok 26 - W85 fact baseline read 404 and empty owner
+  ---
+  duration_ms: 0.715875
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 410 and empty owner
+ok 27 - W85 fact baseline read 410 and empty owner
+  ---
+  duration_ms: 0.613542
+  type: 'test'
+  ...
+# Subtest: W85 fact baseline read 502 and empty owner
+ok 28 - W85 fact baseline read 502 and empty owner
+  ---
+  duration_ms: 0.613958
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 404 and empty owner
+ok 29 - W85 panel baseline read 404 and empty owner
+  ---
+  duration_ms: 0.51925
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 410 and empty owner
+ok 30 - W85 panel baseline read 410 and empty owner
+  ---
+  duration_ms: 0.359708
+  type: 'test'
+  ...
+# Subtest: W85 panel baseline read 502 and empty owner
+ok 31 - W85 panel baseline read 502 and empty owner
+  ---
+  duration_ms: 0.345625
+  type: 'test'
+  ...
+# Subtest: W85 fact confirmed write then deleted
+ok 32 - W85 fact confirmed write then deleted
+  ---
+  duration_ms: 0.294708
+  type: 'test'
+  ...
+# Subtest: W85 fact unknown write then deleted
+ok 33 - W85 fact unknown write then deleted
+  ---
+  duration_ms: 0.305875
+  type: 'test'
+  ...
+# Subtest: W85 panel confirmed write then deleted
+ok 34 - W85 panel confirmed write then deleted
+  ---
+  duration_ms: 0.153375
+  type: 'test'
+  ...
+# Subtest: W85 panel unknown write then deleted
+ok 35 - W85 panel unknown write then deleted
+  ---
+  duration_ms: 0.143125
+  type: 'test'
+  ...
+# Subtest: W83 initial mismatching audit result and lost response stay mismatch without overwrite
+ok 36 - W83 initial mismatching audit result and lost response stay mismatch without overwrite
+  ---
+  duration_ms: 0.756958
+  type: 'test'
+  ...
+# Subtest: W84 reassert initial forged audit and mixed response are command-reused
+ok 37 - W84 reassert initial forged audit and mixed response are command-reused
+  ---
+  duration_ms: 0.423042
+  type: 'test'
+  ...
+# Subtest: W92 direct writers reject inactive assertions even with historical catalog supplied
+ok 38 - W92 direct writers reject inactive assertions even with historical catalog supplied
+  ---
+  duration_ms: 0.356125
+  type: 'test'
+  ...
+# Subtest: W71 panel scalar storage rejects alternate clinical data and wrong typed payload
+ok 39 - W71 panel scalar storage rejects alternate clinical data and wrong typed payload
+  ---
+  duration_ms: 0.200875
+  type: 'test'
+  ...
+# Subtest: W95 panel missing effective definition is a 400 before any write
+ok 40 - W95 panel missing effective definition is a 400 before any write
+  ---
+  duration_ms: 0.1075
+  type: 'test'
+  ...
+# Subtest: W85 fact lost write then recovery direct read 410 stays unknown
+ok 41 - W85 fact lost write then recovery direct read 410 stays unknown
+  ---
+  duration_ms: 0.488125
+  type: 'test'
+  ...
+# Subtest: W85 panel lost write then recovery direct read 410 stays unknown
+ok 42 - W85 panel lost write then recovery direct read 410 stays unknown
+  ---
+  duration_ms: 0.248834
+  type: 'test'
+  ...
+# Subtest: W71 every panel identity dimension is checked
+ok 43 - W71 every panel identity dimension is checked
+  ---
+  duration_ms: 0.261959
+  type: 'test'
+  ...
+# Subtest: W112 panel stale baseline conflicts; replays classify same state and reject different payload
+ok 44 - W112 panel stale baseline conflicts; replays classify same state and reject different payload
+  ---
+  duration_ms: 0.574667
+  type: 'test'
+  ...
+# Subtest: W84 classifyReplay actor binding includes both tags and target set
+ok 45 - W84 classifyReplay actor binding includes both tags and target set
+  ---
+  duration_ms: 0.441833
+  type: 'test'
+  ...
+# Subtest: W109 panel mixed valid and forged audits remains pending
+ok 46 - W109 panel mixed valid and forged audits remains pending
+  ---
+  duration_ms: 0.712458
+  type: 'test'
+  ...
+# Subtest: W95 panel scalar select and string values roundtrip normalized without facts
+ok 47 - W95 panel scalar select and string values roundtrip normalized without facts
+  ---
+  duration_ms: 0.520166
+  type: 'test'
+  ...
+# Subtest: W115 signed final panels and facts retain identity with zero ordinary writes
+ok 48 - W115 signed final panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.173292
+  type: 'test'
+  ...
+# Subtest: W115 signed amended panels and facts retain identity with zero ordinary writes
+ok 49 - W115 signed amended panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.828042
+  type: 'test'
+  ...
+# Subtest: W115 signed corrected panels and facts retain identity with zero ordinary writes
+ok 50 - W115 signed corrected panels and facts retain identity with zero ordinary writes
+  ---
+  duration_ms: 1.11375
+  type: 'test'
+  ...
+# Subtest: W95 review non-shared panel definition returns not-a-shared-finding before writes
+ok 51 - W95 review non-shared panel definition returns not-a-shared-finding before writes
+  ---
+  duration_ms: 0.083375
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-valid-panel
+ok 52 - W71 W112 W117 returned panel identity: foreign-valid-panel
+  ---
+  duration_ms: 0.373083
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: different-eye-valid-panel
+ok 53 - W71 W112 W117 returned panel identity: different-eye-valid-panel
+  ---
+  duration_ms: 0.154583
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-subject
+ok 54 - W71 W112 W117 returned panel identity: foreign-subject
+  ---
+  duration_ms: 0.129
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: foreign-encounter
+ok 55 - W71 W112 W117 returned panel identity: foreign-encounter
+  ---
+  duration_ms: 0.11825
+  type: 'test'
+  ...
+# Subtest: W71 W112 W117 returned panel identity: same-panel
+ok 56 - W71 W112 W117 returned panel identity: same-panel
+  ---
+  duration_ms: 0.401666
+  type: 'test'
+  ...
+1..56
+# tests 56
+# suites 0
+# pass 56
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 213.237292

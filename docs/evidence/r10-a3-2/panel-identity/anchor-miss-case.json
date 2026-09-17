@@ -1,0 +1,14 @@
+{
+  "name": "deliberate-anchor-miss",
+  "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+  "anchor": "NONEXISTENT_PANEL_IDENTITY_GUARD_ANCHOR",
+  "replacement": "",
+  "command": [
+    "node",
+    "--import",
+    "tsx",
+    "--test",
+    "--test-name-pattern=returned panel identity",
+    "tests/r10A3Library.test.ts"
+  ]
+}
