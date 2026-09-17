@@ -1,3 +1,6 @@
+import { supportedDiagnosisPick, supportedFindingLink } from "../../lib/supported-diagnosis-pick";
+import { loadDiagnosisFindings, handleFindingOutcome, mutateDiagnosisFinding, type DiagnosisFindingsPayload, type DiagnosisFindingMutation } from "../../lib/diagnosis-findings";
+import type { SupportingFindingFact } from "../../lib/clinical-graph-client";
 import type { Condition } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../../lib/clinical-actions";
@@ -20,7 +23,8 @@ interface Candidate {
   icd10?: { code?: string; pattern?: Record<string, string> };
   codingStatus: "verified" | "placeholder" | "provisional";
   priority: boolean;
-  source: "rule" | "mapping";
+  source: "rule" | "mapping" | "catalog-search";
+  supportingFacts?: SupportingFindingFact[];
 }
 
 interface CandidateFinding {
@@ -40,7 +44,14 @@ interface CatalogRow {
   icd10?: { code?: string; pattern?: Record<string, string> };
 }
 
-export function DiagnosisPicker({
+interface DiagnosisPickerProps {
+  encounterReference: string; patientReference?: string; observationReferences?: string[]; findingDefinitionKey?: string;
+  refreshKey?: number | string; mode?: "decision" | "proposal"; linkMode?: "facts";
+}
+export function DiagnosisPicker(props: DiagnosisPickerProps) {
+  return props.linkMode === "facts" ? <FactsDiagnosisPicker {...props} /> : <LegacyDiagnosisPicker {...props} />;
+}
+function LegacyDiagnosisPicker({
   encounterReference,
   observationReferences,
   findingDefinitionKey,
@@ -406,7 +417,7 @@ export function catalogCode(row: Pick<CatalogRow, "icd10">): string | undefined 
   return row.icd10.pattern?.unspecifiedEye;
 }
 
-function isLeafCandidate(candidate: DiagnosisCandidateSuggestion): candidate is Candidate {
+function isLeafCandidate(candidate: DiagnosisCandidateSuggestion): candidate is Candidate & { source: "rule" | "mapping" } {
   return typeof candidate.diagnosisKey === "string" &&
     "codingStatus" in candidate &&
     (candidate.codingStatus === "verified" || candidate.codingStatus === "placeholder" || candidate.codingStatus === "provisional");
@@ -434,4 +445,100 @@ function conditionDiagnosisKey(condition: Condition): string | undefined {
     identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
   )?.value;
   return value?.split("::").at(-2);
+}
+
+function FactsDiagnosisPicker({ encounterReference, patientReference, findingDefinitionKey, refreshKey }: DiagnosisPickerProps) {
+  const [projection, setProjection] = useState<DiagnosisFindingsPayload>();
+  const [candidates, setCandidates] = useState<Array<Candidate & { supportingFacts: SupportingFindingFact[] }>>([]);
+  const [conditions, setConditions] = useState<Condition[]>([]);
+  const [message, setMessage] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [pendingLink, setPendingLink] = useState<DiagnosisFindingMutation>();
+  const [catalog, setCatalog] = useState<CatalogRow[]>([]);
+  const [selection, setSelection] = useState<CatalogRow>();
+  const version = useRef(0);
+  const scopeKey = `${encounterReference}\u0000${patientReference}\u0000${findingDefinitionKey}`;
+  const activeScope = useRef(scopeKey);
+  activeScope.current = scopeKey;
+  async function load() {
+    const requested = ++version.current;
+    try {
+      const [payload, findings, currentConditions, response] = await Promise.all([
+        loadDiagnosisFindings(encounterReference),
+        readDiagnosisCandidates(encounterReference.replace(/^Encounter\//, "")),
+        searchAll<Condition>(fhir, "Condition", { encounter: encounterReference }),
+        fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders() }),
+      ]);
+      const catalogBody = await response.json() as { diagnoses?: CatalogRow[]; error?: string };
+      if (requested !== version.current || activeScope.current !== scopeKey) return;
+      if ("result" in payload) throw new Error(payload.error);
+      if (!response.ok) throw new Error(catalogBody.error ?? "Diagnosis catalog unavailable");
+      setProjection(payload); setConditions(currentConditions); setCatalog((catalogBody.diagnoses ?? []).filter(row => row.active));
+      setCandidates(findings.flatMap(finding => finding.candidates.filter(isLeafCandidate).flatMap(candidate => {
+        const supports = candidate.supportingFacts?.filter(support => support.key.stableKey === findingDefinitionKey && payload.searchIndex.some(row => row.rowKey === support.rowKey && row.status === "live" && row.presence === "present"));
+        return supports?.length ? [{ ...candidate, supportingFacts: supports }] : [];
+      })));
+    } catch (caught) { if (requested === version.current && activeScope.current === scopeKey) { setProjection(undefined); setMessage(caught instanceof Error ? caught.message : String(caught)); } }
+  }
+  useEffect(() => {
+    void load();
+    const refresh = (event: Event) => { if ((event as CustomEvent).detail?.encounterReference === encounterReference) void load(); };
+    window.addEventListener("odos:encounter-findings-changed", refresh);
+    return () => { version.current++; window.removeEventListener("odos:encounter-findings-changed", refresh); };
+  }, [encounterReference, findingDefinitionKey, refreshKey]);
+  function supportsFor(diagnosisKey: string) {
+    return [...new Map(candidates.filter(candidate => candidate.diagnosisKey === diagnosisKey).flatMap(candidate => candidate.supportingFacts).map(support => [support.rowKey, support])).values()];
+  }
+  function proposed(candidate: Candidate & { supportingFacts: SupportingFindingFact[] }) {
+    return conditions.some(condition => isProvisional(condition) && conditionDiagnosisKey(condition) === candidate.diagnosisKey && candidate.supportingFacts.every(support => projection?.searchIndex.find(row => row.rowKey === support.rowKey)?.homes.includes(`Condition/${condition.id}`)));
+  }
+  async function finishLink(command: DiagnosisFindingMutation) {
+    const result = await mutateDiagnosisFinding(encounterReference, command);
+    const outcome = await handleFindingOutcome(result, { encounterReference, refresh: load });
+    const complete = result.body.result === "command" && result.body.complete;
+    setPendingLink(complete || outcome.reloadChoice ? undefined : command);
+    setMessage(complete ? "Diagnosis saved · Scope saved · Findings linked" : `Diagnosis saved · Linking incomplete: ${outcome.message ?? "Retry linking"}`);
+  }
+  async function pick(candidate: Candidate & { supportingFacts: SupportingFindingFact[] }) {
+    if (!projection?.canWrite || !projection.encounterEditable || busy) return;
+    const merged = supportsFor(candidate.diagnosisKey);
+    const supports = merged.length ? merged : candidate.supportingFacts;
+    if (supports.some(support => !projection.searchIndex.find(row => row.rowKey === support.rowKey)?.editable)) { setMessage("Supporting findings need review before picking a diagnosis."); return; }
+    const patient = patientReference ?? (supports[0] ? `Patient/${supports[0].key.patientId}` : undefined);
+    if (!patient || !supports.length) return;
+    const eyes = new Set(supports.map(support => support.key.eye));
+    const laterality = eyes.size === 2 ? "OU" : supports[0]!.key.eye;
+    const retract = proposed(candidate);
+    const commandId = crypto.randomUUID();
+    const existing = projection.visitDiagnoses.find(row => row.diagnosisKey === candidate.diagnosisKey && row.laterality === laterality);
+    setBusy(true); setMessage(undefined); setPendingLink(undefined);
+    try {
+      const link = async (reference: string) => {
+        const command = supportedFindingLink(commandId, supports, projection, patient, reference);
+        if (!command) { setMessage("Diagnosis saved; supporting findings need review before linking."); return; }
+        await finishLink(command);
+      };
+      if (existing && !retract) { await link(existing.conditionReference); return; }
+      if (!projection.canWriteDiagnosis) { setMessage("A provider must add this diagnosis before linking."); return; }
+      await supportedDiagnosisPick({
+        request: { encounterReference, commandId, diagnosisKey: candidate.diagnosisKey, action: retract ? "discard" : "possible", source: candidate.source, laterality, supportingFacts: supports },
+        ...(!retract ? { scope: { patientReference: patient, laterality, ...(candidate.icd10?.code || candidate.icd10?.pattern ? { diagnosis: { stableKey: candidate.diagnosisKey, display: candidate.display, icd10: candidate.icd10.code ? { code: candidate.icd10.code } : { pattern: candidate.icd10.pattern! } } } : {}) } } : {}),
+        onPicked: async () => { if (activeScope.current !== scopeKey) return false; await load(); if (activeScope.current !== scopeKey) return false; window.dispatchEvent(new CustomEvent("odos:encounter-findings-changed", { detail: { encounterReference } })); }, onScoped: () => undefined,
+        ...(!retract ? { link: async (reference: string) => { if (activeScope.current === scopeKey) await link(reference); } } : {}), message: value => { if (activeScope.current === scopeKey) setMessage(value); },
+      });
+    } finally { setBusy(false); }
+  }
+  const disabled = busy || !projection?.canWrite || !projection.encounterEditable;
+  return <div data-testid="structure-diagnosis-rail" className="mt-4 space-y-3 border-t border-white/10 pt-4">
+    <div className="text-xs uppercase">Suggested diagnoses</div>
+    {candidates.map((candidate, index) => <ProposalChoice key={`${candidate.diagnosisKey}:${index}`} display={candidate.display} code={catalogCode(candidate)} proposed={proposed(candidate)} busy={disabled} onToggle={() => pick(candidate)} />)}
+    <OdosSearchPicker<CatalogRow> label="Full diagnosis catalog" placeholder="Search full diagnosis catalog" value={selection?.stableKey ?? ""} selectedLabel={selection?.display} disabled={disabled} onClear={() => setSelection(undefined)} search={async query => catalog.filter(row => row.display.toLowerCase().includes(query.toLowerCase())).slice(0,12).map(row => ({value:row.stableKey,label:row.display,item:row}))} onSelect={option => setSelection(option.item)} />
+    {selection && (() => {
+      const supportingFacts = projection?.searchIndex.filter(row => row.key?.stableKey === findingDefinitionKey && row.status === "live" && row.presence === "present" && row.baseline?.kind === "canonical").map(row => ({ rowKey: row.rowKey, key: row.key!, baseline: row.baseline as SupportingFindingFact["baseline"] })) ?? [];
+      const candidate = { ...selection, diagnosisKey: selection.stableKey, source: "catalog-search" as const, priority: false, supportingFacts };
+      return <ProposalChoice display={candidate.display} code={catalogCode(candidate)} proposed={proposed(candidate)} busy={disabled || !supportingFacts.length} onToggle={() => pick(candidate)} />;
+    })()}
+    {pendingLink && <button disabled={disabled} type="button" onClick={async () => { setBusy(true); try { await finishLink(pendingLink); } finally { setBusy(false); } }}>Finish linking</button>}
+    {message && <p role="status">{message}</p>}
+  </div>;
 }

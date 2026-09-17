@@ -803,7 +803,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         slot: sheetUndoSlot.slot,
         canWriteDiagnosis,
         confirmed: confirmedUndoSlots.has(undoSlotKey(sheetUndoSlot.sectionKey, sheetUndoSlot.slot)),
-        onUndo: () => handleUndo({ scope: "section", sectionKey: sheetUndoSlot.sectionKey }),
+        onUndo: (voidActionId: string) => handleUndo({ scope: "section", sectionKey: sheetUndoSlot.sectionKey, voidActionId }),
       }
     : undefined;
   const bodyUndoSlot = entrySheetSection ? undefined : undoSlotForSection(activeUndoLedger, sectionUndoKeys(activeSection));
@@ -856,7 +856,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         undoSlot={activeUndoLedger.encounter ?? undefined}
         canWriteDiagnosis={canWriteDiagnosis}
         undoConfirmed={activeUndoLedger.encounter ? confirmedUndoSlots.has(undoSlotKey("encounter", activeUndoLedger.encounter)) : false}
-        onUndo={() => handleUndo({ scope: "encounter" })}
+        onUndo={(voidActionId) => handleUndo({ scope: "encounter", voidActionId })}
       />
       <div
         className="odos-charting-stage"
@@ -916,7 +916,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
               scope="section"
               confirmed={confirmedUndoSlots.has(undoSlotKey(bodyUndoSlot.sectionKey, bodyUndoSlot.slot))}
               closed={isClosedEncounterStatus(encounter?.status)}
-              onUndo={() => handleUndo({ scope: "section", sectionKey: bodyUndoSlot.sectionKey })}
+              onUndo={(voidActionId) => handleUndo({ scope: "section", sectionKey: bodyUndoSlot.sectionKey, voidActionId })}
             />
           )}
           {activeExamOverviewProjection && boardEditorOpen && (

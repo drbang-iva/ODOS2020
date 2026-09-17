@@ -1,3 +1,4 @@
+import { canonicalOcularFixture } from "./r10CanonicalOcularFixture";
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Patient, ServiceRequest } from "@medplum/fhirtypes";
@@ -527,7 +528,7 @@ function ConfirmSurfaceFixture() {
   if (new URLSearchParams(window.location.search).has("negativeAct")) {
     const fixture = (window as typeof window & { __odosNegativeFixture: { definitions: CustomFindingDefinition[]; patientReference: string; encounterReference: string } }).__odosNegativeFixture;
     return <main className="h-screen overflow-auto bg-bg-deep text-white"><OcularHealthSection
-      {...fixture} onSaved={() => undefined} fetchImpl={window.fetch}
+      {...fixture} onSaved={() => undefined} fetchImpl={canonicalOcularFixture(window.fetch, fixture.definitions)}
     /></main>;
   }
   const surface = new URLSearchParams(window.location.search).get("confirmSurface");
@@ -537,7 +538,7 @@ function ConfirmSurfaceFixture() {
       patientReference="Patient/test"
       encounterReference="Encounter/test"
       onSaved={() => undefined}
-      fetchImpl={window.fetch}
+      fetchImpl={canonicalOcularFixture(window.fetch, [syntheticQualifiedOcularDefinition()])}
     /></main>;
   }
   if (surface === "referral") {

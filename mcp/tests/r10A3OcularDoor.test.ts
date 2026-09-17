@@ -176,3 +176,31 @@ test('V21 review priors searches exact base field and option codes including ina
  assert.ok(searched?.includes(`${lens.stableKey}::CUSTOM_old::old-option`));
  assert.equal(result.body.encounters.length,1);
 });
+
+test('W147 unchanged signed loaded witness permits Remarks without changing the fact', async () => {
+ const f=fixture([{...canonicalFact(),status:'final'}]);const before=structuredClone(live(f));
+ const h:any=await read(f);assert.equal(h.body.eyes.OD.panel.editable,true);
+ const c=claim(before);ok(await save(f,body({OD:{loaded:[c],selected:[structuredClone(c)],panel:panel(lens.stableKey,{deferred:false,values:{},remarks:'Synthetic remark'})}})));
+ assert.deepEqual(live(f),before);const after:any=await read(f);assert.equal(after.body.eyes.OD.panel.remarks,'Synthetic remark');
+});
+for(const action of ['deselect','regrade'] as const)test(`W147 signed ${action} remains refused with zero writes`,async()=>{
+ const f=fixture([{...canonicalFact(),status:'final'}]);const before=structuredClone(live(f)),c=claim(before);
+ const selected=action==='deselect'?[]:[{...c,qualifiers:{grade:'1+'}}];
+ const r:any=await save(f,body({OD:{loaded:[c],selected,panel:panel(lens.stableKey,{deferred:false,values:{},remarks:'Must not save'})}}));
+ assert.equal(r.status,422);assert.equal(r.body.reason,'signed-or-cancelled');assert.equal(f.m.writes.length,0);assert.deepEqual(live(f),before);
+});
+test('W147 unchanged signed witness with a moved fresh version refuses stale baseline',async()=>{
+ const f=fixture([{...canonicalFact(),status:'final'}]);const c=claim(live(f));f.m.save({...live(f),meta:{versionId:'advanced'}});
+ const before=structuredClone(live(f));const r:any=await save(f,body({OD:{loaded:[c],selected:[structuredClone(c)],panel:panel(lens.stableKey,{deferred:false,values:{},remarks:'Must not save'})}}));
+ assert.equal(r.status,409);assert.equal(r.body.reason,'stale-baseline');assert.equal(f.m.writes.length,0);assert.deepEqual(live(f),before);
+});
+test('W147 inactive option is an unchanged witness while active panel Remarks save',async()=>{
+ const defs=buildFindingDefinitionSeeds();const d=defs.find(d=>d.stableKey===lens.stableKey)!;
+ const field=(d.valueSchema.fields as any)[lensField];field.options.find((o:any)=>o.code===keyFor().optionCode).active=false;
+ const f=fixture([canonicalFact()],defs),before=structuredClone(live(f)),c=claim(before);
+ const h:any=await read(f);assert.equal(h.body.eyes.OD.facts.find((r:any)=>r.status==='live').readOnlyReason,'inactive-definition');
+ ok(await save(f,body({OD:{loaded:[c],selected:[structuredClone(c)],panel:panel(lens.stableKey,{deferred:false,values:{},remarks:'Synthetic inactive witness'})}})));
+ assert.deepEqual(live(f),before);
+ const writes=f.m.writes.length;const refused:any=await save(f,body({OD:{loaded:[c],selected:[]}}));
+ assert.equal(refused.status,409);assert.equal(refused.body.reason,'inactive-definition');assert.equal(f.m.writes.length,writes);
+});

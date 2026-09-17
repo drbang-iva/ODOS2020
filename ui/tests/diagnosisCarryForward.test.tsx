@@ -337,7 +337,7 @@ test("encounter changes ignore stale previous-exam responses", async () => {
   act(() => renderer.unmount());
 });
 
-test("checked prior diagnoses select without POST while unchecked pulls are idempotent and row-specific", async () => {
+test("read-only checked prior diagnoses select without POST while provider pulls are idempotent and row-specific", async () => {
   const selections: string[] = [];
   const requests: Array<{ url: string; body: unknown }> = [];
   let resolveFirstPull!: (response: Response) => void;
@@ -360,7 +360,7 @@ test("checked prior diagnoses select without POST while unchecked pulls are idem
   }) as typeof fetch;
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
+    renderer = create(<PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />);
     await flush();
   });
   const row = (reference: string) => renderer.root.findByProps({ "data-source-condition-reference": reference });
@@ -368,6 +368,7 @@ test("checked prior diagnoses select without POST while unchecked pulls are idem
   act(() => row("Condition/source-checked").props.onClick());
   assert.deepEqual(selections, ["Condition/current-checked"]);
   assert.equal(requests.length, 0);
+  await act(async () => renderer.update(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={(reference) => selections.push(reference)} fetchImpl={fetchImpl} />));
 
   await act(async () => {
     row("Condition/source-a").props.onClick();
@@ -375,7 +376,9 @@ test("checked prior diagnoses select without POST while unchecked pulls are idem
     await flush();
   });
   assert.equal(requests.length, 1);
+  assert.match((requests[0]?.body as { commandId: string }).commandId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   assert.deepEqual(requests[0]?.body, {
+    commandId: (requests[0]?.body as { commandId: string }).commandId,
     sourceEncounterReference: "Encounter/recent",
     sourceConditionReference: "Condition/source-a",
   });
@@ -392,7 +395,9 @@ test("checked prior diagnoses select without POST while unchecked pulls are idem
     await flush();
   });
   assert.equal(requests.length, 2);
+  assert.notEqual((requests[1]?.body as { commandId: string }).commandId, (requests[0]?.body as { commandId: string }).commandId);
   assert.deepEqual(requests[1]?.body, {
+    commandId: (requests[1]?.body as { commandId: string }).commandId,
     sourceEncounterReference: "Encounter/older",
     sourceConditionReference: "Condition/source-b",
   });
@@ -508,6 +513,171 @@ test("finding rows distinguish unchanged carried presence, prior absence, and fr
   assert.equal(renderer.root.findByProps({ "aria-label": "Record Prior absent absent" }).props["aria-pressed"], false);
   assert.doesNotMatch(rowText("Reasserted absent"), /carried/);
   act(() => renderer.unmount());
+});
+
+for (const scenario of ["complete", "partial-confirmed", "unconfirmed"] as const) {
+  test(`V25 W135 carry refresh event follows ${scenario} server evidence`, async () => {
+    const originalWindow = globalThis.window;
+    const events: string[] = [];
+    const target = new EventTarget();
+    target.addEventListener("odos:encounter-findings-changed", event => events.push((event as CustomEvent).detail.encounterReference));
+    Object.defineProperty(globalThis, "window", {configurable:true, writable:true, value:target});
+    const fetchImpl = (async (_input, init) => {
+      if (!init?.method) return jsonResponse(page([exam("Encounter/prior", "2026-08-01", "Medical", [priorDiagnosis("Condition/source", "Dry eye", "OU", false)])]));
+      if (scenario === "unconfirmed") throw new Error("response lost before confirmation");
+      return scenario === "complete" ? jsonResponse({conditionReference:"Condition/carried",alreadyPresent:false}) : jsonResponse({conditionReference:"Condition/carried",alreadyPresent:false,conditionStep:"applied",planStep:"applied",linkStep:"applied",lineageStep:"not-attempted",findings:{result:"command",complete:false,outcomes:[{target:"OD",status:"unconfirmed",clinicalWrite:"unknown"}]}},502);
+    }) as typeof fetch;
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async()=>{renderer=create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={()=>undefined} fetchImpl={fetchImpl}/>);await flush();});
+      await act(async()=>{renderer.root.findByProps({"data-source-condition-reference":"Condition/source"}).props.onClick();await flush();});
+      assert.deepEqual(events, scenario === "unconfirmed" ? [] : ["Encounter/current"], "V25 confirmed carry refreshes overview and the other finding door; unconfirmed transport never claims a write");
+    } finally {act(()=>renderer?.unmount());Object.defineProperty(globalThis,"window",{configurable:true,writable:true,value:originalWindow});}
+  });
+}
+
+test("W142 partial carry shows steps and Finish carrying resends the identical command body", async () => {
+  const bodies: string[] = [];
+  const selections: string[] = [];
+  const fetchImpl = (async (_input, init) => {
+    if (!init?.method) return jsonResponse(page([exam("Encounter/prior", "2026-08-01", "Medical", [priorDiagnosis("Condition/source", "Dry eye", "OU", false)])]));
+    bodies.push(String(init.body));
+    if (bodies.length === 1) return jsonResponse({ conditionReference: "Condition/carried", alreadyPresent: false,
+      conditionStep: "applied", planStep: "applied", linkStep: "applied", lineageStep: "not-attempted",
+      findings: { result: "command", commandId: JSON.parse(bodies[0]!).commandId, complete: false, executionOrder: [0],
+        outcomes: [{ target: "OD", status: "unconfirmed", clinicalWrite: "unknown", cause: "verify-read" }] } }, 502);
+    return jsonResponse({ conditionReference: "Condition/carried", alreadyPresent: false,
+      conditionStep: "applied", planStep: "applied", linkStep: "applied", lineageStep: "applied",
+      findings: { result: "command", commandId: JSON.parse(bodies[0]!).commandId, complete: true, executionOrder: [], outcomes: [] } });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={reference => selections.push(reference)} fetchImpl={fetchImpl} />); await flush(); });
+    await act(async () => { renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props.onClick(); await flush(); });
+    assert.deepEqual(selections, []);
+    assert.match(text(renderer), /Diagnosis: applied/);
+    assert.match(text(renderer), /Plan: applied/);
+    assert.match(text(renderer), /Visit link: applied/);
+    assert.match(text(renderer), /Findings: incomplete/);
+    assert.match(text(renderer), /Lineage: not-attempted/);
+    const retry = renderer.root.findAllByType("button").find(button => text(button) === "Finish carrying");
+    assert.ok(retry, "partial carry must remain resumable");
+    assert.match(JSON.parse(bodies[0]!).commandId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    await act(async () => { retry.props.onClick(); await flush(); });
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[1], bodies[0]);
+    assert.deepEqual(selections, ["Condition/carried"]);
+  } finally { act(() => renderer?.unmount()); }
+});
+
+for (const incomplete of [true,false]) test(`V25 V36 W143 remounted checked carry ${incomplete ? "discovers incomplete plan" : "selects already complete without replan"}`, async () => {
+  const requests: any[] = [], selections: string[] = [];
+  let reads=0;
+  const fetchImpl=(async(_input,init)=>{
+    if(!init?.method){reads++;return jsonResponse(page([exam("Encounter/prior","2026-08-01","Medical",[priorDiagnosis("Condition/source","Dry eye","OU",true,[],"Condition/carried")])]));}
+    requests.push(JSON.parse(String(init.body)));
+    if(incomplete&&requests.length===1)return jsonResponse({reason:"carry-incomplete",conditionReference:"Condition/carried",error:"Another carry is incomplete."},409);
+    return jsonResponse({conditionReference:"Condition/carried",alreadyPresent:true});
+  }) as typeof fetch;
+  let renderer!:ReactTestRenderer;
+  try {
+    await act(async()=>{renderer=create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={ref=>selections.push(ref)} fetchImpl={fetchImpl}/>);await flush();});
+    await act(async()=>{renderer.root.findByProps({"data-source-condition-reference":"Condition/source"}).props.onClick();await flush();});
+    assert.equal(requests.length,1,"W143 checked is not proof that the persisted carry finished");
+    assert.equal(requests[0].replan,undefined,"initial verification never forces a new carry plan");
+    if(incomplete){
+      assert.deepEqual(selections,[]);
+      const retry=renderer.root.findAllByType("button").find(button=>text(button)==="Reload and carry findings again");
+      assert.ok(retry,"remounted incomplete carry exposes recovery");
+      await act(async()=>{retry.props.onClick();await flush();});
+      assert.equal(reads,2,"replan first reloads");assert.equal(requests.length,2);assert.equal(requests[1].replan,true);assert.notEqual(requests[0].commandId,requests[1].commandId);
+    }
+    assert.deepEqual(selections,["Condition/carried"]);
+    await act(async()=>{renderer.root.findByProps({"data-source-condition-reference":"Condition/source"}).props.onClick();await flush();});
+    assert.equal(requests.length,incomplete?2:1,"confirmed completed carry selects without another POST");
+  }finally{act(()=>renderer?.unmount());}
+});
+
+test("W143 carry-incomplete reloads before replan with a new command and blocks while reload is unresolved", async () => {
+  const order: string[] = [];
+  const bodies: Array<Record<string, unknown>> = [];
+  const reload = deferred<Response>();
+  let gets = 0;
+  const prior = page([exam("Encounter/prior", "2026-08-01", "Medical", [priorDiagnosis("Condition/source", "Dry eye", "OU", false)])]);
+  const fetchImpl = (async (_input, init) => {
+    if (!init?.method) { gets++; order.push("GET"); return gets === 1 ? jsonResponse(prior) : reload.promise; }
+    order.push("POST"); bodies.push(JSON.parse(String(init.body)));
+    return bodies.length === 1 ? jsonResponse({ reason: "carry-incomplete", error: "Another carry is incomplete.", commandId: "other-command", conditionReference: "Condition/carried" }, 409)
+      : jsonResponse({ conditionReference: "Condition/carried", alreadyPresent: true });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />); await flush(); });
+    await act(async () => { renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props.onClick(); await flush(); });
+    const replan = renderer.root.findAllByType("button").find(button => text(button) === "Reload and carry findings again");
+    assert.ok(replan, "carry-incomplete must offer a reload and a new plan");
+    await act(async () => { replan.props.onClick(); await flush(); });
+    assert.deepEqual(order, ["GET", "POST", "GET"]);
+    assert.equal(bodies.length, 1);
+    await act(async () => { reload.resolve(jsonResponse(prior)); await flush(); });
+    assert.deepEqual(order, ["GET", "POST", "GET", "POST"]);
+    assert.equal(bodies[1]?.replan, true);
+    assert.notEqual(bodies[1]?.commandId, bodies[0]?.commandId);
+    assert.notEqual(bodies[1]?.commandId, "other-command");
+    assert.equal(bodies[1]?.sourceConditionReference, "Condition/source");
+  } finally { act(() => renderer?.unmount()); }
+});
+
+test("W145 previous-exams unscoped records display their notice, including an empty page", async () => {
+  for (const unscopedCount of [2, 0]) {
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => { renderer = create(<PreviousExams encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={async () => jsonResponse({ ...page([]), unscopedCount })} />); await flush(); });
+      assert.equal(text(renderer).includes("Some older records could not be placed on a visit"), unscopedCount > 0);
+    } finally { act(() => renderer?.unmount()); }
+  }
+});
+
+test("W142 a dropped pull response keeps its request for Finish carrying", async () => {
+  const bodies: string[] = [];
+  const fetchImpl = (async (_input, init) => {
+    if (!init?.method) return jsonResponse(page([exam("Encounter/prior", "2026-08-01", "Medical", [priorDiagnosis("Condition/source", "Dry eye", "OU", false)])]));
+    bodies.push(String(init.body));
+    if (bodies.length === 1) throw new TypeError("Network connection lost");
+    return jsonResponse({ conditionReference: "Condition/carried", alreadyPresent: true });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />); await flush(); });
+    await act(async () => { renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props.onClick(); await flush(); });
+    const retry = renderer.root.findAllByType("button").find(button => text(button) === "Finish carrying");
+    assert.ok(retry);
+    await act(async () => { retry.props.onClick(); await flush(); });
+    assert.equal(bodies.length, 2);
+    assert.equal(bodies[1], bodies[0]);
+    assert.equal(renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props["aria-pressed"], true);
+  } finally { act(() => renderer?.unmount()); }
+});
+
+test("W143 failed reload preserves the prior carry and never posts a replan", async () => {
+  let gets = 0, posts = 0;
+  const fetchImpl = (async (_input, init) => {
+    if (!init?.method) return ++gets === 1 ? jsonResponse(page([exam("Encounter/prior", "2026-08-01", "Medical", [priorDiagnosis("Condition/source", "Dry eye", "OU", false)])])) : jsonResponse({ error: "Reload unavailable" }, 503);
+    posts++;
+    return jsonResponse({ reason: "carry-incomplete", error: "Another carry is incomplete.", commandId: "other-command", conditionReference: "Condition/carried" }, 409);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<PreviousExams canWriteDiagnosis encounterReference="Encounter/current" onSelectDiagnosis={() => undefined} fetchImpl={fetchImpl} />); await flush(); });
+    await act(async () => { renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props.onClick(); await flush(); });
+    const retry = renderer.root.findAllByType("button").find(button => text(button) === "Reload and carry findings again");
+    assert.ok(retry);
+    await act(async () => { retry.props.onClick(); await flush(); });
+    assert.equal(gets, 2);
+    assert.equal(posts, 1);
+    assert.match(text(renderer), /Reload unavailable/);
+    assert.equal(renderer.root.findByProps({ "data-source-condition-reference": "Condition/source" }).props["aria-pressed"], false);
+  } finally { act(() => renderer?.unmount()); }
 });
 
 function priorDiagnosis(

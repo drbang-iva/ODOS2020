@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { undoSlotRequiresDiagnosisWrite, undoButtonTitle, undoStripCopy, type UndoLedgerSlot } from "../../lib/encounter-undo";
+import { UndoSupersededError, undoSlotRequiresDiagnosisWrite, undoButtonTitle, undoStripCopy, type UndoLedgerSlot } from "../../lib/encounter-undo";
 import { DIAGNOSIS_WRITE_TOOLTIP, SIGNED_ENCOUNTER_TOOLTIP } from "../../lib/encounter-void";
 
 /**
@@ -26,25 +26,27 @@ export function UndoStrip({
   slot: UndoLedgerSlot;
   closed: boolean;
   canWriteDiagnosis?: boolean;
-  onUndo: () => void | Promise<void>;
+  onUndo: (voidActionId: string) => void | Promise<void>;
   /** True only for a slot returned by a successful void in this page's session. */
   confirmed?: boolean;
   /** Which placement this is — the section strip beneath a sheet heading, or the visit slot in the chart bar. */
   scope?: "section" | "encounter";
 }) {
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string>();
+  const [failure, setFailure] = useState<{ voidActionId: string; message: string; superseded: boolean }>();
+  const currentFailure = failure?.voidActionId === slot.voidActionId ? failure : undefined;
+  const superseded = !slot.voidActionId || currentFailure?.superseded;
 
   const diagnosisDenied = !canWriteDiagnosis && undoSlotRequiresDiagnosisWrite(slot);
 
   async function undo() {
-    if (closed || busy || diagnosisDenied) return;
+    if (closed || busy || diagnosisDenied || !slot.voidActionId || superseded) return;
     setBusy(true);
-    setMessage(undefined);
+    setFailure(undefined);
     try {
-      await onUndo();
+      await onUndo(slot.voidActionId);
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : String(caught));
+      setFailure({ voidActionId: slot.voidActionId, message: caught instanceof Error ? caught.message : String(caught), superseded: caught instanceof UndoSupersededError });
     } finally {
       setBusy(false);
     }
@@ -53,8 +55,8 @@ export function UndoStrip({
   return (
     <div className="odos-undo-strip" role="status" aria-live="polite" data-undo-scope={scope}>
       <span className="odos-undo-strip-copy">{undoStripCopy(slot, { confirmed })}</span>
-      {message && <span className="odos-undo-strip-message">{message}</span>}
-      <button
+      {superseded ? <span className="odos-undo-strip-message">This undo no longer applies</span> : currentFailure && <span className="odos-undo-strip-message">{currentFailure.message}</span>}
+      {!superseded && <button
         type="button"
         data-entry-sheet-pristine-action
         disabled={closed || busy || diagnosisDenied || undefined}
@@ -62,7 +64,7 @@ export function UndoStrip({
         onClick={undo}
       >
         Undo
-      </button>
+      </button>}
     </div>
   );
 }

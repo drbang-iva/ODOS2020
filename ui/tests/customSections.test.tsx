@@ -1,8 +1,10 @@
+import { memoryFhir } from "../../mcp/tests/fixtures/r10/writer-harness";
+import { canonicalOcularFixture } from "./fixtures/r10CanonicalOcularFixture";
 import { buildFindingDefinitionSeeds } from "../../mcp/src/clinical-graph/finding-definition-store.js";
 import { customFieldEntries } from "../../mcp/src/clinical-graph/custom-fields.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test, beforeEach } from "node:test";
 import type { Bundle, Condition, MedicationStatement, Observation, Provenance } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -35,6 +37,14 @@ import { OdosWheel } from "../src/components/inputs/OdosWheel";
 import { ConfirmDestructiveProvider } from "../src/components/charting/ConfirmDestructive";
 import { PatientRoute } from "../src/App";
 import { fhir } from "../src/lib/fhir";
+beforeEach(context => {
+  if (/EncounterCharting|tagged Encounter|changing encounterId/.test(context.name)) delete (globalThis as any).window;
+  else Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: new EventTarget() });
+});
+
+function canonicalQualifiers(eye: any) {
+  return Object.fromEntries(eye.selected.filter((claim:any) => Object.keys(claim.qualifiers).length).map((claim:any) => [claim.key.optionCode, claim.qualifiers]));
+}
 
 function withConfirmation(child: React.ReactNode) {
   return <ConfirmDestructiveProvider>{child}</ConfirmDestructiveProvider>;
@@ -1106,7 +1116,7 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
         encounterReference="Encounter/e1"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1157,7 +1167,7 @@ test("every active top-level ocular finding renders immediately in priority-firs
         encounterReference="Encounter/e-visible-findings"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1172,7 +1182,7 @@ test("every active top-level ocular finding renders immediately in priority-firs
   }
 });
 
-test("ocular-health save derives abnormal from findings and normal after they are cleared", async () => {
+test("V18 V22 ocular-health save asserts findings and clearing the last positive never invents Normal", async () => {
   const definition = syntheticDeferredOcularDefinition();
   const posts: Array<Record<string, any>> = [];
   const fetchImpl = (async (_input, init) => {
@@ -1191,7 +1201,7 @@ test("ocular-health save derives abnormal from findings and normal after they ar
         encounterReference="Encounter/e-derived-state"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1202,22 +1212,18 @@ test("ocular-health save derives abnormal from findings and normal after they ar
 
     act(() => finding().props.onClick());
     await act(async () => save.props.onClick());
-    assert.equal(posts[0]?.eyes.OD.state, "abnormal");
-    assert.deepEqual(posts[0]?.eyes.OD.customFields, [{
-      code: "CUSTOM_DEFERRED_FINDINGS",
-      value: ["synthetic-finding"],
-    }]);
+    assert.equal(posts[0]?.eyes.OD.panel.state.deferred, false);
+    assert.deepEqual(posts[0]?.eyes.OD.selected.map((claim:any) => claim.key.optionCode), ["synthetic-finding"]);
 
     act(() => finding().props.onClick());
     await act(async () => save.props.onClick());
-    assert.equal(posts[1]?.eyes.OD.state, "normal");
-    assert.deepEqual(posts[1]?.eyes.OD.customFields, []);
+    assert.equal(posts[1]?.eyes.OD.negativeAct, undefined, "clearing the final positive never invents a negative act");
+    assert.deepEqual(posts[1]?.eyes.OD.selected, []);
 
-    const other = renderer.root.findByProps({ "data-eye-panel": "OD" }).findByType("textarea");
+    const other = renderer.root.findByProps({ "data-eye-panel": "OD" }).findAllByType("textarea")[0]!;
     act(() => other.props.onChange({ target: { value: "Trace scar" } }));
     await act(async () => save.props.onClick());
-    assert.equal(posts[2]?.eyes.OD.state, "abnormal");
-    assert.equal(posts[2]?.eyes.OD.other, "Trace scar");
+    assert.equal(posts[2]?.eyes.OD.panel.state.other, "Trace scar");
   } finally {
     renderer?.unmount();
   }
@@ -1241,7 +1247,7 @@ test("ocular-health deferral controls come only from each definition's allowDefe
   assert.equal((html.match(/Not performed \/ deferred/g) ?? []).length, 2);
 });
 
-test("deferred and recorded ocular findings cannot coexist at the client-server boundary", async () => {
+test("W138 deferred locks loaded findings while the canonical server preserves their bytes", async () => {
   const definition = syntheticDeferredOcularDefinition();
   const serverDefinition: ClinicalFindingDefinition = {
     id: "finding-definition-synthetic-deferred",
@@ -1263,33 +1269,18 @@ test("deferred and recorded ocular findings cannot coexist at the client-server 
       actorReference: "Practitioner/test",
     },
   };
-  let created = 0;
-  const serverFhir = {
-    async create<T extends Observation | Provenance>(resource: T): Promise<T> {
-      created += 1;
-      return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created}` } as T;
-    },
-    async search<T>(): Promise<Bundle<T>> {
-      return { resourceType: "Bundle", type: "searchset", entry: [] };
-    },
-  };
+  const memory = memoryFhir([{ resourceType: "Encounter", id: "e-deferred-conflict", status: "in-progress", class: { code: "synthetic" }, subject: { reference: "Patient/p-deferred-conflict" } }]);
+  const serverFhir = { ...memory.fhir, create: async (resource:any, headers:any) => (await memory.fhir.createWithOutcome(resource, headers)).resource };
   const attempts: Array<{ body: Record<string, any>; status: number; response: unknown }> = [];
-  const fetchImpl = (async (_input, init) => {
-    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+  const serverDeps = { authenticate: async () => ({staffReference:"Practitioner/test",actorRole:"provider" as const,fhir:serverFhir}), findingDefinitions: () => [serverDefinition], now: () => "2026-09-09T12:00:00.000Z" };
+  const fetchImpl = (async (input, init) => {
+    if (init?.method !== "POST") {
+      const url = new URL(String(input));
+      const history = await handleCustomSectionHistoryRequest(serverDeps, {authHeader:"Bearer test",params:{stableKey:definition.stableKey},query:{patient:url.searchParams.get("patient")!,encounter:url.searchParams.get("encounter")!}});
+      return jsonResponse(history.body, history.status);
+    }
     const body = JSON.parse(String(init.body));
-    const result = await handleCustomSectionCaptureRequest({
-      authenticate: async () => ({
-        staffReference: "Practitioner/test",
-        actorRole: "provider" as const,
-        fhir: serverFhir,
-      }),
-      findingDefinitions: () => [serverDefinition],
-      now: () => "2026-09-09T12:00:00.000Z",
-    }, {
-      authHeader: "Bearer test",
-      params: { stableKey: serverDefinition.stableKey },
-      body,
-    });
+    const result = await handleCustomSectionCaptureRequest(serverDeps, {authHeader:"Bearer test",params:{stableKey:definition.stableKey},body});
     attempts.push({ body, status: result.status, response: result.body });
     return jsonResponse(result.body, result.status);
   }) as typeof fetch;
@@ -1306,47 +1297,38 @@ test("deferred and recorded ocular findings cannot coexist at the client-server 
       />);
       await flushEffects();
     });
-    const eye = renderer.root.findByProps({ "data-eye-panel": "OD" });
-    const deferred = () => eye.findAllByType("button")
+    const eye = () => renderer.root.findByProps({ "data-eye-panel": "OD" });
+    const deferred = () => eye().findAllByType("button")
       .find((button) => renderedText(button) === "Not performed / deferred")!;
-    const finding = () => eye.findAllByType("button")
+    const finding = () => eye().findAllByType("button")
       .find((button) => renderedText(button) === "Synthetic Finding")!;
     const save = renderer.root.findAllByType("button")
       .find((button) => renderedText(button) === "Save Ocular Health")!;
 
-    act(() => deferred().props.onClick());
-    assert.equal(deferred().props["aria-pressed"], true);
     act(() => finding().props.onClick());
-    assert.equal(deferred().props["aria-pressed"], false);
-    assert.equal(finding().props["aria-pressed"], true);
-
-    act(() => deferred().props.onClick());
-    assert.equal(deferred().props["aria-pressed"], false);
-    assert.match(JSON.stringify(renderer.toJSON()), /Clear the selected findings before deferring/);
-    assert.equal(attempts.length, 0);
-
     await act(async () => save.props.onClick());
     assert.equal(attempts[0]?.status, 200, JSON.stringify(attempts[0]?.response));
-    assert.equal(attempts[0]?.body.eyes.OD.state, "abnormal");
-    assert.deepEqual(attempts[0]?.body.eyes.OD.customFields, [{
-      code: "CUSTOM_DEFERRED_FINDINGS",
-      value: ["synthetic-finding"],
-    }]);
-
-    act(() => finding().props.onClick());
+    assert.deepEqual(attempts[0]?.body.eyes.OD.selected.map((claim:any) => claim.key.optionCode), ["synthetic-finding"]);
+    const fact = structuredClone(memory.all<Observation>("Observation").find(o => o.identifier?.some(i => i.system === "urn:odos:current-finding:v1"))!);
+    assert.ok(fact, "canonical fact was actually persisted by the handler");
     act(() => deferred().props.onClick());
     assert.equal(deferred().props["aria-pressed"], true);
-    act(() => eye.findByType("textarea").props.onChange({ target: { value: "trace scar" } }));
-    assert.equal(deferred().props["aria-pressed"], false);
+    assert.equal(finding().props.disabled, true, "W138 Deferred locks the selected fact");
+    assert.equal(finding().props["aria-pressed"], true);
+    await act(async () => save.props.onClick());
+    assert.equal(attempts[1]?.status, 200, JSON.stringify(attempts[1]?.response));
+    assert.deepEqual(attempts[1]?.body.eyes.OD.loaded, attempts[1]?.body.eyes.OD.selected, "W138 no deselection accompanies Deferred");
+    assert.equal(attempts[1]?.body.eyes.OD.panel.state.deferred, true);
+    assert.deepEqual(memory.all<Observation>("Observation").find(o => o.id === fact.id), fact, "W138 Deferred never changes the fact bytes or version");
     act(() => deferred().props.onClick());
-    assert.equal(deferred().props["aria-pressed"], false);
-    assert.match(JSON.stringify(renderer.toJSON()), /Clear Other text before deferring/);
+    assert.equal(finding().props.disabled, false);
+    assert.equal(finding().props["aria-pressed"], true);
   } finally {
     renderer?.unmount();
   }
 });
 
-test("qualified finding definitions render qualifier controls for legacy presence-only history", async () => {
+test("qualified finding definitions render qualifier controls for canonical presence-only history", async () => {
   const definition = syntheticQualifiedOcularDefinition();
   const fetchImpl = (async () => jsonResponse({
     rows: [{
@@ -1364,7 +1346,7 @@ test("qualified finding definitions render qualifier controls for legacy presenc
         encounterReference="Encounter/e-legacy-qualified"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1406,7 +1388,7 @@ test("prior history never seeds current controls or changes the base POST body",
         encounterRecordedAt="2026-08-04T12:00:00Z"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1422,17 +1404,13 @@ test("prior history never seeds current controls or changes the base POST body",
       .find((chips) => chips.props.ariaLabel === "Synthetic qualifier control")!;
     assert.deepEqual(grade.props.selected, []);
     await act(async () => saveButton.props.onClick());
-    const baseBody = JSON.stringify({
-      patientReference: "Patient/p-prior-no-carry",
-      encounterReference: "Encounter/e-prior-no-carry",
-      eyes: {
-        OS: {
-          state: "abnormal",
-          customFields: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
-        },
-      },
-    });
-    assert.equal(posts[0], baseBody, "an untouched OD prior must not add a byte to an unrelated OS save");
+    const request = JSON.parse(posts[0]!);
+    assert.ok(request.commandId);
+    assert.deepEqual(Object.keys(request.eyes), ["OS"], "untouched OD prior does not enter the current request");
+    assert.deepEqual(request.eyes.OS.loaded, []);
+    assert.deepEqual(request.eyes.OS.selected.map((claim:any) => ({code:claim.key.optionCode,qualifiers:claim.qualifiers})), [{code:"synthetic-finding",qualifiers:{}}]);
+    assert.equal(request.eyes.OS.panel.state.deferred, false);
+
   } finally {
     renderer?.unmount();
   }
@@ -1456,7 +1434,7 @@ test("unsaved ocular edits survive an asynchronously arriving encounter cutoff a
     encounterRecordedAt={encounterRecordedAt}
     onSaved={() => undefined}
     apiBase="http://test"
-    fetchImpl={fetchImpl}
+    fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
   />;
   try {
     await act(async () => {
@@ -1521,7 +1499,7 @@ test("a failed optional prior read leaves current-encounter ocular hydration int
         encounterRecordedAt="2026-08-04T13:00:00Z"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
       await flushEffects();
@@ -1566,7 +1544,7 @@ test("prior ocular readings stay in the accessibility tree without renaming or f
         encounterRecordedAt="2026-08-04T12:00:00Z"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
       await flushEffects();
@@ -1619,7 +1597,7 @@ test("ocular priors remain absent without a stable encounter period date", async
         encounterReference="Encounter/e-no-period"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
       await flushEffects();
@@ -1679,7 +1657,7 @@ test("every rendered qualifier and ungraded prior carries its own date and stays
         encounterRecordedAt="2026-08-04T12:00:00Z"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1724,7 +1702,7 @@ test("missing prior data renders no annotation or reserved prior slot", async ()
         encounterReference="Encounter/e-no-prior"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1768,7 +1746,7 @@ test("the current encounter is removed before choosing the most recent prior rea
         encounterRecordedAt="2026-08-04T12:00:00Z"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1813,7 +1791,7 @@ test("ocular-health read-forward preserves stored finding details through an unr
         encounterReference="Encounter/e-qualified-forward"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -1824,18 +1802,14 @@ test("ocular-health read-forward preserves stored finding details through an unr
       .find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
-    assert.deepEqual(postedBody, {
-      patientReference: "Patient/p-qualified-forward",
-      encounterReference: "Encounter/e-qualified-forward",
-      eyes: {
-        OD: {
-          state: "abnormal",
-          customFields: [{ code: "CUSTOM_ABNORMAL_FINDINGS_01", value: ["synthetic-finding"] }],
-          findingDetails: storedFindingDetails,
-          other: "Unrelated note.",
-        },
-      },
-    });
+    const request = postedBody as any;
+    assert.ok(request.commandId);
+    assert.equal(request.patientReference, "Patient/p-qualified-forward");
+    assert.equal(request.encounterReference, "Encounter/e-qualified-forward");
+    assert.deepEqual(request.eyes.OD.selected, request.eyes.OD.loaded);
+    assert.deepEqual(canonicalQualifiers(request.eyes.OD), storedFindingDetails);
+    assert.equal(request.eyes.OD.panel.state.other, "Unrelated note.");
+
   } finally {
     renderer?.unmount();
   }
@@ -1865,7 +1839,7 @@ test("reopened history hydrates structures but posts only the one modified struc
         encounterReference="Encounter/e1"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, ocularDefinitions())}
       />);
       await flushEffects();
     });
@@ -2063,7 +2037,7 @@ test("ocular-health worksheet keeps four described findings in selection order a
         encounterReference="Encounter/e-worksheet-order"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2115,7 +2089,7 @@ test("segmented finding grades replace the value and re-tapping clears the findi
         encounterReference="Encounter/e-grade-segments"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2126,11 +2100,11 @@ test("segmented finding grades replace the value and re-tapping clears the findi
     assert.deepEqual(gradeControl().props.selected, ["marked"]);
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
-    assert.deepEqual(posts[0]!.eyes.OD.findingDetails, { "synthetic-mgd": { grade: "marked" } });
+    assert.deepEqual(canonicalQualifiers(posts[0]!.eyes.OD), { "synthetic-mgd": { grade: "marked" } });
     act(() => gradeControl().findAllByType("button").find((button) => button.children.join("") === "Marked")!.props.onClick());
     assert.deepEqual(gradeControl().props.selected, []);
     await act(async () => saveButton.props.onClick());
-    assert.equal("findingDetails" in posts[1]!.eyes.OD, false);
+    assert.deepEqual(canonicalQualifiers(posts[1]!.eyes.OD), {});
   } finally {
     renderer?.unmount();
   }
@@ -2159,7 +2133,7 @@ test("all four finding qualifier controls write the server-validated value shape
         encounterReference="Encounter/e-all-qualifiers"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2184,7 +2158,7 @@ test("all four finding qualifier controls write the server-validated value shape
     assert.deepEqual(chips("MGD clock-hour arc direction").props.selected, [false]);
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
-    assert.deepEqual(postedBody?.eyes.OD.findingDetails, {
+    assert.deepEqual(canonicalQualifiers(postedBody?.eyes.OD), {
       "synthetic-mgd": {
         grade: "marked",
         type: "seborrheic",
@@ -2223,7 +2197,7 @@ test("numeric finding qualifiers preserve controlled keystrokes and visibly reje
         encounterReference="Encounter/e-numeric-keystrokes"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2258,7 +2232,7 @@ test("numeric finding qualifiers preserve controlled keystrokes and visibly reje
 
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
-    assert.deepEqual(postedBody?.eyes.OD.findingDetails, {
+    assert.deepEqual(canonicalQualifiers(postedBody?.eyes.OD), {
       "synthetic-decimal": { score: 1.5 },
       "synthetic-integer": { score: 15 },
     });
@@ -2283,7 +2257,7 @@ test("presence-only ocular findings never create worksheet rows", async () => {
         encounterReference="Encounter/e-presence-only"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2319,7 +2293,7 @@ test("described finding destruction is guarded from Zone A and the row remove pa
         encounterReference="Encounter/e-confirm-destroy"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />));
       await flushEffects();
     });
@@ -2341,11 +2315,13 @@ test("described finding destruction is guarded from Zone A and the row remove pa
     assert.ok(prompts.every((prompt) => prompt.includes("Synthetic Finding")));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
-    assert.deepEqual(posts[0], {
-      patientReference: "Patient/p-confirm-destroy",
-      encounterReference: "Encounter/e-confirm-destroy",
-      eyes: { OD: { state: "normal", customFields: [] } },
-    });
+    assert.ok(posts[0].commandId);
+    assert.equal(posts[0].patientReference, "Patient/p-confirm-destroy");
+    assert.equal(posts[0].encounterReference, "Encounter/e-confirm-destroy");
+    assert.deepEqual(posts[0].eyes.OD.selected, []);
+    assert.deepEqual(posts[0].eyes.OD.loaded.map((claim:any) => claim.key.optionCode), ["synthetic-finding"]);
+    assert.equal(posts[0].eyes.OD.negativeAct, undefined, "removal never invents Normal");
+
   } finally {
     renderer?.unmount();
   }
@@ -2367,7 +2343,7 @@ test("undescribed finding deselection is instant without a confirmation dialog",
         encounterReference="Encounter/e-no-confirm"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />));
       await flushEffects();
     });
@@ -2401,7 +2377,7 @@ test("removing a parent with selected child codes confirms before destroying the
         encounterReference="Encounter/e-child-confirm"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />));
       await flushEffects();
     });
@@ -2447,7 +2423,7 @@ test("copying an eye confirms before replacing destination finding details", asy
         encounterReference="Encounter/e-copy-guard"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />));
       await flushEffects();
     });
@@ -2497,7 +2473,7 @@ test("copying into an undescribed destination does not ask for confirmation", as
         encounterReference="Encounter/e-copy-no-guard"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />));
       await flushEffects();
     });
@@ -2536,7 +2512,7 @@ test("child details fold into the worksheet row and remain selection codes in th
         encounterReference="Encounter/e-child-fold"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2545,11 +2521,8 @@ test("child details fold into the worksheet row and remain selection codes in th
     act(() => child.props.onClick());
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health")!;
     await act(async () => saveButton.props.onClick());
-    assert.deepEqual(postedBody?.eyes.OD.customFields, [{
-      code: "CUSTOM_ABNORMAL_FINDINGS_WORKSHEET",
-      value: ["synthetic-demodex", "synthetic-demodex::collarettes"],
-    }]);
-    assert.equal("findingDetails" in postedBody!.eyes.OD, false);
+    assert.deepEqual(postedBody?.eyes.OD.selected.map((claim:any) => claim.key.optionCode), ["synthetic-demodex", "synthetic-demodex::collarettes"]);
+    assert.deepEqual(canonicalQualifiers(postedBody!.eyes.OD), {});
   } finally {
     renderer?.unmount();
   }
@@ -2595,7 +2568,7 @@ test("copying mixed qualifiers mirrors only extents and clock-hour mirroring rou
   }
 });
 
-test("a saved normal keeps its captured template snapshot after the live template changes", async () => {
+test("V21 V22 a saved negative scope stays frozen after the live normal template changes", async () => {
   const fetchImpl = (async () => jsonResponse({
     rows: [{ eye: "OD", state: "normal", values: [], normalTemplate: "Saved normal snapshot." }],
   })) as typeof fetch;
@@ -2610,10 +2583,11 @@ test("a saved normal keeps its captured template snapshot after the live templat
         encounterReference="Encounter/e1"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
+    const negativeBefore = renderedText(renderer.root.findByProps({ "data-eye-panel": "OD" }).findByType("details"));
     await act(async () => {
       renderer.update(<OcularHealthSection
         definitions={[{ ...definition, normalTemplate: "Later edited live template." }]}
@@ -2621,12 +2595,14 @@ test("a saved normal keeps its captured template snapshot after the live templat
         encounterReference="Encounter/e1"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
     });
     const templates = renderer.root.findAllByProps({ className: "mt-3 text-sm text-white/45" }).map((node) => node.children.join(""));
-    assert.equal(templates[0], "Saved normal snapshot.");
-    assert.equal(templates[1], "Later edited live template.");
+    assert.deepEqual(templates, ["Later edited live template.", "Later edited live template."]);
+    const negativeAfter = renderedText(renderer.root.findByProps({ "data-eye-panel": "OD" }).findByType("details"));
+    assert.equal(negativeAfter, negativeBefore, "V22 the recorded negative scope and timestamp do not change with template prose");
+    assert.doesNotMatch(negativeAfter, /Later edited live template|Saved normal snapshot/);
   } finally {
     renderer?.unmount();
   }
@@ -2668,7 +2644,7 @@ test("the full ocular-health runner lists all seeded structures blank and stays 
         encounterReference="Encounter/e-runner-empty"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, definitions)}
       />);
       await flushEffects();
     });
@@ -2710,7 +2686,7 @@ test("the full ocular-health runner lists all seeded structures blank and stays 
         encounterReference="Encounter/e-tear-film-only"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [tearFilm])}
       />);
       await flushEffects();
     });
@@ -2733,7 +2709,7 @@ test("the ocular-health runner derives finding count from capture selections", a
         encounterReference="Encounter/e-runner-state"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, definitions)}
       />);
       await flushEffects();
     });
@@ -2777,12 +2753,23 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
   const originalWindow = globalThis.window;
   const diagnosisWrites: Array<Record<string, unknown>> = [];
   let proposedCondition: Condition | undefined;
+  const key = {v:1,patientId:"p-structure-dx",encounterId:"e-structure-dx",stableKey:"ocular-health:anterior:lens",fieldCode:"CUSTOM_LENS_FINDINGS",optionCode:"nuclear-sclerosis",eye:"OD"};
+  const support = {rowKey:"lens-current",key,baseline:{kind:"canonical",reference:"Observation/lens-current",versionId:"2"}};
+  let homes: string[] = [];
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: { dispatchEvent: () => true },
+    value: new EventTarget(),
   });
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (url.includes("/findings")) {
+      if (init?.method === "PUT") { const body=JSON.parse(String(init.body)); homes=body.targets[0].state.homes; return jsonResponse({result:"command",complete:true,executionOrder:[0],outcomes:[{status:"applied",clinicalWrite:"confirmed"}]}); }
+      const row={...support,kind:"fact",status:"live",presence:"present",editable:true,qualifiers:{},homes};
+      return jsonResponse({encounterEditable:true,canWrite:true,canWriteDiagnosis:true,findings:[row],searchIndex:[row],visitDiagnoses:[],catalog:[],auditDebt:[],unassigned:[],bySection:{}});
+    }
+    if (url.includes("BodyStructure")) return jsonResponse({resourceType:"Bundle",entry:[{resource:{resourceType:"BodyStructure",id:"eye"}}]});
+    if (url.includes("Provenance")) return jsonResponse({resourceType:"Provenance",id:"scope-proof"});
+    if (url.includes("Condition/") && init?.method === "PATCH") return jsonResponse(proposedCondition);
     if (url.includes("diagnosis-candidates")) {
       return jsonResponse({
         findings: [{
@@ -2791,6 +2778,7 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
           observationReference: "Observation/lens-stale",
           candidates: [{
             diagnosisKey: "stale_diagnosis",
+            supportingFacts: [{...support,rowKey:"lens-stale"}],
             display: "Wrong stale diagnosis",
             codingStatus: "verified",
             priority: true,
@@ -2802,6 +2790,7 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
           observationReference: "Observation/lens-current",
           candidates: [{
             diagnosisKey: "cataract_nuclear_sclerosis",
+            supportingFacts: [support],
             display: "Age-related nuclear cataract",
             codingStatus: "verified",
             priority: true,
@@ -2833,6 +2822,7 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
       proposedCondition = {
         resourceType: "Condition",
         id: "condition-cataract",
+        meta: { versionId: "1" },
         subject: { reference: "Patient/p-structure-dx" },
         encounter: { reference: "Encounter/e-structure-dx" },
         code: { text: "Age-related nuclear cataract" },
@@ -2844,6 +2834,7 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
         evidence: [{ detail: [{ reference: "Observation/lens-current" }] }],
       };
       return jsonResponse({
+        result: "pick", conditionStep: "applied", link: "pending",
         condition: proposedCondition,
       });
     }
@@ -2885,7 +2876,7 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
         encounterReference="Encounter/e-structure-dx"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [definition])}
       />);
       await flushEffects();
     });
@@ -2911,12 +2902,12 @@ test("saved ocular-health findings expose real scoped diagnosis suggestions and 
       await propose.props.onClick();
       await flushEffects();
     });
+    assert.match(String(diagnosisWrites[0]?.commandId), /^[0-9a-f-]{36}$/);
     assert.deepEqual(diagnosisWrites[0], {
-      diagnosisKey: "cataract_nuclear_sclerosis",
-      action: "possible",
-      findingInstanceId: "lens-current",
-      source: "mapping",
+      diagnosisKey: "cataract_nuclear_sclerosis", action: "possible", source: "mapping",
+      commandId: diagnosisWrites[0]!.commandId, supportingFacts: [{key,baseline:support.baseline}], laterality: "OD",
     });
+    assert.deepEqual(homes,["Condition/condition-cataract"]);
     const retract = renderer.root.findByProps({ "aria-label": "Retract proposed Age-related nuclear cataract" });
     await act(async () => {
       await retract.props.onClick();
@@ -2934,31 +2925,8 @@ test("fresh ocular-health history restores scoped diagnosis suggestions without 
   const originalFetch = globalThis.fetch;
   const originalWindow = globalThis.window;
   const historyRequests: string[] = [];
-  const observations: Observation[] = [];
-  const serverFhir = {
-    async create<T extends Observation | Provenance>(resource: T): Promise<T> {
-      const saved = { ...resource, id: resource.id ?? `${resource.resourceType.toLowerCase()}-${observations.length + 1}` } as T;
-      if (saved.resourceType === "Observation") observations.push(saved as Observation);
-      return saved;
-    },
-    async search<T extends Observation>(
-      _resourceType: T["resourceType"],
-      params: Record<string, string> = {},
-    ): Promise<Bundle<T>> {
-      const [codeSystem, code] = params.code?.split("|") ?? [];
-      const rows = observations
-        .filter((observation) => !params.subject || observation.subject?.reference === params.subject)
-        .filter((observation) => !params.encounter || observation.encounter?.reference === params.encounter)
-        .filter((observation) => !params.code || observation.code.coding?.some((coding) =>
-          coding.system === codeSystem && coding.code === code
-        ));
-      return {
-        resourceType: "Bundle",
-        type: "searchset",
-        entry: rows.map((resource) => ({ resource: resource as T })),
-      };
-    },
-  };
+  const memory=memoryFhir([{resourceType:"Encounter",id:"e-history-structure-dx",status:"in-progress",class:{code:"synthetic"},subject:{reference:"Patient/p-history-structure-dx"}}]);
+  const serverFhir={...memory.fhir,create:async(resource:any,headers:any)=>(await memory.fhir.createWithOutcome(resource,headers)).resource};
   const serverDefinition: ClinicalFindingDefinition = {
     id: "finding-definition-lens",
     stableKey: "ocular-health:anterior:lens",
@@ -3003,31 +2971,27 @@ test("fresh ocular-health history restores scoped diagnosis suggestions without 
     findingDefinitions: () => [serverDefinition],
     now: () => "2026-08-27T14:00:00.000Z",
   };
+  const before = await handleCustomSectionHistoryRequest(serverDeps,{authHeader:"Bearer test",params:{stableKey:serverDefinition.stableKey},query:{patient:"Patient/p-history-structure-dx",encounter:"Encounter/e-history-structure-dx"}});
+  assert.equal(before.status,200,JSON.stringify(before.body));
+  const offered=(before.body as any).eyes.OD.facts[0];
   const saved = await handleCustomSectionCaptureRequest(serverDeps, {
-    authHeader: "Bearer test",
-    params: { stableKey: serverDefinition.stableKey },
-    body: {
-      patientReference: "Patient/p-history-structure-dx",
-      encounterReference: "Encounter/e-history-structure-dx",
-      eyes: {
-        OD: {
-          state: "abnormal",
-          customFields: [{ code: "CUSTOM_LENS_FINDINGS", value: ["nuclear-sclerosis"] }],
-        },
-      },
-    },
+    authHeader: "Bearer test", params: { stableKey: serverDefinition.stableKey },
+    body: {commandId:crypto.randomUUID(),patientReference:"Patient/p-history-structure-dx",encounterReference:"Encounter/e-history-structure-dx",eyes:{OD:{loaded:[],selected:[{key:offered.key,baseline:offered.baseline,presence:"present",qualifiers:{},homes:[]}]}}},
   });
-  assert.equal(saved.status, 200, JSON.stringify(saved.body));
-  const savedReference = (saved.body as { eyes: { OD: { observationReference: string } } })
-    .eyes.OD.observationReference;
-  assert.equal(savedReference, `Observation/${observations[0]?.id}`);
+  assert.equal(saved.status,200,JSON.stringify(saved.body));
+  const current=await handleCustomSectionHistoryRequest(serverDeps,{authHeader:"Bearer test",params:{stableKey:serverDefinition.stableKey},query:{patient:"Patient/p-history-structure-dx",encounter:"Encounter/e-history-structure-dx"}});
+  const row=(current.body as any).eyes.OD.facts.find((fact:any)=>fact.status==="live");
+  const support={rowKey:row.rowKey,key:row.key,baseline:row.baseline};
+  const savedReference=row.baseline.reference;
+  assert.ok(memory.fhir);
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: { dispatchEvent: () => true },
+    value: new EventTarget(),
   });
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (init?.method === "POST") throw new Error(`Unexpected write during remount: ${url}`);
+    if (url.includes("/findings")) return jsonResponse({encounterEditable:true,canWrite:true,canWriteDiagnosis:true,findings:[row],searchIndex:[row],visitDiagnoses:[],catalog:[],auditDebt:[],unassigned:[row],bySection:{}});
     if (url.includes("diagnosis-candidates")) {
       return jsonResponse({
         findings: [{
@@ -3036,6 +3000,7 @@ test("fresh ocular-health history restores scoped diagnosis suggestions without 
           observationReference: savedReference,
           candidates: [{
             diagnosisKey: "cataract_nuclear_sclerosis",
+            supportingFacts: [support],
             display: "Age-related nuclear cataract",
             codingStatus: "verified",
             priority: true,
@@ -3127,7 +3092,7 @@ test("the ocular-health runner Next and Previous reuse structure scrolling and u
         encounterReference="Encounter/e-runner-nav"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, definitions)}
       />);
       await flushEffects();
     });
@@ -3178,7 +3143,7 @@ test("posterior seeded history renders honestly and zero-data eyes remain untouc
         encounterReference="Encounter/e-posterior"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, definitions)}
       />);
       await flushEffects();
     });
@@ -3188,7 +3153,11 @@ test("posterior seeded history renders honestly and zero-data eyes remain untouc
     assert.match(rendered, /Fundus All Normal/);
     assert.match(rendered, /Dot\/Blot Hemorrhage/);
     assert.equal(renderer.root.findAllByProps({ "aria-pressed": true }).length, 1);
-    assert.equal(renderer.root.findAllByProps({ value: "" }).length, 12);
+    const otherFields = renderer.root.findAllByType("textarea").filter(node => !node.props["aria-label"]?.endsWith(" Remarks"));
+    assert.equal(otherFields.length, definitions.length * 2);
+    assert.ok(otherFields.every(node => node.props.value === ""));
+    assert.ok(renderer.root.findAllByType(OdosSelect).every(node => node.props.value === ""), "unmeasured grades remain blank");
+    assert.equal(renderer.root.findAllByType("textarea").filter(node => node.props["aria-label"]?.endsWith(" Remarks") && node.props.value === "").length, definitions.length * 2);
   } finally {
     renderer?.unmount();
   }
@@ -3211,7 +3180,7 @@ test("Fundus All Normal fills only the five posterior narratives and skips Cup D
   assert.equal(result.captures[ocularDefinitions()[0]!.stableKey]?.OD.state, undefined);
 });
 
-test("posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot", async () => {
+test("V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope", async () => {
   const [vitreous, fundus] = posteriorDefinitions();
   assert.ok(vitreous && fundus);
   const posts: Array<{ url: string; body: string }> = [];
@@ -3234,13 +3203,15 @@ test("posterior re-save stays pristine, round-trips selections, and preserves th
         encounterReference="Encounter/e-posterior"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [vitreous, fundus])}
       />);
       await flushEffects();
     });
+    const fundusNegative = () => renderedText(renderer.root.findByProps({ id: "structure-ocular-health-posterior-fundus" }).findByProps({ "data-eye-panel": "OD" }).findByType("details"));
+    const negativeBefore = fundusNegative();
     const vitreousOd = renderer.root.findByProps({ id: "structure-ocular-health-posterior-vitreous" })
       .findByProps({ "data-eye-panel": "OD" });
-    act(() => vitreousOd.findByType("textarea").props.onChange({ target: { value: "Stable floaters." } }));
+    act(() => vitreousOd.findAllByType("textarea")[0]!.props.onChange({ target: { value: "Stable floaters." } }));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
@@ -3250,8 +3221,8 @@ test("posterior re-save stays pristine, round-trips selections, and preserves th
     assert.match(posts[0]!.body, /floaters/);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
-    const templates = renderer.root.findAllByProps({ className: "mt-3 text-sm text-white/45" }).map((node) => node.children.join(""));
-    assert.ok(templates.includes("Saved fundus normal snapshot."));
+    assert.equal(fundusNegative(), negativeBefore, "V22 unrelated save preserves recorded scope");
+    assert.match(fundusNegative(), /Absent:/);
   } finally {
     renderer?.unmount();
   }
@@ -3277,7 +3248,7 @@ test("AVFILL-1 deliberate 2:3 choice persists and does not POST again while pris
         encounterReference="Encounter/e-vessels-grade"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [vessels])}
       />);
       await flushEffects();
     });
@@ -3290,7 +3261,7 @@ test("AVFILL-1 deliberate 2:3 choice persists and does not POST again while pris
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
-    assert.deepEqual(JSON.parse(posts[0]!).eyes.OD.customFields, [{ code: "CUSTOM_GRADE_A_V_RATIO", value: "2-3" }]);
+    assert.deepEqual(JSON.parse(posts[0]!).eyes.OD.panel.state.values, { CUSTOM_GRADE_A_V_RATIO: "2-3" });
     assert.equal(JSON.parse(posts[0]!).eyes.OS, undefined);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
@@ -3322,7 +3293,7 @@ test("remaining anterior structure grades render blank, persist typed values, an
         encounterReference="Encounter/e-anterior-grades"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, definitions)}
       />);
       await flushEffects();
     });
@@ -3339,8 +3310,8 @@ test("remaining anterior structure grades render blank, persist typed values, an
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 2);
-    assert.deepEqual(posts[0]!.body.eyes.OD?.customFields, [{ code: "CUSTOM_GRADE_TBUT", value: 6 }]);
-    assert.deepEqual(posts[1]!.body.eyes.OS?.customFields, [{ code: "CUSTOM_GRADE_VAN_HERICK", value: "grade-2" }]);
+    assert.deepEqual(posts[0]!.body.eyes.OD?.panel.state.values, { CUSTOM_GRADE_TBUT: 6 });
+    assert.deepEqual(posts[1]!.body.eyes.OS?.panel.state.values, { CUSTOM_GRADE_VAN_HERICK: "grade-2" });
   } finally {
     renderer?.unmount();
   }
@@ -3427,7 +3398,7 @@ test("ocular-health cleanup qualifiers render only for their selected finding", 
         encounterReference="Encounter/e-cleanup-ui"
         onSaved={() => undefined}
         apiBase="http://test"
-        fetchImpl={fetchImpl}
+        fetchImpl={canonicalOcularFixture(fetchImpl, [cornea, lens, periphery])}
       />);
       await flushEffects();
     });
@@ -4329,7 +4300,7 @@ test("EXAM-1B partial failure names the structure and All Normal retries only th
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/negative-test" encounterReference="Encounter/negative-test" onSaved={(status, keys) => saved.push({ status, keys })} apiBase="http://test" fetchImpl={fetchImpl} />);
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/negative-test" encounterReference="Encounter/negative-test" onSaved={(status, keys) => saved.push({ status, keys })} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, definitions)} />);
       await flushEffects();
     });
     const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
@@ -4358,7 +4329,7 @@ test("EXAM-1B retry keeps the other segment failure visible until it succeeds", 
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/cross-segment" encounterReference="Encounter/cross-segment" onSaved={(_status, keys) => saved.push(...keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/cross-segment" encounterReference="Encounter/cross-segment" onSaved={(_status, keys) => saved.push(...keys)} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, definitions)} />);
       await flushEffects();
     });
     const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
@@ -4386,7 +4357,7 @@ test("EXAM-1B reverted failed edit cannot trap All Normal in an empty retry", as
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/reverted" encounterReference="Encounter/reverted" onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl} />);
+      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/reverted" encounterReference="Encounter/reverted" onSaved={() => undefined} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, [definition])} />);
       await flushEffects();
     });
     const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
@@ -4416,7 +4387,7 @@ test("EXAM-1B re-edit after partial save remains unsaved when another structure 
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/re-edit" encounterReference="Encounter/re-edit" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      renderer = create(<OcularHealthSection definitions={definitions} patientReference="Patient/re-edit" encounterReference="Encounter/re-edit" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, definitions)} />);
       await flushEffects();
     });
     const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
@@ -4447,7 +4418,7 @@ test("EXAM-1B in-flight edit remains unsaved after the older request completes",
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/in-flight" encounterReference="Encounter/in-flight" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={fetchImpl} />);
+      renderer = create(<OcularHealthSection definitions={[definition]} patientReference="Patient/in-flight" encounterReference="Encounter/in-flight" onSaved={(_status, keys) => saved.push(keys)} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, [definition])} />);
       await flushEffects();
     });
     const button = (label: string) => renderer.root.findAllByType("button").find((node) => renderedText(node) === label)!;
@@ -4482,7 +4453,7 @@ for (const scenario of ["unentered normal", "blank control", "Fundus All Normal"
         renderer = create(<OcularHealthSection
           definitions={scenario === "Fundus All Normal" ? definitions : [vessels]}
           patientReference="Patient/avfill" encounterReference="Encounter/avfill"
-          onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl}
+          onSaved={() => undefined} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, scenario === "Fundus All Normal" ? definitions : [vessels])}
         />);
         await flushEffects();
       });
@@ -4510,9 +4481,10 @@ for (const scenario of ["unentered normal", "blank control", "Fundus All Normal"
         const body = JSON.parse(post);
         assert.deepEqual(Object.keys(body.eyes), scenario === "Fundus All Normal" ? ["OD", "OS"] : ["OD"]);
         for (const eye of Object.keys(body.eyes)) {
-          assert.equal(body.eyes[eye].state, "normal");
+          assert.equal(body.eyes[eye].panel.state.deferred, false);
           if (scenario === "Fundus All Normal") assert.ok(body.eyes[eye].negativeAct.id);
-          assert.deepEqual(body.eyes[eye].customFields, []);
+          assert.deepEqual(body.eyes[eye].panel.state.values, {});
+          assert.deepEqual(body.eyes[eye].selected, []);
         }
       }
     } finally { renderer?.unmount(); }
@@ -4529,7 +4501,7 @@ test("AVFILL-1 selecting then clearing an unsaved ratio leaves no clinical write
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
-      renderer = create(<OcularHealthSection definitions={[vessels]} patientReference="Patient/avfill" encounterReference="Encounter/avfill" onSaved={() => undefined} apiBase="http://test" fetchImpl={fetchImpl} />);
+      renderer = create(<OcularHealthSection definitions={[vessels]} patientReference="Patient/avfill" encounterReference="Encounter/avfill" onSaved={() => undefined} apiBase="http://test" fetchImpl={canonicalOcularFixture(fetchImpl, [vessels])} />);
       await flushEffects();
     });
     const select = () => renderer.root.findAllByType(OdosSelect)[0]!;
