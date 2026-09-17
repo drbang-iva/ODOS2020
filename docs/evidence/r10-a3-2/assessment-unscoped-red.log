@@ -1,0 +1,78 @@
+TAP version 13
+# Subtest: T15 Ocular Health picker accepts a canonical view without one observation id
+ok 1 - T15 Ocular Health picker accepts a canonical view without one observation id
+  ---
+  duration_ms: 20.915
+  type: 'test'
+  ...
+# Subtest: T16 DiagnosisPicker proposal evidence resolves through finding homes
+ok 2 - T16 DiagnosisPicker proposal evidence resolves through finding homes
+  ---
+  duration_ms: 2.250291
+  type: 'test'
+  ...
+# Subtest: T17 Ocular Health picks link fact targets
+ok 3 - T17 Ocular Health picks link fact targets
+  ---
+  duration_ms: 10.149584
+  type: 'test'
+  ...
+# Subtest: T18 Assessment origin uses finding home sources
+not ok 4 - T18 Assessment origin uses finding home sources
+  ---
+  duration_ms: 6.910209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:1:9173'
+  failureType: 'testCodeFailure'
+  error: 'Assessment must display canonical origin from finding homeSources even when Condition.evidence is absent'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'AssessmentVisit diagnoses are separate from the longitudinal problem list.ClearSave as Protocol1 visit diagnosesPrincipal▾PrincipalSecondaryOU▾ODOSOUDiagnosis / ICD-10Selected: Myopia, bilateralAdd diagnosisSynthetic diagnosisPossible · active · UncodedConfirmDiscard'
+  operator: 'match'
+  stack: |-
+    withTransport.proposed (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:122:14)
+    async withTransport (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:67:9)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/ui/tests/r10A3ReleaseScenarios.test.ts:115:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked
+ok 5 - T4 Ocular Health hydrates current canonical facts and leaves cleared facts unchecked
+  ---
+  duration_ms: 16.629958
+  type: 'test'
+  ...
+# Subtest: T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye
+ok 6 - T5 Ocular Health deselection writes the loaded canonical owner and preserves the other eye
+  ---
+  duration_ms: 24.284208
+  type: 'test'
+  ...
+# Subtest: T6 Ocular Health All Normal skips an eye with a canonical positive
+ok 7 - T6 Ocular Health All Normal skips an eye with a canonical positive
+  ---
+  duration_ms: 19.334542
+  type: 'test'
+  ...
+# Subtest: T21 pre-rebuild Ocular Health is labelled and has no save control
+ok 8 - T21 pre-rebuild Ocular Health is labelled and has no save control
+  ---
+  duration_ms: 9.159583
+  type: 'test'
+  ...
+# Subtest: T22 Ocular Health UI writes only canonical fact and panel identities
+ok 9 - T22 Ocular Health UI writes only canonical fact and panel identities
+  ---
+  duration_ms: 15.156584
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 8
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 484.162458

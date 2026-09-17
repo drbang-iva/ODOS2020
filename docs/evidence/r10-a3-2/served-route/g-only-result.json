@@ -1,0 +1,1422 @@
+{
+  "mode": "g-only",
+  "startedAt": "2026-09-17T18:30:57.239Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [
+    {
+      "name": "g",
+      "status": "PASS",
+      "completenessLimitation": "Shipped nuclear cataract has no configured keyFindings; exact missing-requirement arrays remain empty, so this scenario does not prove a diagnosis-completeness transition. Findings remain explicitly uncredited throughout; after Undo their advanced versions read current/edited per W75/W126.",
+      "identicalCarryRequest": true,
+      "carry": {
+        "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+        "alreadyPresent": true
+      },
+      "carriedFacts": [
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "d502de7d-4f73-4042-8009-64f9ccf023c2",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:9328af140097759c3224b956971138b579afe385b70062017d570f52f6e6f540",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "eye": "OD",
+          "laterality": "OD",
+          "presence": "present",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [
+            "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4"
+          ],
+          "homeSources": [
+            {
+              "condition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+              "sources": [
+                {
+                  "kind": "finding-extension",
+                  "contributor": {
+                    "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+                    "versionId": "66298c8c-0935-48d5-b415-40696160f198"
+                  }
+                }
+              ]
+            }
+          ],
+          "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+            "versionId": "66298c8c-0935-48d5-b415-40696160f198"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+              "versionId": "66298c8c-0935-48d5-b415-40696160f198",
+              "effectiveDateTime": "2026-09-17T18:31:01.201Z",
+              "kind": "canonical-fact",
+              "carried": true
+            }
+          ],
+          "carried": true
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "d502de7d-4f73-4042-8009-64f9ccf023c2",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:fb597fb1d3c792338e40acd8c8c41f9ab4b075d929b66850848d818b05e477e7",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "eye": "OS",
+          "laterality": "OS",
+          "presence": "present",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [
+            "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4"
+          ],
+          "homeSources": [
+            {
+              "condition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+              "sources": [
+                {
+                  "kind": "finding-extension",
+                  "contributor": {
+                    "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+                    "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df"
+                  }
+                }
+              ]
+            }
+          ],
+          "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+            "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+              "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df",
+              "effectiveDateTime": "2026-09-17T18:31:01.283Z",
+              "kind": "canonical-fact",
+              "carried": true
+            }
+          ],
+          "carried": true
+        }
+      ],
+      "voided": {
+        "canWriteDiagnosis": true,
+        "voided": [
+          "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+          "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3"
+        ],
+        "count": 2,
+        "sections": [
+          {
+            "sectionKey": "ocular-health:anterior:lens",
+            "label": "Lens",
+            "count": 2
+          }
+        ],
+        "entries": [
+          {
+            "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+            "sectionKey": "ocular-health:anterior:lens",
+            "findingKey": "ocular-health:anterior:lens",
+            "laterality": "OD"
+          },
+          {
+            "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+            "sectionKey": "ocular-health:anterior:lens",
+            "findingKey": "ocular-health:anterior:lens",
+            "laterality": "OS"
+          }
+        ],
+        "preview": false,
+        "ledger": {
+          "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "encounter": null,
+          "sections": {
+            "ocular-health:anterior:periocular-adnexa": {
+              "voidActionId": "0dc1a116-616a-46fb-9ed1-76ca9d028e8a",
+              "voided": [
+                {
+                  "ref": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+                  "priorStatus": "preliminary",
+                  "markerCommandId": "01386f56-daa4-4ded-9af2-5097ae3deafe"
+                },
+                {
+                  "ref": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+                  "priorStatus": "preliminary",
+                  "markerCommandId": "01386f56-daa4-4ded-9af2-5097ae3deafe"
+                }
+              ],
+              "label": "Periocular Adnexa",
+              "count": 2,
+              "at": "2026-09-17T18:31:04.894Z",
+              "sectionKeys": [
+                "ocular-health:anterior:periocular-adnexa",
+                "ocular-health:anterior:lids-lashes",
+                "ocular-health:anterior:palpebral-conjunctiva",
+                "ocular-health:anterior:conjunctiva",
+                "ocular-health:anterior:tear-film",
+                "ocular-health:anterior:cornea",
+                "ocular-health:anterior:anterior-chamber",
+                "ocular-health:anterior:iris",
+                "ocular-health:anterior:lens",
+                "ocular-health:posterior:vitreous",
+                "ocular-health:posterior:fundus",
+                "ocular-health:posterior:macula",
+                "ocular-health:posterior:vessels",
+                "ocular-health:posterior:periphery"
+              ],
+              "scope": "section"
+            }
+          }
+        },
+        "voidActionId": "0dc1a116-616a-46fb-9ed1-76ca9d028e8a"
+      },
+      "undo": {
+        "canWriteDiagnosis": true,
+        "restored": [
+          "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+          "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3"
+        ],
+        "count": 2,
+        "skipped": [],
+        "scope": "section",
+        "sectionKey": "ocular-health:anterior:periocular-adnexa",
+        "ledger": {
+          "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "encounter": null,
+          "sections": {}
+        }
+      },
+      "restoredFacts": [
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "fd340784-b9a4-460c-8227-b5a01c64abdd",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:9328af140097759c3224b956971138b579afe385b70062017d570f52f6e6f540",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OD"
+          },
+          "eye": "OD",
+          "laterality": "OD",
+          "presence": "present",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [
+            "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4"
+          ],
+          "homeSources": [
+            {
+              "condition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+              "sources": [
+                {
+                  "kind": "finding-extension",
+                  "contributor": {
+                    "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+                    "versionId": "a5c13d5a-f556-474e-959f-e0ae5cbecda6"
+                  }
+                }
+              ]
+            }
+          ],
+          "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+            "versionId": "a5c13d5a-f556-474e-959f-e0ae5cbecda6"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+              "versionId": "a5c13d5a-f556-474e-959f-e0ae5cbecda6",
+              "effectiveDateTime": "2026-09-17T18:31:01.201Z",
+              "kind": "canonical-fact",
+              "carried": false
+            }
+          ],
+          "carried": false
+        },
+        {
+          "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+          "findingDefinitionId": "fd340784-b9a4-460c-8227-b5a01c64abdd",
+          "findingDefinitionKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "display": "nuclear sclerosis",
+          "sectionKey": "ocular-health:anterior:lens",
+          "gradeScale": [
+            "1+",
+            "2+",
+            "3+",
+            "4+",
+            "1+ (pale yellow)",
+            "2+ (yellow)",
+            "3+ (dark yellow/amber)",
+            "4+ (dark brown/black; brunescent)"
+          ],
+          "diagnosisKeys": [
+            "cataract_nuclear_sclerosis"
+          ],
+          "origin": "shipped",
+          "rowKey": "finding:fb597fb1d3c792338e40acd8c8c41f9ab4b075d929b66850848d818b05e477e7",
+          "kind": "fact",
+          "key": {
+            "v": 1,
+            "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+            "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+            "stableKey": "ocular-health:anterior:lens",
+            "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+            "optionCode": "nuclear-sclerosis",
+            "eye": "OS"
+          },
+          "eye": "OS",
+          "laterality": "OS",
+          "presence": "present",
+          "qualifiers": {},
+          "status": "live",
+          "editable": true,
+          "homes": [
+            "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4"
+          ],
+          "homeSources": [
+            {
+              "condition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+              "sources": [
+                {
+                  "kind": "finding-extension",
+                  "contributor": {
+                    "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+                    "versionId": "80eaf522-a843-4bdd-869d-9f20984b6b69"
+                  }
+                }
+              ]
+            }
+          ],
+          "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+          "baseline": {
+            "kind": "canonical",
+            "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+            "versionId": "80eaf522-a843-4bdd-869d-9f20984b6b69"
+          },
+          "contributors": [
+            {
+              "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+              "versionId": "80eaf522-a843-4bdd-869d-9f20984b6b69",
+              "effectiveDateTime": "2026-09-17T18:31:01.283Z",
+              "kind": "canonical-fact",
+              "carried": false
+            }
+          ],
+          "carried": false
+        }
+      ],
+      "overview": {
+        "before": {
+          "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+          "findings": [
+            {
+              "observationReference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+              "creditsCompleteness": false,
+              "findingKey": "ocular-health:anterior:lens",
+              "sectionKey": "ocular-health:anterior:lens",
+              "display": "Lens",
+              "laterality": "OD",
+              "examination": {
+                "state": "examined",
+                "sourceEncoding": "observation"
+              },
+              "interpretation": "unknown",
+              "provenance": {
+                "state": "carried-unreasserted",
+                "sourceDate": "2026-09-17T14:00:00Z"
+              },
+              "current": {
+                "recordedAt": "2026-09-17T18:31:01.201Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OD"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "01386f56-daa4-4ded-9af2-5097ae3deafe",
+                        "target": "finding:9328af140097759c3224b956971138b579afe385b70062017d570f52f6e6f540",
+                        "digest": "bd6eb94b79bbc7e3d4c7d711d7c0f404c016ff2f94921232f46a3396a0ff12ae",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:31:01.201Z",
+                          "activity": "CREATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "sheetFindings": [
+                {
+                  "display": "nuclear sclerosis",
+                  "qualifiers": []
+                }
+              ],
+              "diagnoses": [
+                {
+                  "display": "Age-related nuclear cataract"
+                }
+              ],
+              "prior": {
+                "recordedAt": "2026-09-17T18:27:11.577Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OD"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "f147ce62-9d26-46b7-9069-dc9d021af30c",
+                        "target": "finding:f504205e5fc6dddd3657db3fca5f4e47cbd8632a7a05da0a94691948a84c0184",
+                        "digest": "1f7e1f86e2c8beb76a670bd2cfe9d3c86de27bd9bdbc026ea7644220e5a8ea9a",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:27:11.577Z",
+                          "activity": "UPDATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "changeFromPrior": {
+                "kind": "changed"
+              }
+            },
+            {
+              "observationReference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+              "creditsCompleteness": false,
+              "findingKey": "ocular-health:anterior:lens",
+              "sectionKey": "ocular-health:anterior:lens",
+              "display": "Lens",
+              "laterality": "OS",
+              "examination": {
+                "state": "examined",
+                "sourceEncoding": "observation"
+              },
+              "interpretation": "unknown",
+              "provenance": {
+                "state": "carried-unreasserted",
+                "sourceDate": "2026-09-17T14:00:00Z"
+              },
+              "current": {
+                "recordedAt": "2026-09-17T18:31:01.283Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OS"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "01386f56-daa4-4ded-9af2-5097ae3deafe",
+                        "target": "finding:fb597fb1d3c792338e40acd8c8c41f9ab4b075d929b66850848d818b05e477e7",
+                        "digest": "bd6eb94b79bbc7e3d4c7d711d7c0f404c016ff2f94921232f46a3396a0ff12ae",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:31:01.283Z",
+                          "activity": "CREATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "sheetFindings": [
+                {
+                  "display": "nuclear sclerosis",
+                  "qualifiers": []
+                }
+              ],
+              "diagnoses": [
+                {
+                  "display": "Age-related nuclear cataract"
+                }
+              ],
+              "prior": {
+                "recordedAt": "2026-09-17T18:26:46.537Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OS"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "2925c4bc-796a-4c51-bec5-79eb2ee01c2a",
+                        "target": "finding:a451966706b4c16acfbb4433b5a09fcc359069f3dd0f8f0107a89376dbb5e557",
+                        "digest": "1f7e1f86e2c8beb76a670bd2cfe9d3c86de27bd9bdbc026ea7644220e5a8ea9a",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:26:46.537Z",
+                          "activity": "UPDATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "changeFromPrior": {
+                "kind": "changed"
+              }
+            }
+          ],
+          "sections": [],
+          "completeness": {
+            "status": "unconfigured",
+            "requiredSectionCount": 0,
+            "resolvedSectionCount": 0,
+            "trace": [],
+            "documentationIssues": []
+          }
+        },
+        "void": {
+          "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+          "findings": [],
+          "sections": [],
+          "completeness": {
+            "status": "unconfigured",
+            "requiredSectionCount": 0,
+            "resolvedSectionCount": 0,
+            "trace": [],
+            "documentationIssues": []
+          }
+        },
+        "undo": {
+          "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+          "findings": [
+            {
+              "observationReference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+              "creditsCompleteness": false,
+              "findingKey": "ocular-health:anterior:lens",
+              "sectionKey": "ocular-health:anterior:lens",
+              "display": "Lens",
+              "laterality": "OD",
+              "examination": {
+                "state": "examined",
+                "sourceEncoding": "observation"
+              },
+              "interpretation": "unknown",
+              "provenance": {
+                "state": "current"
+              },
+              "current": {
+                "recordedAt": "2026-09-17T18:31:01.201Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OD"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "01386f56-daa4-4ded-9af2-5097ae3deafe",
+                        "target": "finding:9328af140097759c3224b956971138b579afe385b70062017d570f52f6e6f540",
+                        "digest": "bd6eb94b79bbc7e3d4c7d711d7c0f404c016ff2f94921232f46a3396a0ff12ae",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:31:01.201Z",
+                          "activity": "CREATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "sheetFindings": [
+                {
+                  "display": "nuclear sclerosis",
+                  "qualifiers": []
+                }
+              ],
+              "diagnoses": [
+                {
+                  "display": "Age-related nuclear cataract"
+                }
+              ],
+              "prior": {
+                "recordedAt": "2026-09-17T18:27:11.577Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OD"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "f147ce62-9d26-46b7-9069-dc9d021af30c",
+                        "target": "finding:f504205e5fc6dddd3657db3fca5f4e47cbd8632a7a05da0a94691948a84c0184",
+                        "digest": "1f7e1f86e2c8beb76a670bd2cfe9d3c86de27bd9bdbc026ea7644220e5a8ea9a",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:27:11.577Z",
+                          "activity": "UPDATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "changeFromPrior": {
+                "kind": "changed"
+              }
+            },
+            {
+              "observationReference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+              "creditsCompleteness": false,
+              "findingKey": "ocular-health:anterior:lens",
+              "sectionKey": "ocular-health:anterior:lens",
+              "display": "Lens",
+              "laterality": "OS",
+              "examination": {
+                "state": "examined",
+                "sourceEncoding": "observation"
+              },
+              "interpretation": "unknown",
+              "provenance": {
+                "state": "current"
+              },
+              "current": {
+                "recordedAt": "2026-09-17T18:31:01.283Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OS"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "01386f56-daa4-4ded-9af2-5097ae3deafe",
+                        "target": "finding:fb597fb1d3c792338e40acd8c8c41f9ab4b075d929b66850848d818b05e477e7",
+                        "digest": "bd6eb94b79bbc7e3d4c7d711d7c0f404c016ff2f94921232f46a3396a0ff12ae",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:31:01.283Z",
+                          "activity": "CREATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "sheetFindings": [
+                {
+                  "display": "nuclear sclerosis",
+                  "qualifiers": []
+                }
+              ],
+              "diagnoses": [
+                {
+                  "display": "Age-related nuclear cataract"
+                }
+              ],
+              "prior": {
+                "recordedAt": "2026-09-17T18:26:46.537Z",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                },
+                "components": [
+                  {
+                    "code": "R10_CURRENT_META",
+                    "display": "R10_CURRENT_META",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "v": 1,
+                        "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                        "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                        "stableKey": "ocular-health:anterior:lens",
+                        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                        "optionCode": "nuclear-sclerosis",
+                        "eye": "OS"
+                      }
+                    }
+                  },
+                  {
+                    "code": "R10_OPERATION",
+                    "display": "R10_OPERATION",
+                    "value": {
+                      "kind": "json",
+                      "value": {
+                        "commandId": "2925c4bc-796a-4c51-bec5-79eb2ee01c2a",
+                        "target": "finding:a451966706b4c16acfbb4433b5a09fcc359069f3dd0f8f0107a89376dbb5e557",
+                        "digest": "1f7e1f86e2c8beb76a670bd2cfe9d3c86de27bd9bdbc026ea7644220e5a8ea9a",
+                        "audit": {
+                          "kind": "mutation",
+                          "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                          "recorded": "2026-09-17T18:26:46.537Z",
+                          "activity": "UPDATE",
+                          "targetReferences": [
+                            "self",
+                            "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "changeFromPrior": {
+                "kind": "changed"
+              }
+            }
+          ],
+          "sections": [],
+          "completeness": {
+            "status": "unconfigured",
+            "requiredSectionCount": 0,
+            "resolvedSectionCount": 0,
+            "trace": [],
+            "documentationIssues": []
+          }
+        }
+      },
+      "completeness": {
+        "before": {
+          "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "diagnoses": []
+        },
+        "void": {
+          "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "diagnoses": []
+        },
+        "undo": {
+          "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "diagnoses": []
+        }
+      }
+    }
+  ],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-carry-unconfirmed.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-carried-OU.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-section-void.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-undo-control.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-section-undo.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-DkhlaMax.js",
+    "sha256": "a2a981902d7280205b2e6441649253622f24a267d9b0ecae561a004516448944"
+  },
+  "carryProgress": {
+    "identicalCarryRequest": true,
+    "carry": {
+      "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+      "alreadyPresent": true
+    },
+    "carriedFacts": [
+      {
+        "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+        "findingDefinitionId": "d502de7d-4f73-4042-8009-64f9ccf023c2",
+        "findingDefinitionKey": "ocular-health:anterior:lens",
+        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+        "optionCode": "nuclear-sclerosis",
+        "display": "nuclear sclerosis",
+        "sectionKey": "ocular-health:anterior:lens",
+        "gradeScale": [
+          "1+",
+          "2+",
+          "3+",
+          "4+",
+          "1+ (pale yellow)",
+          "2+ (yellow)",
+          "3+ (dark yellow/amber)",
+          "4+ (dark brown/black; brunescent)"
+        ],
+        "diagnosisKeys": [
+          "cataract_nuclear_sclerosis"
+        ],
+        "origin": "shipped",
+        "rowKey": "finding:9328af140097759c3224b956971138b579afe385b70062017d570f52f6e6f540",
+        "kind": "fact",
+        "key": {
+          "v": 1,
+          "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+          "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "stableKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "eye": "OD"
+        },
+        "eye": "OD",
+        "laterality": "OD",
+        "presence": "present",
+        "qualifiers": {},
+        "status": "live",
+        "editable": true,
+        "homes": [
+          "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4"
+        ],
+        "homeSources": [
+          {
+            "condition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+            "sources": [
+              {
+                "kind": "finding-extension",
+                "contributor": {
+                  "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+                  "versionId": "66298c8c-0935-48d5-b415-40696160f198"
+                }
+              }
+            ]
+          }
+        ],
+        "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+        "baseline": {
+          "kind": "canonical",
+          "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+          "versionId": "66298c8c-0935-48d5-b415-40696160f198"
+        },
+        "contributors": [
+          {
+            "reference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+            "versionId": "66298c8c-0935-48d5-b415-40696160f198",
+            "effectiveDateTime": "2026-09-17T18:31:01.201Z",
+            "kind": "canonical-fact",
+            "carried": true
+          }
+        ],
+        "carried": true
+      },
+      {
+        "atomicFindingId": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+        "findingDefinitionId": "d502de7d-4f73-4042-8009-64f9ccf023c2",
+        "findingDefinitionKey": "ocular-health:anterior:lens",
+        "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+        "optionCode": "nuclear-sclerosis",
+        "display": "nuclear sclerosis",
+        "sectionKey": "ocular-health:anterior:lens",
+        "gradeScale": [
+          "1+",
+          "2+",
+          "3+",
+          "4+",
+          "1+ (pale yellow)",
+          "2+ (yellow)",
+          "3+ (dark yellow/amber)",
+          "4+ (dark brown/black; brunescent)"
+        ],
+        "diagnosisKeys": [
+          "cataract_nuclear_sclerosis"
+        ],
+        "origin": "shipped",
+        "rowKey": "finding:fb597fb1d3c792338e40acd8c8c41f9ab4b075d929b66850848d818b05e477e7",
+        "kind": "fact",
+        "key": {
+          "v": 1,
+          "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+          "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+          "stableKey": "ocular-health:anterior:lens",
+          "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+          "optionCode": "nuclear-sclerosis",
+          "eye": "OS"
+        },
+        "eye": "OS",
+        "laterality": "OS",
+        "presence": "present",
+        "qualifiers": {},
+        "status": "live",
+        "editable": true,
+        "homes": [
+          "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4"
+        ],
+        "homeSources": [
+          {
+            "condition": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+            "sources": [
+              {
+                "kind": "finding-extension",
+                "contributor": {
+                  "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+                  "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df"
+                }
+              }
+            ]
+          }
+        ],
+        "conditionReference": "Condition/0fb47b11-3ad4-4c2d-89e1-77b38ab77ff4",
+        "baseline": {
+          "kind": "canonical",
+          "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+          "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df"
+        },
+        "contributors": [
+          {
+            "reference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+            "versionId": "d2dc96c0-b21e-4c6b-b596-0a6830d682df",
+            "effectiveDateTime": "2026-09-17T18:31:01.283Z",
+            "kind": "canonical-fact",
+            "carried": true
+          }
+        ],
+        "carried": true
+      }
+    ],
+    "overview": {
+      "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+      "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+      "findings": [
+        {
+          "observationReference": "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+          "creditsCompleteness": false,
+          "findingKey": "ocular-health:anterior:lens",
+          "sectionKey": "ocular-health:anterior:lens",
+          "display": "Lens",
+          "laterality": "OD",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "carried-unreasserted",
+            "sourceDate": "2026-09-17T14:00:00Z"
+          },
+          "current": {
+            "recordedAt": "2026-09-17T18:31:01.201Z",
+            "value": {
+              "kind": "boolean",
+              "value": true
+            },
+            "components": [
+              {
+                "code": "R10_CURRENT_META",
+                "display": "R10_CURRENT_META",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "v": 1,
+                    "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                    "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+                    "stableKey": "ocular-health:anterior:lens",
+                    "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                    "optionCode": "nuclear-sclerosis",
+                    "eye": "OD"
+                  }
+                }
+              },
+              {
+                "code": "R10_OPERATION",
+                "display": "R10_OPERATION",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "commandId": "01386f56-daa4-4ded-9af2-5097ae3deafe",
+                    "target": "finding:9328af140097759c3224b956971138b579afe385b70062017d570f52f6e6f540",
+                    "digest": "bd6eb94b79bbc7e3d4c7d711d7c0f404c016ff2f94921232f46a3396a0ff12ae",
+                    "audit": {
+                      "kind": "mutation",
+                      "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                      "recorded": "2026-09-17T18:31:01.201Z",
+                      "activity": "CREATE",
+                      "targetReferences": [
+                        "self",
+                        "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "sheetFindings": [
+            {
+              "display": "nuclear sclerosis",
+              "qualifiers": []
+            }
+          ],
+          "diagnoses": [
+            {
+              "display": "Age-related nuclear cataract"
+            }
+          ],
+          "prior": {
+            "recordedAt": "2026-09-17T18:27:11.577Z",
+            "value": {
+              "kind": "boolean",
+              "value": true
+            },
+            "components": [
+              {
+                "code": "R10_CURRENT_META",
+                "display": "R10_CURRENT_META",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "v": 1,
+                    "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                    "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                    "stableKey": "ocular-health:anterior:lens",
+                    "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                    "optionCode": "nuclear-sclerosis",
+                    "eye": "OD"
+                  }
+                }
+              },
+              {
+                "code": "R10_OPERATION",
+                "display": "R10_OPERATION",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "commandId": "f147ce62-9d26-46b7-9069-dc9d021af30c",
+                    "target": "finding:f504205e5fc6dddd3657db3fca5f4e47cbd8632a7a05da0a94691948a84c0184",
+                    "digest": "1f7e1f86e2c8beb76a670bd2cfe9d3c86de27bd9bdbc026ea7644220e5a8ea9a",
+                    "audit": {
+                      "kind": "mutation",
+                      "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                      "recorded": "2026-09-17T18:27:11.577Z",
+                      "activity": "UPDATE",
+                      "targetReferences": [
+                        "self",
+                        "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "changeFromPrior": {
+            "kind": "changed"
+          }
+        },
+        {
+          "observationReference": "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3",
+          "creditsCompleteness": false,
+          "findingKey": "ocular-health:anterior:lens",
+          "sectionKey": "ocular-health:anterior:lens",
+          "display": "Lens",
+          "laterality": "OS",
+          "examination": {
+            "state": "examined",
+            "sourceEncoding": "observation"
+          },
+          "interpretation": "unknown",
+          "provenance": {
+            "state": "carried-unreasserted",
+            "sourceDate": "2026-09-17T14:00:00Z"
+          },
+          "current": {
+            "recordedAt": "2026-09-17T18:31:01.283Z",
+            "value": {
+              "kind": "boolean",
+              "value": true
+            },
+            "components": [
+              {
+                "code": "R10_CURRENT_META",
+                "display": "R10_CURRENT_META",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "v": 1,
+                    "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                    "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+                    "stableKey": "ocular-health:anterior:lens",
+                    "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                    "optionCode": "nuclear-sclerosis",
+                    "eye": "OS"
+                  }
+                }
+              },
+              {
+                "code": "R10_OPERATION",
+                "display": "R10_OPERATION",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "commandId": "01386f56-daa4-4ded-9af2-5097ae3deafe",
+                    "target": "finding:fb597fb1d3c792338e40acd8c8c41f9ab4b075d929b66850848d818b05e477e7",
+                    "digest": "bd6eb94b79bbc7e3d4c7d711d7c0f404c016ff2f94921232f46a3396a0ff12ae",
+                    "audit": {
+                      "kind": "mutation",
+                      "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                      "recorded": "2026-09-17T18:31:01.283Z",
+                      "activity": "CREATE",
+                      "targetReferences": [
+                        "self",
+                        "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "sheetFindings": [
+            {
+              "display": "nuclear sclerosis",
+              "qualifiers": []
+            }
+          ],
+          "diagnoses": [
+            {
+              "display": "Age-related nuclear cataract"
+            }
+          ],
+          "prior": {
+            "recordedAt": "2026-09-17T18:26:46.537Z",
+            "value": {
+              "kind": "boolean",
+              "value": true
+            },
+            "components": [
+              {
+                "code": "R10_CURRENT_META",
+                "display": "R10_CURRENT_META",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "v": 1,
+                    "patientId": "37513ad0-ec6b-4495-b78f-2901841e5e32",
+                    "encounterId": "09c043b9-c705-4487-9365-5e47567636d1",
+                    "stableKey": "ocular-health:anterior:lens",
+                    "fieldCode": "CUSTOM_ABNORMAL_FINDINGS_09",
+                    "optionCode": "nuclear-sclerosis",
+                    "eye": "OS"
+                  }
+                }
+              },
+              {
+                "code": "R10_OPERATION",
+                "display": "R10_OPERATION",
+                "value": {
+                  "kind": "json",
+                  "value": {
+                    "commandId": "2925c4bc-796a-4c51-bec5-79eb2ee01c2a",
+                    "target": "finding:a451966706b4c16acfbb4433b5a09fcc359069f3dd0f8f0107a89376dbb5e557",
+                    "digest": "1f7e1f86e2c8beb76a670bd2cfe9d3c86de27bd9bdbc026ea7644220e5a8ea9a",
+                    "audit": {
+                      "kind": "mutation",
+                      "actor": "Practitioner/fc74d6a9-1a4d-4760-9a0a-4ce5f3536ac8",
+                      "recorded": "2026-09-17T18:26:46.537Z",
+                      "activity": "UPDATE",
+                      "targetReferences": [
+                        "self",
+                        "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "changeFromPrior": {
+            "kind": "changed"
+          }
+        }
+      ],
+      "sections": [],
+      "completeness": {
+        "status": "unconfigured",
+        "requiredSectionCount": 0,
+        "resolvedSectionCount": 0,
+        "trace": [],
+        "documentationIssues": []
+      }
+    },
+    "completeness": {
+      "encounterReference": "Encounter/37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+      "diagnoses": []
+    }
+  },
+  "undoActivation": {
+    "method": "keyboard focus and Enter on actual enabled section Undo button",
+    "pointerLimitation": "Existing Add section group absolute-positioned control intercepts pointer clicks; g-undo-control.png retains the obstruction. No layout change or force click."
+  },
+  "lastUndoRequest": {
+    "scope": "section",
+    "sectionKey": "ocular-health:anterior:periocular-adnexa",
+    "voidActionId": "0dc1a116-616a-46fb-9ed1-76ca9d028e8a"
+  },
+  "lastUndoResponse": {
+    "canWriteDiagnosis": true,
+    "restored": [
+      "Observation/2ea51e69-827e-43ca-820d-e85952505ab6",
+      "Observation/64cdeb7b-e1bc-4cd7-a207-a2508ec144b3"
+    ],
+    "count": 2,
+    "skipped": [],
+    "scope": "section",
+    "sectionKey": "ocular-health:anterior:periocular-adnexa",
+    "ledger": {
+      "encounterId": "37f1d1bb-e019-4c57-8227-cc10ae0233e0",
+      "encounter": null,
+      "sections": {}
+    }
+  },
+  "finishedAt": "2026-09-17T18:31:08.687Z"
+}

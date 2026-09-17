@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-09-17T18:09:22.771Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "97fe47994c15944f367bc13117ed17bf87929c29",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "fixture": {
+    "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+    "signedWitness": {
+      "encounterReference": "Encounter/de35006b-2af8-46d4-a441-2143f19e33db",
+      "observationReference": "Observation/0e6d3143-4cea-497b-abae-be4d968ce18d"
+    },
+    "closed": {
+      "encounterReference": "Encounter/638b6045-a5da-470f-bf2b-3edfbe98194f",
+      "observationReference": "Observation/b6abd951-ed70-4c33-b850-ebd163ba02eb"
+    },
+    "preRebuild": {
+      "encounterReference": "Encounter/c4e8ebbf-f00c-48b7-9624-09fb078d77cc",
+      "observationReference": "Observation/4c6a2235-fdac-4b64-87b8-419a4ce1f354"
+    },
+    "unscopedReference": "Observation/e9e97edc-8c6a-4af1-9149-578ec2b7473a"
+  },
+  "steps": [],
+  "screenshots": [],
+  "errors": [],
+  "failure": {
+    "message": "Synthetic authentication failed; credential-bearing details omitted."
+  },
+  "finishedAt": "2026-09-17T18:09:43.434Z"
+}

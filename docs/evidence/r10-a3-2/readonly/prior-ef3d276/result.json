@@ -1,0 +1,452 @@
+{
+  "startedAt": "2026-09-17T17:56:33.253Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "ef3d276864a3535ca855a5481f1111df84f4444b",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "fixture": {
+    "patientReference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32",
+    "signedWitness": {
+      "encounterReference": "Encounter/de35006b-2af8-46d4-a441-2143f19e33db",
+      "observationReference": "Observation/0e6d3143-4cea-497b-abae-be4d968ce18d"
+    },
+    "closed": {
+      "encounterReference": "Encounter/638b6045-a5da-470f-bf2b-3edfbe98194f",
+      "observationReference": "Observation/b6abd951-ed70-4c33-b850-ebd163ba02eb"
+    },
+    "preRebuild": {
+      "encounterReference": "Encounter/c4e8ebbf-f00c-48b7-9624-09fb078d77cc",
+      "observationReference": "Observation/4c6a2235-fdac-4b64-87b8-419a4ce1f354"
+    },
+    "unscopedReference": "Observation/e9e97edc-8c6a-4af1-9149-578ec2b7473a"
+  },
+  "steps": [
+    {
+      "name": "W145 unscoped priors notice",
+      "unscopedCount": 1,
+      "reference": "Observation/e9e97edc-8c6a-4af1-9149-578ec2b7473a"
+    },
+    {
+      "name": "W147 signed witness Remarks save",
+      "before": {
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+        },
+        "encounter": {
+          "reference": "Encounter/de35006b-2af8-46d4-a441-2143f19e33db"
+        },
+        "effectiveDateTime": "2026-09-17T17:45:37.576Z",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "valueBoolean": true,
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "6a71262a332e8962f2b0c9caacfe4be1928d3a7a8d605ec3ea2918c1acb70bff"
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"de35006b-2af8-46d4-a441-2143f19e33db\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          }
+        ],
+        "id": "0e6d3143-4cea-497b-abae-be4d968ce18d",
+        "meta": {
+          "versionId": "9eda4e35-6368-45c9-929f-999b9032b300",
+          "lastUpdated": "2026-09-17T17:45:37.578Z"
+        }
+      },
+      "after": {
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+        },
+        "encounter": {
+          "reference": "Encounter/de35006b-2af8-46d4-a441-2143f19e33db"
+        },
+        "effectiveDateTime": "2026-09-17T17:45:37.576Z",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "valueBoolean": true,
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "6a71262a332e8962f2b0c9caacfe4be1928d3a7a8d605ec3ea2918c1acb70bff"
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"de35006b-2af8-46d4-a441-2143f19e33db\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          }
+        ],
+        "id": "0e6d3143-4cea-497b-abae-be4d968ce18d",
+        "meta": {
+          "versionId": "9eda4e35-6368-45c9-929f-999b9032b300",
+          "lastUpdated": "2026-09-17T17:45:37.578Z"
+        }
+      },
+      "reply": {
+        "result": "command",
+        "commandId": "4eb69146-4ef2-4c2b-ab64-4d357fa3327d",
+        "complete": true,
+        "executionOrder": [
+          0
+        ],
+        "outcomes": [
+          {
+            "clinicalWrite": "confirmed",
+            "status": "applied",
+            "target": "panel:b53afaca0ef0219a1f6f376787a313daa903a46114095a56203c8761c3d5a68e",
+            "reference": "Observation/e5ca3571-3191-4cdc-a533-1c4900ec8c0e",
+            "versionId": "8c01b3c3-90a9-41c7-afa1-92e7ec341902"
+          }
+        ]
+      },
+      "remarks": "Synthetic signed witness Remarks 1789667798212",
+      "unchanged": true
+    },
+    {
+      "name": "f closed both doors",
+      "findingReadOnlyReason": "encounter-closed",
+      "before": {
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+        },
+        "encounter": {
+          "reference": "Encounter/638b6045-a5da-470f-bf2b-3edfbe98194f"
+        },
+        "effectiveDateTime": "2026-09-17T17:45:37.592Z",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "valueBoolean": true,
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "b88d5414bd902364481a5e8341f334fa4c88763fd6d0c6621462d285d95f8856"
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"638b6045-a5da-470f-bf2b-3edfbe98194f\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          }
+        ],
+        "id": "b6abd951-ed70-4c33-b850-ebd163ba02eb",
+        "meta": {
+          "versionId": "2300f114-dc52-4102-bcd3-a5550f365ff3",
+          "lastUpdated": "2026-09-17T17:45:37.594Z"
+        }
+      },
+      "after": {
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            }
+          ],
+          "text": "ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+        },
+        "subject": {
+          "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+        },
+        "encounter": {
+          "reference": "Encounter/638b6045-a5da-470f-bf2b-3edfbe98194f"
+        },
+        "effectiveDateTime": "2026-09-17T17:45:37.592Z",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "valueBoolean": true,
+        "identifier": [
+          {
+            "system": "urn:odos:current-finding:v1",
+            "value": "b88d5414bd902364481a5e8341f334fa4c88763fd6d0c6621462d285d95f8856"
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "R10_CURRENT_META",
+                  "display": "R10_CURRENT_META"
+                }
+              ],
+              "text": "R10_CURRENT_META"
+            },
+            "valueString": "{\"v\":1,\"patientId\":\"37513ad0-ec6b-4495-b78f-2901841e5e32\",\"encounterId\":\"638b6045-a5da-470f-bf2b-3edfbe98194f\",\"stableKey\":\"ocular-health:anterior:lens\",\"fieldCode\":\"CUSTOM_ABNORMAL_FINDINGS_09\",\"optionCode\":\"nuclear-sclerosis\",\"eye\":\"OD\"}"
+          }
+        ],
+        "id": "b6abd951-ed70-4c33-b850-ebd163ba02eb",
+        "meta": {
+          "versionId": "2300f114-dc52-4102-bcd3-a5550f365ff3",
+          "lastUpdated": "2026-09-17T17:45:37.594Z"
+        }
+      },
+      "unchanged": true
+    },
+    {
+      "name": "f preRebuild both doors",
+      "findingReadOnlyReason": "pre-rebuild-test-encounter",
+      "before": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens",
+              "display": "ocular-health:anterior:lens"
+            }
+          ],
+          "text": "ocular-health:anterior:lens"
+        },
+        "subject": {
+          "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+        },
+        "encounter": {
+          "reference": "Encounter/c4e8ebbf-f00c-48b7-9624-09fb078d77cc"
+        },
+        "effectiveDateTime": "2026-09-17T17:45:37.606Z",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+                  "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+                }
+              ],
+              "text": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            },
+            "valueBoolean": true
+          }
+        ],
+        "id": "4c6a2235-fdac-4b64-87b8-419a4ce1f354",
+        "meta": {
+          "versionId": "1cba6b99-4cc6-408c-aa7c-0816278eb47b",
+          "lastUpdated": "2026-09-17T17:45:37.608Z"
+        }
+      },
+      "after": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "code": {
+          "coding": [
+            {
+              "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+              "code": "ocular-health:anterior:lens",
+              "display": "ocular-health:anterior:lens"
+            }
+          ],
+          "text": "ocular-health:anterior:lens"
+        },
+        "subject": {
+          "reference": "Patient/37513ad0-ec6b-4495-b78f-2901841e5e32"
+        },
+        "encounter": {
+          "reference": "Encounter/c4e8ebbf-f00c-48b7-9624-09fb078d77cc"
+        },
+        "effectiveDateTime": "2026-09-17T17:45:37.606Z",
+        "extension": [
+          {
+            "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD",
+                  "display": "Right eye"
+                }
+              ],
+              "text": "Right eye"
+            }
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                  "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+                  "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+                }
+              ],
+              "text": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis"
+            },
+            "valueBoolean": true
+          }
+        ],
+        "id": "4c6a2235-fdac-4b64-87b8-419a4ce1f354",
+        "meta": {
+          "versionId": "1cba6b99-4cc6-408c-aa7c-0816278eb47b",
+          "lastUpdated": "2026-09-17T17:45:37.608Z"
+        }
+      },
+      "unchanged": true
+    },
+    {
+      "name": "Independent staff browser context actual login and closed diagnosis read-only"
+    }
+  ],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/signed-witness-checked-locked.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/unscoped-priors-notice.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/signed-witness-remarks-reloaded.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/signed-witness-remarks-value.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/closed-diagnosis-readonly.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/closed-diagnosis-locked-control.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/closed-ocular-label.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/closed-ocular-readonly.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/preRebuild-diagnosis-readonly.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/preRebuild-diagnosis-locked-control.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/preRebuild-ocular-label.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/preRebuild-ocular-readonly.png",
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/readonly/staff-closed-diagnosis.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-INv-UM74.js",
+    "sha256": "3e1a94b919810a866ae40f42cdb2b3207e03ff43f4031fdd8cead5df710be108"
+  },
+  "finishedAt": "2026-09-17T17:56:50.672Z"
+}

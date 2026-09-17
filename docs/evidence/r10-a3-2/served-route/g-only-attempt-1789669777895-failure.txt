@@ -1,0 +1,207 @@
+ODOS 20/20
+Clinic
+›
+Encounter
+Find a patient
+▦
+Schedule
+＋ New…
+Sections
+🔔
+RA
+PATIENT
+R10 Synthetic Served Proof
+DOB 1980-01-01 · in-progress
+Exam sections: Not configured
+0 unassigned
+Visit — none
+●
+Blackout
+Sign & finish
+Role
+Doctor
+▾
+Abandon encounter
+By diagnosis
+By structure
+Diagnoses
+THIS VISIT
+
+No visit diagnoses.
+
+PREVIOUS EXAMS
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Age-related nuclear cataract
+OU
+nuclear sclerosis: present · OD
+nuclear sclerosis: present · OS
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Age-related nuclear cataract
+OU
+nuclear sclerosis: present · OD
+nuclear sclerosis: present · OS
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Age-related nuclear cataract
+OU
+nuclear sclerosis: present · OD
+nuclear sclerosis: present · OS
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Sep 17, 2026 · Visit type not recorded
+Age-related nuclear cataract
+OU
+nuclear sclerosis: present · OD
+nuclear sclerosis: present · OS
+Sep 16, 2026 · Visit type not recorded
+Sep 15, 2026 · Visit type not recorded
+Sep 14, 2026 · Visit type not recorded
+COMMON
+Unspecified astigmatism
+H52.209
+●
+↑
+↓
+Myopia
+H52.10
+●
+↑
+↓
+Hypermetropia
+H52.00
+●
+↑
+↓
+Age-related nuclear cataract
+H25.10
+●
+↑
+↓
+Keratoconjunctivitis sicca (dry eye)
+H16.229
+●
+↑
+↓
+Ocular hypertension
+H40.059
+●
+↑
+↓
+Presence of intraocular lens
+Z96.1
+●
+↑
+↓
+Open angle with borderline findings, low risk
+H40.019
+●
+↑
+↓
+Open angle with borderline findings, high risk
+H40.029
+●
+↑
+↓
+Hypertensive retinopathy
+H35.039
+●
+↑
+↓
+Meibomian gland dysfunction
+No ICD-10-CM code
+●
+↑
+↓
+Primary open-angle glaucoma
+Stage
+●
+↑
+↓
+Drusen (degenerative) of macula
+H35.369
+●
+↑
+↓
+Drusen of optic disc
+H47.329
+●
+↑
+↓
+FIND DX
+Find diagnosis
+No diagnosis selected
+
+Select a diagnosis from This visit, or add one from Common or Find dx.
+
+Photos
+Imaging
+Engage
+Longitudinal imaging
+
+Clinical photos across visits
+
+Timeline
+Compare
+
+Two photos are needed for comparison.
+
+Capture or import photo
+×
+Sections
+
+Every working surface, one slide away.
+
+EVERY DAY
+✓
+Consent evidence
+preference gaps by tier
+▤
+Education review
+held steps and staff handouts
+▦
+Schedule
+day grid, all providers
+⌂
+Front desk
+schedule and floor
+⇄
+Work
+reason-grouped billing work
+◫
+Reports / A-R
+production and aging
+▤
+Statements
+patient statement runs
+◇
+Lab orders
+optical orders in flight
+CATALOG & OPERATIONS
+⌗
+Catalog & pricing
+frames catalog and pricing
+▥
+Inventory
+frames inventory
+⚭
+Integrations
+Frames Data
+PRACTICE
+≡
+Audit log
+every access and change
+◉
+Clinic
+Clinic home and patients
+▣
+Protocol Library
+author and manage clinical protocols
+Build aefb6db · drbang-iva/r10-a3-2
+Built 2m ago
+CURRENT

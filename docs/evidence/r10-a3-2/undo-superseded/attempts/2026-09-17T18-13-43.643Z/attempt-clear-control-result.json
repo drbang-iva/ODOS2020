@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-09-17T17:59:20.134Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "ef3d276864a3535ca855a5481f1111df84f4444b",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "encounterReference": "Encounter/c4674fce-f147-4d4e-8d8c-5621a20aa90d",
+  "reference": "Observation/dbcfe746-064e-496f-8e39-196d4f20a24b",
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/undo-superseded/failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-INv-UM74.js",
+    "sha256": "3e1a94b919810a866ae40f42cdb2b3207e03ff43f4031fdd8cead5df710be108"
+  },
+  "failure": {
+    "message": "locator.click: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Clear Ocular Health', exact: true })\u001b[22m\n",
+    "stack": "locator.click: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Clear Ocular Health', exact: true })\u001b[22m\n\n    at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/undo-superseded-proof.mjs:29:73"
+  },
+  "finishedAt": "2026-09-17T17:59:42.567Z"
+}

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: V21 V22 a saved negative scope stays frozen after the live normal template changes
+ok 1 - V21 V22 a saved negative scope stays frozen after the live normal template changes
+  ---
+  duration_ms: 20.588708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 569.6435

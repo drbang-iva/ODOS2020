@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "servedHead": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+  "scriptSha256": "9f20fa198dcd86f6381dc5c3f0f078a1c33bc65b2f1255ea3455ef9be65da727",
+  "visuallyInspectedScreenshots": [
+    "recorded-absent.png",
+    "deferred.png",
+    "picker-proposal.png",
+    "diagnosis-origin.png",
+    "assessment-section-origin.png",
+    "carry-incomplete.png",
+    "carry-replanned.png"
+  ],
+  "carryFactReferencesUnchanged": [
+    "Observation/a54c5327-b1fc-4697-913d-1b5edb09662e"
+  ],
+  "carryConditionReferenceUnchanged": "Condition/dbf23aca-5f4c-4cea-b0cf-52686966c517",
+  "credentialValueMatches": 0
+}

@@ -43,3 +43,9 @@ The fourth container, odos-r10-a3-2-served-binary-init-1, exited normally. Final
 The first seed-ui implementation formatted a vendor-specific profile reference outside its allowed boundary. It now uses the existing production client getAuthenticatedProfileReference() and checks it against the observed membership profile. The lint rules are unchanged. Raw preflight-lint-repair.tap records the repaired live-tree test.
 
 The isolated synthetic project uses Medplum 5.1.30 `userFhirQuota=5000000` and `totalFhirQuota=50000000` weighted FHIR units per minute. The default 50000-unit user quota interrupted the real Ocular Health route with HTTP 429. `seed-ui.ts` sets and reads back only these project settings, preserving both caller AccessPolicies byte-for-byte; limits remain enabled. No service or database restart was needed. `synthetic-fhir-quota.json` records the verified settings.
+
+## Readiness deadlock repair
+
+The first real final serve exposed a synchronous child invoking the frontdoor while its parent owned the response proxy. The parent could not process requests until the child exited. Serve now awaits an asynchronous readiness child, preserving clean environment and file-only output. The regression executes a child HTTP fetch against a server in the parent: synchronous mutation timed out (2/3 passed, 1 failed), restored async execution passed 3/3. Raw outputs: readiness-deadlock-red.tap and readiness-deadlock-green.tap. Other synchronous setup/build calls run before the parent proxy; image inspection does not call it, and container stops run during teardown.
+
+The blocked old supervisor was unblocked by terminating its verified readiness child. Its existing failure cleanup stopped the owned containers; they were restarted using the same compose project and volumes without rerunning fixture bootstrap. Browser proof owns the next final build and serve.

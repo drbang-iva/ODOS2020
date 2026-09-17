@@ -1,6 +1,6 @@
 {
   "base": "a211b368",
-  "head": "HEAD",
+  "head": "6227fad8a10acb82d73567afda8e9e3e6c2ab376",
   "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
   "files": [
     {
@@ -161,6 +161,18 @@
           "after": []
         },
         {
+          "test": "\"ocular-health deferral controls come only from each definition's allowDeferred flag\"",
+          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "before": [
+            {
+              "test": "\"ocular-health deferral controls come only from each definition's allowDeferred flag\"",
+              "line": 1241,
+              "text": "assert.equal((html.match(/Not performed \\/ deferred/g) ?? []).length, 2)"
+            }
+          ],
+          "after": []
+        },
+        {
           "test": "\"deferred and recorded ocular findings cannot coexist at the client-server boundary\"",
           "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
           "before": [
@@ -234,7 +246,7 @@
         },
         {
           "test": "\"qualified finding definitions render qualifier controls for legacy presence-only history\"",
-          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "mapping": "V18 / W130",
           "before": [
             {
               "test": "\"qualified finding definitions render qualifier controls for legacy presence-only history\"",
@@ -1035,7 +1047,7 @@
         },
         {
           "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
-          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "mapping": "V21 / W136",
           "before": [
             {
               "test": "\"AVFILL-1 deliberate 2:3 choice persists and does not POST again while pristine\"",
@@ -1211,7 +1223,7 @@
         },
         {
           "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
-          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "mapping": "V21 / W136",
           "before": [
             {
               "test": "`AVFILL-1 ${scenario} does not invent an A/V ratio`",
@@ -1355,6 +1367,18 @@
           ]
         },
         {
+          "test": "\"W138 canonical ocular panels expose Deferred independently of the legacy definition flag\"",
+          "mapping": "W138",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W138 canonical ocular panels expose Deferred independently of the legacy definition flag\"",
+              "line": 1247,
+              "text": "assert.equal((html.match(/Not performed \\/ deferred/g) ?? []).length, 4)"
+            }
+          ]
+        },
+        {
           "test": "\"W138 deferred locks loaded findings while the canonical server preserves their bytes\"",
           "mapping": "W138",
           "before": [],
@@ -1423,7 +1447,7 @@
         },
         {
           "test": "\"qualified finding definitions render qualifier controls for canonical presence-only history\"",
-          "mapping": "V18 / V19 / V21 / V22 / W130–W140 (see custom-sections/assertion-ledger.md)",
+          "mapping": "V18 / W130",
           "before": [],
           "after": [
             {
@@ -2589,7 +2613,7 @@
     {
       "file": "ui/tests/r10A3OcularEditor.test.tsx",
       "assertionCountBefore": 0,
-      "assertionCountAfter": 49,
+      "assertionCountAfter": 51,
       "changedGroups": [
         {
           "test": "\"W130/W147 signed present witness is checked and locked; absent is outside loaded\"",
@@ -2894,7 +2918,7 @@
         },
         {
           "test": "\"W136 blank optional panel text is omitted; fresh offered option becomes a new assertion\"",
-          "mapping": "W136",
+          "mapping": "W136 / W137",
           "before": [],
           "after": [
             {
@@ -2938,6 +2962,23 @@
               "test": "\"W134 diagnosis door names the closed-encounter refusal\"",
               "line": 104,
               "text": "assert.equal(findingReadOnlyLabel(\"encounter-closed\"), \"Signed or closed visit\")"
+            }
+          ]
+        },
+        {
+          "test": "`V36 canonical ${recorded} controls section Clear visibility`",
+          "mapping": "V36",
+          "before": [],
+          "after": [
+            {
+              "test": "`V36 canonical ${recorded} controls section Clear visibility`",
+              "line": 115,
+              "text": "assert.equal(h.renderer.root.findAllByProps({ \"aria-label\": \"Clear Ocular Health\" }).length, [\"retired\", \"empty\"].includes(recorded) ? 0 : 1)"
+            },
+            {
+              "test": "`V36 canonical ${recorded} controls section Clear visibility`",
+              "line": 116,
+              "text": "assert.equal(h.posts.length, 0)"
             }
           ]
         }

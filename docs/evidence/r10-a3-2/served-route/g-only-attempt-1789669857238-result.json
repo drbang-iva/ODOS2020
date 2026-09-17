@@ -1,0 +1,24 @@
+{
+  "mode": "g-only",
+  "startedAt": "2026-09-17T18:29:37.895Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-only-failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-DkhlaMax.js",
+    "sha256": "a2a981902d7280205b2e6441649253622f24a267d9b0ecae561a004516448944"
+  },
+  "failure": {
+    "message": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-source-condition-reference=\"Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74\"]') to be visible\u001b[22m\n",
+    "stack": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-source-condition-reference=\"Condition/a01b27c4-40d2-4be8-951f-dc847eba8a74\"]') to be visible\u001b[22m\n\n    at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:154:89"
+  },
+  "finishedAt": "2026-09-17T18:30:11.406Z"
+}

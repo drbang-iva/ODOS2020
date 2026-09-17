@@ -1,0 +1,64 @@
+{
+  "originalSha256": "583071e0867e613991a039b4bdcecdc47e47e23c8c0795ee1cde65faeb3f39f7",
+  "mutations": [
+    {
+      "mutant": "template-as-recorded",
+      "mapping": "V21 / V22 / W-k",
+      "test": "V21 V22 a saved negative scope stays frozen after the live normal template changes",
+      "anchorCount": 1,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=V21 V22 a saved negative scope stays frozen after the live normal template changes",
+        "tests/customSections.test.tsx"
+      ],
+      "redExit": 1,
+      "restoredExit": 0,
+      "restoredSha256": "583071e0867e613991a039b4bdcecdc47e47e23c8c0795ee1cde65faeb3f39f7",
+      "redCounts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "restoredCounts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "mutant": "refresh-replaces-frozen-scope",
+      "mapping": "V21 / V22 / W-k",
+      "test": "V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope",
+      "anchorCount": 1,
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=V21 V22 posterior re-save stays pristine, round-trips selections, and preserves the saved negative scope",
+        "tests/customSections.test.tsx"
+      ],
+      "redExit": 1,
+      "restoredExit": 0,
+      "restoredSha256": "583071e0867e613991a039b4bdcecdc47e47e23c8c0795ee1cde65faeb3f39f7",
+      "redCounts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skipped": 0
+      },
+      "restoredCounts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "head": "1325c7b349a141bf4278e328a982bb11db6f7b0b"
+}

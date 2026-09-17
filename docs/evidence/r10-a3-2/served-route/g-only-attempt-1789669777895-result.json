@@ -1,0 +1,24 @@
+{
+  "mode": "g-only",
+  "startedAt": "2026-09-17T18:28:34.936Z",
+  "build": {
+    "root": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2",
+    "head": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
+    "dirty": true,
+    "mcpHash": "0581c3988d2497f78176e50ecb6ba9fb0e2f4945c769c18e936a751c0befb049"
+  },
+  "steps": [],
+  "screenshots": [
+    "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-only-failure.png"
+  ],
+  "errors": [],
+  "servedBundle": {
+    "path": "/assets/index-DkhlaMax.js",
+    "sha256": "a2a981902d7280205b2e6441649253622f24a267d9b0ecae561a004516448944"
+  },
+  "failure": {
+    "message": "locator.scrollIntoViewIfNeeded: Element is not attached to the DOM\nCall log:\n\u001b[2m  - attempting scroll into view action\u001b[22m\n\u001b[2m    - waiting for element to be stable\u001b[22m\n\u001b[2m    - element is not stable\u001b[22m\n\u001b[2m  - retrying scroll into view action\u001b[22m\n\u001b[2m    - waiting for element to be stable\u001b[22m\n",
+    "stack": "locator.scrollIntoViewIfNeeded: Element is not attached to the DOM\nCall log:\n\u001b[2m  - attempting scroll into view action\u001b[22m\n\u001b[2m    - waiting for element to be stable\u001b[22m\n\u001b[2m    - element is not stable\u001b[22m\n\u001b[2m  - retrying scroll into view action\u001b[22m\n\u001b[2m    - waiting for element to be stable\u001b[22m\n\n    at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/scripts/r10-served-route/browser-proof.mjs:154:321"
+  },
+  "finishedAt": "2026-09-17T18:28:38.758Z"
+}

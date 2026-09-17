@@ -286,5 +286,128 @@
       "originalSha256": "32046bd1c2811716a47d49c02b3ed294d503aaa5dc4a3d80dfc0f6e02775f930",
       "normalizedSha256": "de00c9f6ab487802c8908f71e1e9a6a35223e58e6d242e5ff62ab070baf4282d"
     }
-  ]
+  ],
+  "finalSnapshotNormalization": [
+    {
+      "file": "scripts-typecheck-current.log",
+      "beforeSha256": "1bcf2b2c40877a4c596a6f5fa03464d5d7a0f0ac9df063246a824d640c6ffb43",
+      "afterSha256": "847c076a34c2720985fd6ca3ceee56b48f004d6856bd9fd3aa76c3cf220f568c"
+    },
+    {
+      "file": "scripts-typecheck-harness.log",
+      "beforeSha256": "1bcf2b2c40877a4c596a6f5fa03464d5d7a0f0ac9df063246a824d640c6ffb43",
+      "afterSha256": "847c076a34c2720985fd6ca3ceee56b48f004d6856bd9fd3aa76c3cf220f568c"
+    },
+    {
+      "file": "frozen-scope/refresh-replaces-frozen-scope-red.log",
+      "beforeSha256": "4eb2420dfe8bd21df21705d096fea38606352a03b211effc4689f633f713abb9",
+      "afterSha256": "19d3487d13c6640bb0a4acb032a781f62cfe2982c9023a0a63361cd9ff92f9ec"
+    },
+    {
+      "file": "frozen-scope/template-as-recorded-red.log",
+      "beforeSha256": "a406b43a043e1845291e54b563bba37cac4ec5bc22d1c4c7b550ec563b6d9c20",
+      "afterSha256": "f3a0bf2c65c360477abd01ea5b38c3f4866d2b6e2e5164fafff6128613a3d697"
+    },
+    {
+      "file": "picker/typecheck.txt",
+      "beforeSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "afterSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "void-undo/void-types.log",
+      "beforeSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "afterSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "carry-integration/carry-integration-types.log",
+      "beforeSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "afterSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "served-route/undo-only-failure.txt",
+      "beforeSha256": "e367c8c3853902fe98b106f6e0fb50cf20125953ff649809c3b6134042f499ac",
+      "afterSha256": "cf0cd19a9f86eebeac5e19592e33801174e3e3878bb29cce17e90fd66b3c0d3b"
+    },
+    {
+      "file": "served-route/final-attempt-1789667786335-failure.txt",
+      "beforeSha256": "41ec4a6333190147d078b2441735f802ff7e2af5feb4a4252bbc04a86af022d2",
+      "afterSha256": "bbdc388e78186969b9cfae47804a423623b12d7cae923cc0ba91acb4c6acb0b2"
+    },
+    {
+      "file": "served-route/undo-only-attempt-1789669028410-failure.txt",
+      "beforeSha256": "981942bb3fa68dc91519fbf964696b2cd74fee9cc4e91c0eea4869bbc2ff097c",
+      "afterSha256": "58b0babcd4befaef9a171addb305f5ba6fb0c9154f011614405abaa1ba9ed67a"
+    },
+    {
+      "file": "served-route/g-only-failure.txt",
+      "beforeSha256": "75020583a1d25dbc5716dce90d2ee26dc47fea85167259dd5e39aca5d15f24b0",
+      "afterSha256": "188f3cbcb5077e96d95859d2881662061c932da84ef11f3dbc108886f1945689"
+    },
+    {
+      "file": "served-route/final-attempt-1789667992325-failure.txt",
+      "beforeSha256": "8b648fbe90a938e201ce5fca298b924809afa6a1f4ca7e04f2b6c982651b58f9",
+      "afterSha256": "19f0886721e1f09e58aa17231328a9c1f0b504245f664e5a33a2eea75ef283c6"
+    },
+    {
+      "file": "served-route/final-attempt-1789669314693-failure.txt",
+      "beforeSha256": "288c1ea9c9838bb49eef9c55480a72cb9dea5d487d541529147f626dc37bb4e3",
+      "afterSha256": "1fa60c23f9d6ed4d373bb8deb0d7ad0a2510e86e705159f1259e91d2905f3e70"
+    },
+    {
+      "file": "served-route/g-only-attempt-1789669777895-failure.txt",
+      "beforeSha256": "e04f9ac77761506cf2e4d2d93d5f290b3fa83510f78fe200bcd647c30239a7a3",
+      "afterSha256": "fa7e3bd7326638468ea3dd162799dab124ace83664a65a327c8a4ba63f574b24"
+    },
+    {
+      "file": "served-route/final-attempt-1789668707698-failure.txt",
+      "beforeSha256": "288c1ea9c9838bb49eef9c55480a72cb9dea5d487d541529147f626dc37bb4e3",
+      "afterSha256": "1fa60c23f9d6ed4d373bb8deb0d7ad0a2510e86e705159f1259e91d2905f3e70"
+    },
+    {
+      "file": "served-route/final-attempt-1789668529064-failure.txt",
+      "beforeSha256": "1d95f0e60e5ad0a54e29390de5c5078fd74be1eb899e84e553bce4fbf15c4445",
+      "afterSha256": "0490835840f044faedeb9cf97aef60e159add51cc53eedb9a9592db78277fb6e"
+    },
+    {
+      "file": "served-route/final-attempt-1789667928025-failure.txt",
+      "beforeSha256": "704ab2508d83cd63f0961b46e045a5670d238e4a486fce832e3079bbb1976470",
+      "afterSha256": "fbb43a85bfd23ec918339151008dcea0779aa1c801422b3d429a7992339d877f"
+    },
+    {
+      "file": "served-route/g-only-attempt-1789669857239-failure.txt",
+      "beforeSha256": "75020583a1d25dbc5716dce90d2ee26dc47fea85167259dd5e39aca5d15f24b0",
+      "afterSha256": "188f3cbcb5077e96d95859d2881662061c932da84ef11f3dbc108886f1945689"
+    },
+    {
+      "file": "served-route/final-failure.txt",
+      "beforeSha256": "4230c74c9929aa35b5a9cda5f89400f2464a729b5bec8b0b7d88dcac43e170d1",
+      "afterSha256": "fc053f301d8916ed355964170d09aca0278d77c69b3f887aebad69a853fc160b"
+    },
+    {
+      "file": "served-route/final-attempt-1789667890877-failure.txt",
+      "beforeSha256": "41ec4a6333190147d078b2441735f802ff7e2af5feb4a4252bbc04a86af022d2",
+      "afterSha256": "bbdc388e78186969b9cfae47804a423623b12d7cae923cc0ba91acb4c6acb0b2"
+    },
+    {
+      "file": "served-route/final-attempt-1789669595607-failure.txt",
+      "beforeSha256": "288c1ea9c9838bb49eef9c55480a72cb9dea5d487d541529147f626dc37bb4e3",
+      "afterSha256": "1fa60c23f9d6ed4d373bb8deb0d7ad0a2510e86e705159f1259e91d2905f3e70"
+    },
+    {
+      "file": "served-route/screens/assessment-visible.txt",
+      "beforeSha256": "9d7e7c40e6b5b8124497da46260d2f246acfb9b7a28987b78afd7fa57a781393",
+      "afterSha256": "fe094e32256e815d9c39c7f4faf0ec268e9469116c0286ef25354dc6df0a4b4c"
+    },
+    {
+      "file": "editor/canonical-clear-red.log",
+      "beforeSha256": "c182aefcdbc229a088f02294713200d25b758f93114cfcb5013ed63400d2116f",
+      "afterSha256": "76d35e5f64ffd6a5bbb04b3155b4cd442020087d99b876c539942e04f704a7b8"
+    },
+    {
+      "file": "editor/deferred-visibility-red.log",
+      "beforeSha256": "84580bd34289133def1029198c1b105cd05a4784847c6d75413b2155c3dd3ed7",
+      "afterSha256": "884fdc6fcde519d3c96375b51d630f9ea26ffa3bfbed5502af6456d4f078e418"
+    }
+  ],
+  "normalization": "Trailing line whitespace and excess terminal blank lines only; counts and diagnostics retained."
 }

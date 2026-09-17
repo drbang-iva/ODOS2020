@@ -1,16 +1,16 @@
 {
-  "implementationHead": "592fa1f1",
+  "implementationHead": "aefb6dbfc4cc1b5a0df70e75ba1dd25d4b82e2e2",
   "checks": [
     {
       "command": "npm --prefix ui test",
-      "log": "full-ui-sealed.log",
-      "tests": 1728,
-      "pass": 1728,
+      "log": "full-ui-assessment-final.log",
+      "tests": 1734,
+      "pass": 1734,
       "fail": 0,
       "skip": 0,
       "todo": 0,
       "exitCode": 0,
-      "note": "Full run before moving unchanged W134 test from strict release registry to editor file; dedicated editor17/17 and strict T1\u2013T22 rechecked after move."
+      "note": "Full suite after canonical Clear, approved Deferred visibility and Assessment unscoped-index correction."
     },
     {
       "command": "CI MCP node test command with Python recursive expansion of the exact workflow globs",
@@ -46,43 +46,112 @@
     },
     {
       "command": "node mcp/scripts/check-r10-a3-release.mjs --strict",
-      "log": "release-strict-sealed.log",
+      "log": "release-strict-final.log",
       "exitCode": 0,
       "output": "R10 A3 release PASS: T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22"
     },
     {
       "command": "npm run preflight",
-      "log": "preflight-final.log",
+      "log": "preflight-current.log",
       "exitCode": 0,
       "warnings": 0,
       "hardBlocks": 0
     },
     {
       "command": "npm --prefix ui run build",
-      "log": "ui-build-sealed.log",
+      "log": "served-route/final-build-output.log",
       "exitCode": 0,
       "modules": 333
     },
     {
       "command": "npm run typecheck:scripts",
-      "log": "scripts-typecheck-harness.log",
+      "log": "scripts-typecheck-current.log",
       "exitCode": 0
     },
     {
       "command": "node --test scripts/r10-served-route/harness.test.mjs",
-      "log": "harness/final.tap",
+      "log": "harness/final-current.tap",
       "exitCode": 0,
-      "tests": 2,
-      "pass": 2,
+      "tests": 3,
+      "pass": 3,
       "fail": 0
     },
     {
       "command": "node --import tsx --test tests/r10A3OcularEditor.test.tsx (cwd ui)",
-      "log": "editor/label-placement-green.log",
+      "log": "editor/canonical-clear-green.log",
       "exitCode": 0,
-      "tests": 17,
-      "pass": 17,
-      "fail": 0
+      "tests": 23,
+      "pass": 23,
+      "fail": 0,
+      "note": "After six canonical Clear guards; later full UI1734includesall."
+    },
+    {
+      "command": "node --import tsx --test tests/r10DiagnosisWorkspace.test.tsx tests/diagnosisWorkspace.test.tsx (cwd ui)",
+      "log": "workspace-final.log",
+      "tests": 75,
+      "pass": 75,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0,
+      "exitCode": 0,
+      "note": "Both test files unchanged from a211b368."
+    },
+    {
+      "command": "npm --prefix mcp run build",
+      "log": "served-route/final-build-output.log",
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/r10A3OcularDoor.test.ts"
+      ],
+      "cwd": "mcp",
+      "log": "r10A3OcularDoor-final.log",
+      "exitCode": 0,
+      "tests": 62,
+      "pass": 62,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/r10A3DoorGuards.test.ts"
+      ],
+      "cwd": "mcp",
+      "log": "r10A3DoorGuards-final.log",
+      "exitCode": 0,
+      "tests": 14,
+      "pass": 14,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "tsx",
+        "--test",
+        "tests/r10A3ReleaseScenarios.test.ts"
+      ],
+      "cwd": "mcp",
+      "log": "r10A3ReleaseScenarios-final.log",
+      "exitCode": 0,
+      "tests": 16,
+      "pass": 16,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
     }
-  ]
+  ],
+  "scopedMcpCounts": "mcp-scoped-final-counts.json"
 }

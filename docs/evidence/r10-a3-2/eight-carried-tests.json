@@ -1,0 +1,55 @@
+{
+  "log": "full-ui-assessment-final.log",
+  "tests": [
+    {
+      "name": "W138 deferred locks loaded findings while the canonical server preserves their bytes",
+      "result": "PASS",
+      "line": 1586,
+      "output": "ok 256 - W138 deferred locks loaded findings while the canonical server preserves their bytes",
+      "originalName": "deferred and recorded ocular findings cannot coexist at the client-server boundary",
+      "mapping": "W138 / section13 Deferred ruling; exact changed assertions in custom-sections ledger"
+    },
+    {
+      "name": "fresh ocular-health history restores scoped diagnosis suggestions without a save",
+      "result": "PASS",
+      "line": 1760,
+      "output": "ok 285 - fresh ocular-health history restores scoped diagnosis suggestions without a save"
+    },
+    {
+      "name": "custom state writer preserves other-only notes for normal and abnormal findings",
+      "result": "PASS",
+      "line": 4478,
+      "output": "ok 717 - custom state writer preserves other-only notes for normal and abnormal findings"
+    },
+    {
+      "name": "abnormal custom state other-only value leaves the exact unformatted sentinel behind",
+      "result": "PASS",
+      "line": 4490,
+      "output": "ok 719 - abnormal custom state other-only value leaves the exact unformatted sentinel behind"
+    },
+    {
+      "name": "exercised EOM and custom-state writers declare every schema-blind component code",
+      "result": "PASS",
+      "line": 4520,
+      "output": "ok 724 - exercised EOM and custom-state writers declare every schema-blind component code"
+    },
+    {
+      "name": "SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler",
+      "result": "PASS",
+      "line": 6906,
+      "output": "ok 1107 - SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler"
+    },
+    {
+      "name": "count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree",
+      "result": "PASS",
+      "line": 3282,
+      "output": "ok 528 - count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree"
+    },
+    {
+      "name": "count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree",
+      "result": "PASS",
+      "line": 3288,
+      "output": "ok 529 - count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree"
+    }
+  ]
+}

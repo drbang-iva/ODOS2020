@@ -1,0 +1,1 @@
+{"mode":"undo-only","steps":[],"failure":"Expected values to be strictly equal:\n\n0 !== 2\n","screenshots":["/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/g-undo-control.png","/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-2/docs/evidence/r10-a3-2/served-route/undo-only-failure.png"]}
