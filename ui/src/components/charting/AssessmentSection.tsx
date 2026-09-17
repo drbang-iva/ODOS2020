@@ -210,7 +210,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     }
     setProvenanceLines(Object.fromEntries(loadedConditions.flatMap((condition) => {
       if (!condition.id) return [];
-      const lines = projection.findings
+      const lines = projection.searchIndex
         .filter((row) => row.status === "live" && row.presence !== "absent" &&
           row.homeSources.some((home) => home.condition === `Condition/${condition.id}` && home.sources.length > 0))
         .map((row) => [row.display, row.grade, row.laterality].filter(Boolean).join(" "));
