@@ -390,6 +390,8 @@ export function DiagnosisWorkspace({
 
   async function addDiagnosis(row: DiagnosisQuickListRow, laterality?: EyeChoice) {
     if (!findings?.encounterEditable || !findings.canWrite) return;
+    const supportEye = supportingEyeUnion(row.supportingFacts);
+    if (laterality && supportEye && laterality !== supportEye) return;
     const selectedMember = row.members?.find((member) => member.stableKey === row.selectedMemberKey);
     const resolvedRow = selectedMember ? memberDiagnosisRow(selectedMember) : row;
     if ((row.members || row.lateralityRequired) && !laterality || row.members && !selectedMember && !row.stageDeferred) { setPendingDiagnosis(row); return; }
@@ -644,7 +646,7 @@ export function DiagnosisWorkspace({
             <div className="odos-diagnosis-resolution-row">
               <span>Scope</span>
               <OdosChips
-                options={(["OD", "OS", "OU"] as const).map((eye) => ({ value: eye, label: eye }))}
+                options={(["OD", "OS", "OU"] as const).map((eye) => ({ value: eye, label: eye, disabled: Boolean(supportingEyeUnion(pendingDiagnosis.supportingFacts) && supportingEyeUnion(pendingDiagnosis.supportingFacts) !== eye) }))}
                 selected={[]}
                 onChange={(selected) => selected[0] && void addDiagnosis(pendingDiagnosis, selected[0])}
                 ariaLabel={`Scope for ${pendingDiagnosis.display}`}
@@ -1102,4 +1104,10 @@ function conditionEye(condition: Condition): "OD" | "OS" | "OU" | undefined {
   if (bodySite === "OD" || bodySite === "OS" || bodySite === "OU") return bodySite;
   const bucket = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value?.split("::").at(-1);
   return bucket === "right" ? "OD" : bucket === "left" ? "OS" : bucket === "bilateral" ? "OU" : undefined;
+}
+
+function supportingEyeUnion(supports: DiagnosisQuickListRow["supportingFacts"]): EyeChoice | undefined {
+  if (!supports?.length) return undefined;
+  const eyes = new Set(supports.map(support => support.key.eye));
+  return eyes.has("OD") && eyes.has("OS") ? "OU" : eyes.has("OD") ? "OD" : eyes.has("OS") ? "OS" : undefined;
 }

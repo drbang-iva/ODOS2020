@@ -1,3 +1,17 @@
+# R10 A2b.2 — round 2 fixback F11–F13
+
+**NOT EVALUATED · HELD OPEN · NEVER MERGE.** Codex GPT-6, high effort. Independent Opus verdict at b5376689 was NEEDS-WORK. This round merges both-eye suggestions per diagnosis, sends the merged supports, and restricts scope to the supports' eye union. The PR body receives the standalone Coded-by line; exact-head verification and bot states belong in the final handoff.
+
+Changed this round: DiagnosisFindingsTable.tsx, DiagnosisWorkspace.tsx; r10DiagnosisTable.test.tsx, r10DiagnosisWorkspace.test.tsx; evidence under this directory and PR body. No MCP or prohibited component change. Four new cases; no pre-existing assertion change. No new decision or medical-code binding.
+
+Full UI: **1685 total / 1681 pass / 0 fail / 0 skipped / 4 A3 TODO**. Affected suites: workspace 53/53; LinkL2 4/4; LinkL3 7/7; grouping 2/2; carry 15/15; demotion 11/11; R10 workspace 22/22; R10 table 24/24; surfaces 5 pass / 4 TODO. UI build exit 0; preflight exit 0 with 0 warnings/0 hard blocks; diff check clean. MCP suite was not rerun because no mcp/ file changed. A3 checker remains exit 1 expected.
+
+W88 red **1 pass / 1 fail** → green **2 / 0**; W89 red **0 / 2** → green **2 / 0**. W55–W64 re-demonstrated red/green and all 14 restored tests pass. [Round 2 sealed evidence](round2/README.md) contains the exact TAP/counts, mutation runner, source hashes and synthetic before/after capture. Two MCP/A3 bot threads remain open by ruling, CodeQL alerts unchanged, independent exact-head evaluation still required. No Docker started this round; temporary Vite capture servers stopped.
+
+---
+
+## Round 1 historical evidence
+
 # R10 A2b.2 — independent evaluation fixback
 
 **NOT EVALUATED · HELD OPEN · NEVER MERGE.** Codex GPT-6, high effort. The prior head 9f58d5fc received Opus NEEDS-WORK. This fixback addresses F1–F10; the new head requires independent re-evaluation.

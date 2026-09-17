@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: W88 one suggestion per diagnosis unions real per-eye views: OD+OS
+ok 1 - W88 one suggestion per diagnosis unions real per-eye views: OD+OS
+  ---
+  duration_ms: 9.101667
+  type: 'test'
+  ...
+# Subtest: W88 one suggestion per diagnosis unions real per-eye views: OD
+ok 2 - W88 one suggestion per diagnosis unions real per-eye views: OD
+  ---
+  duration_ms: 0.580167
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 194.123708

@@ -139,3 +139,18 @@ test("V13 tray shows only candidates supported by that finding row",()=>{
   assert.deepEqual(selected.map(([candidate,id])=>[candidate.diagnosisKey,id]),[["a","projection"],["b","projection"]]);
  }finally{view.unmount();}
 });
+
+for (const eyes of [["OD", "OS"], ["OD"]] as const) test(`W88 one suggestion per diagnosis unions real per-eye views: ${eyes.join('+')}`, () => {
+ const rows=eyes.map(eye=>row(eye,{homes:[]}));
+ const suggestions=Object.fromEntries(rows.map(r=>[r.eye,{findingInstanceId:`definition:["lens","${r.eye}"]`,linkable:false as const,candidates:[{diagnosisKey:"cataract",display:"Synthetic diagnosis",source:"mapping" as const,codingStatus:"provisional" as const,priority:false,linkable:false as const,supportingFacts:[{rowKey:r.rowKey,key:r.key!,baseline:r.baseline as any}]}]}]));
+ const selected:any[]=[];
+ const view=create(<UnassignedFindingsTray rows={rows} visitDiagnoses={[]} patientReference="Patient/p" disabled={false} suggestionsByFinding={suggestions} onSuggest={(candidate,id)=>selected.push({candidate,id})} onMutate={()=>undefined}/>);
+ try {
+  const buttons=view.root.findAllByProps({className:"odos-unassigned-finding-suggestion"});
+  assert.equal(buttons.length,1);assert.equal(Boolean(buttons[0].props.disabled),false);
+  act(()=>buttons[0].props.onClick());
+  assert.equal(selected[0].id,suggestions[eyes[0]].findingInstanceId);
+  assert.deepEqual(selected[0].candidate.supportingFacts.map((s:any)=>s.key.eye),eyes);
+  assert.equal(new Set(selected[0].candidate.supportingFacts.map((s:any)=>s.rowKey)).size,eyes.length);
+ } finally {view.unmount();}
+});

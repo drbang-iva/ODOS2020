@@ -1,0 +1,38 @@
+{
+  "W88": {
+    "red": {
+      "tests": 2,
+      "pass": 1,
+      "fail": 1,
+      "skipped": 0,
+      "todo": 0,
+      "exit": 1
+    },
+    "green": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0,
+      "exit": 0
+    }
+  },
+  "W89": {
+    "red": {
+      "tests": 2,
+      "pass": 0,
+      "fail": 2,
+      "skipped": 0,
+      "todo": 0,
+      "exit": 1
+    },
+    "green": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0,
+      "exit": 0
+    }
+  }
+}

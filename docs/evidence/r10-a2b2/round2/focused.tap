@@ -1,0 +1,286 @@
+TAP version 13
+# Subtest: W9 OU click sends one command with two independent canonical baselines
+ok 1 - W9 OU click sends one command with two independent canonical baselines
+  ---
+  duration_ms: 11.956625
+  type: 'test'
+  ...
+# Subtest: W48 pre-rebuild table disables every control and shows the banner
+ok 2 - W48 pre-rebuild table disables every control and shows the banner
+  ---
+  duration_ms: 0.8345
+  type: 'test'
+  ...
+# Subtest: W50 grouped OU to OD retires only OS with explicit from and to
+ok 3 - W50 grouped OU to OD retires only OS with explicit from and to
+  ---
+  duration_ms: 0.931625
+  type: 'test'
+  ...
+# Subtest: grouping refuses differing presence qualifiers or homes
+ok 4 - grouping refuses differing presence qualifiers or homes
+  ---
+  duration_ms: 0.18625
+  type: 'test'
+  ...
+# Subtest: grade preserves all qualifiers and homes and does not require diagnosis write permission
+ok 5 - grade preserves all qualifiers and homes and does not require diagnosis write permission
+  ---
+  duration_ms: 0.906583
+  type: 'test'
+  ...
+# Subtest: offered presence asserts both eyes using absent baselines and selected diagnosis
+ok 6 - offered presence asserts both eyes using absent baselines and selected diagnosis
+  ---
+  duration_ms: 1.309292
+  type: 'test'
+  ...
+# Subtest: search resolves carried current facts and reasserts instead of replacing homes
+ok 7 - search resolves carried current facts and reasserts instead of replacing homes
+  ---
+  duration_ms: 1.766917
+  type: 'test'
+  ...
+# Subtest: tray assigns with move and records standalone with per-eye targets
+ok 8 - tray assigns with move and records standalone with per-eye targets
+  ---
+  duration_ms: 0.716667
+  type: 'test'
+  ...
+# Subtest: row conflict and signed status disable actions with plain-language reasons
+ok 9 - row conflict and signed status disable actions with plain-language reasons
+  ---
+  duration_ms: 1.302292
+  type: 'test'
+  ...
+# Subtest: transport preserves non-2xx result bodies and status; load failures stay unavailable
+ok 10 - transport preserves non-2xx result bodies and status; load failures stay unavailable
+  ---
+  duration_ms: 8.009667
+  type: 'test'
+  ...
+# Subtest: W53 repair calls audit-repair with fresh commandId and patientReference
+ok 11 - W53 repair calls audit-repair with fresh commandId and patientReference
+  ---
+  duration_ms: 0.207833
+  type: 'test'
+  ...
+# Subtest: W46 confirmed partial 409 refreshes and dispatches; unconfirmed 502 retains exact retry
+ok 12 - W46 confirmed partial 409 refreshes and dispatches; unconfirmed 502 retains exact retry
+  ---
+  duration_ms: 0.137209
+  type: 'test'
+  ...
+# Subtest: UNKNOWN offered finding requires explicit eye and resolves canonical search baseline
+ok 13 - UNKNOWN offered finding requires explicit eye and resolves canonical search baseline
+  ---
+  duration_ms: 1.668083
+  type: 'test'
+  ...
+# Subtest: adding an eye revives its retired canonical owner without replacing its identity
+ok 14 - adding an eye revives its retired canonical owner without replacing its identity
+  ---
+  duration_ms: 0.685209
+  type: 'test'
+  ...
+# Subtest: assert retains only current live diagnosis homes and includes selected diagnosis
+ok 15 - assert retains only current live diagnosis homes and includes selected diagnosis
+  ---
+  duration_ms: 0.470375
+  type: 'test'
+  ...
+# Subtest: shared outcomes distinguish complete, audit debt, unavailable, precondition, and refused
+ok 16 - shared outcomes distinguish complete, audit debt, unavailable, precondition, and refused
+  ---
+  duration_ms: 0.110833
+  type: 'test'
+  ...
+# Subtest: W58 search on carried live absent fact asserts present
+ok 17 - W58 search on carried live absent fact asserts present
+  ---
+  duration_ms: 2.317
+  type: 'test'
+  ...
+# Subtest: W61 tray move replaces a non-visit home with selected X
+ok 18 - W61 tray move replaces a non-visit home with selected X
+  ---
+  duration_ms: 0.330708
+  type: 'test'
+  ...
+# Subtest: W62 tray disables Assign and standalone for signed row
+ok 19 - W62 tray disables Assign and standalone for signed row
+  ---
+  duration_ms: 0.175917
+  type: 'test'
+  ...
+# Subtest: W62 tray disables Assign and standalone for conflict row
+ok 20 - W62 tray disables Assign and standalone for conflict row
+  ---
+  duration_ms: 0.0975
+  type: 'test'
+  ...
+# Subtest: W64 conflict row replaces offered and choose-presence labels
+ok 21 - W64 conflict row replaces offered and choose-presence labels
+  ---
+  duration_ms: 0.243166
+  type: 'test'
+  ...
+# Subtest: V13 tray shows only candidates supported by that finding row
+ok 22 - V13 tray shows only candidates supported by that finding row
+  ---
+  duration_ms: 0.616042
+  type: 'test'
+  ...
+# Subtest: W88 one suggestion per diagnosis unions real per-eye views: OD+OS
+ok 23 - W88 one suggestion per diagnosis unions real per-eye views: OD+OS
+  ---
+  duration_ms: 0.337875
+  type: 'test'
+  ...
+# Subtest: W88 one suggestion per diagnosis unions real per-eye views: OD
+ok 24 - W88 one suggestion per diagnosis unions real per-eye views: OD
+  ---
+  duration_ms: 0.135625
+  type: 'test'
+  ...
+# Subtest: W3 Retry resends identical command
+ok 25 - W3 Retry resends identical command
+  ---
+  duration_ms: 45.277458
+  type: 'test'
+  ...
+# Subtest: W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+ok 26 - W46 confirmed write on 409 emits event; W47 kept choice uses new command and baseline
+  ---
+  duration_ms: 23.525208
+  type: 'test'
+  ...
+# Subtest: W37 existing diagnosis suggestion links without pick
+ok 27 - W37 existing diagnosis suggestion links without pick
+  ---
+  duration_ms: 11.401458
+  type: 'test'
+  ...
+# Subtest: W36 Finish linking repeats only link
+ok 28 - W36 Finish linking repeats only link
+  ---
+  duration_ms: 20.704041
+  type: 'test'
+  ...
+# Subtest: unconfirmed pick never automatically repeats
+ok 29 - unconfirmed pick never automatically repeats
+  ---
+  duration_ms: 4.8735
+  type: 'test'
+  ...
+# Subtest: W52 origin comes from homeSources despite obsolete Condition evidence
+ok 30 - W52 origin comes from homeSources despite obsolete Condition evidence
+  ---
+  duration_ms: 2.822459
+  type: 'test'
+  ...
+# Subtest: W53 Repair sends fresh UUID to audit repair
+ok 31 - W53 Repair sends fresh UUID to audit repair
+  ---
+  duration_ms: 11.2635
+  type: 'test'
+  ...
+# Subtest: W49 workspace renders both unavailable states
+ok 32 - W49 workspace renders both unavailable states
+  ---
+  duration_ms: 2.532042
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope
+ok 33 - pick then bodySite then link ordering: scope
+  ---
+  duration_ms: 20.305709
+  type: 'test'
+  ...
+# Subtest: pick then bodySite then link ordering: scope-fail
+ok 34 - pick then bodySite then link ordering: scope-fail
+  ---
+  duration_ms: 13.841
+  type: 'test'
+  ...
+# Subtest: staff existing-diagnosis support suggestion links without Condition permission
+ok 35 - staff existing-diagnosis support suggestion links without Condition permission
+  ---
+  duration_ms: 9.522
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+ok 36 - W55 kept eye choice uses current live rows and handles builder errors: eye-conflict
+  ---
+  duration_ms: 14.638375
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+ok 37 - W55 kept eye choice uses current live rows and handles builder errors: eye-invalid
+  ---
+  duration_ms: 14.395875
+  type: 'test'
+  ...
+# Subtest: W55 kept eye choice uses current live rows and handles builder errors: eye-different
+ok 38 - W55 kept eye choice uses current live rows and handles builder errors: eye-different
+  ---
+  duration_ms: 13.831375
+  type: 'test'
+  ...
+# Subtest: W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+ok 39 - W56 unconfirmed outcome with confirmed clinical write on 502 refreshes and dispatches
+  ---
+  duration_ms: 9.645541
+  type: 'test'
+  ...
+# Subtest: W57 thrown PUT fetch offers Retry with the identical body
+ok 40 - W57 thrown PUT fetch offers Retry with the identical body
+  ---
+  duration_ms: 10.905333
+  type: 'test'
+  ...
+# Subtest: W59 pre-rebuild workspace disables diagnosis additions scope and rank
+ok 41 - W59 pre-rebuild workspace disables diagnosis additions scope and rank
+  ---
+  duration_ms: 5.257125
+  type: 'test'
+  ...
+# Subtest: W60 linking a finding homed to B preserves B and adds A
+ok 42 - W60 linking a finding homed to B preserves B and adds A
+  ---
+  duration_ms: 9.153375
+  type: 'test'
+  ...
+# Subtest: W63 applied pick dispatches findings changed without a subsequent link
+ok 43 - W63 applied pick dispatches findings changed without a subsequent link
+  ---
+  duration_ms: 10.301542
+  type: 'test'
+  ...
+# Subtest: W55 kept shrink choice retires the current presence with its fresh baseline
+ok 44 - W55 kept shrink choice retires the current presence with its fresh baseline
+  ---
+  duration_ms: 15.228792
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+ok 45 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=true
+  ---
+  duration_ms: 18.808666
+  type: 'test'
+  ...
+# Subtest: W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+ok 46 - W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=false
+  ---
+  duration_ms: 17.241375
+  type: 'test'
+  ...
+1..46
+# tests 46
+# suites 0
+# pass 46
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 555.738041

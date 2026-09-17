@@ -41,3 +41,11 @@ Exact evaluator mutations and executable runner: [fixback/README.md](fixback/REA
 | W64 | 0 pass / 1 fail | 1 pass / 0 fail |
 
 PR-Agent V13 / W-d / W-e support association guard: old tray selection/rendering **0 pass / 1 fail**, restored **1 pass / 0 fail**; fixback/V13-tray-red.tap and V13-tray-green.tap.
+
+## Round 2 F11–F13
+
+- W88: revert only the per-diagnosis merge to the b5376689 per-candidate flat-map. Real two-view OU shape fails the one-button assertion; single-eye case stays green. Red **1 pass / 1 fail** → restored **2 pass / 0 fail**. First contributing id and OD+OS support union are asserted.
+- W89: remove mismatched-scope refusal and enable all eye choices. Red **0 pass / 2 fail** → restored **2 pass / 0 fail**. One case checks DOM disabled choices; the other calls the disabled handlers directly and proves the request boundary refuses them. Both assert one OU request with both supports after valid selection.
+- W55–W64 re-demonstrated red/green, with identical counts to round 1; all 14 selected tests green after restoration.
+- Runner: `round2/run-guards.py`; exact outputs: `round2/W88-*.tap`, `round2/W89-*.tap`, `round2/counts.json`; fresh prior guard outputs: `round2/W55-*.tap` through `round2/W64-*.tap`, `round2/prior-guard-counts.json`.
+- F13 is checked against the fetched PR body after publication: exactly one standalone Coded-by line outside fenced code and HTML comments.

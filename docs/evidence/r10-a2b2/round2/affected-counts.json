@@ -1,0 +1,74 @@
+{
+  "diagnosisWorkspace": {
+    "tests": 53,
+    "pass": 53,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "diagnosisLinkL2": {
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "diagnosisLinkL3": {
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "diagnosisFindingGrouping": {
+    "tests": 2,
+    "pass": 2,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "diagnosisCarryForward": {
+    "tests": 15,
+    "pass": 15,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "diagnosisDemotionImpact": {
+    "tests": 11,
+    "pass": 11,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "r10DiagnosisWorkspace": {
+    "tests": 22,
+    "pass": 22,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "r10DiagnosisTable": {
+    "tests": 24,
+    "pass": 24,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 0
+  },
+  "r10DiagnosisSurfaces": {
+    "tests": 9,
+    "pass": 5,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 4,
+    "exit": 0
+  }
+}

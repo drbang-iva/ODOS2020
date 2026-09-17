@@ -40,6 +40,7 @@ async function mount(mode='normal', configure?: (payload:any,row:any)=>void) {
   }
   if(url.includes('/findings')){reads++;return mode==='unavailable'?Response.json({result:'unavailable',kind:'upstream',error:'offline'},{status:502}):Response.json(payload);}
   if(url.includes('diagnosis-picks'))return mode==='unconfirmed'?Response.json({result:'pick',conditionStep:'unconfirmed',link:'pending',error:'lost'},{status:502}):Response.json({result:'pick',conditionStep:'applied',link:'pending',condition:{...condition,id:'new'},strandedCharges:[],unaffectedChargeCount:0,strandedChargesComputed:true});
+  if(url.includes('diagnosis-candidates') && mode==='scope-ou')return Response.json({findings:payload.unassigned.map(r=>({findingInstanceId:`definition:[synthetic,${r.eye}]`,contributors:r.contributors,candidates:[{diagnosisKey:'synthetic-dx',display:'Suggested diagnosis',source:'mapping',codingStatus:'provisional',supportingFacts:[{rowKey:r.rowKey,key:r.key,baseline:r.baseline}]}]}))});
   if(url.includes('diagnosis-candidates'))return mode==='unavailable'?Response.json({error:'offline'},{status:502}):Response.json({findings:[{findingInstanceId:'projection-od',contributors:row.contributors,candidates:[{diagnosisKey:'synthetic-dx',display:'Suggested diagnosis',source:'mapping',codingStatus:'provisional',supportingFacts:[{rowKey:row.rowKey,key,baseline}]}]}]});
   if(url.includes('diagnosis-quick-list'))return Response.json({canWrite:true,canWriteDiagnosis:mode!=='staff-existing',pinnedDiagnosisKeys:[],diagnoses:mode==='prebuild'?[{stableKey:'common',display:'Common synthetic',lateralityRequired:false,pinned:false,tallyCount:0}]:[],catalog:[{stableKey:'synthetic-dx',display:'Suggested diagnosis',lateralityRequired:mode.startsWith('scope'),icd10:{pattern:{right:'SYNTHETIC'}},pinned:false,tallyCount:0}]});
   if(url.includes('/fhir/R4/Encounter/e1'))return Response.json({resourceType:'Encounter',id:'e1',status:'in-progress',class:{code:'AMB'},diagnosis:[{condition:{reference:'Condition/a'},rank:1}]});
@@ -130,4 +131,24 @@ test('W55 kept shrink choice retires the current presence with its fresh baselin
   assert.equal(next.targets.length,1);assert.equal(next.targets[0].key.eye,'OS');assert.equal(next.targets[0].baseline.versionId,'2');
   assert.deepEqual(next.targets[0].state,{status:'retired',presence:'absent',qualifiers:{grade:'2'},homes:['Condition/a']});
  }finally{m.close();}
+});
+
+for (const checkDisabled of [true,false]) test(`W89 suggested OU pick only accepts the supporting eye union and sends both supports: disabled=${checkDisabled}`,async()=>{
+ const m=await mount('scope-ou',(payload,row)=>{
+  row.homes=[];row.homeSources=[];
+  const os={...row,rowKey:'row-os',eye:'OS',laterality:'OS',key:{...row.key,eye:'OS'},baseline:{...row.baseline,reference:'Observation/fact-os'},contributors:[{reference:'Observation/fact-os',versionId:'1',kind:'canonical'}]};
+  payload.findings=payload.searchIndex=payload.unassigned=[row,os];
+ });
+ try {
+  await m.click('Add suggested diagnosis Suggested diagnosis');
+  const scope=m.renderer.root.findByProps({'aria-label':'Scope for Suggested diagnosis'});
+  const buttons=scope.findAllByType('button');
+  if(checkDisabled) assert.deepEqual(buttons.map((b:any)=>[text(b),Boolean(b.props.disabled)]),[['OD',true],['OS',true],['OU',false]]);
+  for(const eye of ['OD','OS'])await m.click(eye);
+  assert.equal(m.calls.filter(c=>c.url.includes('diagnosis-picks')).length,0);
+  await m.click('OU');
+  const picks=m.calls.filter(c=>c.url.includes('diagnosis-picks'));
+  assert.equal(picks.length,1);assert.equal(picks[0].body.laterality,'OU');
+  assert.deepEqual(picks[0].body.supportingFacts,m.payload.unassigned.map(r=>({key:r.key,baseline:r.baseline})));
+ } finally {m.close();}
 });
