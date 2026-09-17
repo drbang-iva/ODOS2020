@@ -1229,7 +1229,7 @@ test("V18 V22 ocular-health save asserts findings and clearing the last positive
   }
 });
 
-test("ocular-health deferral controls come only from each definition's allowDeferred flag", () => {
+test("W138 canonical ocular panels expose Deferred independently of the legacy definition flag", () => {
   const deferredDefinition = syntheticDeferredOcularDefinition();
   const requiredDefinition = {
     ...syntheticDeferredOcularDefinition(),
@@ -1244,7 +1244,7 @@ test("ocular-health deferral controls come only from each definition's allowDefe
     encounterReference="Encounter/e-deferred-scope"
     onSaved={() => undefined}
   />);
-  assert.equal((html.match(/Not performed \/ deferred/g) ?? []).length, 2);
+  assert.equal((html.match(/Not performed \/ deferred/g) ?? []).length, 4);
 });
 
 test("W138 deferred locks loaded findings while the canonical server preserves their bytes", async () => {

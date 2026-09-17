@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {loadVerifiedOperatorFhirClient} from '../operator-identity.ts';
+import {canonicalFact,keyFor} from '../../mcp/tests/fixtures/r10/writer-harness.ts';
+import {comp} from '../../mcp/tests/fixtures/r10/factories.ts';
+import {currentFindingIdentifier} from '../../mcp/src/clinical-graph/current-finding-identity.ts';
+import {FhirEncounterUndoLedgerStore} from '../../mcp/src/clinical-graph/encounter-undo-ledger-store.ts';
+const root=resolve(new URL('../..',import.meta.url).pathname),runtime=resolve(process.env.R10_RUNTIME??join(root,'.odos/r10-a3-2-served'));
+const read=name=>JSON.parse(readFileSync(join(runtime,name),'utf8'));
+const manifest=read('manifest.json'),credentials=read('credentials.json'),main=read('fixture.json');assert.equal(manifest.project,'odos-r10-a3-2-served');
+const evidence=join(root,'docs/evidence/r10-a3-2/undo-superseded');mkdirSync(evidence,{recursive:true});
+const save=(name,value)=>writeFileSync(join(evidence,name),JSON.stringify(value,null,2)+'\n');
+const operator=await loadVerifiedOperatorFhirClient({baseUrl:`http://127.0.0.1:${manifest.ports.medplum}`,projectId:credentials.projectId,postgresUrl:`postgresql://medplum:medplum@127.0.0.1:${manifest.ports.postgres}/medplum`,credentialPath:join(runtime,'operator.env'),statePath:join(runtime,'operator-state.json')});
+const encounter=await operator.fhir.create({resourceType:'Encounter',status:'in-progress',class:{code:'AMB'},subject:{reference:main.patientReference},period:{start:new Date().toISOString()},participant:[{individual:{reference:credentials.provider.practitionerReference}}]});
+const encounterReference=`Encounter/${encounter.id}`,key={...keyFor(),patientId:main.patientReference.slice(8),encounterId:encounter.id},resource=canonicalFact();delete resource.id;delete resource.meta;resource.subject={reference:main.patientReference};resource.encounter={reference:encounterReference};resource.identifier=[currentFindingIdentifier(key)];resource.component=[comp('R10_CURRENT_META',JSON.stringify(key))];const fact=await operator.fhir.create(resource),reference=`Observation/${fact.id}`;
+const result={startedAt:new Date().toISOString(),build:read('build.json'),encounterReference,reference,screenshots:[],errors:[]};
+const require=createRequire(join(root,'ui/package.json')),{chromium}=require('playwright-core');
+const browser=await chromium.launch({executablePath:process.env.R10_CHROME??'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true}),base=`http://127.0.0.1:${manifest.ports.frontdoor}`,path=`/clinical-graph/encounters/${encounter.id}`;let page;
+const login=async()=>{const context=await browser.newContext({viewport:{width:1600,height:1100}}),p=await context.newPage();p.setDefaultTimeout(20000);p.on('pageerror',e=>result.errors.push(e.message));await p.goto(base+'/clinic');await p.getByPlaceholder('Email address').fill(credentials.provider.email);await p.getByPlaceholder('Password',{exact:true}).fill(credentials.provider.password);await p.getByRole('button',{name:'Enter',exact:true}).click();await p.getByPlaceholder('Password',{exact:true}).waitFor({state:'detached'});return p;};
+const api=async(p,url,method='GET',body)=>p.evaluate(async({url,method,body})=>{const session=JSON.parse(sessionStorage.getItem('odos.session.v1')),r=await fetch(url,{method,headers:{Authorization:`Bearer ${session.accessToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};},{url,method,body});
+const shot=async name=>{assert.equal(await page.locator('input[type=password]').count(),0);const file=join(evidence,name+'.png');await page.screenshot({path:file,fullPage:true});result.screenshots.push(file);save(name+'-text.json',await page.locator('body').innerText());};
+const stored=async()=>({fact:await operator.fhir.read('Observation',fact.id),encounter:await operator.fhir.read('Encounter',encounter.id),ledger:(await new FhirEncounterUndoLedgerStore(operator.fhir).readRow(encounter.id)).resource,provenance:((await operator.fhir.search('Provenance',{target:reference,_count:'100'})).entry??[]).map(e=>e.resource).sort((a,b)=>a.id.localeCompare(b.id))});
+try{
+ page=await login();const other=await login();const html=await(await fetch(base)).text(),asset=html.match(/src="([^\"]+\.js)"/)?.[1];assert.ok(asset);result.servedBundle={path:asset,sha256:createHash('sha256').update(Buffer.from(await(await fetch(new URL(asset,base))).arrayBuffer())).digest('hex')};
+ const initial=await api(other,path+'/void','POST',{scope:'encounter',label:'Synthetic chart'});assert.equal(initial.status,200,JSON.stringify(initial.body));const first=initial.body;assert.ok(first.voidActionId);
+ await page.goto(`${base}/clinic?patientId=${main.patientReference.slice(8)}&encounterId=${encounter.id}`);await page.waitForLoadState('networkidle');const strip=page.locator('[data-undo-scope="encounter"]').filter({has:page.getByRole('button',{name:'Undo',exact:true})}).first();await strip.waitFor();await strip.scrollIntoViewIfNeeded();await shot('displayed-first-undo');
+ const slot=first.ledger.encounter;assert.equal(slot.voidActionId,first.voidActionId);result.displayedVoid={voidActionId:first.voidActionId,slot};
+ const undo=await api(other,path+'/void/undo','POST',{scope:'encounter',voidActionId:first.voidActionId});assert.equal(undo.status,200,JSON.stringify(undo.body));
+ const second=await api(other,path+'/void','POST',{scope:'encounter',label:'Synthetic chart'});assert.equal(second.status,200,JSON.stringify(second.body));assert.ok(second.body.voidActionId);assert.notEqual(second.body.voidActionId,first.voidActionId);result.otherContext={undo,second};
+ const before=await stored();const staleReply=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname===path+'/void/undo');await strip.getByRole('button',{name:'Undo',exact:true}).click();const refused=await staleReply;result.request=JSON.parse(refused.request().postData());assert.equal(result.request.voidActionId,first.voidActionId);assert.equal(refused.status(),409);result.refusal=await refused.json();assert.equal(result.refusal.code,'undo-superseded');
+ await page.getByText('This undo no longer applies',{exact:true}).waitFor();const failedStrip=page.locator('[data-undo-scope="encounter"]').filter({hasText:'This undo no longer applies'});assert.equal(await failedStrip.getByRole('button').count(),0);assert.equal(await page.getByRole('button',{name:'Retry',exact:true}).count(),0);await failedStrip.scrollIntoViewIfNeeded();await shot('superseded-no-retry');await page.setViewportSize({width:2400,height:1200});await page.evaluate(()=>window.scrollTo(0,0));await shot('superseded-no-retry-wide');
+ const after=await stored();assert.deepEqual(after,before,'Stale Undo writes no fact, Encounter, ledger, or Provenance');result.before=before;result.after=after;result.noUnintendedWrites=true;result.complete=true;
+}catch(error){result.failure={message:error.message,stack:error.stack};process.exitCode=1;if(page&&await page.locator('input[type=password]').count()===0)await shot('failure');}
+finally{result.finishedAt=new Date().toISOString();save('result.json',result);writeFileSync(join(evidence,'exit-code.txt'),String(process.exitCode??0)+'\n');await browser.close();}
+console.log(JSON.stringify({complete:result.complete,failure:result.failure?.message,displayedAction:result.displayedVoid?.voidActionId,supersedingAction:result.otherContext?.second.body.voidActionId,screenshots:result.screenshots}));
