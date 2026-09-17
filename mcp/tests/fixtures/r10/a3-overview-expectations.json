@@ -1,0 +1,589 @@
+{
+  "3": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/lens-abnormal",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:lens",
+        "sectionKey": "ocular-health:anterior:lens",
+        "display": "Lens",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade",
+              "value": {
+                "kind": "code",
+                "code": "2+",
+                "display": "2+"
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc::grade",
+              "value": {
+                "kind": "code",
+                "code": "3+",
+                "display": "3+"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Clear",
+        "sheetFindings": [
+          {
+            "display": "nuclear sclerosis",
+            "qualifiers": [
+              "2+"
+            ]
+          },
+          {
+            "display": "posterior subcapsular (PSC)",
+            "qualifiers": [
+              "3+"
+            ]
+          }
+        ]
+      },
+      {
+        "observationReference": "Observation/lens-normal",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:lens",
+        "sectionKey": "ocular-health:anterior:lens",
+        "display": "Lens",
+        "laterality": "OS",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "normal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": []
+        },
+        "normalLabel": "Clear"
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "4": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/lens-brunescent-alone",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:lens",
+        "sectionKey": "ocular-health:anterior:lens",
+        "display": "Lens",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+              "value": {
+                "kind": "code",
+                "code": "4+ (dark brown/black; brunescent)",
+                "display": "4+ (dark brown/black; brunescent)",
+                "text": "4+ (dark brown/black; brunescent)"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Clear",
+        "sheetFindings": [
+          {
+            "display": "nuclear sclerosis",
+            "qualifiers": [
+              "4+ (dark brown/black; brunescent)"
+            ]
+          }
+        ]
+      },
+      {
+        "observationReference": "Observation/lens-brunescent-merged",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:lens",
+        "sectionKey": "ocular-health:anterior:lens",
+        "display": "Lens",
+        "laterality": "OS",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "display": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+              "display": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+              "value": {
+                "kind": "code",
+                "code": "4+ (dark brown/black; brunescent)",
+                "display": "4+ (dark brown/black; brunescent)",
+                "text": "4+ (dark brown/black; brunescent)"
+              }
+            },
+            {
+              "code": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade",
+              "display": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade",
+              "value": {
+                "kind": "code",
+                "code": "3+",
+                "display": "3+",
+                "text": "3+"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Clear",
+        "sheetFindings": [
+          {
+            "display": "nuclear sclerosis",
+            "qualifiers": [
+              "3+",
+              "4+ (dark brown/black; brunescent)"
+            ]
+          }
+        ]
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "5": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/legacy-horseshoe",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:posterior:periphery",
+        "sectionKey": "ocular-health:posterior:periphery",
+        "display": "Periphery",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+              "value": {
+                "kind": "code",
+                "code": "horseshoe",
+                "display": "horseshoe",
+                "text": "horseshoe"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Flat and attached",
+        "sheetFindings": [
+          {
+            "display": "retinal tear",
+            "qualifiers": [
+              "Horseshoe (flap)"
+            ]
+          }
+        ]
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "6": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/legacy-horseshoe",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:posterior:periphery",
+        "sectionKey": "ocular-health:posterior:periphery",
+        "display": "Periphery",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+              "value": {
+                "kind": "code",
+                "code": "horseshoe",
+                "display": "horseshoe",
+                "text": "horseshoe"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Flat and attached",
+        "sheetFindings": [
+          {
+            "display": "retinal tear",
+            "qualifiers": [
+              "horseshoe"
+            ]
+          }
+        ]
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "7": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/iron-line-fleischers",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:cornea",
+        "sectionKey": "ocular-health:anterior:cornea",
+        "display": "Cornea",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            },
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line::subtype",
+              "value": {
+                "kind": "code",
+                "code": "fleischers",
+                "display": "Fleischer's"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Clear and compact",
+        "sheetFindings": [
+          {
+            "display": "iron line",
+            "qualifiers": [
+              "Fleischer's"
+            ]
+          }
+        ]
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "8": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/legacy-iron-line",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:cornea",
+        "sectionKey": "ocular-health:anterior:cornea",
+        "display": "Cornea",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            }
+          ]
+        },
+        "normalLabel": "Clear and compact",
+        "sheetFindings": [
+          {
+            "display": "iron line",
+            "qualifiers": []
+          }
+        ]
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "9": {
+    "encounterReference": "Encounter/e1",
+    "patientReference": "Patient/p1",
+    "findings": [
+      {
+        "observationReference": "Observation/legacy-macular-hole",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:posterior:macula",
+        "sectionKey": "ocular-health:posterior:macula",
+        "display": "Macula",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-08-16T12:00:00.000Z",
+          "components": [
+            {
+              "code": "OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole",
+              "display": "OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole",
+              "value": {
+                "kind": "boolean",
+                "value": true
+              }
+            }
+          ]
+        },
+        "normalLabel": "Healthy foveal reflex",
+        "sheetFindings": [
+          {
+            "display": "macular hole",
+            "qualifiers": []
+          }
+        ]
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  },
+  "66": {
+    "encounterReference": "Encounter/exam-overview-interpretation",
+    "patientReference": "Patient/exam-overview-interpretation",
+    "findings": [
+      {
+        "observationReference": "Observation/finding-ocular-health-anterior-lids-lashes-od-2026-07-10t18-00-00-000z",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:lids-lashes",
+        "sectionKey": "ocular-health:anterior:lids-lashes",
+        "display": "Lids & Lashes",
+        "laterality": "OD",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "abnormal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-07-10T18:00:00.000Z",
+          "components": [
+            {
+              "code": "EXAM_STATE",
+              "display": "Exam state",
+              "value": {
+                "kind": "string",
+                "value": "abnormal"
+              }
+            }
+          ]
+        },
+        "normalLabel": "Normal lid position and lashes"
+      },
+      {
+        "observationReference": "Observation/finding-ocular-health-anterior-lids-lashes-os-2026-07-10t18-00-00-000z",
+        "creditsCompleteness": false,
+        "findingKey": "ocular-health:anterior:lids-lashes",
+        "sectionKey": "ocular-health:anterior:lids-lashes",
+        "display": "Lids & Lashes",
+        "laterality": "OS",
+        "examination": {
+          "state": "examined",
+          "sourceEncoding": "observation"
+        },
+        "interpretation": "normal",
+        "provenance": {
+          "state": "current"
+        },
+        "current": {
+          "recordedAt": "2026-07-10T18:00:00.000Z",
+          "components": [
+            {
+              "code": "EXAM_STATE",
+              "display": "Exam state",
+              "value": {
+                "kind": "string",
+                "value": "normal"
+              }
+            },
+            {
+              "code": "NORMAL_TEMPLATE",
+              "display": "Normal template",
+              "value": {
+                "kind": "string",
+                "value": "Normal lid position and lashes; no MGD, blepharitis, or lesions."
+              }
+            }
+          ]
+        },
+        "normalLabel": "Normal lid position and lashes"
+      }
+    ],
+    "sections": [],
+    "completeness": {
+      "status": "unconfigured",
+      "requiredSectionCount": 0,
+      "resolvedSectionCount": 0,
+      "trace": [],
+      "documentationIssues": []
+    }
+  }
+}

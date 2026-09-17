@@ -1,0 +1,229 @@
+TAP version 13
+# Subtest: FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+ok 1 - FHIR read grant scan collects every literal FHIR receiver and requires the search-contract marker for computed searches
+  ---
+  duration_ms: 382.906916
+  type: 'test'
+  ...
+# Subtest: FHIR operation scan maps every write interaction to its required Medplum grant
+ok 2 - FHIR operation scan maps every write interaction to its required Medplum grant
+  ---
+  duration_ms: 1.017416
+  type: 'test'
+  ...
+# Subtest: the PR 397 tally create fails grant comparison when its exact profile fence is absent
+ok 3 - the PR 397 tally create fails grant comparison when its exact profile fence is absent
+  ---
+  duration_ms: 0.703584
+  type: 'test'
+  ...
+# Subtest: the exact write ratchet rejects a stale entry instead of silently forgiving it
+ok 4 - the exact write ratchet rejects a stale entry instead of silently forgiving it
+  ---
+  duration_ms: 0.168834
+  type: 'test'
+  ...
+# Subtest: the service-identity write inventory rejects an exact ui/src relocation
+ok 5 - the service-identity write inventory rejects an exact ui/src relocation
+  ---
+  duration_ms: 0.140667
+  type: 'test'
+  ...
+# Subtest: FHIR read grant comparison reports the exact sorted subset gap
+ok 6 - FHIR read grant comparison reports the exact sorted subset gap
+  ---
+  duration_ms: 0.086834
+  type: 'test'
+  ...
+# Subtest: an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+ok 7 - an explicitly reasoned non-FHIR literal call site does not manufacture a grant demand
+  ---
+  duration_ms: 0.275167
+  type: 'test'
+  ...
+# Subtest: live FHIR read grant check covers all four chart resources through compiled role policies
+not ok 8 - live FHIR read grant check covers all four chart resources through compiled role policies
+  ---
+  duration_ms: 913.618041
+  type: 'test'
+  location: '<worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:7617'
+  failureType: 'testCodeFailure'
+  error: 'Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription — MCP process service client.. Remove or update the entry explicitly.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    <anonymous> (<worktree>/scripts/fhir-read-grant-check.ts:429:13)
+    Array.map (<anonymous>)
+    matchExactWriteInventory (<worktree>/scripts/fhir-read-grant-check.ts:426:29)
+    runFhirReadGrantCheck (<worktree>/scripts/fhir-read-grant-check.ts:333:41)
+    TestContext.<anonymous> (<worktree>/tests/preflight/fhir-read-grant-check.test.ts:289:18)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: FHIR read grant CLI passes only with full coverage and always prints its limits
+not ok 9 - FHIR read grant CLI passes only with full coverage and always prints its limits
+  ---
+  duration_ms: 1376.142958
+  type: 'test'
+  location: '<worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:11044'
+  failureType: 'testCodeFailure'
+  error: |-
+    <worktree>/scripts/fhir-read-grant-check.ts:429
+          throw new Error(
+                ^
+    
+    Error: Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription — MCP process service client.. Remove or update the entry explicitly.
+        at <anonymous> (<worktree>/scripts/fhir-read-grant-check.ts:429:13)
+        at Array.map (<anonymous>)
+        at matchExactWriteInventory (<worktree>/scripts/fhir-read-grant-check.ts:426:29)
+        at runFhirReadGrantCheck (<worktree>/scripts/fhir-read-grant-check.ts:333:41)
+        at <anonymous> (<worktree>/scripts/fhir-read-grant-check.ts:743:18)
+        at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+        at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+        at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+    
+    Node.js v22.22.3
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    <anonymous> (<worktree>/scripts/fhir-read-grant-check.ts:429:13)
+    Array.map (<anonymous>)
+    matchExactWriteInventory (<worktree>/scripts/fhir-read-grant-check.ts:426:29)
+    runFhirReadGrantCheck (<worktree>/scripts/fhir-read-grant-check.ts:333:41)
+    <anonymous> (<worktree>/scripts/fhir-read-grant-check.ts:743:18)
+    ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+    TestContext.<anonymous> (<worktree>/tests/preflight/fhir-read-grant-check.test.ts:370:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+not ok 10 - an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1408.279584
+  type: 'test'
+  location: '<worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:12560'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:
+    
+    ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: ''
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/tests/preflight/fhir-read-grant-check.test.ts:409:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+not ok 11 - an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+  ---
+  duration_ms: 1392.861083
+  type: 'test'
+  location: '<worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:13292'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:
+    
+    ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: ''
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/tests/preflight/fhir-read-grant-check.test.ts:436:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+not ok 12 - serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+  ---
+  duration_ms: 1359.3735
+  type: 'test'
+  location: '<worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:13964'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /FHIR read grant check: FAIL/. Input:
+    
+    ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: ''
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/tests/preflight/fhir-read-grant-check.test.ts:462:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: an ungranted FHIR read in ui/src makes the CLI fail with its name
+not ok 13 - an ungranted FHIR read in ui/src makes the CLI fail with its name
+  ---
+  duration_ms: 1398.465542
+  type: 'test'
+  location: '<worktree>/tests/preflight/fhir-read-grant-check.test.ts:1:14661'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /FHIR read grant check: FAIL/. Input:
+    
+    ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: ''
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/tests/preflight/fhir-read-grant-check.test.ts:489:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: a marked computed search helper carries literal resource types across source files
+ok 14 - a marked computed search helper carries literal resource types across source files
+  ---
+  duration_ms: 0.591292
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 8
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8351.132667

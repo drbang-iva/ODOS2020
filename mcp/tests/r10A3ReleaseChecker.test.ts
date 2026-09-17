@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -53,3 +53,24 @@ test("W40 rejects traversal that executes MCP scenarios as UI proof", () => with
   assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout + result.stderr, /T4: wrong ui file/);
 }));
+
+for (const broken of [false, true]) test(`W86 rejects ${broken ? "broken" : "escaping"} suite symlink before execution`, () => withFixture(root => {
+  const path=join(root,"ui/tests/scenarios.test.mjs");
+  const outside=join(root,"outside.test.mjs");
+  const source=readFileSync(path,"utf8");
+  rmSync(path);
+  if (!broken) writeFileSync(outside,source+'\nthrow new Error("OUTSIDE EXECUTED");\n');
+  symlinkSync(outside,path);
+  const result=check(root);
+  assert.equal(result.status,1,result.stdout+result.stderr);
+  assert.match(result.stdout+result.stderr,/T4: (wrong ui file|missing ui suite)/);
+  assert.doesNotMatch(result.stdout+result.stderr,/child process failed|OUTSIDE EXECUTED/);
+}));
+
+test("W87a W87b W129 exact finding write registry covers every call site including Binary patches", () => {
+  const root=resolve(import.meta.dirname,"../..");
+  const read=(name:string)=>JSON.parse(readFileSync(join(root,"mcp/tests/fixtures/r10",name+".json"),"utf8"));
+  const result=checker.checkFindingWriteRegistry(root,read("finding-write-paths"),read("finding-write-exclusions"));
+  assert.deepEqual(result.failures,[],result.failures.join("\n"));
+  assert.equal(result.sites.filter((site:any)=>site.kind==="observation-json-patch-entry").length,2);
+});

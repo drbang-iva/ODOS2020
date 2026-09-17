@@ -1,0 +1,334 @@
+TAP version 13
+# Subtest: W116 create_observation refuses canonical before associated writes through MCP dispatch
+ok 1 - W116 create_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 72.785166
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses panel before associated writes through MCP dispatch
+ok 2 - W116 create_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 33.932125
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses negative before associated writes through MCP dispatch
+ok 3 - W116 create_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 23.880666
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 4 - W116 create_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 18.664209
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch
+ok 5 - W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 17.332
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses panel before associated writes through MCP dispatch
+ok 6 - W116 scribe_write_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 19.641
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses negative before associated writes through MCP dispatch
+ok 7 - W116 scribe_write_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 17.996958
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 8 - W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.772125
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses canonical before associated writes through MCP dispatch
+ok 9 - W116 save_section_observations refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 20.134208
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses panel before associated writes through MCP dispatch
+ok 10 - W116 save_section_observations refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.177209
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses negative before associated writes through MCP dispatch
+ok 11 - W116 save_section_observations refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.238042
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch
+ok 12 - W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 17.055084
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch
+ok 13 - W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.160458
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch
+ok 14 - W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.842209
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch
+ok 15 - W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.05875
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 16 - W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.490709
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch
+ok 17 - W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.017917
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch
+ok 18 - W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.232583
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch
+ok 19 - W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.383833
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch
+ok 20 - W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.10875
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch
+ok 21 - W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.448625
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses panel before associated writes through MCP dispatch
+ok 22 - W116 create_meibography_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.519375
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses negative before associated writes through MCP dispatch
+ok 23 - W116 create_meibography_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.870584
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 24 - W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.532709
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch
+ok 25 - W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.764209
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch
+ok 26 - W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.36425
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch
+ok 27 - W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.054875
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 28 - W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 13.524625
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch
+ok 29 - W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.004375
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch
+ok 30 - W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.912666
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch
+ok 31 - W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.729166
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch
+ok 32 - W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.308875
+  type: 'test'
+  ...
+# Subtest: W116 append guards target through MCP dispatch
+ok 33 - W116 append guards target through MCP dispatch
+  ---
+  duration_ms: 14.429083
+  type: 'test'
+  ...
+# Subtest: W116 append guards result through MCP dispatch
+ok 34 - W116 append guards result through MCP dispatch
+  ---
+  duration_ms: 15.304166
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild
+ok 35 - W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 35.588917
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild
+ok 36 - W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 32.559708
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild
+ok 37 - W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 30.899459
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild
+ok 38 - W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 38.116417
+  type: 'test'
+  ...
+# Subtest: W115 mismatching session practitioner refuses before audit repair or lifecycle writes
+ok 39 - W115 mismatching session practitioner refuses before audit repair or lifecycle writes
+  ---
+  duration_ms: 14.5935
+  type: 'test'
+  ...
+# Subtest: W116 create_observation retains unrelated Observation writes
+ok 40 - W116 create_observation retains unrelated Observation writes
+  ---
+  duration_ms: 16.424625
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation retains unrelated Observation writes
+ok 41 - W116 scribe_write_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.8945
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations retains unrelated Observation writes
+ok 42 - W116 save_section_observations retains unrelated Observation writes
+  ---
+  duration_ms: 13.625375
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation retains unrelated Observation writes
+ok 43 - W116 create_smoking_status_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.665708
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response retains unrelated Observation writes
+ok 44 - W116 create_dry_eye_questionnaire_response retains unrelated Observation writes
+  ---
+  duration_ms: 15.203792
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation retains unrelated Observation writes
+ok 45 - W116 create_meibography_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.810459
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation retains unrelated Observation writes
+ok 46 - W116 record_ortho_k_fit_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.869792
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement retains unrelated Observation writes
+ok 47 - W116 record_eye_growth_axial_length_measurement retains unrelated Observation writes
+  ---
+  duration_ms: 13.240667
+  type: 'test'
+  ...
+# Subtest: W116 eye growth validates optional corneal Observation before axial writes
+ok 48 - W116 eye growth validates optional corneal Observation before axial writes
+  ---
+  duration_ms: 15.492958
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation rejects legacy targets even without other findings
+ok 49 - W115 clinician_attest_observation rejects legacy targets even without other findings
+  ---
+  duration_ms: 15.530667
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation rejects legacy targets even without other findings
+ok 50 - W115 amend_observation rejects legacy targets even without other findings
+  ---
+  duration_ms: 14.828834
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation repairs only selected debt before lifecycle
+ok 51 - W115 clinician_attest_observation repairs only selected debt before lifecycle
+  ---
+  duration_ms: 18.279292
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation refuses mismatched audit
+ok 52 - W115 clinician_attest_observation refuses mismatched audit
+  ---
+  duration_ms: 14.976791
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation repairs only selected debt before lifecycle
+ok 53 - W115 amend_observation repairs only selected debt before lifecycle
+  ---
+  duration_ms: 16.76225
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation refuses mismatched audit
+ok 54 - W115 amend_observation refuses mismatched audit
+  ---
+  duration_ms: 16.362292
+  type: 'test'
+  ...
+1..54
+# tests 54
+# suites 0
+# pass 54
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1626.788209

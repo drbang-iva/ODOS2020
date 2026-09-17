@@ -1,0 +1,1953 @@
+{
+  "events": [
+    {
+      "sequence": 1,
+      "scenario": "provider/G-e",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.239Z",
+      "method": "POST",
+      "path": "/fhir/R4/Condition",
+      "requestHeaders": {
+        "If-None-Exist": "identifier=urn:odos:carry-diagnosis:v1|0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+      },
+      "end": "2026-09-17T00:58:33.255Z",
+      "status": 201,
+      "etag": "W/\"3ef6db78-a048-4e5b-868f-e319442a14cc\"",
+      "location": "http://127.0.0.1:29131/fhir/R4/Condition/2ec2580d-fa95-4e54-9d83-23230aa5f278",
+      "request": {
+        "resourceType": "Condition",
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:carry-command:v1",
+              "code": "5d1ef072-a8f6-4eb7-8632-39a9152d7cf7"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis",
+                "display": "Encounter Diagnosis"
+              }
+            ],
+            "text": "Encounter Diagnosis"
+          }
+        ],
+        "code": {
+          "text": "Synthetic carry capability"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ],
+          "text": "Active"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ],
+          "text": "Confirmed"
+        },
+        "identifier": [
+          {
+            "system": "urn:odos:carry-diagnosis:v1",
+            "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Condition",
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:carry-command:v1",
+              "code": "5d1ef072-a8f6-4eb7-8632-39a9152d7cf7"
+            }
+          ],
+          "versionId": "3ef6db78-a048-4e5b-868f-e319442a14cc",
+          "lastUpdated": "2026-09-17T00:58:33.249Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis",
+                "display": "Encounter Diagnosis"
+              }
+            ],
+            "text": "Encounter Diagnosis"
+          }
+        ],
+        "code": {
+          "text": "Synthetic carry capability"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ],
+          "text": "Active"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ],
+          "text": "Confirmed"
+        },
+        "identifier": [
+          {
+            "system": "urn:odos:carry-diagnosis:v1",
+            "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ],
+        "id": "2ec2580d-fa95-4e54-9d83-23230aa5f278"
+      }
+    },
+    {
+      "sequence": 2,
+      "scenario": "provider/G-e",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.240Z",
+      "method": "POST",
+      "path": "/fhir/R4/Condition",
+      "requestHeaders": {
+        "If-None-Exist": "identifier=urn:odos:carry-diagnosis:v1|0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+      },
+      "end": "2026-09-17T00:58:33.298Z",
+      "status": 200,
+      "etag": "W/\"3ef6db78-a048-4e5b-868f-e319442a14cc\"",
+      "location": null,
+      "request": {
+        "resourceType": "Condition",
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:carry-command:v1",
+              "code": "ea902045-3f41-4fd3-9c84-e9c125c52b4b"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis",
+                "display": "Encounter Diagnosis"
+              }
+            ],
+            "text": "Encounter Diagnosis"
+          }
+        ],
+        "code": {
+          "text": "Synthetic carry capability"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ],
+          "text": "Active"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ],
+          "text": "Confirmed"
+        },
+        "identifier": [
+          {
+            "system": "urn:odos:carry-diagnosis:v1",
+            "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Condition",
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:carry-command:v1",
+              "code": "5d1ef072-a8f6-4eb7-8632-39a9152d7cf7"
+            }
+          ],
+          "versionId": "3ef6db78-a048-4e5b-868f-e319442a14cc",
+          "lastUpdated": "2026-09-17T00:58:33.249Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis",
+                "display": "Encounter Diagnosis"
+              }
+            ],
+            "text": "Encounter Diagnosis"
+          }
+        ],
+        "code": {
+          "text": "Synthetic carry capability"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ],
+          "text": "Active"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ],
+          "text": "Confirmed"
+        },
+        "identifier": [
+          {
+            "system": "urn:odos:carry-diagnosis:v1",
+            "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ],
+        "id": "2ec2580d-fa95-4e54-9d83-23230aa5f278"
+      }
+    },
+    {
+      "sequence": 3,
+      "scenario": "provider/G-e",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.298Z",
+      "method": "POST",
+      "path": "/fhir/R4/Condition",
+      "requestHeaders": {
+        "If-None-Exist": "identifier=urn:odos:carry-diagnosis:v1|0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+      },
+      "end": "2026-09-17T00:58:33.304Z",
+      "status": 200,
+      "etag": "W/\"3ef6db78-a048-4e5b-868f-e319442a14cc\"",
+      "location": null,
+      "request": {
+        "resourceType": "Condition",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-encounter-diagnosis"
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis",
+                "display": "Encounter Diagnosis"
+              }
+            ],
+            "text": "Encounter Diagnosis"
+          }
+        ],
+        "code": {
+          "text": "Synthetic carry capability"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ],
+          "text": "Active"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ],
+          "text": "Confirmed"
+        },
+        "identifier": [
+          {
+            "system": "urn:odos:carry-diagnosis:v1",
+            "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Condition",
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:carry-command:v1",
+              "code": "5d1ef072-a8f6-4eb7-8632-39a9152d7cf7"
+            }
+          ],
+          "versionId": "3ef6db78-a048-4e5b-868f-e319442a14cc",
+          "lastUpdated": "2026-09-17T00:58:33.249Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis",
+                "display": "Encounter Diagnosis"
+              }
+            ],
+            "text": "Encounter Diagnosis"
+          }
+        ],
+        "code": {
+          "text": "Synthetic carry capability"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "encounter": {
+          "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ],
+          "text": "Active"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ],
+          "text": "Confirmed"
+        },
+        "identifier": [
+          {
+            "system": "urn:odos:carry-diagnosis:v1",
+            "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ],
+        "id": "2ec2580d-fa95-4e54-9d83-23230aa5f278"
+      }
+    },
+    {
+      "sequence": 4,
+      "scenario": "provider/G-e",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.304Z",
+      "method": "GET",
+      "path": "/fhir/R4/Condition?identifier=urn%3Aodos%3Acarry-diagnosis%3Av1%7C0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31&_count=1000&_total=accurate",
+      "requestHeaders": {},
+      "end": "2026-09-17T00:58:33.309Z",
+      "status": 200,
+      "etag": null,
+      "location": null,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:29131/fhir/R4/Condition/2ec2580d-fa95-4e54-9d83-23230aa5f278",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Condition",
+              "meta": {
+                "tag": [
+                  {
+                    "system": "urn:odos:carry-command:v1",
+                    "code": "5d1ef072-a8f6-4eb7-8632-39a9152d7cf7"
+                  }
+                ],
+                "versionId": "3ef6db78-a048-4e5b-868f-e319442a14cc",
+                "lastUpdated": "2026-09-17T00:58:33.249Z",
+                "author": {
+                  "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+                  "display": "Synthetic R10 provider"
+                },
+                "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+                "compartment": [
+                  {
+                    "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+                  },
+                  {
+                    "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                  }
+                ]
+              },
+              "category": [
+                {
+                  "coding": [
+                    {
+                      "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                      "code": "encounter-diagnosis",
+                      "display": "Encounter Diagnosis"
+                    }
+                  ],
+                  "text": "Encounter Diagnosis"
+                }
+              ],
+              "code": {
+                "text": "Synthetic carry capability"
+              },
+              "subject": {
+                "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+              },
+              "encounter": {
+                "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+              },
+              "clinicalStatus": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                    "code": "active",
+                    "display": "Active"
+                  }
+                ],
+                "text": "Active"
+              },
+              "verificationStatus": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+                    "code": "confirmed",
+                    "display": "Confirmed"
+                  }
+                ],
+                "text": "Confirmed"
+              },
+              "identifier": [
+                {
+                  "system": "urn:odos:carry-diagnosis:v1",
+                  "value": "0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+                }
+              ],
+              "id": "2ec2580d-fa95-4e54-9d83-23230aa5f278"
+            }
+          }
+        ],
+        "total": 1,
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:29131/fhir/R4/Condition?_count=1000&_total=accurate&identifier=urn%3Aodos%3Acarry-diagnosis%3Av1%7C0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:29131/fhir/R4/Condition?_count=1000&_total=accurate&identifier=urn%3Aodos%3Acarry-diagnosis%3Av1%7C0c39b93b90440cefef7e7e6ac7fe2cae1515af83c933e63ad533cc8c05ce8b31"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 5,
+      "scenario": "provider/G-f",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.310Z",
+      "method": "POST",
+      "path": "/fhir/R4/Provenance",
+      "requestHeaders": {
+        "If-None-Exist": "_tag=urn:odos:finding-operation:v1|57e43f15-f15d-459f-ae24-8aa9390262bc"
+      },
+      "end": "2026-09-17T00:58:33.375Z",
+      "status": 200,
+      "etag": "W/\"23be2988-c6ba-44e6-9f65-1c3f28b4fd33\"",
+      "location": null,
+      "request": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.310Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.310Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+            }
+          ],
+          "versionId": "23be2988-c6ba-44e6-9f65-1c3f28b4fd33",
+          "lastUpdated": "2026-09-17T00:58:33.318Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ],
+        "id": "90b1d6e3-5372-45e4-8ac1-deff84bc0752"
+      }
+    },
+    {
+      "sequence": 6,
+      "scenario": "provider/G-f",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.311Z",
+      "method": "POST",
+      "path": "/fhir/R4/Provenance",
+      "requestHeaders": {
+        "If-None-Exist": "_tag=urn:odos:finding-operation:v1|57e43f15-f15d-459f-ae24-8aa9390262bc"
+      },
+      "end": "2026-09-17T00:58:33.321Z",
+      "status": 201,
+      "etag": "W/\"23be2988-c6ba-44e6-9f65-1c3f28b4fd33\"",
+      "location": "http://127.0.0.1:29131/fhir/R4/Provenance/90b1d6e3-5372-45e4-8ac1-deff84bc0752",
+      "request": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.310Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.310Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+            }
+          ],
+          "versionId": "23be2988-c6ba-44e6-9f65-1c3f28b4fd33",
+          "lastUpdated": "2026-09-17T00:58:33.318Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ],
+        "id": "90b1d6e3-5372-45e4-8ac1-deff84bc0752"
+      }
+    },
+    {
+      "sequence": 7,
+      "scenario": "provider/G-f",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.375Z",
+      "method": "POST",
+      "path": "/fhir/R4/Provenance",
+      "requestHeaders": {
+        "If-None-Exist": "_tag=urn:odos:finding-operation:v1|57e43f15-f15d-459f-ae24-8aa9390262bc"
+      },
+      "end": "2026-09-17T00:58:33.380Z",
+      "status": 200,
+      "etag": "W/\"23be2988-c6ba-44e6-9f65-1c3f28b4fd33\"",
+      "location": null,
+      "request": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.310Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.310Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+            }
+          ],
+          "versionId": "23be2988-c6ba-44e6-9f65-1c3f28b4fd33",
+          "lastUpdated": "2026-09-17T00:58:33.318Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ],
+        "id": "90b1d6e3-5372-45e4-8ac1-deff84bc0752"
+      }
+    },
+    {
+      "sequence": 8,
+      "scenario": "provider/G-f",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.380Z",
+      "method": "GET",
+      "path": "/fhir/R4/Provenance?_tag=urn%3Aodos%3Afinding-operation%3Av1%7C57e43f15-f15d-459f-ae24-8aa9390262bc&_count=1000&_total=accurate",
+      "requestHeaders": {},
+      "end": "2026-09-17T00:58:33.384Z",
+      "status": 200,
+      "etag": null,
+      "location": null,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:29131/fhir/R4/Provenance/90b1d6e3-5372-45e4-8ac1-deff84bc0752",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Provenance",
+              "target": [
+                {
+                  "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                },
+                {
+                  "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+                }
+              ],
+              "recorded": "2026-09-17T00:58:33.310Z",
+              "activity": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+                    "code": "CREATE",
+                    "display": "Create"
+                  }
+                ],
+                "text": "Create"
+              },
+              "agent": [
+                {
+                  "type": {
+                    "coding": [
+                      {
+                        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                        "code": "author",
+                        "display": "Author"
+                      }
+                    ],
+                    "text": "Author"
+                  },
+                  "who": {
+                    "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282"
+                  }
+                }
+              ],
+              "meta": {
+                "tag": [
+                  {
+                    "system": "urn:odos:finding-operation:v1",
+                    "code": "57e43f15-f15d-459f-ae24-8aa9390262bc"
+                  }
+                ],
+                "versionId": "23be2988-c6ba-44e6-9f65-1c3f28b4fd33",
+                "lastUpdated": "2026-09-17T00:58:33.318Z",
+                "author": {
+                  "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+                  "display": "Synthetic R10 provider"
+                },
+                "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+                "compartment": [
+                  {
+                    "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+                  },
+                  {
+                    "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                  }
+                ]
+              },
+              "extension": [
+                {
+                  "url": "urn:odos:carry-plan",
+                  "valueString": "{\"v\":1,\"commandId\":\"57e43f15-f15d-459f-ae24-8aa9390262bc\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+                }
+              ],
+              "id": "90b1d6e3-5372-45e4-8ac1-deff84bc0752"
+            }
+          }
+        ],
+        "total": 1,
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:29131/fhir/R4/Provenance?_count=1000&_tag=urn%3Aodos%3Afinding-operation%3Av1%7C57e43f15-f15d-459f-ae24-8aa9390262bc&_total=accurate"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:29131/fhir/R4/Provenance?_count=1000&_tag=urn%3Aodos%3Afinding-operation%3Av1%7C57e43f15-f15d-459f-ae24-8aa9390262bc&_total=accurate"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 9,
+      "scenario": "staff/G-f",
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "start": "2026-09-17T00:58:33.384Z",
+      "method": "POST",
+      "path": "/fhir/R4/Provenance",
+      "requestHeaders": {
+        "If-None-Exist": "_tag=urn:odos:finding-operation:v1|dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+      },
+      "end": "2026-09-17T00:58:33.394Z",
+      "status": 201,
+      "etag": "W/\"c11fa397-c298-4031-9871-df3c730bf559\"",
+      "location": "http://127.0.0.1:29131/fhir/R4/Provenance/782e0995-a634-4d71-ac31-2dd47acde777",
+      "request": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.384Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.384Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+            }
+          ],
+          "versionId": "c11fa397-c298-4031-9871-df3c730bf559",
+          "lastUpdated": "2026-09-17T00:58:33.391Z",
+          "author": {
+            "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f",
+            "display": "Synthetic R10 staff"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ],
+        "id": "782e0995-a634-4d71-ac31-2dd47acde777"
+      }
+    },
+    {
+      "sequence": 10,
+      "scenario": "staff/G-f",
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "start": "2026-09-17T00:58:33.384Z",
+      "method": "POST",
+      "path": "/fhir/R4/Provenance",
+      "requestHeaders": {
+        "If-None-Exist": "_tag=urn:odos:finding-operation:v1|dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+      },
+      "end": "2026-09-17T00:58:33.396Z",
+      "status": 200,
+      "etag": "W/\"c11fa397-c298-4031-9871-df3c730bf559\"",
+      "location": null,
+      "request": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.384Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.384Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+            }
+          ],
+          "versionId": "c11fa397-c298-4031-9871-df3c730bf559",
+          "lastUpdated": "2026-09-17T00:58:33.391Z",
+          "author": {
+            "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f",
+            "display": "Synthetic R10 staff"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ],
+        "id": "782e0995-a634-4d71-ac31-2dd47acde777"
+      }
+    },
+    {
+      "sequence": 11,
+      "scenario": "staff/G-f",
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "start": "2026-09-17T00:58:33.396Z",
+      "method": "POST",
+      "path": "/fhir/R4/Provenance",
+      "requestHeaders": {
+        "If-None-Exist": "_tag=urn:odos:finding-operation:v1|dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+      },
+      "end": "2026-09-17T00:58:33.400Z",
+      "status": 200,
+      "etag": "W/\"c11fa397-c298-4031-9871-df3c730bf559\"",
+      "location": null,
+      "request": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.384Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ]
+      },
+      "response": {
+        "resourceType": "Provenance",
+        "target": [
+          {
+            "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+          },
+          {
+            "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+          }
+        ],
+        "recorded": "2026-09-17T00:58:33.384Z",
+        "activity": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+              "code": "CREATE",
+              "display": "Create"
+            }
+          ],
+          "text": "Create"
+        },
+        "agent": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "author",
+                  "display": "Author"
+                }
+              ],
+              "text": "Author"
+            },
+            "who": {
+              "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+            }
+          }
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:odos:finding-operation:v1",
+              "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+            }
+          ],
+          "versionId": "c11fa397-c298-4031-9871-df3c730bf559",
+          "lastUpdated": "2026-09-17T00:58:33.391Z",
+          "author": {
+            "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f",
+            "display": "Synthetic R10 staff"
+          },
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "urn:odos:carry-plan",
+            "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+          }
+        ],
+        "id": "782e0995-a634-4d71-ac31-2dd47acde777"
+      }
+    },
+    {
+      "sequence": 12,
+      "scenario": "staff/G-f",
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "start": "2026-09-17T00:58:33.400Z",
+      "method": "GET",
+      "path": "/fhir/R4/Provenance?_tag=urn%3Aodos%3Afinding-operation%3Av1%7Cdad6c59e-8c25-4fc1-ae18-9881d17fec0b&_count=1000&_total=accurate",
+      "requestHeaders": {},
+      "end": "2026-09-17T00:58:33.403Z",
+      "status": 200,
+      "etag": null,
+      "location": null,
+      "response": {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+          {
+            "fullUrl": "http://127.0.0.1:29131/fhir/R4/Provenance/782e0995-a634-4d71-ac31-2dd47acde777",
+            "search": {
+              "mode": "match"
+            },
+            "resource": {
+              "resourceType": "Provenance",
+              "target": [
+                {
+                  "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                },
+                {
+                  "reference": "Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+                }
+              ],
+              "recorded": "2026-09-17T00:58:33.384Z",
+              "activity": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
+                    "code": "CREATE",
+                    "display": "Create"
+                  }
+                ],
+                "text": "Create"
+              },
+              "agent": [
+                {
+                  "type": {
+                    "coding": [
+                      {
+                        "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                        "code": "author",
+                        "display": "Author"
+                      }
+                    ],
+                    "text": "Author"
+                  },
+                  "who": {
+                    "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f"
+                  }
+                }
+              ],
+              "meta": {
+                "tag": [
+                  {
+                    "system": "urn:odos:finding-operation:v1",
+                    "code": "dad6c59e-8c25-4fc1-ae18-9881d17fec0b"
+                  }
+                ],
+                "versionId": "c11fa397-c298-4031-9871-df3c730bf559",
+                "lastUpdated": "2026-09-17T00:58:33.391Z",
+                "author": {
+                  "reference": "Practitioner/a5140517-ff3b-436a-93cd-119ea8307a5f",
+                  "display": "Synthetic R10 staff"
+                },
+                "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+                "compartment": [
+                  {
+                    "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+                  },
+                  {
+                    "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+                  }
+                ]
+              },
+              "extension": [
+                {
+                  "url": "urn:odos:carry-plan",
+                  "valueString": "{\"v\":1,\"commandId\":\"dad6c59e-8c25-4fc1-ae18-9881d17fec0b\",\"values\":[\"synthetic\",1],\"spacing\":\" retained \"}"
+                }
+              ],
+              "id": "782e0995-a634-4d71-ac31-2dd47acde777"
+            }
+          }
+        ],
+        "total": 1,
+        "link": [
+          {
+            "relation": "self",
+            "url": "http://127.0.0.1:29131/fhir/R4/Provenance?_count=1000&_tag=urn%3Aodos%3Afinding-operation%3Av1%7Cdad6c59e-8c25-4fc1-ae18-9881d17fec0b&_total=accurate"
+          },
+          {
+            "relation": "first",
+            "url": "http://127.0.0.1:29131/fhir/R4/Provenance?_count=1000&_tag=urn%3Aodos%3Afinding-operation%3Av1%7Cdad6c59e-8c25-4fc1-ae18-9881d17fec0b&_total=accurate"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 13,
+      "scenario": "provider/G-g",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.404Z",
+      "method": "GET",
+      "path": "/fhir/R4/Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+      "requestHeaders": {},
+      "end": "2026-09-17T00:58:33.407Z",
+      "status": 200,
+      "etag": "W/\"64bf54a2-2c45-4469-ad58-ba95ddde69e3\"",
+      "location": null,
+      "response": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "64bf54a2-2c45-4469-ad58-ba95ddde69e3",
+          "lastUpdated": "2026-09-17T00:58:14.679Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+      }
+    },
+    {
+      "sequence": 14,
+      "scenario": "provider/G-g",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.407Z",
+      "method": "PUT",
+      "path": "/fhir/R4/Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+      "requestHeaders": {
+        "If-Match": "W/\"64bf54a2-2c45-4469-ad58-ba95ddde69e3\""
+      },
+      "end": "2026-09-17T00:58:33.417Z",
+      "status": 200,
+      "etag": "W/\"e1f1a7a5-403d-404c-a829-328c253c2b0a\"",
+      "location": null,
+      "request": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "64bf54a2-2c45-4469-ad58-ba95ddde69e3",
+          "lastUpdated": "2026-09-17T00:58:14.679Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+        "period": {
+          "start": "2026-09-17T00:58:33.407Z"
+        }
+      },
+      "response": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "e1f1a7a5-403d-404c-a829-328c253c2b0a",
+          "lastUpdated": "2026-09-17T00:58:33.413Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+        "period": {
+          "start": "2026-09-17T00:58:33.407Z"
+        }
+      }
+    },
+    {
+      "sequence": 15,
+      "scenario": "provider/G-g",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.417Z",
+      "method": "PUT",
+      "path": "/fhir/R4/Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+      "requestHeaders": {
+        "If-Match": "W/\"64bf54a2-2c45-4469-ad58-ba95ddde69e3\""
+      },
+      "end": "2026-09-17T00:58:33.422Z",
+      "status": 412,
+      "etag": null,
+      "location": null,
+      "request": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "64bf54a2-2c45-4469-ad58-ba95ddde69e3",
+          "lastUpdated": "2026-09-17T00:58:14.679Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5"
+      },
+      "response": {
+        "resourceType": "OperationOutcome",
+        "id": "precondition-failed",
+        "issue": [
+          {
+            "severity": "error",
+            "code": "processing",
+            "details": {
+              "text": "Precondition Failed"
+            }
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://medplum.com/fhir/StructureDefinition/tracing",
+            "extension": [
+              {
+                "url": "requestId",
+                "valueId": "063fe2e1-73b1-4cd7-90e4-d956f762274c"
+              },
+              {
+                "url": "traceId",
+                "valueId": "823d886f-9f51-446a-b007-ab7abf71e00b"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 16,
+      "scenario": "provider/G-g",
+      "role": "provider",
+      "login": "r10-a3-1-provider@example.invalid",
+      "start": "2026-09-17T00:58:33.422Z",
+      "method": "GET",
+      "path": "/fhir/R4/Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+      "requestHeaders": {},
+      "end": "2026-09-17T00:58:33.424Z",
+      "status": 200,
+      "etag": "W/\"e1f1a7a5-403d-404c-a829-328c253c2b0a\"",
+      "location": null,
+      "response": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "e1f1a7a5-403d-404c-a829-328c253c2b0a",
+          "lastUpdated": "2026-09-17T00:58:33.413Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+        "period": {
+          "start": "2026-09-17T00:58:33.407Z"
+        }
+      }
+    },
+    {
+      "sequence": 17,
+      "scenario": "staff/G-g",
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "start": "2026-09-17T00:58:33.425Z",
+      "method": "GET",
+      "path": "/fhir/R4/Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+      "requestHeaders": {},
+      "end": "2026-09-17T00:58:33.427Z",
+      "status": 200,
+      "etag": "W/\"e1f1a7a5-403d-404c-a829-328c253c2b0a\"",
+      "location": null,
+      "response": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "e1f1a7a5-403d-404c-a829-328c253c2b0a",
+          "lastUpdated": "2026-09-17T00:58:33.413Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+        "period": {
+          "start": "2026-09-17T00:58:33.407Z"
+        }
+      }
+    },
+    {
+      "sequence": 18,
+      "scenario": "staff/G-g",
+      "role": "staff",
+      "login": "r10-a3-1-staff@example.invalid",
+      "start": "2026-09-17T00:58:33.427Z",
+      "method": "PUT",
+      "path": "/fhir/R4/Encounter/9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+      "requestHeaders": {
+        "If-Match": "W/\"e1f1a7a5-403d-404c-a829-328c253c2b0a\""
+      },
+      "end": "2026-09-17T00:58:33.433Z",
+      "status": 403,
+      "etag": null,
+      "location": null,
+      "request": {
+        "resourceType": "Encounter",
+        "meta": {
+          "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95",
+          "versionId": "e1f1a7a5-403d-404c-a829-328c253c2b0a",
+          "lastUpdated": "2026-09-17T00:58:33.413Z",
+          "author": {
+            "reference": "Practitioner/4994eb66-d7f4-484c-8de5-ae86c1e5c282",
+            "display": "Synthetic R10 provider"
+          },
+          "compartment": [
+            {
+              "reference": "Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+            },
+            {
+              "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+            }
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "code": "synthetic"
+        },
+        "subject": {
+          "reference": "Patient/8cb9b257-b787-4005-95f7-155422d4127d"
+        },
+        "id": "9f6c5028-af3d-4bb6-9064-29a7cd522fd5",
+        "period": {
+          "start": "2026-09-17T00:58:33.427Z"
+        }
+      },
+      "response": {
+        "resourceType": "OperationOutcome",
+        "id": "forbidden",
+        "issue": [
+          {
+            "severity": "error",
+            "code": "forbidden",
+            "details": {
+              "text": "Forbidden"
+            }
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://medplum.com/fhir/StructureDefinition/tracing",
+            "extension": [
+              {
+                "url": "requestId",
+                "valueId": "20666f33-7517-4580-b9f5-6458883b017a"
+              },
+              {
+                "url": "traceId",
+                "valueId": "aac1b4b8-251b-4cb0-9f50-69dad54a9f61"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

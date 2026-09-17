@@ -1,0 +1,490 @@
+TAP version 13
+# Subtest: identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+ok 1 - identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+  ---
+  duration_ms: 1.670083
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects hash mismatch
+ok 2 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 0.221791
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects patient mismatch
+ok 3 - canonical envelope rejects patient mismatch
+  ---
+  duration_ms: 0.080417
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects encounter mismatch
+ok 4 - canonical envelope rejects encounter mismatch
+  ---
+  duration_ms: 0.163209
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects code mismatch
+ok 5 - canonical envelope rejects code mismatch
+  ---
+  duration_ms: 0.0715
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects eye mismatch
+ok 6 - canonical envelope rejects eye mismatch
+  ---
+  duration_ms: 0.056125
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects schema mismatch
+ok 7 - canonical envelope rejects schema mismatch
+  ---
+  duration_ms: 0.251667
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-envelope mismatch
+ok 8 - canonical envelope rejects duplicate-envelope mismatch
+  ---
+  duration_ms: 0.041875
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-identifier mismatch
+ok 9 - canonical envelope rejects duplicate-identifier mismatch
+  ---
+  duration_ms: 0.232042
+  type: 'test'
+  ...
+# Subtest: exact catalog resolution retains the whole nested option
+ok 10 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.304417
+  type: 'test'
+  ...
+# Subtest: retired atomic aliases use current retirement semantics and never reverse false subtypes
+ok 11 - retired atomic aliases use current retirement semantics and never reverse false subtypes
+  ---
+  duration_ms: 0.293416
+  type: 'test'
+  ...
+# Subtest: role markers dominate definition matching, conflicting markers are invalid
+ok 12 - role markers dominate definition matching, conflicting markers are invalid
+  ---
+  duration_ms: 0.877833
+  type: 'test'
+  ...
+# Subtest: one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+ok 13 - one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+  ---
+  duration_ms: 2.306042
+  type: 'test'
+  ...
+# Subtest: malformed stored negative still throws; eye sets never coerce UNKNOWN
+ok 14 - malformed stored negative still throws; eye sets never coerce UNKNOWN
+  ---
+  duration_ms: 0.235167
+  type: 'test'
+  ...
+# Subtest: compiled ocular structure field identities and atomic samples are pinned
+ok 15 - compiled ocular structure field identities and atomic samples are pinned
+  ---
+  duration_ms: 0.449541
+  type: 'test'
+  ...
+# Subtest: operation marker validates audit envelope and hashes exact digest-keyed identity
+ok 16 - operation marker validates audit envelope and hashes exact digest-keyed identity
+  ---
+  duration_ms: 0.37275
+  type: 'test'
+  ...
+# Subtest: pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+ok 17 - pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+  ---
+  duration_ms: 0.678916
+  type: 'test'
+  ...
+# Subtest: review regression: an audit for a copied marker covers only its actual Observation target
+ok 18 - review regression: an audit for a copied marker covers only its actual Observation target
+  ---
+  duration_ms: 0.199375
+  type: 'test'
+  ...
+# Subtest: captured suites match the suiteHashes provenance keys
+ok 19 - captured suites match the suiteHashes provenance keys
+  ---
+  duration_ms: 0.69525
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 1: customSectionEndpoint.test.ts
+ok 20 - history preserves legacy rows and exposes shared read-only projection 1: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.210584
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 2: customSectionEndpoint.test.ts
+ok 21 - history preserves legacy rows and exposes shared read-only projection 2: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.145541
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 3: customSectionEndpoint.test.ts
+ok 22 - history preserves legacy rows and exposes shared read-only projection 3: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.205167
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 4: customSectionEndpoint.test.ts
+ok 23 - history preserves legacy rows and exposes shared read-only projection 4: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.199417
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 5: customSectionEndpoint.test.ts
+ok 24 - history preserves legacy rows and exposes shared read-only projection 5: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.384833
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 6: customSectionEndpoint.test.ts
+ok 25 - history preserves legacy rows and exposes shared read-only projection 6: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 6.604666
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 7: customSectionEndpoint.test.ts
+ok 26 - history preserves legacy rows and exposes shared read-only projection 7: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.506708
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 8: customSectionEndpoint.test.ts
+ok 27 - history preserves legacy rows and exposes shared read-only projection 8: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 2.613333
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 9: customSectionEndpoint.test.ts
+ok 28 - history preserves legacy rows and exposes shared read-only projection 9: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.860792
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 10: customSectionEndpoint.test.ts
+ok 29 - history preserves legacy rows and exposes shared read-only projection 10: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 7.245
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 11: customSectionEndpoint.test.ts
+ok 30 - history preserves legacy rows and exposes shared read-only projection 11: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.053708
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 12: customSectionEndpoint.test.ts
+ok 31 - history preserves legacy rows and exposes shared read-only projection 12: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.941666
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 13: customSectionEndpoint.test.ts
+ok 32 - history preserves legacy rows and exposes shared read-only projection 13: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.59975
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 14: customSectionEndpoint.test.ts
+ok 33 - history preserves legacy rows and exposes shared read-only projection 14: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.743375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 15: customSectionEndpoint.test.ts
+ok 34 - history preserves legacy rows and exposes shared read-only projection 15: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.613041
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 16: customSectionEndpoint.test.ts
+ok 35 - history preserves legacy rows and exposes shared read-only projection 16: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.275791
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 17: customSectionEndpoint.test.ts
+ok 36 - history preserves legacy rows and exposes shared read-only projection 17: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.380208
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 18: customSectionEndpoint.test.ts
+ok 37 - history preserves legacy rows and exposes shared read-only projection 18: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.612708
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 19: customSectionEndpoint.test.ts
+ok 38 - history preserves legacy rows and exposes shared read-only projection 19: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.403
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 20: customSectionEndpoint.test.ts
+ok 39 - history preserves legacy rows and exposes shared read-only projection 20: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.206625
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 21: customSectionEndpoint.test.ts
+ok 40 - history preserves legacy rows and exposes shared read-only projection 21: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.224209
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 22: customSectionEndpoint.test.ts
+ok 41 - history preserves legacy rows and exposes shared read-only projection 22: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.41725
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 23: customSectionEndpoint.test.ts
+ok 42 - history preserves legacy rows and exposes shared read-only projection 23: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.336333
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 24: customSectionEndpoint.test.ts
+ok 43 - history preserves legacy rows and exposes shared read-only projection 24: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.190375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 25: customSectionEndpoint.test.ts
+ok 44 - history preserves legacy rows and exposes shared read-only projection 25: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.183958
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 26: customSectionEndpoint.test.ts
+ok 45 - history preserves legacy rows and exposes shared read-only projection 26: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.204458
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 27: customSectionEndpoint.test.ts
+ok 46 - history preserves legacy rows and exposes shared read-only projection 27: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.215625
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 28: customSectionEndpoint.test.ts
+ok 47 - history preserves legacy rows and exposes shared read-only projection 28: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.362125
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 29: customSectionEndpoint.test.ts
+ok 48 - history preserves legacy rows and exposes shared read-only projection 29: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.3775
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 30: customSectionEndpoint.test.ts
+ok 49 - history preserves legacy rows and exposes shared read-only projection 30: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.3845
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 31: customSectionEndpoint.test.ts
+ok 50 - history preserves legacy rows and exposes shared read-only projection 31: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.381291
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 32: customSectionEndpoint.test.ts
+ok 51 - history preserves legacy rows and exposes shared read-only projection 32: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.518375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 33: customSectionEndpoint.test.ts
+ok 52 - history preserves legacy rows and exposes shared read-only projection 33: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.343375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 34: customSectionEndpoint.test.ts
+ok 53 - history preserves legacy rows and exposes shared read-only projection 34: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.42375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 35: customSectionEndpoint.test.ts
+ok 54 - history preserves legacy rows and exposes shared read-only projection 35: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.31225
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 36: customSectionEndpoint.test.ts
+ok 55 - history preserves legacy rows and exposes shared read-only projection 36: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.335042
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 37: customSectionEndpoint.test.ts
+ok 56 - history preserves legacy rows and exposes shared read-only projection 37: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.207
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 38: customSectionEndpoint.test.ts
+ok 57 - history preserves legacy rows and exposes shared read-only projection 38: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.187167
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 39: customSectionEndpoint.test.ts
+ok 58 - history preserves legacy rows and exposes shared read-only projection 39: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.157084
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 40: customSectionEndpoint.test.ts
+ok 59 - history preserves legacy rows and exposes shared read-only projection 40: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.164375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 41: customSectionEndpoint.test.ts
+ok 60 - history preserves legacy rows and exposes shared read-only projection 41: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.178875
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 42: customSectionEndpoint.test.ts
+ok 61 - history preserves legacy rows and exposes shared read-only projection 42: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.103917
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 43: customSectionEndpoint.test.ts
+ok 62 - history preserves legacy rows and exposes shared read-only projection 43: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.099459
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 44: customSectionEndpoint.test.ts
+ok 63 - history preserves legacy rows and exposes shared read-only projection 44: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.199166
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 45: customSectionEndpoint.test.ts
+ok 64 - history preserves legacy rows and exposes shared read-only projection 45: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.111459
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 46: customSectionEndpoint.test.ts
+ok 65 - history preserves legacy rows and exposes shared read-only projection 46: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.111833
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 47: customSectionEndpoint.test.ts
+ok 66 - history preserves legacy rows and exposes shared read-only projection 47: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.329375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 48: customSectionEndpoint.test.ts
+ok 67 - history preserves legacy rows and exposes shared read-only projection 48: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.065584
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 49: customSectionEndpoint.test.ts
+ok 68 - history preserves legacy rows and exposes shared read-only projection 49: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.616416
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 50: customSectionEndpoint.test.ts
+ok 69 - history preserves legacy rows and exposes shared read-only projection 50: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.128375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 51: customSectionEndpoint.test.ts
+ok 70 - history preserves legacy rows and exposes shared read-only projection 51: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.963917
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 52: diagnosisLinkL2.test.ts
+ok 71 - history preserves legacy rows and exposes shared read-only projection 52: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.070875
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 53: diagnosisLinkL2.test.ts
+ok 72 - history preserves legacy rows and exposes shared read-only projection 53: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.052667
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 54: diagnosisLinkL2.test.ts
+ok 73 - history preserves legacy rows and exposes shared read-only projection 54: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.046917
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 55: diagnosisLinkL2.test.ts
+ok 74 - history preserves legacy rows and exposes shared read-only projection 55: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.052833
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 56: diagnosisLinkL2.test.ts
+ok 75 - history preserves legacy rows and exposes shared read-only projection 56: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.048375
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 57: diagnosisLinkL2.test.ts
+ok 76 - history preserves legacy rows and exposes shared read-only projection 57: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044708
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 58: diagnosisLinkL2.test.ts
+ok 77 - history preserves legacy rows and exposes shared read-only projection 58: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.048333
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 59: diagnosisLinkL2.test.ts
+ok 78 - history preserves legacy rows and exposes shared read-only projection 59: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044166
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 60: diagnosisLinkL2.test.ts
+ok 79 - history preserves legacy rows and exposes shared read-only projection 60: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.041625
+  type: 'test'
+  ...
+# Subtest: history preserves legacy rows and exposes shared read-only projection 61: diagnosisLinkL2.test.ts
+ok 80 - history preserves legacy rows and exposes shared read-only projection 61: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.041209
+  type: 'test'
+  ...
+1..80
+# tests 80
+# suites 0
+# pass 80
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 331.40775

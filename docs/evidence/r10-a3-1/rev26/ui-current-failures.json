@@ -1,0 +1,14 @@
+{
+  "count": 8,
+  "testNames": [
+    "deferred and recorded ocular findings cannot coexist at the client-server boundary",
+    "fresh ocular-health history restores scoped diagnosis suggestions without a save",
+    "count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree",
+    "count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree",
+    "custom state writer preserves other-only notes for normal and abnormal findings",
+    "abnormal custom state other-only value leaves the exact unformatted sentinel behind",
+    "exercised EOM and custom-state writers declare every schema-blind component code",
+    "SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler"
+  ],
+  "noUiChanges": true
+}

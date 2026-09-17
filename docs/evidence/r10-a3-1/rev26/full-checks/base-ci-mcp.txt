@@ -1,0 +1,9 @@
+npm warn deprecated lodash.get@4.4.2: This package is deprecated. Use the optional chaining (?.) operator instead.
+npm warn deprecated scmp@2.1.0: Just use Node.js's crypto.timingSafeEqual()
+
+added 261 packages, and audited 262 packages in 1s
+
+49 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities

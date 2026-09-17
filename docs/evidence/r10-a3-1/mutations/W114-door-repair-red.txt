@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W114 repair resolves a practice-only option through its real store dependency
+not ok 1 - W114 repair resolves a practice-only option through its real store dependency
+  ---
+  duration_ms: 26.874708
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3StoredDefinitions.test.ts:1:1122'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","error":"pre-rebuild-test-encounter","reason":"pre-rebuild-test-encounter"}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3StoredDefinitions.test.ts:38:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 231.137042

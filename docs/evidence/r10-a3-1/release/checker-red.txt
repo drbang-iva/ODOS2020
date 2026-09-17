@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: W40 complete green fixture satisfies the fixed A3 scenario set
+ok 1 - W40 complete green fixture satisfies the fixed A3 scenario set
+  ---
+  duration_ms: 158.14575
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test and names T1
+ok 2 - W40 strict rejects delete-test and names T1
+  ---
+  duration_ms: 155.552333
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects delete-test-and-manifest and names T1
+ok 3 - W40 strict rejects delete-test-and-manifest and names T1
+  ---
+  duration_ms: 153.513292
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects skip and names T1
+ok 4 - W40 strict rejects skip and names T1
+  ---
+  duration_ms: 150.568041
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects todo and names T1
+ok 5 - W40 strict rejects todo and names T1
+  ---
+  duration_ms: 149.6655
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects failure and names T1
+ok 6 - W40 strict rejects failure and names T1
+  ---
+  duration_ms: 155.327167
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects wrong-suite and names T1
+ok 7 - W40 strict rejects wrong-suite and names T1
+  ---
+  duration_ms: 151.512833
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects duplicate and names T1
+ok 8 - W40 strict rejects duplicate and names T1
+  ---
+  duration_ms: 153.284625
+  type: 'test'
+  ...
+# Subtest: W40 strict rejects child-failure and names T1
+ok 9 - W40 strict rejects child-failure and names T1
+  ---
+  duration_ms: 156.150541
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects truncated
+ok 10 - W40 strict TAP parser rejects truncated
+  ---
+  duration_ms: 0.436625
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects malformed
+ok 11 - W40 strict TAP parser rejects malformed
+  ---
+  duration_ms: 0.039
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects wrongPlan
+ok 12 - W40 strict TAP parser rejects wrongPlan
+  ---
+  duration_ms: 0.186667
+  type: 'test'
+  ...
+# Subtest: W40 strict TAP parser rejects duplicateNumber
+ok 13 - W40 strict TAP parser rejects duplicateNumber
+  ---
+  duration_ms: 0.112708
+  type: 'test'
+  ...
+# Subtest: W40 TAP completion requires every final summary and duration
+ok 14 - W40 TAP completion requires every final summary and duration
+  ---
+  duration_ms: 0.033
+  type: 'test'
+  ...
+# Subtest: W40 rejects traversal that executes MCP scenarios as UI proof
+ok 15 - W40 rejects traversal that executes MCP scenarios as UI proof
+  ---
+  duration_ms: 94.32
+  type: 'test'
+  ...
+# Subtest: W86 rejects escaping suite symlink before execution
+not ok 16 - W86 rejects escaping suite symlink before execution
+  ---
+  duration_ms: 154.775084
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3ReleaseChecker.test.ts:1:3999'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /T4: (wrong ui file|missing ui suite)/. Input:
+    
+    'R10 A3 release BLOCKED\n' +
+      'T4: ui child process failed (1)\n' +
+      'T5: ui child process failed (1)\n' +
+      'T6: ui child process failed (1)\n' +
+      'T15: ui child process failed (1)\n' +
+      'T16: ui child process failed (1)\n' +
+      'T17: ui child process failed (1)\n' +
+      'T18: ui child process failed (1)\n' +
+      'T21: ui child process failed (1)\n' +
+      'T22: ui child process failed (1)\n' +
+      'T4: ui Nonsequential TAP result\n' +
+      'T5: ui Nonsequential TAP result\n' +
+      'T6: ui Nonsequential TAP result\n' +
+      'T15: ui Nonsequential TAP result\n' +
+      'T16: ui Nonsequential TAP result\n' +
+      'T17: ui Nonsequential TAP result\n' +
+      'T18: ui Nonsequential TAP result\n' +
+      'T21: ui Nonsequential TAP result\n' +
+      'T22: ui Nonsequential TAP result\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    R10 A3 release BLOCKED
+    T4: ui child process failed (1)
+    T5: ui child process failed (1)
+    T6: ui child process failed (1)
+    T15: ui child process failed (1)
+    T16: ui child process failed (1)
+    T17: ui child process failed (1)
+    T18: ui child process failed (1)
+    T21: ui child process failed (1)
+    T22: ui child process failed (1)
+    T4: ui Nonsequential TAP result
+    T5: ui Nonsequential TAP result
+    T6: ui Nonsequential TAP result
+    T15: ui Nonsequential TAP result
+    T16: ui Nonsequential TAP result
+    T17: ui Nonsequential TAP result
+    T18: ui Nonsequential TAP result
+    T21: ui Nonsequential TAP result
+    T22: ui Nonsequential TAP result
+    
+  operator: 'match'
+  stack: |-
+    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3ReleaseChecker.test.ts:66:10)
+    withFixture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3ReleaseChecker.test.ts:13:48)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3ReleaseChecker.test.ts:57:128)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W86 rejects broken suite symlink before execution
+ok 17 - W86 rejects broken suite symlink before execution
+  ---
+  duration_ms: 88.403708
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 16
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1884.758541

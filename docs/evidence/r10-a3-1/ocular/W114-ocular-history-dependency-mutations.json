@@ -1,0 +1,25 @@
+[
+  {
+    "id": "W114-ocular-history-dependency",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 practice option",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "  const fhir = ocularReadFhir(staff), definitions = deps.findingDefinitions?.() ?? [];",
+        "after": "  const fhir = ocularReadFhir(staff), definitions = (await import(\"./finding-definition-store.js\")).buildFindingDefinitionSeeds();"
+      }
+    ],
+    "redExit": 1,
+    "greenExit": 0,
+    "redLog": "ocular/W114-ocular-history-dependency-red.tap",
+    "greenLog": "ocular/W114-ocular-history-dependency-green.tap",
+    "sourceRestoredSha256": "35c3c93b4d1cbc1966f56967ae47284dd23da296157da7c249b03148a20a4f60"
+  }
+]

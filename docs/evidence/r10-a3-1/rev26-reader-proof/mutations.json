@@ -1,0 +1,34 @@
+[
+  {
+    "guard": "W71-panel-envelope",
+    "exit": 1,
+    "source": "mcp/src/clinical-graph/current-finding-identity.ts",
+    "sourceRestoredSha256": "ffb8a76f079d755dd253c9305b80fa716ca1454045e1fa530608537608b25780",
+    "before": "if (envelope.status === \"invalid\") return {kind:\"invalid\",reason:envelope.reason};",
+    "mutation": "if (envelope.status === \"invalid\") return {kind:\"panel-context\",definition};"
+  },
+  {
+    "guard": "W93-owned-catalog",
+    "exit": 1,
+    "source": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+    "sourceRestoredSha256": "ae513f1645ac210be5ab86682e92f71266e71323c56b17ba316c0b4e5136b5d8",
+    "before": ".filter(field => ownsFact(definition, field))",
+    "mutation": ""
+  },
+  {
+    "guard": "V23-history-readonly",
+    "exit": 1,
+    "source": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+    "sourceRestoredSha256": "35c3c93b4d1cbc1966f56967ae47284dd23da296157da7c249b03148a20a4f60",
+    "before": "encounterEditable: !reason",
+    "mutation": "encounterEditable: true"
+  },
+  {
+    "guard": "V27-overview-credit",
+    "exit": 1,
+    "source": "mcp/src/clinical-graph/exam-overview-projection.ts",
+    "sourceRestoredSha256": "c6a3cd8d09e261f52c3de7070b08409a4bb86c88d4a9f5aa5a77a6194949461b",
+    "before": "{creditsCompleteness:credit.has(observationReference)}",
+    "mutation": "{creditsCompleteness:true}"
+  }
+]

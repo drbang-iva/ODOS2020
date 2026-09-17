@@ -1,0 +1,212 @@
+[
+  {
+    "path": "3/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "3/findings/1/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/0/current/components/0/code",
+    "before": "OD_CUSTOM_ABNORMAL_FINDINGS_09::brunescent",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/0/current/components/0/display",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/0/current/components/1",
+    "after": {
+      "code": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+      "display": "OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+      "value": {
+        "kind": "code",
+        "code": "4+ (dark brown/black; brunescent)",
+        "display": "4+ (dark brown/black; brunescent)",
+        "text": "4+ (dark brown/black; brunescent)"
+      }
+    },
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/0/code",
+    "before": "OS_CUSTOM_ABNORMAL_FINDINGS_09::brunescent",
+    "after": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/0/display",
+    "after": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/code",
+    "before": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis",
+    "after": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/value/kind",
+    "before": "boolean",
+    "after": "code",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/value/value",
+    "before": true,
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/value/code",
+    "after": "4+ (dark brown/black; brunescent)",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/value/display",
+    "after": "4+ (dark brown/black; brunescent)",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/value/text",
+    "after": "4+ (dark brown/black; brunescent)",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/1/display",
+    "after": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/2/value/text",
+    "after": "3+",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/current/components/2/display",
+    "after": "OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade",
+    "mapping": "V27"
+  },
+  {
+    "path": "4/findings/1/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "5/findings/0/current/components/0/code",
+    "before": "OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+    "mapping": "V27"
+  },
+  {
+    "path": "5/findings/0/current/components/0/display",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+    "mapping": "V27"
+  },
+  {
+    "path": "5/findings/0/current/components/1",
+    "after": {
+      "code": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+      "display": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+      "value": {
+        "kind": "code",
+        "code": "horseshoe",
+        "display": "horseshoe",
+        "text": "horseshoe"
+      }
+    },
+    "mapping": "V27"
+  },
+  {
+    "path": "5/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "6/findings/0/current/components/0/code",
+    "before": "OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+    "mapping": "V27"
+  },
+  {
+    "path": "6/findings/0/current/components/0/display",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear",
+    "mapping": "V27"
+  },
+  {
+    "path": "6/findings/0/current/components/1",
+    "after": {
+      "code": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+      "display": "OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype",
+      "value": {
+        "kind": "code",
+        "code": "horseshoe",
+        "display": "horseshoe",
+        "text": "horseshoe"
+      }
+    },
+    "mapping": "V27"
+  },
+  {
+    "path": "6/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "7/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "8/findings/0/current/components/0/code",
+    "before": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line-hudson-stahli-stocker-s-fleischer-s",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line",
+    "mapping": "V27"
+  },
+  {
+    "path": "8/findings/0/current/components/0/display",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line",
+    "mapping": "V27"
+  },
+  {
+    "path": "8/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "9/findings/0/current/components/0/code",
+    "before": "OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole-full-lamellar",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole",
+    "mapping": "V27"
+  },
+  {
+    "path": "9/findings/0/current/components/0/display",
+    "after": "OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole",
+    "mapping": "V27"
+  },
+  {
+    "path": "9/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "66/findings/0/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  },
+  {
+    "path": "66/findings/1/creditsCompleteness",
+    "after": false,
+    "mapping": "V27"
+  }
+]

@@ -1,0 +1,41 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 166.193084
+  type: 'test'
+  ...
+# Subtest: W105 fact writer supersession refuses whole undo
+ok 2 - W105 fact writer supersession refuses whole undo
+  ---
+  duration_ms: 85.280584
+  type: 'test'
+  ...
+# Subtest: W105 panel writer supersession refuses whole undo
+ok 3 - W105 panel writer supersession refuses whole undo
+  ---
+  duration_ms: 52.276459
+  type: 'test'
+  ...
+# Subtest: W105 marker absence transitions refuse without touching unrelated owners
+ok 4 - W105 marker absence transitions refuse without touching unrelated owners
+  ---
+  duration_ms: 62.096541
+  type: 'test'
+  ...
+# Subtest: W105 forged audit or malformed operation cannot trigger undo repair before supersession
+ok 5 - W105 forged audit or malformed operation cannot trigger undo repair before supersession
+  ---
+  duration_ms: 25.192667
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 396.11975

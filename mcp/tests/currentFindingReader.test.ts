@@ -1,3 +1,4 @@
+import { findingPanelIdentifier } from "../src/clinical-graph/current-finding-identity.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Condition, Observation } from "@medplum/fhirtypes";
@@ -165,8 +166,8 @@ test("inferred homes intersect eye sets and never replace explicit homes on a co
   assert.deepEqual(project([snapshot()],{conditions:[unknown]}).currentFacts[0].homes,[]);
 });
 test("panel context and negative acts cannot replace a laterally scoped positive snapshot", () => {
-  const context={...snapshot("context",[]),effectiveDateTime:"2026-09-15T14:00:00.000Z",identifier:[{system:"urn:odos:finding-panel:v1",value:"panel"}],
-    component:[comp("EXAM_STATE","deferred"),comp("OTHER","No view"),comp("REMARKS","Synthetic remark")]};
+  const context={...snapshot("context",[]),effectiveDateTime:"2026-09-15T14:00:00.000Z",identifier:[findingPanelIdentifier({v:1,patientId:"p1",encounterId:"e1",stableKey:lens.stableKey,eye:"OD"})],
+    component:[comp("R10_PANEL_META",JSON.stringify({v:1,patientId:"p1",encounterId:"e1",stableKey:lens.stableKey,eye:"OD"})),comp("EXAM_STATE","deferred"),comp("OTHER","No view"),comp("REMARKS","Synthetic remark")]};
   const p=project([context,snapshot(),negative()]);
   assert.equal(p.currentFacts.length,0);assert.equal(p.panels[0].deferred,true);
   assert.equal(p.panels[0].other,"No view");assert.equal(p.panels[0].remarks,"Synthetic remark");

@@ -1,0 +1,83 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 198.910625
+  type: 'test'
+  ...
+# Subtest: V24 void finished closed before repair
+not ok 2 - V24 void finished closed before repair
+  ---
+  duration_ms: 37.614083
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:10463'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    422 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 422
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:76:628)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: V24 void cancelled closed before repair
+not ok 3 - V24 void cancelled closed before repair
+  ---
+  duration_ms: 19.914417
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:10463'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    422 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 422
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:76:628)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V24 void entered-in-error closed before repair
+not ok 4 - V24 void entered-in-error closed before repair
+  ---
+  duration_ms: 20.19975
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:10463'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    422 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 422
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:76:628)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 1
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 280.459833

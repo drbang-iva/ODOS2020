@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W114 overview stored definition dependency resolves practice option label and clinical credit
+ok 1 - W114 overview stored definition dependency resolves practice option label and clinical credit
+  ---
+  duration_ms: 14.035459
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 182.083209

@@ -1,0 +1,97 @@
+[
+  {
+    "id": "W114-door-read",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "async function handleDiagnosisFindingsReadRequest(deps: DiagnosisFindingsEndpointDeps, input: {\n    authHeader: string | undefined;\n    params: unknown;\n    query: unknown;\n}): Promise<Response> {\n    const staff = await deps.authenticate(input.authHeader);\n    if (!staff)\n        return { status: 401, body: { result: 'unauthenticated', error: 'Authentication required.' } };\n    if (!staffHasBusinessAction(staff, 'chart.read'))\n        return { status: 403, body: { result: 'forbidden', error: 'chart.read role required' } };\n    const params = paramsSchema.safeParse(input.params), query = readQuerySchema.safeParse(input.query);\n    if (!params.success || !query.success)\n        return invalid('Invalid encounter findings request.');\n    try {\n        const definitions = await (deps.findingDefinitions?.() ?? new FhirFindingDefinitionStore(staff.fhir).list()",
+        "after": "async function handleDiagnosisFindingsReadRequest(deps: DiagnosisFindingsEndpointDeps, input: {\n    authHeader: string | undefined;\n    params: unknown;\n    query: unknown;\n}): Promise<Response> {\n    const staff = await deps.authenticate(input.authHeader);\n    if (!staff)\n        return { status: 401, body: { result: 'unauthenticated', error: 'Authentication required.' } };\n    if (!staffHasBusinessAction(staff, 'chart.read'))\n        return { status: 403, body: { result: 'forbidden', error: 'chart.read role required' } };\n    const params = paramsSchema.safeParse(input.params), query = readQuerySchema.safeParse(input.query);\n    if (!params.success || !query.success)\n        return invalid('Invalid encounter findings request.');\n    try {\n        const definitions = await (deps.findingDefinitions?.() ?? new FhirFindingDefinitionStore(staff.fhir)['seeds']"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 read ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ],
+    "failurePattern": "not ok 1 - W114 read"
+  },
+  {
+    "id": "W114-door-write",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFindingsEndpointDeps, input: {\n    authHeader: string | undefined;\n    params: unknown;\n    body: unknown;\n}): Promise<Response> {\n    const staff = await deps.authenticate(input.authHeader);\n    if (!staff)\n        return { status: 401, body: { result: 'unauthenticated', error: 'Authentication required.' } };\n    if (!staffHasBusinessAction(staff, 'chart.write'))\n        return { status: 403, body: { result: 'forbidden', error: 'chart.write role required' } };\n    const params = paramsSchema.safeParse(input.params), parsed = mutationSchema.safeParse(input.body);\n    if (!params.success || !parsed.success) {\n        const index = !parsed.success ? parsed.error.issues[0]?.path[1] : undefined;\n        return invalid('Invalid finding command.', typeof index === 'number' ? index : undefined);\n    }\n    const body = parsed.data;\n    const missing = body.targets.findIndex(t => !t.baseline);\n    if (missing !== -1)\n        return { status: 428, headers: { 'Cache-Control': 'no-store' }, body: { result: 'precondition', error: 'A finding baseline is required.', targetIndex: missing } };\n    try {\n        const definitions = await (deps.findingDefinitions?.() ?? new FhirFindingDefinitionStore(staff.fhir).list()",
+        "after": "async function handleDiagnosisFindingsMutationRequest(deps: DiagnosisFindingsEndpointDeps, input: {\n    authHeader: string | undefined;\n    params: unknown;\n    body: unknown;\n}): Promise<Response> {\n    const staff = await deps.authenticate(input.authHeader);\n    if (!staff)\n        return { status: 401, body: { result: 'unauthenticated', error: 'Authentication required.' } };\n    if (!staffHasBusinessAction(staff, 'chart.write'))\n        return { status: 403, body: { result: 'forbidden', error: 'chart.write role required' } };\n    const params = paramsSchema.safeParse(input.params), parsed = mutationSchema.safeParse(input.body);\n    if (!params.success || !parsed.success) {\n        const index = !parsed.success ? parsed.error.issues[0]?.path[1] : undefined;\n        return invalid('Invalid finding command.', typeof index === 'number' ? index : undefined);\n    }\n    const body = parsed.data;\n    const missing = body.targets.findIndex(t => !t.baseline);\n    if (missing !== -1)\n        return { status: 428, headers: { 'Cache-Control': 'no-store' }, body: { result: 'precondition', error: 'A finding baseline is required.', targetIndex: missing } };\n    try {\n        const definitions = await (deps.findingDefinitions?.() ?? new FhirFindingDefinitionStore(staff.fhir)['seeds']"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 write ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ],
+    "failurePattern": "not ok 1 - W114 write"
+  },
+  {
+    "id": "W114-door-repair",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "async function handleDiagnosisFindingsAuditRepairRequest(deps: DiagnosisFindingsEndpointDeps, input: {\n    authHeader: string | undefined;\n    params: unknown;\n    body: unknown;\n}): Promise<Response> {\n    const staff = await deps.authenticate(input.authHeader);\n    if (!staff)\n        return { status: 401, body: { result: 'unauthenticated', error: 'Authentication required.' } };\n    if (!staffHasBusinessAction(staff, 'chart.write'))\n        return { status: 403, body: { result: 'forbidden', error: 'chart.write role required' } };\n    const params = paramsSchema.safeParse(input.params), body = z.object({ commandId: uuid, patientReference: patientReferenceSchema }).strict().safeParse(input.body);\n    if (!params.success || !body.success)\n        return invalid('Invalid audit repair command.');\n    try {\n        const definitions = await (deps.findingDefinitions?.() ?? new FhirFindingDefinitionStore(staff.fhir).list()",
+        "after": "async function handleDiagnosisFindingsAuditRepairRequest(deps: DiagnosisFindingsEndpointDeps, input: {\n    authHeader: string | undefined;\n    params: unknown;\n    body: unknown;\n}): Promise<Response> {\n    const staff = await deps.authenticate(input.authHeader);\n    if (!staff)\n        return { status: 401, body: { result: 'unauthenticated', error: 'Authentication required.' } };\n    if (!staffHasBusinessAction(staff, 'chart.write'))\n        return { status: 403, body: { result: 'forbidden', error: 'chart.write role required' } };\n    const params = paramsSchema.safeParse(input.params), body = z.object({ commandId: uuid, patientReference: patientReferenceSchema }).strict().safeParse(input.body);\n    if (!params.success || !body.success)\n        return invalid('Invalid audit repair command.');\n    try {\n        const definitions = await (deps.findingDefinitions?.() ?? new FhirFindingDefinitionStore(staff.fhir)['seeds']"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 repair ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ],
+    "failurePattern": "not ok 1 - W114 repair"
+  },
+  {
+    "id": "W114-door-candidates",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts",
+        "before": "async function handleDiagnosisCandidatesRequest(\n  deps: {\n    authenticate(authHeader: string | undefined): Promise<{\n      staffReference: string;\n      actorRole: PracticeRoleId;\n      fhir: DiagnosisCandidatesFhirClient;\n    } | null>;\n    now?: () => string;\n  },\n  input: { authHeader: string | undefined; params: unknown },\n): Promise<{ status: number; body: unknown }> {\n  const staff = await deps.authenticate(input.authHeader);\n  if (!staff) return { status: 401, body: { result: \"unauthenticated\", error: \"Authentication required to read diagnosis candidates.\" } };\n  if (!staffHasBusinessAction(staff, \"chart.read\")) {\n    return { status: 403, body: { result: \"forbidden\", error: \"chart.read role required\" } };\n  }\n  const encounterId = readEncounterId(input.params);\n  if (!encounterId) return { status: 400, body: { result: \"invalid\", reason: \"invalid-encounter\", error: \"A valid encounter id is required.\" } };\n  const encounterReference = `Encounter/${encounterId}`;\n  try {\n  const [definitions, catalog, tally] = await Promise.all([\n    new FhirFindingDefinitionStore(staff.fhir).list()",
+        "after": "async function handleDiagnosisCandidatesRequest(\n  deps: {\n    authenticate(authHeader: string | undefined): Promise<{\n      staffReference: string;\n      actorRole: PracticeRoleId;\n      fhir: DiagnosisCandidatesFhirClient;\n    } | null>;\n    now?: () => string;\n  },\n  input: { authHeader: string | undefined; params: unknown },\n): Promise<{ status: number; body: unknown }> {\n  const staff = await deps.authenticate(input.authHeader);\n  if (!staff) return { status: 401, body: { result: \"unauthenticated\", error: \"Authentication required to read diagnosis candidates.\" } };\n  if (!staffHasBusinessAction(staff, \"chart.read\")) {\n    return { status: 403, body: { result: \"forbidden\", error: \"chart.read role required\" } };\n  }\n  const encounterId = readEncounterId(input.params);\n  if (!encounterId) return { status: 400, body: { result: \"invalid\", reason: \"invalid-encounter\", error: \"A valid encounter id is required.\" } };\n  const encounterReference = `Encounter/${encounterId}`;\n  try {\n  const [definitions, catalog, tally] = await Promise.all([\n    new FhirFindingDefinitionStore(staff.fhir)['seeds']"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 candidates ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ],
+    "failurePattern": "not ok 1 - W114 candidates"
+  },
+  {
+    "id": "W114-door-pick",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+        "before": "async function performDiagnosisPickRequest(\n  deps: {\n    authenticate(authHeader: string | undefined): Promise<{\n      staffReference: string;\n      actorRole: PracticeRoleId;\n      fhir: DiagnosisPickFhirClient;\n    } | null>;\n    diagnosisVisitStatusStore: DiagnosisVisitStatusStore;\n    now?: () => string;\n  },\n  input: { authHeader: string | undefined; params: unknown; body: unknown },\n): Promise<{ status: number; body: unknown }> {\n  const staff = await deps.authenticate(input.authHeader);\n  if (!staff) return { status: 401, body: { error: \"Authentication required to pick a diagnosis.\" } };\n  if (!staffHasBusinessAction(staff, \"chart.diagnosis.write\")) return { status: 403, body: { error: \"chart.diagnosis.write role required\" } };\n  const encounterId = readEncounterId(input.params);\n  if (!encounterId) return { status: 400, body: { error: \"A valid encounter id is required.\" } };\n  const parsed = pickSchema.safeParse(input.body);\n  if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? \"Invalid diagnosis pick.\" } };\n  if (parsed.data.status && parsed.data.action !== \"confirm\") {\n    return { status: 400, body: { error: \"Diagnosis visit status is only accepted when confirming a diagnosis.\" } };\n  }\n  if (parsed.data.stageDeferred && parsed.data.action !== \"confirm\") {\n    return { status: 400, body: { error: \"Stage can only be deferred when confirming a diagnosis.\" } };\n  }\n\n  let encounter = await staff.fhir.read<Encounter>(\"Encounter\", encounterId);\n  if (isClosedEncounter(encounter)) return { status: 409, body: { result: \"invalid\", reason: \"encounter-closed\", error: \"Signed or closed encounters cannot be edited.\" } };\n  const encounterReference = `Encounter/${encounterId}`;\n  const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();\n  const familyMode = FAMILY_RESOLUTION_MODES[parsed.data.diagnosisKey];\n  if (parsed.data.stageDeferred && familyMode?.mode !== \"staged\") {\n    return { status: 400, body: { error: `${parsed.data.diagnosisKey} is not a staged diagnosis family.` } };\n  }\n  const diagnosis = parsed.data.stageDeferred && familyMode?.mode === \"staged\"\n    ? pendingStageDiagnosis(catalog, parsed.data.diagnosisKey, familyMode.members.map((member) => member.stableKey))\n    : catalog.find((row) => row.stableKey === parsed.data.diagnosisKey);\n  if (!diagnosis) return { status: 404, body: { error: `Diagnosis ${parsed.data.diagnosisKey} does not exist.` } };\n  if (!diagnosis.active) return { status: 409, body: { error: `Diagnosis ${parsed.data.diagnosisKey} is inactive.` } };\n\n  let observation: Observation | undefined;\n  let findingDefinitionStableKey: string | undefined;\n  let supportLaterality: \"right\" | \"left\" | \"bilateral\" | undefined;\n  const supports = parsed.data.supportingFacts;\n  if (supports || parsed.data.findingInstanceId) {\n    const definitions = await new FhirFindingDefinitionStore(staff.fhir).list()",
+        "after": "async function performDiagnosisPickRequest(\n  deps: {\n    authenticate(authHeader: string | undefined): Promise<{\n      staffReference: string;\n      actorRole: PracticeRoleId;\n      fhir: DiagnosisPickFhirClient;\n    } | null>;\n    diagnosisVisitStatusStore: DiagnosisVisitStatusStore;\n    now?: () => string;\n  },\n  input: { authHeader: string | undefined; params: unknown; body: unknown },\n): Promise<{ status: number; body: unknown }> {\n  const staff = await deps.authenticate(input.authHeader);\n  if (!staff) return { status: 401, body: { error: \"Authentication required to pick a diagnosis.\" } };\n  if (!staffHasBusinessAction(staff, \"chart.diagnosis.write\")) return { status: 403, body: { error: \"chart.diagnosis.write role required\" } };\n  const encounterId = readEncounterId(input.params);\n  if (!encounterId) return { status: 400, body: { error: \"A valid encounter id is required.\" } };\n  const parsed = pickSchema.safeParse(input.body);\n  if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? \"Invalid diagnosis pick.\" } };\n  if (parsed.data.status && parsed.data.action !== \"confirm\") {\n    return { status: 400, body: { error: \"Diagnosis visit status is only accepted when confirming a diagnosis.\" } };\n  }\n  if (parsed.data.stageDeferred && parsed.data.action !== \"confirm\") {\n    return { status: 400, body: { error: \"Stage can only be deferred when confirming a diagnosis.\" } };\n  }\n\n  let encounter = await staff.fhir.read<Encounter>(\"Encounter\", encounterId);\n  if (isClosedEncounter(encounter)) return { status: 409, body: { result: \"invalid\", reason: \"encounter-closed\", error: \"Signed or closed encounters cannot be edited.\" } };\n  const encounterReference = `Encounter/${encounterId}`;\n  const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();\n  const familyMode = FAMILY_RESOLUTION_MODES[parsed.data.diagnosisKey];\n  if (parsed.data.stageDeferred && familyMode?.mode !== \"staged\") {\n    return { status: 400, body: { error: `${parsed.data.diagnosisKey} is not a staged diagnosis family.` } };\n  }\n  const diagnosis = parsed.data.stageDeferred && familyMode?.mode === \"staged\"\n    ? pendingStageDiagnosis(catalog, parsed.data.diagnosisKey, familyMode.members.map((member) => member.stableKey))\n    : catalog.find((row) => row.stableKey === parsed.data.diagnosisKey);\n  if (!diagnosis) return { status: 404, body: { error: `Diagnosis ${parsed.data.diagnosisKey} does not exist.` } };\n  if (!diagnosis.active) return { status: 409, body: { error: `Diagnosis ${parsed.data.diagnosisKey} is inactive.` } };\n\n  let observation: Observation | undefined;\n  let findingDefinitionStableKey: string | undefined;\n  let supportLaterality: \"right\" | \"left\" | \"bilateral\" | undefined;\n  const supports = parsed.data.supportingFacts;\n  if (supports || parsed.data.findingInstanceId) {\n    const definitions = await new FhirFindingDefinitionStore(staff.fhir)['seeds']"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 pick ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ],
+    "failurePattern": "not ok 1 - W114 pick"
+  }
+]

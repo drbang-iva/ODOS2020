@@ -1,0 +1,53 @@
+[
+  {
+    "id": "rev25-W115-live-prebuild",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/shared-finding-write-guard.ts",
+        "before": "if (projectCurrentFindings(state).preRebuild) throw new Error(\"pre-rebuild-test-encounter: Shared findings are read-only\");",
+        "after": "if (false) throw new Error(\"pre-rebuild-test-encounter: Shared findings are read-only\");"
+      }
+    ],
+    "command": [
+      "node",
+      ".odos/r10-a3-1/run-live-stdout.mjs",
+      ".odos/r10-a3-1/rev25-live-mutation-current.txt",
+      "tests/r10OcularHealthDoorAuthzLive.test.ts"
+    ],
+    "failurePattern": "not ok 3 - MCP service identity"
+  },
+  {
+    "id": "rev25-W115-live-session",
+    "edits": [
+      {
+        "file": "mcp/src/index.ts",
+        "before": "        case \"amend_observation\": {\n          const input = observationAmendmentSchema.parse(args);\n          const observation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.observation_id, \"Observation\"),\n          );\n          assertClinicianSessionMatches({\n            clinicianId: input.clinician_id,\n            sessionPractitionerId: sessionPractitionerId(),\n          });\n",
+        "after": "        case \"amend_observation\": {\n          const input = observationAmendmentSchema.parse(args);\n          const observation = await fhir.read<Observation>(\n            \"Observation\",\n            stripReference(input.observation_id, \"Observation\"),\n          );\n          assertClinicianSessionMatches({\n            clinicianId: input.clinician_id,\n            sessionPractitionerId: input.clinician_id,\n          });\n"
+      }
+    ],
+    "command": [
+      "node",
+      ".odos/r10-a3-1/run-live-stdout.mjs",
+      ".odos/r10-a3-1/rev25-live-mutation-current.txt",
+      "tests/r10OcularHealthDoorAuthzLive.test.ts"
+    ],
+    "failurePattern": "not ok 3 - MCP service identity"
+  },
+  {
+    "id": "rev25-W115-live-identity",
+    "edits": [
+      {
+        "file": "mcp/src/index.ts",
+        "before": "              signatureDataBase64: input.signature_data_base64,\n            });\n            const actionReason =\n              transaction.activityCode === \"NULLIFY\"",
+        "after": "              signatureDataBase64: input.signature_data_base64,\n            });\n            const binary = transaction.bundle.entry![0].resource as any;\n            binary.data = Buffer.from(JSON.stringify([...JSON.parse(Buffer.from(binary.data, \"base64\").toString(\"utf8\")), {op:\"replace\",path:\"/identifier\",value:[]}])).toString(\"base64\");\n            const actionReason =\n              transaction.activityCode === \"NULLIFY\""
+      }
+    ],
+    "command": [
+      "node",
+      ".odos/r10-a3-1/run-live-stdout.mjs",
+      ".odos/r10-a3-1/rev25-live-mutation-current.txt",
+      "tests/r10OcularHealthDoorAuthzLive.test.ts"
+    ],
+    "failurePattern": "not ok 3 - MCP service identity"
+  }
+]

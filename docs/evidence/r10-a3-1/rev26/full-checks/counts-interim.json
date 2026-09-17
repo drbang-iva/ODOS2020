@@ -1,0 +1,57 @@
+[
+  {
+    "file": "base-mcp-npm.txt",
+    "counts": {
+      "tests": 5687,
+      "pass": 5618,
+      "fail": 1,
+      "skipped": 52,
+      "todo": 16
+    },
+    "sha256": "85d4b09e06a3125dc20df4a53b6d9033880afcc1f8d57133274bd20c160bab41"
+  },
+  {
+    "file": "mcp-npm.txt",
+    "counts": {
+      "tests": 5979,
+      "pass": 5923,
+      "fail": 3,
+      "skipped": 53,
+      "todo": 0
+    },
+    "sha256": "2f9895c6e2c56e047a8baa432d45113ad706d8dabac60e327ae711a608f98a51"
+  },
+  {
+    "file": "base-live-authz.txt",
+    "counts": {
+      "tests": 69,
+      "pass": 69,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "sha256": "642bb0beaf42150396080d9dbf3ea46404bf84a1dc8b1880c1d3a9cec63789a4"
+  },
+  {
+    "file": "live-authz.txt",
+    "counts": {
+      "tests": 73,
+      "pass": 73,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "sha256": "795947a44253dde84749e4df8ef25a14e47e31f70ed6dac6bc19c05791c74697"
+  },
+  {
+    "file": "ui-test.txt",
+    "counts": {
+      "tests": 1685,
+      "pass": 1673,
+      "fail": 8,
+      "skipped": 0,
+      "todo": 4
+    },
+    "sha256": "0784f9b7c7e42408a64b5d75bb78214cf87278ef90e5b38025a5c42928095896"
+  }
+]

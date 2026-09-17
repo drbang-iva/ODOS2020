@@ -1,0 +1,318 @@
+TAP version 13
+# Subtest: W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared
+not ok 1 - W73 W113 previous exams uses extension homes for both eyes with typed qualifiers and hides cleared
+  ---
+  duration_ms: 2.285
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:40:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+not ok 2 - W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+  ---
+  duration_ms: 0.823833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:42:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:44:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W101 lost Condition response resumes one conditional owner
+not ok 3 - W101 lost Condition response resumes one conditional owner
+  ---
+  duration_ms: 0.403042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:51:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"first":{"status":400,"body":{"error":"A current Encounter and source Encounter diagnosis are required."}},"second":{"status":400,"body":{"error":"A current Encounter and source Encounter diagnosis are required."}}}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:54:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W102 same command changed source fingerprint refuses zero further writes
+not ok 4 - W102 same command changed source fingerprint refuses zero further writes
+  ---
+  duration_ms: 0.241917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:56:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:57:45)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W103 W104 frozen retry stays stale and partial carry has no findings witness
+not ok 5 - W103 W104 frozen retry stays stale and partial carry has no findings witness
+  ---
+  duration_ms: 0.307458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:62:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:64:71)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W125 replan accepts unchanged already-completed target and records exact versions
+not ok 6 - W125 replan accepts unchanged already-completed target and records exact versions
+  ---
+  duration_ms: 0.386708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:68:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:71:72)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W124 resumes persisted Condition with failed plan
+not ok 7 - W124 resumes persisted Condition with failed plan
+  ---
+  duration_ms: 0.276791
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:75:50'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:77:71)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W124 resumes persisted Condition with failed link
+not ok 8 - W124 resumes persisted Condition with failed link
+  ---
+  duration_ms: 0.252583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:75:50'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:77:71)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W123 two different commands race one conditional Condition owner
+not ok 9 - W123 two different commands race one conditional Condition owner
+  ---
+  duration_ms: 0.59625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:80:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:83:60)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W75 W126 void between facts and witness remains edited
+not ok 10 - W75 W126 void between facts and witness remains edited
+  ---
+  duration_ms: 0.372625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:85:52'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:87:36)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W75 W126 void-undo between facts and witness remains edited
+not ok 11 - W75 W126 void-undo between facts and witness remains edited
+  ---
+  duration_ms: 0.107208
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:85:52'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:87:36)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W79 W91 refuses source before all writes
+not ok 12 - W79 W91 refuses source before all writes
+  ---
+  duration_ms: 0.160667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:89:62'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:91:36)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W79 W91 refuses destination before all writes
+not ok 13 - W79 W91 refuses destination before all writes
+  ---
+  duration_ms: 0.101583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:89:62'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:91:36)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W79 W91 refuses closed before all writes
+not ok 14 - W79 W91 refuses closed before all writes
+  ---
+  duration_ms: 0.080625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:89:62'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"A current Encounter and source Encounter diagnosis are required."}
+    
+    400 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:91:36)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 0
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 257.766666

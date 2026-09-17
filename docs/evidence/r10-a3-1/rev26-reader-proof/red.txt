@@ -1,0 +1,3547 @@
+TAP version 13
+# Subtest: identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+ok 1 - identity is SHA256 of the ordered v1 tuple, independent of object order and seed id
+  ---
+  duration_ms: 1.584042
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects hash mismatch
+ok 2 - canonical envelope rejects hash mismatch
+  ---
+  duration_ms: 0.21225
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects patient mismatch
+ok 3 - canonical envelope rejects patient mismatch
+  ---
+  duration_ms: 0.07825
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects encounter mismatch
+ok 4 - canonical envelope rejects encounter mismatch
+  ---
+  duration_ms: 0.163333
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects code mismatch
+ok 5 - canonical envelope rejects code mismatch
+  ---
+  duration_ms: 0.086042
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects eye mismatch
+ok 6 - canonical envelope rejects eye mismatch
+  ---
+  duration_ms: 0.053792
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects schema mismatch
+ok 7 - canonical envelope rejects schema mismatch
+  ---
+  duration_ms: 0.244042
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-envelope mismatch
+ok 8 - canonical envelope rejects duplicate-envelope mismatch
+  ---
+  duration_ms: 0.041042
+  type: 'test'
+  ...
+# Subtest: canonical envelope rejects duplicate-identifier mismatch
+ok 9 - canonical envelope rejects duplicate-identifier mismatch
+  ---
+  duration_ms: 0.24075
+  type: 'test'
+  ...
+# Subtest: exact catalog resolution retains the whole nested option
+ok 10 - exact catalog resolution retains the whole nested option
+  ---
+  duration_ms: 0.332042
+  type: 'test'
+  ...
+# Subtest: retired atomic aliases use current retirement semantics and never reverse false subtypes
+ok 11 - retired atomic aliases use current retirement semantics and never reverse false subtypes
+  ---
+  duration_ms: 0.308709
+  type: 'test'
+  ...
+# Subtest: role markers dominate definition matching, conflicting markers are invalid
+not ok 12 - role markers dominate definition matching, conflicting markers are invalid
+  ---
+  duration_ms: 1.782
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:3666'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'invalid'
+    - 'panel-context'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'panel-context'
+  actual: 'invalid'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:56:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+ok 13 - one typed qualifier reader preserves numeric, enum, extent, legacy GRADE and retired grade removal
+  ---
+  duration_ms: 1.9455
+  type: 'test'
+  ...
+# Subtest: malformed stored negative still throws; eye sets never coerce UNKNOWN
+ok 14 - malformed stored negative still throws; eye sets never coerce UNKNOWN
+  ---
+  duration_ms: 0.231208
+  type: 'test'
+  ...
+# Subtest: compiled ocular structure field identities and atomic samples are pinned
+not ok 15 - compiled ocular structure field identities and atomic samples are pinned
+  ---
+  duration_ms: 2.561167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:5941'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      [
+        {
+          atomicIds: [
+            'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis',
+            'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis',
+    ...
+            'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film',
+    -       'ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein',
+            'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam',
+    +       'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::mucus-strands'
+          ],
+          fields: [
+            'CUSTOM_ABNORMAL_FINDINGS_05',
+            'CUSTOM_GRADE_TBUT',
+            'CUSTOM_GRADE_TBUT_METHOD'
+    ...
+            'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare',
+    +       'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::hyphema'
+    -       'ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed'
+          ],
+          fields: [
+            'CUSTOM_ABNORMAL_FINDINGS_07',
+            'CUSTOM_GRADE_VAN_HERICK'
+          ],
+    ...
+          atomicIds: [
+    +       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::arteriolar-attenuation',
+    +       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-crossing-changes',
+    +       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-nicking'
+    -       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2',
+    -       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3',
+    -       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4'
+          ],
+          fields: [
+            'CUSTOM_ABNORMAL_FINDINGS_04',
+            'CUSTOM_GRADE_A_V_RATIO'
+          ],
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      stableKey: 'ocular-health:anterior:periocular-adnexa'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis'
+        1: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis'
+        2: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatochalasis'
+    1:
+      stableKey: 'ocular-health:anterior:lids-lashes'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::anterior-blepharitis'
+        1: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::chalazion'
+        2: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes'
+    2:
+      stableKey: 'ocular-health:anterior:palpebral-conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::concretions'
+        1: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::follicles'
+        2: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::giant-papillae-gpc'
+    3:
+      stableKey: 'ocular-health:anterior:conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+      atomicIds:
+        0: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::chemosis'
+        1: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::concretion'
+        2: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::conjunctivochalasis'
+    4:
+      stableKey: 'ocular-health:anterior:tear-film'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+        1: 'CUSTOM_GRADE_TBUT'
+        2: 'CUSTOM_GRADE_TBUT_METHOD'
+      atomicIds:
+        0: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film'
+        1: 'ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein'
+        2: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam'
+    5:
+      stableKey: 'ocular-health:anterior:cornea'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_06'
+        1: 'CUSTOM_GRADE_VITAL_DYE'
+      atomicIds:
+        0: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::abrasion'
+        1: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::arcus'
+        2: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::band-keratopathy'
+    6:
+      stableKey: 'ocular-health:anterior:anterior-chamber'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_07'
+        1: 'CUSTOM_GRADE_VAN_HERICK'
+      atomicIds:
+        0: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells'
+        1: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare'
+        2: 'ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed'
+    7:
+      stableKey: 'ocular-health:anterior:iris'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_08'
+      atomicIds:
+        0: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::atrophy'
+        1: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::coloboma'
+        2: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::heterochromia'
+    8:
+      stableKey: 'ocular-health:anterior:lens'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_09'
+      atomicIds:
+        0: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar'
+        1: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular'
+        2: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia'
+    9:
+      stableKey: 'ocular-health:posterior:vitreous'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::anterior-hyaloid'
+        1: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::asteroid-hyalosis'
+        2: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::floaters'
+    10:
+      stableKey: 'ocular-health:posterior:fundus'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::chorioretinal-scar'
+        1: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-lesion'
+        2: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-nevus'
+    11:
+      stableKey: 'ocular-health:posterior:macula'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cnvm'
+        1: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cystoid-macular-edema-cme'
+        2: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::diabetic-macular-edema'
+    12:
+      stableKey: 'ocular-health:posterior:vessels'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+        1: 'CUSTOM_GRADE_A_V_RATIO'
+      atomicIds:
+        0: 'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2'
+        1: 'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3'
+        2: 'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4'
+    13:
+      stableKey: 'ocular-health:posterior:periphery'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+      atomicIds:
+        0: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::chorioretinal-scar'
+        1: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cobblestone-paving-stone-degeneration'
+        2: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cystoid-degeneration'
+  actual:
+    0:
+      stableKey: 'ocular-health:anterior:periocular-adnexa'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis'
+        1: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis'
+        2: 'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatochalasis'
+    1:
+      stableKey: 'ocular-health:anterior:lids-lashes'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::anterior-blepharitis'
+        1: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::chalazion'
+        2: 'ocular-health:anterior:lids-lashes::CUSTOM_ABNORMAL_FINDINGS_02::demodex::collarettes'
+    2:
+      stableKey: 'ocular-health:anterior:palpebral-conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::concretions'
+        1: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::follicles'
+        2: 'ocular-health:anterior:palpebral-conjunctiva::CUSTOM_ABNORMAL_FINDINGS_03::giant-papillae-gpc'
+    3:
+      stableKey: 'ocular-health:anterior:conjunctiva'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+      atomicIds:
+        0: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::chemosis'
+        1: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::concretion'
+        2: 'ocular-health:anterior:conjunctiva::CUSTOM_ABNORMAL_FINDINGS_04::conjunctivochalasis'
+    4:
+      stableKey: 'ocular-health:anterior:tear-film'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+        1: 'CUSTOM_GRADE_TBUT'
+        2: 'CUSTOM_GRADE_TBUT_METHOD'
+      atomicIds:
+        0: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film'
+        1: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam'
+        2: 'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::mucus-strands'
+    5:
+      stableKey: 'ocular-health:anterior:cornea'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_06'
+        1: 'CUSTOM_GRADE_VITAL_DYE'
+      atomicIds:
+        0: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::abrasion'
+        1: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::arcus'
+        2: 'ocular-health:anterior:cornea::CUSTOM_ABNORMAL_FINDINGS_06::band-keratopathy'
+    6:
+      stableKey: 'ocular-health:anterior:anterior-chamber'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_07'
+        1: 'CUSTOM_GRADE_VAN_HERICK'
+      atomicIds:
+        0: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::cells'
+        1: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare'
+        2: 'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::hyphema'
+    7:
+      stableKey: 'ocular-health:anterior:iris'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_08'
+      atomicIds:
+        0: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::atrophy'
+        1: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::coloboma'
+        2: 'ocular-health:anterior:iris::CUSTOM_ABNORMAL_FINDINGS_08::heterochromia'
+    8:
+      stableKey: 'ocular-health:anterior:lens'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_09'
+      atomicIds:
+        0: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-polar'
+        1: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::anterior-subcapsular'
+        2: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::aphakia'
+    9:
+      stableKey: 'ocular-health:posterior:vitreous'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_01'
+      atomicIds:
+        0: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::anterior-hyaloid'
+        1: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::asteroid-hyalosis'
+        2: 'ocular-health:posterior:vitreous::CUSTOM_ABNORMAL_FINDINGS_01::floaters'
+    10:
+      stableKey: 'ocular-health:posterior:fundus'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_02'
+      atomicIds:
+        0: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::chorioretinal-scar'
+        1: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-lesion'
+        2: 'ocular-health:posterior:fundus::CUSTOM_ABNORMAL_FINDINGS_02::choroidal-nevus'
+    11:
+      stableKey: 'ocular-health:posterior:macula'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_03'
+      atomicIds:
+        0: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cnvm'
+        1: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::cystoid-macular-edema-cme'
+        2: 'ocular-health:posterior:macula::CUSTOM_ABNORMAL_FINDINGS_03::diabetic-macular-edema'
+    12:
+      stableKey: 'ocular-health:posterior:vessels'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_04'
+        1: 'CUSTOM_GRADE_A_V_RATIO'
+      atomicIds:
+        0: 'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::arteriolar-attenuation'
+        1: 'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-crossing-changes'
+        2: 'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-nicking'
+    13:
+      stableKey: 'ocular-health:posterior:periphery'
+      fields:
+        0: 'CUSTOM_ABNORMAL_FINDINGS_05'
+      atomicIds:
+        0: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::chorioretinal-scar'
+        1: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cobblestone-paving-stone-degeneration'
+        2: 'ocular-health:posterior:periphery::CUSTOM_ABNORMAL_FINDINGS_05::cystoid-degeneration'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:82:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: operation marker validates audit envelope and hashes exact digest-keyed identity
+ok 16 - operation marker validates audit envelope and hashes exact digest-keyed identity
+  ---
+  duration_ms: 0.489542
+  type: 'test'
+  ...
+# Subtest: pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+not ok 17 - pending audit lookup uses one comma-OR tag search, all pages, and fails closed
+  ---
+  duration_ms: 0.609042
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:7435'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'Observation/one',
+        'Observation/two'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Observation/two'
+  actual:
+    0: 'Observation/one'
+    1: 'Observation/two'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:103:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: review regression: an audit for a copied marker covers only its actual Observation target
+not ok 18 - review regression: an audit for a copied marker covers only its actual Observation target
+  ---
+  duration_ms: 0.180583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:9232'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'Observation/first',
+        'Observation/second'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'Observation/second'
+  actual:
+    0: 'Observation/first'
+    1: 'Observation/second'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:121:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: captured suites match the suiteHashes provenance keys
+ok 19 - captured suites match the suiteHashes provenance keys
+  ---
+  duration_ms: 0.696625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 1: customSectionEndpoint.test.ts
+ok 20 - history bytes unchanged 1: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 1.141084
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 2: customSectionEndpoint.test.ts
+ok 21 - history bytes unchanged 2: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.181667
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 3: customSectionEndpoint.test.ts
+ok 22 - history bytes unchanged 3: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.255208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 4: customSectionEndpoint.test.ts
+ok 23 - history bytes unchanged 4: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.246458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 5: customSectionEndpoint.test.ts
+ok 24 - history bytes unchanged 5: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.461875
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 6: customSectionEndpoint.test.ts
+not ok 25 - history bytes unchanged 6: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.200041
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 7: customSectionEndpoint.test.ts
+not ok 26 - history bytes unchanged 7: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.145167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 8: customSectionEndpoint.test.ts
+not ok 27 - history bytes unchanged 8: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.300708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 9: customSectionEndpoint.test.ts
+not ok 28 - history bytes unchanged 9: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.574625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 10: customSectionEndpoint.test.ts
+not ok 29 - history bytes unchanged 10: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.185791
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 11: customSectionEndpoint.test.ts
+not ok 30 - history bytes unchanged 11: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.179625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 12: customSectionEndpoint.test.ts
+not ok 31 - history bytes unchanged 12: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.076584
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 13: customSectionEndpoint.test.ts
+not ok 32 - history bytes unchanged 13: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.049708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 14: customSectionEndpoint.test.ts
+not ok 33 - history bytes unchanged 14: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.100792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 15: customSectionEndpoint.test.ts
+not ok 34 - history bytes unchanged 15: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.054917
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 16: customSectionEndpoint.test.ts
+not ok 35 - history bytes unchanged 16: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.044916
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 17: customSectionEndpoint.test.ts
+not ok 36 - history bytes unchanged 17: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.035458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 18: customSectionEndpoint.test.ts
+not ok 37 - history bytes unchanged 18: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.03325
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 19: customSectionEndpoint.test.ts
+not ok 38 - history bytes unchanged 19: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.032542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 20: customSectionEndpoint.test.ts
+not ok 39 - history bytes unchanged 20: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.032375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 21: customSectionEndpoint.test.ts
+not ok 40 - history bytes unchanged 21: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.033
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 22: customSectionEndpoint.test.ts
+not ok 41 - history bytes unchanged 22: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.077875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 23: customSectionEndpoint.test.ts
+not ok 42 - history bytes unchanged 23: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.0365
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 24: customSectionEndpoint.test.ts
+not ok 43 - history bytes unchanged 24: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.032708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 25: customSectionEndpoint.test.ts
+not ok 44 - history bytes unchanged 25: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.039875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 26: customSectionEndpoint.test.ts
+not ok 45 - history bytes unchanged 26: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.036625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 27: customSectionEndpoint.test.ts
+not ok 46 - history bytes unchanged 27: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.031875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 28: customSectionEndpoint.test.ts
+not ok 47 - history bytes unchanged 28: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.033666
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 29: customSectionEndpoint.test.ts
+not ok 48 - history bytes unchanged 29: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.036458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 30: customSectionEndpoint.test.ts
+not ok 49 - history bytes unchanged 30: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.03225
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 31: customSectionEndpoint.test.ts
+not ok 50 - history bytes unchanged 31: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.046834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 32: customSectionEndpoint.test.ts
+not ok 51 - history bytes unchanged 32: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.031583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 33: customSectionEndpoint.test.ts
+not ok 52 - history bytes unchanged 33: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.031875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 34: customSectionEndpoint.test.ts
+not ok 53 - history bytes unchanged 34: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.033667
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 35: customSectionEndpoint.test.ts
+not ok 54 - history bytes unchanged 35: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.035875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 36: customSectionEndpoint.test.ts
+not ok 55 - history bytes unchanged 36: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.031583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 37: customSectionEndpoint.test.ts
+not ok 56 - history bytes unchanged 37: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.036833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 38: customSectionEndpoint.test.ts
+not ok 57 - history bytes unchanged 38: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.085708
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 39: customSectionEndpoint.test.ts
+ok 58 - history bytes unchanged 39: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.343834
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 40: customSectionEndpoint.test.ts
+ok 59 - history bytes unchanged 40: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.080208
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 41: customSectionEndpoint.test.ts
+ok 60 - history bytes unchanged 41: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.131125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 42: customSectionEndpoint.test.ts
+ok 61 - history bytes unchanged 42: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.092125
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 43: customSectionEndpoint.test.ts
+ok 62 - history bytes unchanged 43: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.094458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 44: customSectionEndpoint.test.ts
+ok 63 - history bytes unchanged 44: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.08775
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 45: customSectionEndpoint.test.ts
+ok 64 - history bytes unchanged 45: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.057083
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 46: customSectionEndpoint.test.ts
+ok 65 - history bytes unchanged 46: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.080875
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 47: customSectionEndpoint.test.ts
+not ok 66 - history bytes unchanged 47: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.058167
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 48: customSectionEndpoint.test.ts
+ok 67 - history bytes unchanged 48: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.068458
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 49: customSectionEndpoint.test.ts
+not ok 68 - history bytes unchanged 49: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.039333
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 50: customSectionEndpoint.test.ts
+ok 69 - history bytes unchanged 50: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.075875
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 51: customSectionEndpoint.test.ts
+not ok 70 - history bytes unchanged 51: customSectionEndpoint.test.ts
+  ---
+  duration_ms: 0.033625
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595'
+  failureType: 'testCodeFailure'
+  error: 'Ocular Health requires the finding read transport.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    ocularReadFhir (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:591:54)
+    readOcularHealth (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:778:16)
+    handleCustomSectionHistoryRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/custom-section-endpoint.ts:339:73)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:12:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: history bytes unchanged 52: diagnosisLinkL2.test.ts
+ok 71 - history bytes unchanged 52: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.061167
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 53: diagnosisLinkL2.test.ts
+ok 72 - history bytes unchanged 53: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.048583
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 54: diagnosisLinkL2.test.ts
+ok 73 - history bytes unchanged 54: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.048834
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 55: diagnosisLinkL2.test.ts
+ok 74 - history bytes unchanged 55: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044625
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 56: diagnosisLinkL2.test.ts
+ok 75 - history bytes unchanged 56: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044666
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 57: diagnosisLinkL2.test.ts
+ok 76 - history bytes unchanged 57: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044541
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 58: diagnosisLinkL2.test.ts
+ok 77 - history bytes unchanged 58: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.043666
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 59: diagnosisLinkL2.test.ts
+ok 78 - history bytes unchanged 59: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.044291
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 60: diagnosisLinkL2.test.ts
+ok 79 - history bytes unchanged 60: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.043792
+  type: 'test'
+  ...
+# Subtest: history bytes unchanged 61: diagnosisLinkL2.test.ts
+ok 80 - history bytes unchanged 61: diagnosisLinkL2.test.ts
+  ---
+  duration_ms: 0.0435
+  type: 'test'
+  ...
+# node:internal/modules/run_main:123
+#     triggerUncaughtException(
+#     ^
+# AssertionError [ERR_ASSERTION]: {"result":"invalid","reason":"invalid"}
+# 400 !== 200
+#     at capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
+#     at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {
+#   generatedMessage: false,
+#   code: 'ERR_ASSERTION',
+#   actual: 400,
+#   expected: 200,
+#   operator: 'strictEqual',
+#   diff: 'simple'
+# }
+# Node.js v22.22.3
+# Subtest: legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 81 - legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 7.857584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 82 - legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 1.154792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 83 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 5.037833
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+                  code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+                  value: {
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [],
+              recordedAt: '2026-08-16T12:00:00.000Z'
+            },
+            display: 'Lens',
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/lens-abnormal'
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade'
+              value:
+                kind: 'code'
+                code: '2+'
+                display: '2+'
+            2:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc'
+              value:
+                kind: 'boolean'
+                value: true
+            3:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc::grade'
+              value:
+                kind: 'code'
+                code: '3+'
+                display: '3+'
+        normalLabel: 'Clear'
+        sheetFindings:
+          0:
+            display: 'nuclear sclerosis'
+            qualifiers:
+              0: '2+'
+          1:
+            display: 'posterior subcapsular (PSC)'
+            qualifiers:
+              0: '3+'
+      1:
+        observationReference: 'Observation/lens-normal'
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OS'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'normal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+        normalLabel: 'Clear'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/lens-abnormal'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade'
+              value:
+                kind: 'code'
+                code: '2+'
+                display: '2+'
+            2:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc'
+              value:
+                kind: 'boolean'
+                value: true
+            3:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::posterior-subcapsular-psc::grade'
+              value:
+                kind: 'code'
+                code: '3+'
+                display: '3+'
+        normalLabel: 'Clear'
+        sheetFindings:
+          0:
+            display: 'nuclear sclerosis'
+            qualifiers:
+              0: '2+'
+          1:
+            display: 'posterior subcapsular (PSC)'
+            qualifiers:
+              0: '3+'
+      1:
+        observationReference: 'Observation/lens-normal'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OS'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'normal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+        normalLabel: 'Clear'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 84 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 1.317958
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::brunescent',
+                  value: {
+                    kind: 'boolean',
+                    value: true
+                  }
+                },
+    +           {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',
+    +             value: {
+    +               code: '4+ (dark brown/black; brunescent)',
+    +               display: '4+ (dark brown/black; brunescent)',
+    +               kind: 'code',
+    +               text: '4+ (dark brown/black; brunescent)'
+    +             }
+    +           }
+              ],
+              recordedAt: '2026-08-16T12:00:00.000Z'
+            },
+            display: 'Lens',
+            examination: {
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+    +             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+    +             display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+    -             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::brunescent',
+                  value: {
+                    kind: 'boolean',
+                    value: true
+                  }
+                },
+                {
+    +             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',
+    +             display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',
+    -             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+                  value: {
+    +               code: '4+ (dark brown/black; brunescent)',
+    +               display: '4+ (dark brown/black; brunescent)',
+    +               kind: 'code',
+    +               text: '4+ (dark brown/black; brunescent)'
+    -               kind: 'boolean',
+    -               value: true
+                  }
+                },
+                {
+                  code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade',
+    +             display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade',
+                  value: {
+                    code: '3+',
+                    display: '3+',
+                    kind: 'code',
+    +               text: '3+'
+                  }
+                }
+              ],
+              recordedAt: '2026-08-16T12:00:00.000Z'
+            },
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/lens-brunescent-alone'
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::brunescent'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Clear'
+        sheetFindings:
+          0:
+            display: 'nuclear sclerosis'
+            qualifiers:
+              0: '4+ (dark brown/black; brunescent)'
+      1:
+        observationReference: 'Observation/lens-brunescent-merged'
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OS'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::brunescent'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              value:
+                kind: 'boolean'
+                value: true
+            2:
+              code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade'
+              value:
+                kind: 'code'
+                code: '3+'
+                display: '3+'
+        normalLabel: 'Clear'
+        sheetFindings:
+          0:
+            display: 'nuclear sclerosis'
+            qualifiers:
+              0: '3+'
+              1: '4+ (dark brown/black; brunescent)'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/lens-brunescent-alone'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour'
+              value:
+                kind: 'code'
+                code: '4+ (dark brown/black; brunescent)'
+                display: '4+ (dark brown/black; brunescent)'
+                text: '4+ (dark brown/black; brunescent)'
+        normalLabel: 'Clear'
+        sheetFindings:
+          0:
+            display: 'nuclear sclerosis'
+            qualifiers:
+              0: '4+ (dark brown/black; brunescent)'
+      1:
+        observationReference: 'Observation/lens-brunescent-merged'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:lens'
+        sectionKey: 'ocular-health:anterior:lens'
+        display: 'Lens'
+        laterality: 'OS'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour'
+              display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour'
+              value:
+                kind: 'code'
+                code: '4+ (dark brown/black; brunescent)'
+                display: '4+ (dark brown/black; brunescent)'
+                text: '4+ (dark brown/black; brunescent)'
+            2:
+              code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade'
+              display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::grade'
+              value:
+                kind: 'code'
+                code: '3+'
+                display: '3+'
+                text: '3+'
+        normalLabel: 'Clear'
+        sheetFindings:
+          0:
+            display: 'nuclear sclerosis'
+            qualifiers:
+              0: '3+'
+              1: '4+ (dark brown/black; brunescent)'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 85 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.519458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
+    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear',
+                  value: {
+                    kind: 'boolean',
+                    value: true
+                  }
+                },
+    +           {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',
+    +             value: {
+    +               code: 'horseshoe',
+    +               display: 'horseshoe',
+    +               kind: 'code',
+    +               text: 'horseshoe'
+    +             }
+    +           }
+              ],
+              recordedAt: '2026-08-16T12:00:00.000Z'
+            },
+            display: 'Periphery',
+            examination: {
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-horseshoe'
+        findingKey: 'ocular-health:posterior:periphery'
+        sectionKey: 'ocular-health:posterior:periphery'
+        display: 'Periphery'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Flat and attached'
+        sheetFindings:
+          0:
+            display: 'retinal tear'
+            qualifiers:
+              0: 'Horseshoe (flap)'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-horseshoe'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:posterior:periphery'
+        sectionKey: 'ocular-health:posterior:periphery'
+        display: 'Periphery'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype'
+              value:
+                kind: 'code'
+                code: 'horseshoe'
+                display: 'horseshoe'
+                text: 'horseshoe'
+        normalLabel: 'Flat and attached'
+        sheetFindings:
+          0:
+            display: 'retinal tear'
+            qualifiers:
+              0: 'Horseshoe (flap)'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 86 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.338458
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',
+    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear',
+                  value: {
+                    kind: 'boolean',
+                    value: true
+                  }
+                },
+    +           {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',
+    +             value: {
+    +               code: 'horseshoe',
+    +               display: 'horseshoe',
+    +               kind: 'code',
+    +               text: 'horseshoe'
+    +             }
+    +           }
+              ],
+              recordedAt: '2026-08-16T12:00:00.000Z'
+            },
+            display: 'Periphery',
+            examination: {
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-horseshoe'
+        findingKey: 'ocular-health:posterior:periphery'
+        sectionKey: 'ocular-health:posterior:periphery'
+        display: 'Periphery'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Flat and attached'
+        sheetFindings:
+          0:
+            display: 'retinal tear'
+            qualifiers:
+              0: 'horseshoe'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-horseshoe'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:posterior:periphery'
+        sectionKey: 'ocular-health:posterior:periphery'
+        display: 'Periphery'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype'
+              value:
+                kind: 'code'
+                code: 'horseshoe'
+                display: 'horseshoe'
+                text: 'horseshoe'
+        normalLabel: 'Flat and attached'
+        sheetFindings:
+          0:
+            display: 'retinal tear'
+            qualifiers:
+              0: 'horseshoe'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 87 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.553125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+                  code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
+                  value: {
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/iron-line-fleischers'
+        findingKey: 'ocular-health:anterior:cornea'
+        sectionKey: 'ocular-health:anterior:cornea'
+        display: 'Cornea'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line::subtype'
+              value:
+                kind: 'code'
+                code: 'fleischers'
+                display: "Fleischer's"
+        normalLabel: 'Clear and compact'
+        sheetFindings:
+          0:
+            display: 'iron line'
+            qualifiers:
+              0: "Fleischer's"
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/iron-line-fleischers'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:cornea'
+        sectionKey: 'ocular-health:anterior:cornea'
+        display: 'Cornea'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line'
+              value:
+                kind: 'boolean'
+                value: true
+            1:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line::subtype'
+              value:
+                kind: 'code'
+                code: 'fleischers'
+                display: "Fleischer's"
+        normalLabel: 'Clear and compact'
+        sheetFindings:
+          0:
+            display: 'iron line'
+            qualifiers:
+              0: "Fleischer's"
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 88 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 2.029125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',
+    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line-hudson-stahli-stocker-s-fleischer-s',
+                  value: {
+                    kind: 'boolean',
+                    value: true
+                  }
+                }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-iron-line'
+        findingKey: 'ocular-health:anterior:cornea'
+        sectionKey: 'ocular-health:anterior:cornea'
+        display: 'Cornea'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line-hudson-stahli-stocker-s-fleischer-s'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Clear and compact'
+        sheetFindings:
+          0:
+            display: 'iron line'
+            qualifiers:
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-iron-line'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:cornea'
+        sectionKey: 'ocular-health:anterior:cornea'
+        display: 'Cornea'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Clear and compact'
+        sheetFindings:
+          0:
+            display: 'iron line'
+            qualifiers:
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 89 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.904666
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole',
+    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole',
+    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole-full-lamellar',
+                  value: {
+                    kind: 'boolean',
+                    value: true
+                  }
+                }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-macular-hole'
+        findingKey: 'ocular-health:posterior:macula'
+        sectionKey: 'ocular-health:posterior:macula'
+        display: 'Macula'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole-full-lamellar'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Healthy foveal reflex'
+        sheetFindings:
+          0:
+            display: 'macular hole'
+            qualifiers:
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/e1'
+    patientReference: 'Patient/p1'
+    findings:
+      0:
+        observationReference: 'Observation/legacy-macular-hole'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:posterior:macula'
+        sectionKey: 'ocular-health:posterior:macula'
+        display: 'Macula'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-08-16T12:00:00.000Z'
+          components:
+            0:
+              code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole'
+              display: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole'
+              value:
+                kind: 'boolean'
+                value: true
+        normalLabel: 'Healthy foveal reflex'
+        sheetFindings:
+          0:
+            display: 'macular hole'
+            qualifiers:
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 90 - legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.540166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 91 - legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.440083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 92 - legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.608625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 93 - legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.171417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 94 - legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.180416
+  type: 'test'
+  ...
+# Subtest: legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 95 - legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.145959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 96 - legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.200125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 97 - legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.052667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 98 - legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.038875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 99 - legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.067875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 100 - legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.1775
+  type: 'test'
+  ...
+# Subtest: legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+ok 101 - legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 0.158833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+ok 102 - legacy fixture 23: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.8365
+  type: 'test'
+  ...
+# Subtest: legacy fixture 24: diagnosisFindings.test.ts sectionFindingRows
+ok 103 - legacy fixture 24: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.053125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 25: diagnosisFindings.test.ts atomicFindingRows
+ok 104 - legacy fixture 25: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.420292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 26: diagnosisFindings.test.ts sectionFindingRows
+ok 105 - legacy fixture 26: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.030666
+  type: 'test'
+  ...
+# Subtest: legacy fixture 27: diagnosisFindings.test.ts atomicFindingRows
+ok 106 - legacy fixture 27: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.19525
+  type: 'test'
+  ...
+# Subtest: legacy fixture 28: diagnosisFindings.test.ts sectionFindingRows
+ok 107 - legacy fixture 28: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.029792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 29: diagnosisFindings.test.ts atomicFindingRows
+ok 108 - legacy fixture 29: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.21675
+  type: 'test'
+  ...
+# Subtest: legacy fixture 30: diagnosisFindings.test.ts sectionFindingRows
+ok 109 - legacy fixture 30: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.03425
+  type: 'test'
+  ...
+# Subtest: legacy fixture 31: diagnosisFindings.test.ts atomicFindingRows
+ok 110 - legacy fixture 31: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.250958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 32: diagnosisFindings.test.ts sectionFindingRows
+ok 111 - legacy fixture 32: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.045084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 34: diagnosisFindings.test.ts atomicFindingRows
+ok 112 - legacy fixture 34: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.104209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 35: diagnosisFindings.test.ts sectionFindingRows
+ok 113 - legacy fixture 35: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.04225
+  type: 'test'
+  ...
+# Subtest: legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 114 - legacy fixture 38: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.157292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 39: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 115 - legacy fixture 39: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.220125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 40: diagnosisFindings.test.ts atomicFindingRows
+ok 116 - legacy fixture 40: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.330625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 41: diagnosisFindings.test.ts sectionFindingRows
+ok 117 - legacy fixture 41: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.036083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 42: diagnosisFindings.test.ts atomicFindingRows
+ok 118 - legacy fixture 42: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.111083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 43: diagnosisFindings.test.ts sectionFindingRows
+ok 119 - legacy fixture 43: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.0285
+  type: 'test'
+  ...
+# Subtest: legacy fixture 44: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 120 - legacy fixture 44: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.124
+  type: 'test'
+  ...
+# Subtest: legacy fixture 45: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 121 - legacy fixture 45: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.187625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 46: diagnosisFindings.test.ts atomicFindingRows
+ok 122 - legacy fixture 46: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.093833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 47: diagnosisFindings.test.ts sectionFindingRows
+ok 123 - legacy fixture 47: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.026458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 48: diagnosisFindings.test.ts atomicFindingRows
+ok 124 - legacy fixture 48: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.084416
+  type: 'test'
+  ...
+# Subtest: legacy fixture 49: diagnosisFindings.test.ts sectionFindingRows
+ok 125 - legacy fixture 49: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.026375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 50: diagnosisFindings.test.ts atomicFindingRows
+ok 126 - legacy fixture 50: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.085125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 51: diagnosisFindings.test.ts sectionFindingRows
+ok 127 - legacy fixture 51: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.025291
+  type: 'test'
+  ...
+# Subtest: legacy fixture 52: diagnosisFindings.test.ts atomicFindingRows
+ok 128 - legacy fixture 52: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.093959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 53: diagnosisFindings.test.ts sectionFindingRows
+ok 129 - legacy fixture 53: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.029334
+  type: 'test'
+  ...
+# Subtest: legacy fixture 54: diagnosisFindings.test.ts atomicFindingRows
+ok 130 - legacy fixture 54: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.098042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 55: diagnosisFindings.test.ts sectionFindingRows
+ok 131 - legacy fixture 55: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.032708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 56: diagnosisFindings.test.ts atomicFindingRows
+ok 132 - legacy fixture 56: diagnosisFindings.test.ts atomicFindingRows
+  ---
+  duration_ms: 0.108166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 57: diagnosisFindings.test.ts sectionFindingRows
+ok 133 - legacy fixture 57: diagnosisFindings.test.ts sectionFindingRows
+  ---
+  duration_ms: 0.031375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 62: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 134 - legacy fixture 62: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.109667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 63: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 135 - legacy fixture 63: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.118041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 64: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 136 - legacy fixture 64: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.11425
+  type: 'test'
+  ...
+# Subtest: legacy fixture 65: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 137 - legacy fixture 65: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.16125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+not ok 138 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+  ---
+  duration_ms: 1.698459
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        completeness: {
+          documentationIssues: [],
+          requiredSectionCount: 0,
+          resolvedSectionCount: 0,
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+                  code: 'EXAM_STATE',
+                  display: 'Exam state',
+    ...
+          {
+    +       creditsCompleteness: false,
+            current: {
+              components: [
+                {
+                  code: 'EXAM_STATE',
+                  display: 'Exam state',
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    encounterReference: 'Encounter/exam-overview-interpretation'
+    patientReference: 'Patient/exam-overview-interpretation'
+    findings:
+      0:
+        observationReference: 'Observation/finding-ocular-health-anterior-lids-lashes-od-2026-07-10t18-00-00-000z'
+        findingKey: 'ocular-health:anterior:lids-lashes'
+        sectionKey: 'ocular-health:anterior:lids-lashes'
+        display: 'Lids & Lashes'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-07-10T18:00:00.000Z'
+          components:
+            0:
+              code: 'EXAM_STATE'
+              display: 'Exam state'
+              value:
+                kind: 'string'
+                value: 'abnormal'
+        normalLabel: 'Normal lid position and lashes'
+      1:
+        observationReference: 'Observation/finding-ocular-health-anterior-lids-lashes-os-2026-07-10t18-00-00-000z'
+        findingKey: 'ocular-health:anterior:lids-lashes'
+        sectionKey: 'ocular-health:anterior:lids-lashes'
+        display: 'Lids & Lashes'
+        laterality: 'OS'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'normal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-07-10T18:00:00.000Z'
+          components:
+            0:
+              code: 'EXAM_STATE'
+              display: 'Exam state'
+              value:
+                kind: 'string'
+                value: 'normal'
+            1:
+              code: 'NORMAL_TEMPLATE'
+              display: 'Normal template'
+              value:
+                kind: 'string'
+                value: 'Normal lid position and lashes; no MGD, blepharitis, or lesions.'
+        normalLabel: 'Normal lid position and lashes'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  actual:
+    encounterReference: 'Encounter/exam-overview-interpretation'
+    patientReference: 'Patient/exam-overview-interpretation'
+    findings:
+      0:
+        observationReference: 'Observation/finding-ocular-health-anterior-lids-lashes-od-2026-07-10t18-00-00-000z'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:lids-lashes'
+        sectionKey: 'ocular-health:anterior:lids-lashes'
+        display: 'Lids & Lashes'
+        laterality: 'OD'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'abnormal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-07-10T18:00:00.000Z'
+          components:
+            0:
+              code: 'EXAM_STATE'
+              display: 'Exam state'
+              value:
+                kind: 'string'
+                value: 'abnormal'
+        normalLabel: 'Normal lid position and lashes'
+      1:
+        observationReference: 'Observation/finding-ocular-health-anterior-lids-lashes-os-2026-07-10t18-00-00-000z'
+        creditsCompleteness: false
+        findingKey: 'ocular-health:anterior:lids-lashes'
+        sectionKey: 'ocular-health:anterior:lids-lashes'
+        display: 'Lids & Lashes'
+        laterality: 'OS'
+        examination:
+          state: 'examined'
+          sourceEncoding: 'observation'
+        interpretation: 'normal'
+        provenance:
+          state: 'current'
+        current:
+          recordedAt: '2026-07-10T18:00:00.000Z'
+          components:
+            0:
+              code: 'EXAM_STATE'
+              display: 'Exam state'
+              value:
+                kind: 'string'
+                value: 'normal'
+            1:
+              code: 'NORMAL_TEMPLATE'
+              display: 'Normal template'
+              value:
+                kind: 'string'
+                value: 'Normal lid position and lashes; no MGD, blepharitis, or lesions.'
+        normalLabel: 'Normal lid position and lashes'
+    sections:
+    completeness:
+      status: 'unconfigured'
+      requiredSectionCount: 0
+      resolvedSectionCount: 0
+      trace:
+      documentationIssues:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:68:36)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: legacy fixture 67: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 139 - legacy fixture 67: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.269209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 68: diagnosisLinkL3.test.ts keyFindingSatisfied
+ok 140 - legacy fixture 68: diagnosisLinkL3.test.ts keyFindingSatisfied
+  ---
+  duration_ms: 0.342375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 70: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 141 - legacy fixture 70: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.374875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 71: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 142 - legacy fixture 71: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.043792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 72: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 143 - legacy fixture 72: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.768708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 73: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 144 - legacy fixture 73: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.855833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 74: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 145 - legacy fixture 74: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.91525
+  type: 'test'
+  ...
+# Subtest: legacy fixture 76: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 146 - legacy fixture 76: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.676542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 77: diagnosisLinkL1.test.ts findingInstancesFromObservation
+ok 147 - legacy fixture 77: diagnosisLinkL1.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.063209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 86: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 148 - legacy fixture 86: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.637833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 87: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 149 - legacy fixture 87: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.091667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 88: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 150 - legacy fixture 88: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.025958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 89: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 151 - legacy fixture 89: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.919958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 90: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 152 - legacy fixture 90: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.871459
+  type: 'test'
+  ...
+# Subtest: legacy fixture 91: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 153 - legacy fixture 91: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.809041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 92: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 154 - legacy fixture 92: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.365708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 93: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 155 - legacy fixture 93: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.183542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 94: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 156 - legacy fixture 94: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.095792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 95: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 157 - legacy fixture 95: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.778833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 96: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 158 - legacy fixture 96: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.661125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 97: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 159 - legacy fixture 97: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.682667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 98: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 160 - legacy fixture 98: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.723666
+  type: 'test'
+  ...
+# Subtest: legacy fixture 99: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 161 - legacy fixture 99: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.737667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 103: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 162 - legacy fixture 103: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.764792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 104: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 163 - legacy fixture 104: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.568417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 105: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 164 - legacy fixture 105: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.776959
+  type: 'test'
+  ...
+# Subtest: legacy fixture 106: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 165 - legacy fixture 106: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.478958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 107: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 166 - legacy fixture 107: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.852416
+  type: 'test'
+  ...
+# Subtest: legacy fixture 108: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 167 - legacy fixture 108: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.597042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 109: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 168 - legacy fixture 109: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.591166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 117: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 169 - legacy fixture 117: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.81375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 124: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 170 - legacy fixture 124: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.770958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 125: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 171 - legacy fixture 125: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.803708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 126: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 172 - legacy fixture 126: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.754208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 131: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 173 - legacy fixture 131: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.736917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 134: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 174 - legacy fixture 134: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.732125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 136: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 175 - legacy fixture 136: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.402708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 144: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 176 - legacy fixture 144: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.903417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 146: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 177 - legacy fixture 146: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.798375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 147: customSectionEndpoint.test.ts findingInstancesFromObservation
+ok 178 - legacy fixture 147: customSectionEndpoint.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.590125
+  type: 'test'
+  ...
+# Subtest: legacy fixture 150: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 179 - legacy fixture 150: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.855208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 151: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 180 - legacy fixture 151: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.759958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 152: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 181 - legacy fixture 152: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.695208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 153: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 182 - legacy fixture 153: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.665166
+  type: 'test'
+  ...
+# Subtest: legacy fixture 154: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 183 - legacy fixture 154: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.717792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 155: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 184 - legacy fixture 155: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.041625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 156: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 185 - legacy fixture 156: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.649708
+  type: 'test'
+  ...
+# Subtest: legacy fixture 157: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 186 - legacy fixture 157: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.65925
+  type: 'test'
+  ...
+# Subtest: legacy fixture 158: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 187 - legacy fixture 158: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.770833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 159: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 188 - legacy fixture 159: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.634292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 160: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 189 - legacy fixture 160: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.650208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 161: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 190 - legacy fixture 161: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.081584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 162: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 191 - legacy fixture 162: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.985666
+  type: 'test'
+  ...
+# Subtest: legacy fixture 163: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 192 - legacy fixture 163: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.77225
+  type: 'test'
+  ...
+# Subtest: legacy fixture 164: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 193 - legacy fixture 164: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.842916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 165: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 194 - legacy fixture 165: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.116542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 166: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 195 - legacy fixture 166: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.719459
+  type: 'test'
+  ...
+# Subtest: legacy fixture 167: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 196 - legacy fixture 167: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.6445
+  type: 'test'
+  ...
+# Subtest: legacy fixture 168: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 197 - legacy fixture 168: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.640584
+  type: 'test'
+  ...
+# Subtest: legacy fixture 169: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 198 - legacy fixture 169: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.58425
+  type: 'test'
+  ...
+# Subtest: legacy fixture 170: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 199 - legacy fixture 170: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.580167
+  type: 'test'
+  ...
+# Subtest: legacy fixture 171: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 200 - legacy fixture 171: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.9825
+  type: 'test'
+  ...
+# Subtest: legacy fixture 172: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 201 - legacy fixture 172: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.615042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 173: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 202 - legacy fixture 173: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.607917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 174: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 203 - legacy fixture 174: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.619417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 175: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 204 - legacy fixture 175: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.637542
+  type: 'test'
+  ...
+# Subtest: legacy fixture 176: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 205 - legacy fixture 176: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.140209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 177: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 206 - legacy fixture 177: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.59475
+  type: 'test'
+  ...
+# Subtest: legacy fixture 178: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 207 - legacy fixture 178: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.58625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 179: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 208 - legacy fixture 179: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.615167
+  type: 'test'
+  ...
+# Subtest: legacy fixture 180: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 209 - legacy fixture 180: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.633458
+  type: 'test'
+  ...
+# Subtest: legacy fixture 181: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 210 - legacy fixture 181: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.580292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 182: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 211 - legacy fixture 182: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.565834
+  type: 'test'
+  ...
+# Subtest: legacy fixture 183: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 212 - legacy fixture 183: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.577041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 184: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 213 - legacy fixture 184: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.613209
+  type: 'test'
+  ...
+# Subtest: legacy fixture 185: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 214 - legacy fixture 185: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.841417
+  type: 'test'
+  ...
+# Subtest: legacy fixture 186: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 215 - legacy fixture 186: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.659
+  type: 'test'
+  ...
+# Subtest: legacy fixture 187: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 216 - legacy fixture 187: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.377084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 188: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 217 - legacy fixture 188: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.762042
+  type: 'test'
+  ...
+# Subtest: legacy fixture 189: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 218 - legacy fixture 189: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.692875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 190: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 219 - legacy fixture 190: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.581084
+  type: 'test'
+  ...
+# Subtest: legacy fixture 191: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 220 - legacy fixture 191: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.59625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 192: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 221 - legacy fixture 192: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.627875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 193: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 222 - legacy fixture 193: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.65875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 194: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 223 - legacy fixture 194: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.627375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 195: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 224 - legacy fixture 195: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.648916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 196: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 225 - legacy fixture 196: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.579041
+  type: 'test'
+  ...
+# Subtest: legacy fixture 197: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 226 - legacy fixture 197: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.063958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 198: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 227 - legacy fixture 198: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.527875
+  type: 'test'
+  ...
+# Subtest: legacy fixture 199: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 228 - legacy fixture 199: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.853333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 201: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 229 - legacy fixture 201: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.6705
+  type: 'test'
+  ...
+# Subtest: legacy fixture 203: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 230 - legacy fixture 203: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.621083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 205: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 231 - legacy fixture 205: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.530833
+  type: 'test'
+  ...
+# Subtest: legacy fixture 207: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 232 - legacy fixture 207: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.50075
+  type: 'test'
+  ...
+# Subtest: legacy fixture 209: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 233 - legacy fixture 209: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.529083
+  type: 'test'
+  ...
+# Subtest: legacy fixture 211: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 234 - legacy fixture 211: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.511625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 213: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 235 - legacy fixture 213: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.50725
+  type: 'test'
+  ...
+# Subtest: legacy fixture 215: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 236 - legacy fixture 215: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.070667
+  type: 'test'
+  ...
+# Subtest: legacy fixture 217: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 237 - legacy fixture 217: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.847208
+  type: 'test'
+  ...
+# Subtest: legacy fixture 219: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 238 - legacy fixture 219: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.679792
+  type: 'test'
+  ...
+# Subtest: legacy fixture 220: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 239 - legacy fixture 220: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.847
+  type: 'test'
+  ...
+# Subtest: legacy fixture 221: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 240 - legacy fixture 221: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.828333
+  type: 'test'
+  ...
+# Subtest: legacy fixture 222: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 241 - legacy fixture 222: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.61625
+  type: 'test'
+  ...
+# Subtest: legacy fixture 223: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 242 - legacy fixture 223: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.47475
+  type: 'test'
+  ...
+# Subtest: legacy fixture 224: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 243 - legacy fixture 224: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.514292
+  type: 'test'
+  ...
+# Subtest: legacy fixture 225: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 244 - legacy fixture 225: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.504375
+  type: 'test'
+  ...
+# Subtest: legacy fixture 226: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 245 - legacy fixture 226: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.512958
+  type: 'test'
+  ...
+# Subtest: legacy fixture 227: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 246 - legacy fixture 227: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.427916
+  type: 'test'
+  ...
+# Subtest: legacy fixture 228: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 247 - legacy fixture 228: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 1.131917
+  type: 'test'
+  ...
+# Subtest: legacy fixture 229: diagnosisLinkL2.test.ts findingInstancesFromObservation
+ok 248 - legacy fixture 229: diagnosisLinkL2.test.ts findingInstancesFromObservation
+  ---
+  duration_ms: 0.749917
+  type: 'test'
+  ...
+# Subtest: E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+not ok 249 - E1–E17 reproduce the original writer/read behaviors and assert the A1 projections
+  ---
+  duration_ms: 393.006334
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:6766'
+  failureType: 'testCodeFailure'
+  error: |-
+    Command failed: /Users/ericr.bang/.hermes/node/bin/node --import tsx /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts
+    node:internal/modules/run_main:123
+        triggerUncaughtException(
+        ^
+    
+    AssertionError [ERR_ASSERTION]: {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+        at capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
+        at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: 400,
+      expected: 200,
+      operator: 'strictEqual',
+      diff: 'simple'
+    }
+    
+    Node.js v22.22.3
+    
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)
+    async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {
+    genericNodeError (node:internal/errors:983:15)
+    wrappedFn (node:internal/errors:537:14)
+    checkExecSyncError (node:child_process:916:11)
+    execFileSync (node:child_process:952:15)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:98:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: capture instrumentation preserves named exports and executes their wrappers
+ok 250 - capture instrumentation preserves named exports and executes their wrappers
+  ---
+  duration_ms: 270.470083
+  type: 'test'
+  ...
+1..250
+# tests 250
+# suites 0
+# pass 201
+# fail 49
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1288.44

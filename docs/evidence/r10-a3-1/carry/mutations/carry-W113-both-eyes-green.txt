@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+ok 1 - W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+  ---
+  duration_ms: 19.467084
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 211.63475

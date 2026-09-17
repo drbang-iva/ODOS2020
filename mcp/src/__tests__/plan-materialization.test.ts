@@ -7,6 +7,7 @@ import { handleProtocolApplyRequest } from "../clinical-graph/protocol-endpoint.
 
 test("plan order focus and counseling narrative reach FHIR projections", async () => {
   const fhir = new PlanAuthoringFhir();
+  fhir.rows.push({ resourceType: "Encounter", id: "e", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p" } });
   const service = new ProtocolService(fhir, { commitFinding: async () => undefined, materializeAction: async () => undefined });
   const protocol = { ...structuredClone(V1), id: "projection-test", items: [
     { itemKey: "photo", itemType: "order" as const, title: "Optic nerve photos", defaultSelected: true, lateralityMode: "OU-always" as const, payload: { orderableKey: "fundus-photography", focus: "optic nerve" } },
@@ -27,6 +28,7 @@ test("plan order focus and counseling narrative reach FHIR projections", async (
 
 test("real education is recorded with the catalog title and truthful delivery note", async () => {
   const fhir = new PlanAuthoringFhir();
+  fhir.rows.push({ resourceType: "Encounter", id: "e", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p" } });
   const service = new ProtocolService(fhir, { commitFinding: async () => undefined, materializeAction: async () => undefined });
   const protocol = { ...structuredClone(V1), id: "education-projection-test", items: [
     { itemKey: "handout", itemType: "education" as const, defaultSelected: true, lateralityMode: "OU-always" as const, payload: { assetRef: "synthetic-real-handout" } },

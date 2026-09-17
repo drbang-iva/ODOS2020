@@ -1,0 +1,1144 @@
+HEAD 1706d7c8417b04791471d4332b4ecd712883bf11
+
+mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:284-425
+284:   if (!sourceStart || !initialCurrentStart || sourceStart >= initialCurrentStart) {
+285:     return { status: 409, body: { error: "Diagnosis pull requires a strictly prior source and valid full encounter start instants." } };
+286:   }
+287:   const sourceObservations = await sourceEvidenceObservations(
+288:     staff.fhir,
+289:     sourceCondition,
+290:     patientReference,
+291:     parsedBody.data.sourceEncounterReference,
+292:   );
+293:   if (!sourceObservations) {
+294:     return { status: 409, body: { error: "The source diagnosis evidence does not belong to its patient and encounter." } };
+295:   }
+296: 
+297:   const currentEncounter = await diagnosisPullRead(() =>
+298:     staff.fhir.read<Encounter>("Encounter", currentEncounterId)
+299:   );
+300:   if (
+301:     currentEncounter.status === "entered-in-error" ||
+302:     currentEncounter.subject?.reference !== patientReference
+303:   ) {
+304:     return { status: 409, body: { error: "The current encounter patient changed; reload and retry." } };
+305:   }
+306:   const currentStart = fullInstant(currentEncounter.period?.start);
+307:   if (!currentStart || sourceStart >= currentStart) {
+308:     return { status: 409, body: { error: "Diagnosis pull requires a strictly prior source and valid full encounter start instants." } };
+309:   }
+310:   const versionId = currentEncounter.meta?.versionId;
+311:   if (!versionId) {
+312:     return { status: 409, body: { error: "The current encounter has no version for an atomic pull." } };
+313:   }
+314:   const currentIdentities = await currentDiagnosisIdentities(staff.fhir, currentEncounter, patientReference);
+315:   const sourceIdentity = diagnosisIdentity(sourceCondition, sourceEncounterId);
+316:   const alreadyPresent = currentIdentities.get(identityKey(sourceIdentity));
+317:   if (alreadyPresent) {
+318:     return { status: 200, body: { conditionReference: alreadyPresent, alreadyPresent: true } };
+319:   }
+320: 
+321:   const conditionFullUrl = uuidFullUrl();
+322:   const encounterFullUrl = uuidFullUrl();
+323:   const observationRows = sourceObservations.filter((observation) => observation.valueBoolean === true);
+324:   const observationFullUrls = observationRows.map(() => uuidFullUrl());
+325:   const provenanceFullUrl = uuidFullUrl();
+326:   const pulledCondition = pulledDiagnosisCondition(
+327:     sourceCondition,
+328:     sourceEncounterId,
+329:     currentEncounterId,
+330:     patientReference,
+331:     observationFullUrls,
+332:   );
+333:   const nextRank = Math.max(0, ...(currentEncounter.diagnosis ?? []).flatMap((diagnosis) =>
+334:     Number.isInteger(diagnosis.rank) && diagnosis.rank! > 0 ? [diagnosis.rank!] : []
+335:   )) + 1;
+336:   const pulledEncounter: Encounter = {
+337:     ...currentEncounter,
+338:     diagnosis: [
+339:       ...(currentEncounter.diagnosis ?? []),
+340:       buildEncounterDiagnosisComponent(conditionFullUrl, nextRank),
+341:     ],
+342:   };
+343:   const pulledObservations = observationRows.map((observation) =>
+344:     pulledFindingObservation(observation, patientReference, `Encounter/${currentEncounterId}`)
+345:   );
+346:   const provenance = buildProvenance({
+347:     targetReferences: [conditionFullUrl, encounterFullUrl, ...observationFullUrls, patientReference],
+348:     recorded: new Date().toISOString(),
+349:     activityCode: "CREATE",
+350:     activityDisplay: "Diagnosis pull-forward",
+351:     agents: [{ typeCode: "author", whoReference: staff.staffReference }],
+352:     entityReferences: [
+353:       parsedBody.data.sourceConditionReference,
+354:       ...sourceObservations.map((observation) => `Observation/${observation.id}`),
+355:     ],
+356:   }) as Provenance;
+357:   const transactionBundle: Bundle = {
+358:     resourceType: "Bundle",
+359:     type: "transaction",
+360:     entry: [
+361:       {
+362:         fullUrl: encounterFullUrl,
+363:         resource: pulledEncounter,
+364:         request: {
+365:           method: "PUT",
+366:           url: `Encounter/${currentEncounterId}`,
+367:           ifMatch: `W/"${versionId}"`,
+368:         },
+369:       },
+370:       {
+371:         fullUrl: conditionFullUrl,
+372:         resource: pulledCondition,
+373:         request: { method: "POST", url: "Condition" },
+374:       },
+375:       ...pulledObservations.map((observation, index) => ({
+376:         fullUrl: observationFullUrls[index],
+377:         resource: observation,
+378:         request: { method: "POST" as const, url: "Observation" },
+379:       })),
+380:       {
+381:         fullUrl: provenanceFullUrl,
+382:         resource: provenance,
+383:         request: { method: "POST", url: "Provenance" },
+384:       },
+385:     ],
+386:   };
+387: 
+388:   let transaction: Bundle;
+389:   try {
+390:     transaction = await staff.fhir.executeTransaction(transactionBundle, {
+391:       "X-ODOS-Source": "diagnosis-carry-forward",
+392:       Prefer: "return=representation",
+393:     }, { autoRollbackCreatedEntries: false });
+394:   } catch (error) {
+395:     if (isFhirConflict(error)) {
+396:       return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
+397:     }
+398:     throw error;
+399:   }
+400:   const transactionValidation = validateTransactionResponse(transactionBundle, transaction);
+401:   if (transactionValidation.kind !== "ok") {
+402:     const rollback = await rollbackMixedTransactionCreates(
+403:       deps.rollbackFhir,
+404:       transactionBundle,
+405:       transaction,
+406:     );
+407:     if (rollback === "failed") {
+408:       console.error("odos-mcp: diagnosis pull transaction rollback was not verified:", new Error(transactionValidation.kind));
+409:       return { status: 502, body: { error: "FHIR diagnosis pull transaction rollback was not verified." } };
+410:     }
+411:     if (transactionValidation.kind === "conflict") {
+412:       return diagnosisConflict(staff.fhir, currentEncounterId, patientReference, sourceIdentity);
+413:     }
+414:     console.error("odos-mcp: diagnosis pull transaction response was invalid:", new Error(transactionValidation.kind));
+415:     return { status: 502, body: { error: "FHIR diagnosis pull transaction response was invalid." } };
+416:   }
+417:   const conditionReference = transactionConditionReference(transaction, 1);
+418:   if (!conditionReference) {
+419:     console.error("odos-mcp: diagnosis pull transaction omitted the created Condition:", new Error("missing Condition reference"));
+420:     return { status: 502, body: { error: "FHIR diagnosis pull transaction did not return the created Condition." } };
+421:   }
+422:   return {
+423:     status: 200,
+424:     body: { conditionReference, alreadyPresent: false, transaction },
+425:   };
+
+mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:440-458
+440: async function currentDiagnosisIdentities(
+441:   fhir: DiagnosisCarryForwardFhirClient,
+442:   encounter: Encounter,
+443:   patientReference: string,
+444: ): Promise<Map<string, string>> {
+445:   const identities = new Map<string, string>();
+446:   for (const diagnosis of encounter.diagnosis ?? []) {
+447:     const match = diagnosis.condition.reference?.match(conditionReferencePattern);
+448:     if (!match) continue;
+449:     const condition = await diagnosisPullRead(() => fhir.read<Condition>("Condition", match[1]!));
+450:     if (
+451:       condition.subject?.reference !== patientReference ||
+452:       condition.encounter?.reference !== `Encounter/${encounter.id}` ||
+453:       excludedCondition(condition)
+454:     ) continue;
+455:     const reference = `Condition/${match[1]}`;
+456:     identities.set(identityKey(diagnosisIdentity(condition, encounter.id ?? "")), reference);
+457:   }
+458:   return identities;
+
+mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:611-689
+611: async function sourceEvidenceObservations(
+612:   fhir: DiagnosisCarryForwardFhirClient,
+613:   condition: Condition,
+614:   patientReference: string,
+615:   encounterReference: string,
+616: ): Promise<Observation[] | undefined> {
+617:   const observations: Observation[] = [];
+618:   for (const detail of condition.evidence?.flatMap((evidence) => evidence.detail ?? []) ?? []) {
+619:     const match = detail.reference?.match(observationReferencePattern);
+620:     if (!match) continue;
+621:     const observation = await diagnosisPullRead(() => fhir.read<Observation>("Observation", match[1]!));
+622:     if (
+623:       observation.subject?.reference !== patientReference ||
+624:       observation.encounter?.reference !== encounterReference
+625:     ) return undefined;
+626:     if (
+627:       observation.status === "entered-in-error" ||
+628:       observation.status === "cancelled"
+629:     ) continue;
+630:     observations.push(observation);
+631:   }
+632:   return observations;
+633: }
+634: 
+635: function pulledDiagnosisCondition(
+636:   source: Condition,
+637:   sourceEncounterId: string,
+638:   currentEncounterId: string,
+639:   patientReference: string,
+640:   evidenceReferences: string[],
+641: ): Condition {
+642:   const sourceIdentity = diagnosisIdentity(source, sourceEncounterId);
+643:   const identifier = sourceIdentity.diagnosisKey
+644:     ? [{
+645:         system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM,
+646:         value: `${currentEncounterId}::${sourceIdentity.diagnosisKey}::${diagnosisIdentifierSuffix(source)}`,
+647:       }]
+648:     : undefined;
+649:   const condition = buildEncounterDiagnosisCondition({
+650:     patientReference,
+651:     encounterReference: `Encounter/${currentEncounterId}`,
+652:     code: structuredClone(source.code!),
+653:     verificationStatus: "confirmed",
+654:     ...(identifier ? { identifiers: identifier } : {}),
+655:     evidenceObservationReferences: evidenceReferences,
+656:   });
+657:   const extensions = source.extension?.filter((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality);
+658:   const bodySite = source.bodySite?.filter((site) => lateralityFromBodySite(site) !== "UNKNOWN");
+659:   return {
+660:     ...condition,
+661:     ...(extensions?.length ? { extension: structuredClone(extensions) } : {}),
+662:     ...(bodySite?.length ? { bodySite: structuredClone(bodySite) } : {}),
+663:   };
+664: }
+665: 
+666: function pulledFindingObservation(
+667:   source: Observation,
+668:   patientReference: string,
+669:   encounterReference: string,
+670: ): Observation {
+671:   const extension = source.extension?.filter((candidate) => candidate.url === ODOS_EXTENSION_URLS.eyeLaterality);
+672:   const bodySite = recordedLaterality(source) !== "UNKNOWN"
+673:     ? source.bodySite
+674:     : undefined;
+675:   const component = source.component?.filter((candidate) =>
+676:     candidate.code.coding?.some((coding) => coding.code === "GRADE")
+677:   );
+678:   return {
+679:     resourceType: "Observation",
+680:     status: "preliminary",
+681:     code: structuredClone(source.code),
+682:     subject: { reference: patientReference },
+683:     encounter: { reference: encounterReference },
+684:     valueBoolean: true,
+685:     ...(extension?.length ? { extension: structuredClone(extension) } : {}),
+686:     ...(bodySite ? { bodySite: structuredClone(bodySite) } : {}),
+687:     ...(component?.length ? { component: structuredClone(component) } : {}),
+688:   };
+689: }
+
+mcp/src/clinical-graph/diagnosis-carry-provenance.ts:63-114
+63:   const currentCarry = await carryForTarget(fhir, currentReference, provenanceCache);
+64:   if (currentCarry.kind === "none") return empty;
+65:   if (currentCarry.kind === "invalid") return integrityFailure(currentCarry.warning);
+66: 
+67:   const sourceReference = directSourceConditionReference(currentCarry.provenance);
+68:   if (!sourceReference) {
+69:     return integrityFailure("Diagnosis carry provenance source Condition is missing or ambiguous.");
+70:   }
+71:   const sourceCondition = await readReference<Condition>(fhir, sourceReference, "Condition");
+72:   const pulledFromDate = await conditionEncounterDate(fhir, sourceCondition);
+73:   if (!pulledFromDate) {
+74:     return integrityFailure("Diagnosis carry provenance source encounter date is missing.");
+75:   }
+76: 
+77:   const sourceAbsentSnapshots = await absentSourceSnapshots(fhir, currentCarry.provenance);
+78:   const observationCarried: Record<string, boolean> = {};
+79:   const observationReasserted: Record<string, boolean> = {};
+80:   let integrityWarning: string | undefined;
+81:   let edited = false;
+82: 
+83:   const conditionTarget = await targetState(
+84:     fhir,
+85:     currentReference,
+86:     currentCarry.provenance,
+87:     currentCarry.recorded,
+88:     provenanceCache,
+89:   );
+90:   edited ||= conditionTarget.edited;
+91:   integrityWarning = conditionTarget.warning;
+92: 
+93:   const activeObservationReferences = new Set(observations.flatMap((observation) => {
+94:     const reference = resourceReference(observation);
+95:     return reference ? [reference] : [];
+96:   }));
+97:   const carriedObservationReferences = new Set<string>();
+98:   for (const target of currentCarry.provenance.target) {
+99:     const reference = target.reference;
+100:     if (!reference?.match(observationReferencePattern)) continue;
+101:     carriedObservationReferences.add(reference);
+102:     const state = await targetState(
+103:       fhir,
+104:       reference,
+105:       currentCarry.provenance,
+106:       currentCarry.recorded,
+107:       provenanceCache,
+108:     );
+109:     if (activeObservationReferences.has(reference)) observationCarried[reference] = !state.edited;
+110:     edited ||= state.edited;
+111:     integrityWarning ??= state.warning;
+112:   }
+113:   for (const observation of observations) {
+114:     const reference = resourceReference(observation);
+
+mcp/src/clinical-graph/diagnosis-carry-provenance.ts:287-340
+287: const encounterReferencePattern = /^Encounter\/([^/]+)$/;
+288: const observationReferencePattern = /^Observation\/([^/]+)$/;
+289: const instantPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/;
+290: 
+291: type CarryLookup =
+292:   | { kind: "none" }
+293:   | { kind: "invalid"; warning: string }
+294:   | { kind: "carry"; provenance: Provenance; recorded: number };
+295: 
+296: async function carryForTarget(
+297:   fhir: DiagnosisCarryProvenanceFhirClient,
+298:   targetReference: string,
+299:   cache: Map<string, Promise<Provenance[]>>,
+300: ): Promise<CarryLookup> {
+301:   const candidates = (await provenancesForTarget(fhir, targetReference, cache)).filter(isCarryProvenance);
+302:   if (candidates.length === 0) return { kind: "none" };
+303:   if (candidates.length !== 1) {
+304:     return {
+305:       kind: "invalid",
+306:       warning: "Diagnosis carry provenance has an invalid or ambiguous recorded timestamp.",
+307:     };
+308:   }
+309:   const recorded = recordedInstant(candidates[0]!.recorded);
+310:   if (recorded === undefined) {
+311:     return {
+312:       kind: "invalid",
+313:       warning: "Diagnosis carry provenance has an invalid or ambiguous recorded timestamp.",
+314:     };
+315:   }
+316:   return { kind: "carry", provenance: candidates[0]!, recorded };
+317: }
+318: 
+319: async function targetState(
+320:   fhir: DiagnosisCarryProvenanceFhirClient,
+321:   targetReference: string,
+322:   carry: Provenance,
+323:   carryRecorded: number,
+324:   cache: Map<string, Promise<Provenance[]>>,
+325: ): Promise<{ edited: boolean; warning?: string }> {
+326:   const candidates = await provenancesForTarget(fhir, targetReference, cache);
+327:   let edited = false;
+328:   for (const candidate of candidates) {
+329:     if (sameProvenance(candidate, carry)) continue;
+330:     const recorded = recordedInstant(candidate.recorded);
+331:     if (recorded === undefined || recorded === carryRecorded) {
+332:       return {
+333:         edited: true,
+334:         warning: "Diagnosis carry provenance has an invalid or ambiguous recorded timestamp.",
+335:       };
+336:     }
+337:     if (recorded > carryRecorded) edited = true;
+338:   }
+339:   return { edited };
+340: }
+
+mcp/src/clinical-graph/diagnosis-carry-provenance.ts:355-367
+355:   fhir: DiagnosisCarryProvenanceFhirClient,
+356:   targetReference: string,
+357: ): Promise<Provenance[]> {
+358:   let bundle = await fhir.search<Provenance>("Provenance", {
+359:     target: targetReference,
+360:     _count: "500",
+361:   });
+362:   const provenances: Provenance[] = [];
+363:   const followed = new Set<string>();
+364:   while (true) {
+365:     provenances.push(...bundleResources(bundle).filter((provenance) =>
+366:       provenance.target.some((target) => target.reference === targetReference)
+367:     ));
+
+mcp/src/clinical-graph/encounter-void-endpoint.ts:217-281
+217:   // The sign gate closes every write. A preview writes nothing and is allowed after sign: a signed
+218:   // chart still shows what it recorded, with its controls present-but-disabled (§3, §4b.5), so
+219:   // the sheet must still be able to learn what it holds.
+220:   if (isClosedEncounter(encounter) && parsed.data.preview !== true) {
+221:     return { status: 409, body: { error: CLOSED_ENCOUNTER_EDIT_ERROR, code: "encounter-closed" } };
+222:   }
+223:   const patientReference = encounter.subject?.reference;
+224:   if (!patientReference || !/^Patient\/[A-Za-z0-9.-]+$/.test(patientReference)) {
+225:     return { status: 400, body: { error: "Encounter must reference a Patient subject." } };
+226:   }
+227:   const encounterReference = `Encounter/${encounterId}`;
+228:   const definitions = (deps.findingDefinitions?.() ?? []).filter((definition) => definition.active);
+229:   const request = parsed.data;
+230: 
+231:   // --- Candidate resolution -------------------------------------------------------------
+232:   // The encounter boundary: only this encounter's resources are ever candidates.
+233:   const observations = (await searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }))
+234:     .filter((observation): observation is Observation & { id: string } =>
+235:       typeof observation.id === "string" &&
+236:       observation.encounter?.reference === encounterReference &&
+237:       observation.subject?.reference === patientReference &&
+238:       isLiveObservation(observation)
+239:     )
+240:     .map((observation) => identify(observation, definitions));
+241: 
+242:   let targetObservations: IdentifiedObservation[] = [];
+243:   let includeComplaints = false;
+244:   let targetComplaintIds: Set<string> | undefined;
+245:   let includeConditions = false;
+246:   if (request.scope === "observation") {
+247:     // All-or-nothing: a caller that names N references means all N. Voiding the valid subset
+248:     // would leave a refraction block half-gone — the UI drops it while one eye stays live.
+249:     const wanted = Array.isArray(request.observationReference) ? request.observationReference : [request.observationReference];
+250:     const live = new Map(observations.map((row) => [`Observation/${row.observation.id}`, row]));
+251:     const missing = wanted.filter((reference) => !live.has(reference));
+252:     if (missing.length > 0) {
+253:       return {
+254:         status: 404,
+255:         body: {
+256:           error: `Not a live entry of this encounter: ${missing.join(", ")}. Nothing was voided.`,
+257:           missing,
+258:         },
+259:       };
+260:     }
+261:     targetObservations = [...new Set(wanted)].map((reference) => live.get(reference)!);
+262:   } else if (request.scope === "finding") {
+263:     targetObservations = observations.filter((row) =>
+264:       row.findingKey === request.findingKey &&
+265:       (request.laterality === undefined || row.laterality === request.laterality)
+266:     );
+267:     if (request.findingKey.startsWith("hpi-complaint:")) {
+268:       includeComplaints = true;
+269:       targetComplaintIds = new Set([request.findingKey.slice("hpi-complaint:".length)]);
+270:     }
+271:   } else if (request.scope === "section") {
+272:     const keys = Array.isArray(request.sectionKey) ? request.sectionKey : [request.sectionKey];
+273:     const matches = (sectionKey: string) => keys.some((key) => sectionKey === key || sectionKey.startsWith(`${key}:`));
+274:     targetObservations = observations.filter((row) => matches(row.sectionKey));
+275:     includeComplaints = matches(HISTORY_SECTION_KEY) || matches(COMPLAINTS_SECTION_KEY);
+276:     includeConditions = matches(ASSESSMENT_SECTION_KEY);
+277:   } else {
+278:     targetObservations = observations;
+279:     includeComplaints = true;
+280:     includeConditions = true;
+281:   }
+
+mcp/src/clinical-graph/encounter-void-endpoint.ts:359-361
+359:     ...targetObservations.map(({ observation }): UndoLedgerEntry => ({
+360:       ref: `Observation/${observation.id}`,
+361:       priorStatus: observation.status ?? "",
+
+mcp/src/clinical-graph/encounter-void-endpoint.ts:415-489
+415:   // --- One transaction ------------------------------------------------------------------
+416:   const complaintProvenance: ClinicalGraphProvenance = {
+417:     source: "manual",
+418:     recordedAt: now,
+419:     actorReference: staff.staffReference,
+420:     note: VOID_PROVENANCE_NOTE,
+421:   };
+422:   const provenanceFor = (target: string): Provenance => chartProvenance({
+423:     target,
+424:     encounterReference,
+425:     patientReference,
+426:     staffReference: staff.staffReference,
+427:     now,
+428:     activity: { code: "VOID", display: "Void before sign", note: VOID_PROVENANCE_NOTE },
+429:   });
+430:   const transactionEntries: NonNullable<Bundle["entry"]> = [];
+431:   for (const { observation } of targetObservations) {
+432:     transactionEntries.push(putEntry(`Observation/${observation.id}`, { ...observation, status: "entered-in-error" }, observation.meta?.versionId));
+433:     transactionEntries.push({ resource: provenanceFor(`Observation/${observation.id}`), request: { method: "POST", url: "Provenance" } });
+434:   }
+435:   for (const administration of administrations) {
+436:     transactionEntries.push(putEntry(
+437:       `MedicationAdministration/${administration.id}`,
+438:       { ...administration, status: "entered-in-error" },
+439:       administration.meta?.versionId,
+440:     ));
+441:     transactionEntries.push({
+442:       resource: provenanceFor(`MedicationAdministration/${administration.id}`),
+443:       request: { method: "POST", url: "Provenance" },
+444:     });
+445:   }
+446:   for (const condition of conditions) {
+447:     const { clinicalStatus: _clinicalStatus, ...withoutClinicalStatus } = condition;
+448:     transactionEntries.push(putEntry(
+449:       `Condition/${condition.id}`,
+450:       { ...withoutClinicalStatus, verificationStatus: verificationStatusConcept("entered-in-error") },
+451:       condition.meta?.versionId,
+452:     ));
+453:     transactionEntries.push({ resource: provenanceFor(`Condition/${condition.id}`), request: { method: "POST", url: "Provenance" } });
+454:   }
+455:   for (const { resource, complaint } of complaints) {
+456:     transactionEntries.push(putEntry(
+457:       `Basic/${resource.id}`,
+458:       buildEncounterComplaintResource({
+459:         ...complaint,
+460:         status: "removed",
+461:         provenance: complaintProvenance,
+462:         provenanceHistory: [...complaint.provenanceHistory, complaintProvenance],
+463:       }, resource),
+464:       resource.meta?.versionId,
+465:     ));
+466:   }
+467:   // The Encounter goes in EVERY void transaction, version-guarded, even when its body is
+468:   // unchanged. The status read above is a snapshot; without this entry a concurrent sign can
+469:   // finish the encounter while the void still commits. With it, the sign bumps the version and
+470:   // the whole transaction fails closed as a concurrent edit.
+471:   const retracted = new Set(conditions.map((condition) => `Condition/${condition.id}`));
+472:   let nextEncounter: Encounter = encounter;
+473:   if (complaints.length) {
+474:     const removedComplaintIds = new Set(complaints.map((row) => row.complaint.id));
+475:     nextEncounter = stampPrimaryComplaint(
+476:       nextEncounter,
+477:       activeComplaintRows.filter((row) => !removedComplaintIds.has(row.complaint.id)).map((row) => row.complaint),
+478:       buildComplaintDefinitionSeeds(),
+479:     );
+480:   }
+481:   if (conditions.length) {
+482:     const diagnosis = (nextEncounter.diagnosis ?? []).filter((row) => !retracted.has(row.condition.reference ?? ""));
+483:     nextEncounter = diagnosis.length ? { ...nextEncounter, diagnosis } : stripDiagnosis(nextEncounter);
+484:   }
+485:   transactionEntries.push(putEntry(encounterReference, nextEncounter, encounter.meta?.versionId));
+486:   // The ledger is written by the void, in the void's transaction: a void without its Undo
+487:   // slot, or a slot without its void, cannot exist.
+488:   transactionEntries.push(ledgerEntry(nextLedger, ledgerRow?.resource));
+489:   const transaction: Bundle = { resourceType: "Bundle", type: "transaction", entry: transactionEntries };
+
+mcp/src/clinical-graph/encounter-void-endpoint.ts:508-541
+508: function identify(
+509:   observation: Observation & { id: string },
+510:   definitions: readonly ClinicalFindingDefinition[],
+511: ): IdentifiedObservation {
+512:   const laterality = observationLaterality(observation);
+513:   if (isHistoryAnswerObservation(observation)) {
+514:     const answer = parseHistoryAnswerObservation(observation);
+515:     if (answer.complaintId) {
+516:       return { observation, findingKey: `hpi-complaint:${answer.complaintId}`, sectionKey: HISTORY_SECTION_KEY, laterality };
+517:     }
+518:     return {
+519:       observation,
+520:       findingKey: `history-subject:${answer.templateKey}:${answer.sectionId}:${answer.optionCode ?? "value"}`,
+521:       sectionKey: answer.templateKey,
+522:       laterality: answer.eye ?? laterality,
+523:     };
+524:   }
+525:   if (observation.code.coding?.some((coding) =>
+526:     coding.system === HISTORY_REVIEW_ATTESTATION_CODE_SYSTEM &&
+527:     [HISTORY_REVIEW_ATTESTATION_CODE, HISTORY_ITEM_REVIEW_CODE, HISTORY_ITEM_RETRACTION_CODE].includes(coding.code ?? "")
+528:   )) {
+529:     const sectionKey = observation.extension?.find((extension) => extension.url === HISTORY_REVIEW_SECTION_EXTENSION_URL)?.valueCode ?? OTHER_SECTION_KEY;
+530:     return { observation, findingKey: `history-review:${sectionKey}`, sectionKey, laterality };
+531:   }
+532:   const definition = findingDefinitionForObservation(observation, definitions);
+533:   if (definition) {
+534:     return { observation, findingKey: definition.stableKey, sectionKey: definition.sectionKey ?? definition.stableKey, laterality };
+535:   }
+536:   const code = observation.code.coding?.find((coding) => coding.code)?.code;
+537:   if (code === "VISUAL_ACUITY" || code === "VISUAL_ACUITY_PANEL") {
+538:     return { observation, findingKey: code, sectionKey: "va", laterality };
+539:   }
+540:   return { observation, findingKey: code ?? OTHER_SECTION_KEY, sectionKey: OTHER_SECTION_KEY, laterality };
+541: }
+
+mcp/src/clinical-graph/encounter-undo-endpoint.ts:260-325
+260: async function readTarget(fhir: EncounterVoidFhirClient, entry: UndoLedgerEntry): Promise<RestoreTarget> {
+261:   const [resourceType, id] = entry.ref.split("/") as [string, string];
+262:   let resource: Observation | MedicationAdministration | Condition | Basic;
+263:   try {
+264:     switch (resourceType) {
+265:       case "Observation":
+266:         resource = await fhir.read<Observation>("Observation", id);
+267:         break;
+268:       case "MedicationAdministration":
+269:         resource = await fhir.read<MedicationAdministration>("MedicationAdministration", id);
+270:         break;
+271:       case "Condition":
+272:         resource = await fhir.read<Condition>("Condition", id);
+273:         break;
+274:       case "Basic":
+275:         resource = await fhir.read<Basic>("Basic", id);
+276:         break;
+277:       default:
+278:         throw new Error(`unsupported resource type ${resourceType}`);
+279:     }
+280:   } catch (error) {
+281:     throw new UndoEntryReadError(entry.ref, error);
+282:   }
+283:   const versionId = resource.meta?.versionId;
+284:   switch (resource.resourceType) {
+285:     case "Observation": {
+286:       const restored = withStatus(resource, entry.priorStatus) as Observation;
+287:       return { entry, resource, voided: resource.status === "entered-in-error", restored, versionId };
+288:     }
+289:     case "MedicationAdministration": {
+290:       const restored = withStatus(resource, entry.priorStatus) as MedicationAdministration;
+291:       return { entry, resource, voided: resource.status === "entered-in-error", restored, versionId };
+292:     }
+293:     case "Condition": {
+294:       const { verificationStatus: _verification, ...rest } = resource;
+295:       const restored: Condition = {
+296:         ...rest,
+297:         ...(entry.priorStatus ? { verificationStatus: verificationStatusConcept(entry.priorStatus as Parameters<typeof verificationStatusConcept>[0]) } : {}),
+298:         ...(entry.clinicalStatus ? { clinicalStatus: clinicalStatusConcept(entry.clinicalStatus as Parameters<typeof clinicalStatusConcept>[0]) } : {}),
+299:       };
+300:       const voided = resource.verificationStatus?.coding?.some((coding) => coding.code === "entered-in-error") === true;
+301:       return { entry, resource, voided, restored, versionId };
+302:     }
+303:     default: {
+304:       const complaint = parseEncounterComplaintResource(resource);
+305:       const active: EncounterComplaint = { ...complaint, status: "active" };
+306:       return {
+307:         entry,
+308:         resource,
+309:         voided: complaint.status === "removed",
+310:         restored: buildEncounterComplaintResource(active, resource),
+311:         versionId,
+312:         complaint: active,
+313:       };
+314:     }
+315:   }
+316: }
+317: 
+318: /** priorStatus "" means the resource saved with no status at all — restore it that way. */
+319: function withStatus<T extends { status?: string }>(resource: T, priorStatus: string): T {
+320:   if (!priorStatus) {
+321:     const { status: _status, ...rest } = resource;
+322:     return rest as T;
+323:   }
+324:   return { ...resource, status: priorStatus };
+325: }
+
+mcp/src/clinical-graph/encounter-undo-ledger-store.ts:19-31
+19: export interface UndoLedgerEntry {
+20:   /** `ResourceType/id` of the voided resource. */
+21:   ref: string;
+22:   /**
+23:    * The status the resource carried before the void: Observation.status,
+24:    * MedicationAdministration.status, Condition.verificationStatus code, or the complaint's
+25:    * `active`. Custom-section Observations save with no status at all; that is recorded as "".
+26:    */
+27:   priorStatus: string;
+28:   /** Conditions only — the clinicalStatus code the void stripped. */
+29:   clinicalStatus?: string;
+30:   /** Conditions only — the Encounter.diagnosis row the void retracted, restored verbatim. */
+31:   diagnosis?: EncounterDiagnosis;
+
+mcp/src/clinical-graph/current-finding-writer.ts:117-133
+117: export async function repairPendingAudits(deps: FindingCommandDeps,
+118:   request: Pick<FindingCommand,"commandId"|"patientReference"|"encounterReference">): Promise<FindingCommandResult> {
+119:   const command:FindingCommand={...request,surface:"audit-repair",targets:[]};
+120:   validateCommand(command,true);
+121:   const state=await load(deps,command);
+122:   if(state.incomplete)return {commandId:command.commandId,complete:false,executionOrder:[0],outcomes:[{
+123:     status:"not-attempted",target:command.encounterReference,clinicalWrite:"none",cause:"load",fresh:state,reason:state.reason}]};
+124:   const debt=state.observations.filter(o=>state.pendingAudits?.has(`Observation/${o.id}`));
+125:   const outcomes:FindingOutcome[]=[];
+126:   let stopped=false;
+127:   for(const observation of debt) {
+128:     const marker=parseFindingOperation(observation)!;
+129:     if(stopped){outcomes.push({status:"not-attempted",target:marker.target,clinicalWrite:"none",cause:"halted-by-earlier-target"});continue;}
+130:     const outcome=await ensureReplayAudit(deps,marker.target,observation,marker);
+131:     outcomes.push({...outcome,clinicalWrite:"none"});
+132:     stopped=outcome.auditPending===true || !["applied","already-applied"].includes(outcome.status);
+133:   }
+
+mcp/tests/encounterVoidFixture.ts:202-217
+202: export function definition(stableKey: string, sectionKey: string, display: string): ClinicalFindingDefinition {
+203:   return {
+204:     id: `finding-def-${stableKey}`,
+205:     stableKey,
+206:     display,
+207:     sectionKey,
+208:     anatomyTarget: "eye",
+209:     valueSchema: {},
+210:     normalSemantics: {},
+211:     sourceStatus: "verified-seed",
+212:     allowDiagnosisMapping: false,
+213:     notBillReady: true,
+214:     active: true,
+215:     provenance: { source: "manual", recordedAt: NOW, actorReference: "Practitioner/pr1" },
+216:   };
+217: }
+
+mcp/src/clinical-graph/exam-overview-endpoint.ts:84-101
+84:         searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }),
+85:         searchAll<Observation>(staff.fhir, "Observation", { subject: patientReference }),
+86:         searchAll<Condition>(staff.fhir, "Condition", { encounter: encounterReference }),
+87:         resolveVisitTypeCategoryForEncounter(encounter, undefined, serviceFhir),
+88:         new FhirComplaintDefinitionStore(staff.fhir).list(),
+89:         new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId),
+90:       ]);
+91:     const current = currentObservations.filter((observation) =>
+92:       observation.subject?.reference === patientReference
+93:     );
+94:     const encounterConditions = conditions.filter((condition) =>
+95:       condition.subject.reference === patientReference
+96:     );
+97:     const provenanceByObservation = await findingProvenanceProjection(
+98:       staff.fhir,
+99:       encounterConditions,
+100:       current,
+101:     );
+
+mcp/src/clinical-graph/exam-overview-endpoint.ts:344-386
+344: async function findingProvenanceProjection(
+345:   fhir: ExamOverviewFhirClient,
+346:   conditions: readonly Condition[],
+347:   observations: readonly Observation[],
+348: ): Promise<Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }>> {
+349:   const states = await Promise.all(conditions.map(async (condition) => {
+350:     const references = conditionObservationReferences(condition);
+351:     const boundObservations = observations.filter((observation) =>
+352:       observation.id && references.has(`Observation/${observation.id}`)
+353:     );
+354:     return readDiagnosisCarryState(fhir, condition, boundObservations);
+355:   }));
+356:   return states.reduce<Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }>>(
+357:     (projection, state) => mergeCarryState(projection, state),
+358:     {},
+359:   );
+360: }
+361: 
+362: function mergeCarryState(
+363:   projection: Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }>,
+364:   carryState: DiagnosisCarryState,
+365: ): Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }> {
+366:   for (const [reference, reasserted] of Object.entries(carryState.observationReasserted)) {
+367:     if (!reasserted) continue;
+368:     projection[reference] = {
+369:       state: "carried-reasserted",
+370:       ...(carryState.pulledFromDate ? { sourceDate: carryState.pulledFromDate } : {}),
+371:     };
+372:   }
+373:   for (const [reference, carried] of Object.entries(carryState.observationCarried)) {
+374:     if (!carried || projection[reference]?.state === "carried-reasserted") continue;
+375:     projection[reference] = {
+376:       state: "carried-unreasserted",
+377:       ...(carryState.pulledFromDate ? { sourceDate: carryState.pulledFromDate } : {}),
+378:     };
+379:   }
+380:   return projection;
+381: }
+382: 
+383: function conditionObservationReferences(condition: Condition): Set<string> {
+384:   return new Set(condition.evidence?.flatMap((evidence) => evidence.detail ?? [])
+385:     .flatMap((detail) => detail.reference?.startsWith("Observation/") ? [detail.reference] : []) ?? []);
+386: }
+
+mcp/src/clinical-graph/exam-overview-projection.ts:454-475
+454: function observationIdentity(
+455:   observation: Observation,
+456:   definitions: readonly ClinicalFindingDefinition[],
+457: ): { findingKey: string; sectionKey: string; display: string } | undefined {
+458:   const definition = findingDefinitionForObservation(observation, definitions.filter((row) => row.active));
+459:   if (definition) {
+460:     return {
+461:       findingKey: definition.stableKey,
+462:       sectionKey: definition.sectionKey ?? definition.stableKey,
+463:       display: definition.display,
+464:     };
+465:   }
+466:   const coding = observation.code.coding?.find((row) => row.code);
+467:   if (coding?.code === "VISUAL_ACUITY" || coding?.code === "VISUAL_ACUITY_PANEL") {
+468:     return {
+469:       findingKey: coding.code,
+470:       sectionKey: "va",
+471:       display: coding.display ?? observation.code.text ?? "Visual acuity",
+472:     };
+473:   }
+474:   return undefined;
+475: }
+
+mcp/src/clinical-graph/exam-overview-projection.ts:529-570
+529: function sectionProjection(
+530:   requirement: ClinicalSectionRequirement,
+531:   applicable: boolean,
+532:   findings: readonly ExamOverviewFindingProjection[],
+533:   definitions: readonly ClinicalFindingDefinition[],
+534:   assessmentRows: ReadonlyArray<{ problemStatusRecorded: boolean }>,
+535: ): ExamOverviewSectionProjection {
+536:   const evidence = requirement.evidence;
+537:   const rows = evidence.kind === "assessment"
+538:     ? []
+539:     : findings.filter((finding) => evidence.sectionKeyPrefixes.some((prefix) =>
+540:       finding.sectionKey.startsWith(prefix)
+541:     ));
+542:   const carriedUnreassertedCount = rows.filter((row) =>
+543:     row.provenance.state === "carried-unreasserted"
+544:   ).length;
+545:   const currentRows = rows.filter((row) => row.provenance.state !== "carried-unreasserted");
+546:   const definitionSlots = evidence.kind === "assessment"
+547:     ? []
+548:     : definitions.filter((definition) => definition.active && evidence.sectionKeyPrefixes.some((prefix) =>
+549:       (definition.sectionKey ?? definition.stableKey).startsWith(prefix)
+550:     ));
+551:   const findingSlots = evidence.kind === "assessment"
+552:     ? []
+553:     : findingSectionSlots(definitionSlots, currentRows);
+554:   const state = !applicable
+555:     ? "not-indicated"
+556:     : requirement.evidence.kind === "assessment"
+557:       ? assessmentSectionState(assessmentRows)
+558:       : deriveExamSectionState({ applicable: true, rows: findingSlots });
+559:   return {
+560:     sectionKey: requirement.sectionKey,
+561:     label: requirement.label,
+562:     state,
+563:     findingObservationReferences: rows.map((row) => row.observationReference),
+564:     abnormalCount: rows.filter((row) => row.interpretation === "abnormal").length,
+565:     carriedUnreassertedCount,
+566:     deferredWithoutReasonCount: currentRows.filter((row) =>
+567:       row.examination.state === "deferred-without-reason"
+568:     ).length,
+569:   };
+570: }
+
+mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts:123-134
+123: function keyFindingSatisfied(
+124:   entry: KeyFindingEntry,
+125:   definition: ClinicalFindingDefinition,
+126:   encounterObservations: readonly Observation[],
+127:   historyObservations: readonly Observation[],
+128:   now: Date,
+129: ): boolean {
+130:   const observations = entry.satisfiedBy === "this-encounter" ? encounterObservations : historyObservations;
+131:   return observations.some((observation) =>
+132:     observationMatchesFindingDefinition(observation, definition) &&
+133:     (entry.withinMonths === undefined || observationWithinMonths(observation, entry.withinMonths, now))
+134:   );
+
+mcp/src/clinical-graph/protocol-service.ts:301-348
+301:     for (const observation of input.observations.filter((row) =>
+302:       ["final", "amended", "corrected"].includes(row.status)
+303:     )) {
+304:       const findingDefKey = observationFindingKey(observation, input.findingKeys);
+305:       if (!findingDefKey) continue;
+306:       const protocolFinding = observation.id
+307:         ? findingByObservation.get(`Observation/${observation.id}`)
+308:         : undefined;
+309:       const sourceItem = protocolFinding
+310:         ? sourceItems.get(`${protocolFinding.protocolApplicationId}:${protocolFinding.sourceItemKey}`)
+311:         : undefined;
+312:       const deviceMeasured = observationIsDeviceMeasured(observation);
+313:       const value = deviceMeasured ? undefined : structuredObservationValue(observation);
+314:       items.push({
+315:         itemKey: uniqueItemKey(items, `finding-${findingDefKey}`),
+316:         itemType: "finding-seed",
+317:         defaultSelected: true,
+318:         lateralityMode: sourceItem?.lateralityMode === "OU-always" ? "OU-always" : "inherit-dx",
+319:         payload: {
+320:           findingDefKey,
+321:           mode: value === undefined ? "promptOnly" : "seedValue",
+322:           ...(value === undefined ? {} : { defaultValue: value }),
+323:         },
+324:         capture: {
+325:           source: deviceMeasured ? "device-measured" : "observed-estimate",
+326:           ...(value === undefined ? {} : { seedValueKept: true }),
+327:         },
+328:       });
+329:     }
+330:     for (const finding of findings.filter((row) => !row.observationReference)) {
+331:       if (!input.findingKeys.has(finding.findingDefKey)) continue;
+332:       const sourceItem = sourceItems.get(`${finding.protocolApplicationId}:${finding.sourceItemKey}`);
+333:       const value = structuredFindingValue(finding.value);
+334:       items.push({
+335:         itemKey: uniqueItemKey(items, `finding-${finding.findingDefKey}`),
+336:         itemType: "finding-seed",
+337:         defaultSelected: true,
+338:         lateralityMode: sourceItem?.lateralityMode === "OU-always" ? "OU-always" : "inherit-dx",
+339:         payload: {
+340:           findingDefKey: finding.findingDefKey,
+341:           mode: value === undefined ? "promptOnly" : "seedValue",
+342:           ...(value === undefined ? {} : { defaultValue: value }),
+343:         },
+344:         capture: {
+345:           source: "observed-estimate",
+346:           ...(value === undefined ? {} : { seedValueKept: true }),
+347:         },
+348:       });
+
+mcp/src/clinical-graph/protocol-service.ts:587-617
+587:       for (const item of protocol.items) {
+588:         const choice = choices.get(item.itemKey);
+589:         const selected = choice?.selected ?? item.defaultSelected;
+590:         if (!selected) {
+591:           if (choice?.skipReason) application.dedupResolutions.push({ itemKey: item.itemKey, reason: choice.skipReason });
+592:           dispositions.push({ itemKey: item.itemKey, outcome: "opted-out" });
+593:           for (const finding of proposed.filter((row) =>
+594:             row.sourceItemKey === item.itemKey && row.state === "proposed"
+595:           )) await this.findings.save({ ...finding, state: "removed" });
+596:           continue;
+597:         }
+598:         const payload = choice?.payload ?? item.payload;
+599:         const modified = JSON.stringify(payload) !== JSON.stringify(item.payload);
+600:         dispositions.push({ itemKey: item.itemKey, outcome: modified ? "applied-modified" : "applied-default" });
+601:         await this.applySelectedItem(application, item, payload, linkedDx, proposed, at, writes);
+602:         if (item.itemType === "charge-seed" && application.dedupResolutions.some((row) => row.itemKey === item.itemKey && row.reason === "charge-exists")) {
+603:           dispositions[dispositions.length - 1].outcome = "opted-out";
+604:         }
+605:       }
+606:       await this.saveApplication(originalApplication, { ...application, scope: "whole", confirmed: true, dispositions });
+607:     } catch (error) {
+608:       const current = await this.applications.get(application.id);
+609:       if (current?.confirmed && current.undoState === "active" && JSON.stringify(current.dispositions) === JSON.stringify(dispositions) && JSON.stringify(current.dedupResolutions) === JSON.stringify(application.dedupResolutions)) return;
+610:       await this.cleanupItemAddWrites(writes);
+611:       for (const finding of await this.findings.list()) {
+612:         if (finding.protocolApplicationId !== application.id) continue;
+613:         if (finding.observationReference) await this.projection.removeMaterialized?.(finding.observationReference);
+614:         const original = proposed.find((row) => row.id === finding.id);
+615:         await this.findings.save(current?.undoState === "active" && !current.confirmed && original ? original : { ...finding, state: "removed" });
+616:       }
+617:       throw error;
+
+mcp/src/clinical-graph/protocol-service.ts:817-826
+817:       for (const finding of originalFindings) {
+818:         const current = await this.findings.get(finding.id);
+819:         const projectionRemoved = Boolean(finding.observationReference && removedProjections.has(finding.observationReference));
+820:         if (!current || (!projectionRemoved && JSON.stringify(current) === JSON.stringify(finding))) continue;
+821:         const restored = { ...finding };
+822:         if (projectionRemoved) {
+823:           const restore = removedProjections.get(finding.observationReference!);
+824:           try {
+825:             if (restore) await restore();
+826:             else restored.observationReference = await this.projection.commitFinding(finding);
+
+mcp/src/clinical-graph/protocol-service.ts:1022-1026
+1022:         const observationReference = committed.value === undefined
+1023:           ? undefined
+1024:           : await this.projection.commitFinding(committed);
+1025:         if (observationReference) committed.observationReference = observationReference;
+1026:         await this.findings.save(committed);
+
+mcp/src/clinical-graph/protocol-service.ts:1450-1465
+1450: function findingDimensions(payload: Record<string, unknown>): Array<{
+1451:   laterality?: "OD" | "OS" | "OU";
+1452:   componentKey?: string;
+1453: }> {
+1454:   const expand = typeof payload.expand === "object" && payload.expand !== null
+1455:     ? payload.expand as { eyes?: unknown; components?: unknown }
+1456:     : undefined;
+1457:   const eyes = Array.isArray(expand?.eyes)
+1458:     ? expand.eyes.filter((eye): eye is "OD" | "OS" => eye === "OD" || eye === "OS")
+1459:     : [];
+1460:   const components = Array.isArray(expand?.components)
+1461:     ? expand.components.filter((component): component is string => typeof component === "string" && Boolean(component))
+1462:     : [];
+1463:   if (!eyes.length) return [{}];
+1464:   if (!components.length) return eyes.map((laterality) => ({ laterality }));
+1465:   return eyes.flatMap((laterality) => components.map((componentKey) => ({ laterality, componentKey })));
+
+mcp/src/clinical-graph/protocol-endpoint.ts:402-418
+402:   const opened = await service.open(parsed.data.protocolId, {
+403:     encounterId: parsed.data.encounterId,
+404:     patientId: parsed.data.patientId,
+405:     diagnosis: parsed.data.diagnosis,
+406:     actor: staff.staffReference,
+407:   });
+408:   try {
+409:     await liveService(staff, deps.now, seriesResolution.protocols, deps.educationCatalog).commit(
+410:       opened.application.id,
+411:       offeredSelections,
+412:       [parsed.data.diagnosis.reference],
+413:     );
+414:   } catch (error) {
+415:     if (error instanceof ProtocolItemAddConflictError) {
+416:       return { status: 409, body: { error: error.message } };
+417:     }
+418:     throw error;
+
+mcp/src/clinical-graph/protocol-endpoint.ts:893-901
+893:     async commitFinding(finding) {
+894:       if (finding.value === undefined) return undefined;
+895:       const observation = finding.findingDefKey === "gonio_angle_structures"
+896:         ? protocolFindingToGonioObservation(finding)
+897:         : protocolFindingObservation(finding);
+898:       const saved = await staff.fhir.create(observation, { "X-ODOS-Source": "protocol-module" });
+899:       return saved.id ? `Observation/${saved.id}` : undefined;
+900:     },
+901:     async materializeAction(action) {
+
+mcp/src/clinical-graph/protocol-endpoint.ts:942-1010
+942:     async removeMaterialized(reference) {
+943:       const [resourceType, id] = reference.split("/");
+944:       if (!id || !["Observation", "ServiceRequest", "CarePlan"].includes(resourceType ?? "")) return;
+945:       if (resourceType === "Observation") {
+946:         const resource = await staff.fhir.read<Observation>("Observation", id);
+947:         const revoked = await updateProjected(staff.fhir, "Observation", id, { ...resource, status: "entered-in-error" });
+948:         return projectionRestore(staff.fhir, "Observation", id, resource, revoked.meta?.versionId);
+949:       } else if (resourceType === "ServiceRequest") {
+950:         const resource = await staff.fhir.read<ServiceRequest>("ServiceRequest", id);
+951:         const revoked = await updateProjected(staff.fhir, "ServiceRequest", id, { ...resource, status: "revoked" });
+952:         return projectionRestore(staff.fhir, "ServiceRequest", id, resource, revoked.meta?.versionId);
+953:       } else {
+954:         const resource = await staff.fhir.read<CarePlan>("CarePlan", id);
+955:         const revoked = await updateProjected(staff.fhir, "CarePlan", id, { ...resource, status: "revoked" });
+956:         return projectionRestore(staff.fhir, "CarePlan", id, resource, revoked.meta?.versionId);
+957:       }
+958:     },
+959:   }, now);
+960: }
+961: 
+962: async function updateProjected<T extends Observation | ServiceRequest | CarePlan>(
+963:   fhir: LiveFhir,
+964:   resourceType: T["resourceType"],
+965:   id: string,
+966:   resource: T,
+967:   headers?: Record<string, string>,
+968: ): Promise<T> {
+969:   const update = fhir.update as unknown as (
+970:     type: T["resourceType"],
+971:     id: string,
+972:     resource: T,
+973:     headers?: Record<string, string>,
+974:   ) => Promise<T>;
+975:   return update(resourceType, id, resource, { "X-ODOS-Source": "protocol-module", ...headers });
+976: }
+977: 
+978: function projectionRestore<T extends Observation | ServiceRequest | CarePlan>(
+979:   fhir: LiveFhir,
+980:   resourceType: T["resourceType"],
+981:   id: string,
+982:   resource: T,
+983:   revokedVersion: string | undefined,
+984: ): () => Promise<void> {
+985:   return async () => {
+986:     if (!revokedVersion) throw new Error(`Projection rollback refused for ${resourceType}/${id}: revoke returned no versionId.`);
+987:     try {
+988:       await updateProjected(fhir, resourceType, id, resource, { "If-Match": `W/"${revokedVersion}"` });
+989:     } catch (error) {
+990:       throw new Error(`Projection rollback failed for ${resourceType}/${id}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+991:     }
+992:   };
+993: }
+994: 
+995: export function protocolFindingObservation(finding: ProtocolFindingInstance): Observation {
+996:   if (typeof finding.value === "number" && finding.findingDefKey !== "cup_disc_ratio") {
+997:     throw new Error(`Numeric protocol finding ${finding.findingDefKey} requires an explicit unit mapping.`);
+998:   }
+999:   return {
+1000:     resourceType: "Observation",
+1001:     status: "final",
+1002:     code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/odos", code: finding.findingDefKey }] },
+1003:     subject: { reference: `Patient/${finding.patientId}` },
+1004:     encounter: { reference: `Encounter/${finding.encounterId}` },
+1005:     effectiveDateTime: finding.provenance.at,
+1006:     performer: [{ reference: finding.provenance.actor }],
+1007:     ...(finding.laterality ? { bodySite: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/laterality", code: finding.laterality }] } } : {}),
+1008:     ...(typeof finding.value === "number"
+1009:       ? { valueQuantity: { value: finding.value, unit: "ratio", code: "1" } }
+1010:       : { valueString: String(finding.value) }),
+
+mcp/src/clinical-graph/protocol-fixtures.ts:123-132
+123:   effectivePeriod: { start: "2026-07-18" },
+124:   verificationStatus: "provisional",
+125: }));
+126: 
+127: const DRY_EYE_PROMPT_FINDINGS = [
+128:   { itemKey: "dry-eye-symptoms", findingDefKey: DRY_EYE_SYMPTOMS_KEY },
+129:   { itemKey: "dry-eye-tear-stability", findingDefKey: "ocular-health:anterior:tear-film" },
+130:   { itemKey: "dry-eye-tear-volume", findingDefKey: DRY_EYE_TEAR_VOLUME_KEY },
+131:   { itemKey: "dry-eye-markers", findingDefKey: DRY_EYE_MARKERS_KEY },
+132:   { itemKey: "dry-eye-gland-structure", findingDefKey: DRY_EYE_GLAND_STRUCTURE_KEY },
+
+ui/src/components/charting/AssessmentSection.tsx:203-224
+203:     const evidenceReferences = [...new Set(loadedConditions.flatMap((condition) =>
+204:       (condition.evidence ?? []).flatMap((evidence) => (evidence.detail ?? []).flatMap((detail) => detail.reference?.startsWith("Observation/") ? [detail.reference] : []))
+205:     ))];
+206:     const observationResults = await Promise.allSettled(evidenceReferences.map(async (reference) =>
+207:       fhir.read<Observation>("Observation", reference.replace(/^Observation\//, ""))
+208:     ));
+209:     const observations = observationResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+210:     const observationsByReference = new Map(observations.map((observation) => [`Observation/${observation.id}`, observation]));
+211:     setProvenanceLines(Object.fromEntries(loadedConditions.flatMap((condition) => {
+212:       if (!condition.id) return [];
+213:       const lines = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
+214:         .flatMap((detail) => detail.reference ? [observationsByReference.get(detail.reference)] : [])
+215:         .flatMap((observation) => observation ? [findingProvenanceLine(observation)] : []);
+216:       return lines.length ? [[condition.id, lines.join(" · ")]] : [];
+217:     })));
+218:   }
+219: 
+220:   useEffect(() => {
+221:     void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+222:     return () => { loadGeneration.current += 1; };
+223:   }, [encounterId, encounterReference]);
+224: 
+
+ui/src/components/charting/DiagnosisPicker.tsx:419-429
+419: function isProposedDiagnosis(
+420:   conditions: readonly Condition[],
+421:   diagnosisKey: string,
+422:   observationReference: string | undefined,
+423: ): boolean {
+424:   return conditions.some((condition) =>
+425:     conditionDiagnosisKey(condition) === diagnosisKey &&
+426:     (!observationReference || condition.evidence?.some((evidence) =>
+427:       evidence.detail?.some((detail) => detail.reference === observationReference)
+428:     ) === true)
+429:   );
+
+mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts:130-151
+130: 
+131:   return {
+132:     status: 200,
+133:     body: {
+134:       encounterReference,
+135:       findings: findings.map((finding) => {
+136:         const definition = definitions.find((row) => row.id === finding.findingDefinitionId);
+137:         const view = views.find(v => (v.id ?? v.projectionKey) === finding.id)!;
+138:         const liveFacts = !projection.preRebuild && definition && customFieldEntries(definition, true).some(f => f.valueType === "multi-select")
+139:           ? projection.currentFacts.filter(f => f.status === "live" && f.presence === "present" && f.key.stableKey === definition.stableKey && f.eye === finding.laterality)
+140:           : [];
+141:         const support = (trigger?: MappingTrigger) => {
+142:           const facts = supportingFactsForTrigger(liveFacts, finding, trigger);
+143:           return facts.length ? { supportingFacts: facts } : {};
+144:         };
+145:         const ruleCandidates = (rulesByFinding.get(finding.id) ?? []).flatMap((evaluation, order) => {
+146:           const diagnosisKey = catalogKeyForRule(evaluation.diagnosisDefinition.stableKey);
+147:           const row = activeCatalog.get(diagnosisKey);
+148:           if (!row) return [];
+149:           const icd10 = resolvedIcd10(row, finding, definition?.stableKey);
+150:           return [{
+151:             diagnosisKey,
+
+mcp/src/clinical-graph/diagnosis-pick-endpoint.ts:151-174
+151:       const views = definitionViews.filter(v => findingDefinitionForObservation(v, definitions)?.stableKey === findingDefinitionStableKey &&
+152:         eyes.has(observationLaterality(v) as "OD" | "OS"));
+153:       if (views.length !== eyes.size || parsed.data.findingInstanceId && !views.some(v => (v.id ?? v.projectionKey) === stripReference(parsed.data.findingInstanceId!, "Observation"))) {
+154:         return { status: 400, body: { result: "invalid", reason: "support-view", error: "Supports must belong to the selected finding view." } };
+155:       }
+156:       observation = views[0];
+157:     } else {
+158:       const findingId = stripReference(parsed.data.findingInstanceId!, "Observation");
+159:       observation = definitionViews.find(v => (v.id ?? v.projectionKey) === findingId);
+160:       const raw = context.state.observations.find(o => o.id === findingId);
+161:       const rawDefinition = raw && findingDefinitionForObservation(raw, definitions);
+162:       if (rawDefinition && customFieldEntries(rawDefinition, true).some(f => f.valueType === "multi-select") && context.projection.preRebuild) {
+163:         return { status: 409, body: { result: "invalid", reason: "pre-rebuild-test-encounter", error: "Test data from before the rebuild is read-only." } };
+164:       }
+165:       if (!observation) return { status: 404, body: { error: `Finding ${findingId} does not exist in the current projection.` } };
+166:       findingDefinitionStableKey = findingDefinitionForObservation(observation, definitions)?.stableKey;
+167:       if (!findingDefinitionStableKey) return { status: 422, body: { error: "The finding does not resolve to an active finding definition." } };
+168:     }
+169:   }
+170: 
+171:   const laterality = supportLaterality ?? normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
+172:   const visualFieldDescriptor = visualFieldDescriptorResolutionFromObservation(
+173:     findingDefinitionStableKey,
+174:     observation,

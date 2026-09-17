@@ -54,6 +54,11 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Media", "_id", "_count"),
   ],
   "protocol-store.search-basic": [spec("Basic", "code", "identifier", "_count")],
+  "diagnosis-carry-provenance.search-resource": [
+    spec("Condition", "identifier", "_count"),
+    spec("Provenance", "target", "_count"),
+    spec("Provenance", "_tag", "_count"),
+  ],
   "day-ledger.search-resource": [
     spec("Invoice", "date", "_count", "_sort"),
     spec("PaymentReconciliation", "status", "created", "_count", "_sort"),

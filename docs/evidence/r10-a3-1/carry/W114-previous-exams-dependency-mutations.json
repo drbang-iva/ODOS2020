@@ -1,0 +1,25 @@
+[
+  {
+    "id": "W114-previous-exams-dependency",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 stored practice option",
+      "mcp/tests/r10A3Carry.test.ts"
+    ],
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts",
+        "before": "    const definitions = await new FhirFindingDefinitionStore(fhir as unknown as ConstructorParameters<typeof FhirFindingDefinitionStore>[0]).list();",
+        "after": "    const definitions = (await import(\"./finding-definition-store.js\")).buildFindingDefinitionSeeds();"
+      }
+    ],
+    "redExit": 1,
+    "greenExit": 0,
+    "redLog": "carry/W114-previous-exams-dependency-red.tap",
+    "greenLog": "carry/W114-previous-exams-dependency-green.tap",
+    "sourceRestoredSha256": "804cd9541c6eb78f062bd15bcb4e6743eccc8811a564e7e6d64bdab91d17308a"
+  }
+]

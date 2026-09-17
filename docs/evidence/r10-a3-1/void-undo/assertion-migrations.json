@@ -1,0 +1,310 @@
+[
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 192,
+    "test": "\"rule 2: sections own independent slots — clearing CVF leaves Pupils' Undo alone, and a tier-1 remove inside Pupils replaces only Pupils'\"",
+    "before": "assert.deepEqual(body.ledger.sections[\"entrance:pupils\"], {\n    voided: [{ ref: \"Observation/pupil-again\", priorStatus: \"preliminary\" }],\n    label: \"Reactivity · OD\",\n    count: 1,\n    at: NOW,\n    sectionKeys: [\"entrance:pupils\"],\n    scope: \"observation\",\n  }, \"a tier-1 remove is slotted under its section and replaces that section's previous clear\")",
+    "row": "V36/W127",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 203,
+      "test": "\"rule 2: sections own independent slots — clearing CVF leaves Pupils' Undo alone, and a tier-1 remove inside Pupils replaces only Pupils'\"",
+      "assertion": "assert.deepEqual(body.ledger.sections[\"entrance:pupils\"], {\n    voidActionId: body.voidActionId,\n    voided: [{ ref: \"Observation/pupil-again\", priorStatus: \"preliminary\" }],\n    label: \"Reactivity · OD\",\n    count: 1,\n    at: NOW,\n    sectionKeys: [\"entrance:pupils\"],\n    scope: \"observation\",\n  }, \"a tier-1 remove is slotted under its section and replaces that section's previous clear\")"
+    },
+    "kind": "literal assertion changed"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 436,
+    "test": "\"undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written\"",
+    "before": "assert.equal(second.status, 404, JSON.stringify(second.body))",
+    "row": "V36/W127",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 448,
+      "test": "\"undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written\"",
+      "assertion": "assert.equal(second.status, 409, JSON.stringify(second.body))"
+    },
+    "kind": "literal assertion changed"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 437,
+    "test": "\"undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written\"",
+    "before": "assert.match((second.body as UndoBody).error ?? \"\", /nothing to undo/i)",
+    "row": "V36/W127",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 449,
+      "test": "\"undo is not itself undoable: once a slot is undone there is nothing to undo, and no 'restored' slot is written\"",
+      "assertion": "assert.equal((second.body as UndoBody).code, \"undo-superseded\")"
+    },
+    "kind": "literal assertion changed"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 448,
+    "test": "\"undo with an empty visit slot or an unknown section returns 404 and writes nothing\"",
+    "before": "assert.equal(visit.status, 404, JSON.stringify(visit.body))",
+    "row": "V36/W127",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 460,
+      "test": "\"undo with an empty visit slot or an unknown section returns 409 and writes nothing\"",
+      "assertion": "assert.equal(visit.status, 409, JSON.stringify(visit.body))"
+    },
+    "kind": "literal assertion changed"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 450,
+    "test": "\"undo with an empty visit slot or an unknown section returns 404 and writes nothing\"",
+    "before": "assert.equal(other.status, 404, JSON.stringify(other.body))",
+    "row": "V36/W127",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 462,
+      "test": "\"undo with an empty visit slot or an unknown section returns 409 and writes nothing\"",
+      "assertion": "assert.equal(other.status, 409, JSON.stringify(other.body))"
+    },
+    "kind": "literal assertion changed"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 495,
+    "test": "\"undo requires authentication, chart.write, a valid encounter id, and a known scope\"",
+    "before": "assert.equal((await handleEncounterUndoRequest(deps, { authHeader: AUTH, params: { encounterId: \"missing\" }, body: { scope: \"encounter\" } })).status, 404)",
+    "row": "V36/W127",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 507,
+      "test": "\"undo requires authentication, chart.write, a valid encounter id, and a known scope\"",
+      "assertion": "assert.equal((await handleEncounterUndoRequest(deps, { authHeader: AUTH, params: { encounterId: \"missing\" }, body: { scope: \"encounter\", voidActionId: randomUUID() } })).status, 404)"
+    },
+    "kind": "literal assertion changed"
+  },
+  {
+    "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+    "line": 250,
+    "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+    "before": "assert.equal(result.status, 200, JSON.stringify(result.body))",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+      "line": 251,
+      "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+      "assertion": "assert.equal(result.status, 200, JSON.stringify(result.body))"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+    "line": 252,
+    "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+    "before": "assert.deepEqual([...body.voided].sort(), [\"Observation/cornea-od\", \"Observation/lens-os\"])",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+      "line": 253,
+      "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+      "assertion": "assert.deepEqual([...body.voided].sort(), [\"Observation/cornea-od\", \"Observation/lens-os\"])"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+    "line": 253,
+    "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+    "before": "assert.deepEqual(body.sections.map((section) => [section.sectionKey, section.label, section.count]).sort(), [\n    [\"ocular-health:anterior:cornea\", \"Cornea\", 1],\n    [\"ocular-health:anterior:lens\", \"Lens\", 1],\n  ])",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+      "line": 254,
+      "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+      "assertion": "assert.deepEqual(body.sections.map((section) => [section.sectionKey, section.label, section.count]).sort(), [\n    [\"ocular-health:anterior:cornea\", \"Cornea\", 1],\n    [\"ocular-health:anterior:lens\", \"Lens\", 1],\n  ])"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+    "line": 257,
+    "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+    "before": "assert.equal(fhir.get<Observation>(\"Observation\", \"cvf-od\").status, \"final\")",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+      "line": 258,
+      "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+      "assertion": "assert.equal(fhir.get<Observation>(\"Observation\", \"cvf-od\").status, \"final\")"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+    "line": 258,
+    "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+    "before": "assert.equal(fhir.get<Observation>(\"Observation\", \"pupils-od\").status, \"final\")",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterVoidEndpoint.test.ts",
+      "line": 259,
+      "test": "\"section scope matches the section key exactly or as a prefix, and reports per-section labels\"",
+      "assertion": "assert.equal(fhir.get<Observation>(\"Observation\", \"pupils-od\").status, \"final\")"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 247,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(pupilsVoid.count, 6)",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 259,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(pupilsVoid.count, 6)"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 249,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(everything.count, 25, \"Pupils' 6 were already entered-in-error and are not re-voided\")",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 261,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(everything.count, 25, \"Pupils' 6 were already entered-in-error and are not re-voided\")"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 250,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(everything.ledger.encounter?.count, 25)",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 262,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(everything.ledger.encounter?.count, 25)"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 251,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.deepEqual(everything.ledger.sections, {}, \"rule 3: the Pupils Undo was absorbed\")",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 263,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.deepEqual(everything.ledger.sections, {}, \"rule 3: the Pupils Undo was absorbed\")"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 254,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(result.status, 200, JSON.stringify(result.body))",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 266,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(result.status, 200, JSON.stringify(result.body))"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 256,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(body.count, 25)",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 268,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(body.count, 25)"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 257,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.deepEqual([...body.restored].sort(), [...others].sort())",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 269,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.deepEqual([...body.restored].sort(), [...others].sort())"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 259,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.notEqual(fhir.get<Observation>(\"Observation\", reference.slice(\"Observation/\".length)).status, \"entered-in-error\", `${reference} restored`)",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 271,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.notEqual(fhir.get<Observation>(\"Observation\", reference.slice(\"Observation/\".length)).status, \"entered-in-error\", `${reference} restored`)"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 262,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(fhir.get<Observation>(\"Observation\", reference.slice(\"Observation/\".length)).status, \"entered-in-error\", `${reference} stays voided: that Undo was absorbed and is gone`)",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 274,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(fhir.get<Observation>(\"Observation\", reference.slice(\"Observation/\".length)).status, \"entered-in-error\", `${reference} stays voided: that Undo was absorbed and is gone`)"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 264,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.equal(body.ledger.encounter, null, \"the slot is cleared by the Undo\")",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 276,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.equal(body.ledger.encounter, null, \"the slot is cleared by the Undo\")"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  },
+  {
+    "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+    "line": 265,
+    "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+    "before": "assert.deepEqual(body.ledger.sections, {})",
+    "row": "V26/W76",
+    "after": {
+      "file": "mcp/tests/encounterUndoEndpoint.test.ts",
+      "line": 277,
+      "test": "\"guard 7: clear Pupils (6), clear everything (25 more), undo everything → 25 restored and Pupils' 6 still entered-in-error\"",
+      "assertion": "assert.deepEqual(body.ledger.sections, {})"
+    },
+    "kind": "assertion retained; canonical fixture replaces shared legacy snapshot"
+  }
+]

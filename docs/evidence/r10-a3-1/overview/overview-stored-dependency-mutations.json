@@ -1,0 +1,26 @@
+[
+  {
+    "id": "W114-overview-dependency",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 overview stored definition dependency",
+      "mcp/tests/r10A3Overview.test.ts"
+    ],
+    "failurePattern": "not ok .*W114 overview stored definition dependency",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/exam-overview-endpoint.ts",
+        "before": "        deps.findingDefinitions(),",
+        "after": "        import(\"./finding-definition-store.js\").then(m=>m.buildFindingDefinitionSeeds()),"
+      }
+    ],
+    "redExit": 1,
+    "greenExit": 0,
+    "sourceRestoredSha256": "5d8fba24852c491b9e4bbd14fe043bc9b1c266e2d3d78f9872e7180454eae695",
+    "redLog": "overview/W114-overview-dependency-red.tap",
+    "greenLog": "overview/W114-overview-dependency-green.tap"
+  }
+]

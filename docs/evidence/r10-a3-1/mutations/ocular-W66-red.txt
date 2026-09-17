@@ -1,0 +1,162 @@
+TAP version 13
+# Subtest: W66 frozen loaded set preserves concurrent addition
+not ok 1 - W66 frozen loaded set preserves concurrent addition
+  ---
+  duration_ms: 18.666
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        code: {
+          coding: [
+            {
+              code: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract',
+    ...
+            },
+    +       valueString: '{"commandId":"42f4b30e-360f-4098-9c2c-0b7b7ee5630f","target":"finding:a97e8422fd8484f37fb700e5960d1575fcb12c8d8695c2639f3b6d1500f006e5","digest":"2ed77e86ca95bcf3113c5cda9b70457d802f8bb638cd8a5f601e86e53626f7f6","audit":{"kind":"mutation","actor":"Practitioner/synthetic","recorded":"2026-09-16T12:00:00.000Z","activity":"UPDATE","targetReferences":["self","Patient/p1"]}}'
+    -       valueString: '{"commandId":"80a1d198-e463-447a-9ab4-0639b17e6d44","target":"finding:a97e8422fd8484f37fb700e5960d1575fcb12c8d8695c2639f3b6d1500f006e5","digest":"d77f24af0a1473c2f447036c35fca94c37031dfb438e53a104bc444373e569f0","audit":{"kind":"mutation","actor":"Practitioner/synthetic","recorded":"2026-09-16T12:00:00.000Z","activity":"CREATE","targetReferences":["self","Patient/p1"]}}'
+          }
+        ],
+        effectiveDateTime: '2026-09-16T12:00:00.000Z',
+        encounter: {
+          reference: 'Encounter/e1'
+    ...
+        meta: {
+    +     versionId: '7ddd257e-2198-405e-bfd9-caee92938d4e'
+    -     versionId: '2efac015-0d83-49f8-8347-82531339e8ee'
+        },
+        resourceType: 'Observation',
+    +   status: 'entered-in-error',
+    -   status: 'preliminary',
+        subject: {
+          reference: 'Patient/p1'
+        },
+        valueBoolean: true
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'Observation'
+    status: 'preliminary'
+    effectiveDateTime: '2026-09-16T12:00:00.000Z'
+    code:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+          code: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract'
+          display: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract'
+      text: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract'
+    subject:
+      reference: 'Patient/p1'
+    encounter:
+      reference: 'Encounter/e1'
+    valueBoolean: true
+    identifier:
+      0:
+        system: 'urn:odos:current-finding:v1'
+        value: 'a97e8422fd8484f37fb700e5960d1575fcb12c8d8695c2639f3b6d1500f006e5'
+    extension:
+      0:
+        url: 'https://odos2020.com/fhir/StructureDefinition/eye-laterality'
+        valueCodeableConcept:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'OD'
+              display: 'Right eye'
+          text: 'Right eye'
+    component:
+      0:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_CURRENT_META'
+              display: 'R10_CURRENT_META'
+          text: 'R10_CURRENT_META'
+        valueString: '{"v":1,"patientId":"p1","encounterId":"e1","stableKey":"ocular-health:anterior:lens","fieldCode":"CUSTOM_ABNORMAL_FINDINGS_09","optionCode":"cortical-cataract","eye":"OD"}'
+      1:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_OPERATION'
+              display: 'R10_OPERATION'
+          text: 'R10_OPERATION'
+        valueString: '{"commandId":"80a1d198-e463-447a-9ab4-0639b17e6d44","target":"finding:a97e8422fd8484f37fb700e5960d1575fcb12c8d8695c2639f3b6d1500f006e5","digest":"d77f24af0a1473c2f447036c35fca94c37031dfb438e53a104bc444373e569f0","audit":{"kind":"mutation","actor":"Practitioner/synthetic","recorded":"2026-09-16T12:00:00.000Z","activity":"CREATE","targetReferences":["self","Patient/p1"]}}'
+    id: 'a27c0f8a-6314-4c7e-9164-e7d425e45cda'
+    meta:
+      versionId: '2efac015-0d83-49f8-8347-82531339e8ee'
+  actual:
+    resourceType: 'Observation'
+    status: 'entered-in-error'
+    effectiveDateTime: '2026-09-16T12:00:00.000Z'
+    code:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+          code: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract'
+          display: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract'
+      text: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::cortical-cataract'
+    subject:
+      reference: 'Patient/p1'
+    encounter:
+      reference: 'Encounter/e1'
+    valueBoolean: true
+    identifier:
+      0:
+        system: 'urn:odos:current-finding:v1'
+        value: 'a97e8422fd8484f37fb700e5960d1575fcb12c8d8695c2639f3b6d1500f006e5'
+    extension:
+      0:
+        url: 'https://odos2020.com/fhir/StructureDefinition/eye-laterality'
+        valueCodeableConcept:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'OD'
+              display: 'Right eye'
+          text: 'Right eye'
+    component:
+      0:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_CURRENT_META'
+              display: 'R10_CURRENT_META'
+          text: 'R10_CURRENT_META'
+        valueString: '{"v":1,"patientId":"p1","encounterId":"e1","stableKey":"ocular-health:anterior:lens","fieldCode":"CUSTOM_ABNORMAL_FINDINGS_09","optionCode":"cortical-cataract","eye":"OD"}'
+      1:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_OPERATION'
+              display: 'R10_OPERATION'
+          text: 'R10_OPERATION'
+        valueString: '{"commandId":"42f4b30e-360f-4098-9c2c-0b7b7ee5630f","target":"finding:a97e8422fd8484f37fb700e5960d1575fcb12c8d8695c2639f3b6d1500f006e5","digest":"2ed77e86ca95bcf3113c5cda9b70457d802f8bb638cd8a5f601e86e53626f7f6","audit":{"kind":"mutation","actor":"Practitioner/synthetic","recorded":"2026-09-16T12:00:00.000Z","activity":"UPDATE","targetReferences":["self","Patient/p1"]}}'
+    id: 'a27c0f8a-6314-4c7e-9164-e7d425e45cda'
+    meta:
+      versionId: '7ddd257e-2198-405e-bfd9-caee92938d4e'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:36:340)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 292.122

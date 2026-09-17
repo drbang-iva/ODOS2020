@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: W85 W128 fact empty deletion conflicts before write or replay
+ok 1 - W85 W128 fact empty deletion conflicts before write or replay
+  ---
+  duration_ms: 3.884292
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 404 deletion conflicts before write or replay
+ok 2 - W85 W128 fact 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 3.074541
+  type: 'test'
+  ...
+# Subtest: W85 W128 fact 410 deletion conflicts before write or replay
+ok 3 - W85 W128 fact 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 1.603709
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel empty deletion conflicts before write or replay
+ok 4 - W85 W128 panel empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.937209
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 404 deletion conflicts before write or replay
+ok 5 - W85 W128 panel 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.61475
+  type: 'test'
+  ...
+# Subtest: W85 W128 panel 410 deletion conflicts before write or replay
+ok 6 - W85 W128 panel 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.489084
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert empty deletion conflicts before write or replay
+ok 7 - W85 W128 reassert empty deletion conflicts before write or replay
+  ---
+  duration_ms: 0.818875
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 404 deletion conflicts before write or replay
+ok 8 - W85 W128 reassert 404 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.531667
+  type: 'test'
+  ...
+# Subtest: W85 W128 reassert 410 deletion conflicts before write or replay
+ok 9 - W85 W128 reassert 410 deletion conflicts before write or replay
+  ---
+  duration_ms: 0.732958
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 179.039584

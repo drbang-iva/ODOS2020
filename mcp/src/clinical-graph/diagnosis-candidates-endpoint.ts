@@ -1,6 +1,6 @@
 import { collectAllFhirSearchPages, type FhirSearchClient } from "../fhir-search.js";
 import { customFieldEntries } from "./custom-fields.js";
-import { currentFindingIdentifier, type CurrentFindingKey } from "./current-finding-identity.js";
+import { currentFindingIdentifier, ownsFact, type CurrentFindingKey } from "./current-finding-identity.js";
 import type { CurrentFindingFact, FindingBaseline, CurrentFindingProjection, FindingDefinitionView } from "./current-finding-reader.js";
 import { loadDiagnosisFindingContext } from "./diagnosis-findings-endpoint.js";
 import type { Basic, Bundle, Condition, Observation, Resource } from "@medplum/fhirtypes";
@@ -135,7 +135,7 @@ export async function handleDiagnosisCandidatesRequest(
       findings: findings.map((finding) => {
         const definition = definitions.find((row) => row.id === finding.findingDefinitionId);
         const view = views.find(v => (v.id ?? v.projectionKey) === finding.id)!;
-        const liveFacts = !projection.preRebuild && definition && customFieldEntries(definition, true).some(f => f.valueType === "multi-select")
+        const liveFacts = !projection.preRebuild && definition && customFieldEntries(definition, true).some(f => ownsFact(definition, f))
           ? projection.currentFacts.filter(f => f.status === "live" && f.presence === "present" && f.key.stableKey === definition.stableKey && f.eye === finding.laterality)
           : [];
         const support = (trigger?: MappingTrigger) => {

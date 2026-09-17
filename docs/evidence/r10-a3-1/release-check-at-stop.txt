@@ -1,0 +1,31 @@
+R10 A3 release BLOCKED
+T1: mcp TODO remains open
+T2: mcp TODO remains open
+T3: mcp TODO remains open
+T7: mcp TODO remains open
+T8: mcp TODO remains open
+T9: mcp TODO remains open
+T10: mcp TODO remains open
+T11: mcp TODO remains open
+T12: mcp TODO remains open
+T13: mcp TODO remains open
+T14: mcp TODO remains open
+T17: mcp TODO remains open
+T19: mcp TODO remains open
+T20: mcp TODO remains open
+T21: mcp TODO remains open
+T22: mcp TODO remains open
+T4: ui code must declare exactly one named test
+T5: ui code must declare exactly one named test
+T6: ui code must declare exactly one named test
+T21: ui code must declare exactly one named test
+T22: ui code must declare exactly one named test
+T4: ui TAP expected exactly once, found 0
+T5: ui TAP expected exactly once, found 0
+T6: ui TAP expected exactly once, found 0
+T15: ui TODO remains open
+T16: ui TODO remains open
+T17: ui TODO remains open
+T18: ui TODO remains open
+T21: ui TAP expected exactly once, found 0
+T22: ui TAP expected exactly once, found 0

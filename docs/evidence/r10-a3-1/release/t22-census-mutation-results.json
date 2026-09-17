@@ -1,0 +1,67 @@
+[
+  {
+    "id": "T22-W87a-registry-id",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=T22 ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "T22-W87b-exact-call-site",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=T22 ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "T22-W129-mcp-attest",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=T22 ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "T22-W129-mcp-amend",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=T22 ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "T22-W129-new-binary-entry",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=T22 ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  }
+]

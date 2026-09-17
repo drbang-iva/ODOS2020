@@ -1,0 +1,211 @@
+[
+  {
+    "guard": "W114",
+    "id": "mcp-amend",
+    "tool": "amend_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-amend"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-append-context",
+    "tool": "append_observation_context",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-append-context"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-attest",
+    "tool": "clinician_attest_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-attest"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-create-observation",
+    "tool": "create_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-create-observation"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-dry-eye-questionnaire-score",
+    "tool": "create_dry_eye_questionnaire_response",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-dry-eye-questionnaire-score"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-eye-growth",
+    "tool": "record_eye_growth_axial_length_measurement",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-eye-growth"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-meibography",
+    "tool": "create_meibography_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-meibography"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-ortho-k-fit",
+    "tool": "record_ortho_k_fit_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-ortho-k-fit"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-save-section",
+    "tool": "save_section_observations",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-save-section"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-scribe-write",
+    "tool": "scribe_write_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-scribe-write"
+    ]
+  },
+  {
+    "guard": "W114",
+    "id": "mcp-smoking-status",
+    "tool": "create_smoking_status_observation",
+    "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+    "redExit": 1,
+    "greenExit": 0,
+    "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+    "executedCommand": [
+      "mcp/node_modules/.bin/tsx",
+      ".odos/r10-a3-1/verify-mcp-runtime.ts"
+    ],
+    "replayCommand": [
+      "node",
+      "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+      "mcp-smoking-status"
+    ]
+  }
+]

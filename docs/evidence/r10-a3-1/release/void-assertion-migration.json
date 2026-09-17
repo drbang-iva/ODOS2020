@@ -1,0 +1,380 @@
+{
+  "base": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "mappings": [
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 108,
+        "context": "voidAndUndo",
+        "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 123,
+          "context": "voidAndUndo",
+          "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 109,
+        "context": "voidAndUndo",
+        "text": "assert.equal((result.body as any).count,scope===\"finding\"?1:scope===\"section\"?2:4)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 124,
+          "context": "voidAndUndo",
+          "text": "assert.equal((result.body as any).count,scope===\"finding\"?1:scope===\"section\"?2:4)"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 110,
+        "context": "voidAndUndo",
+        "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"fact\").status,\"entered-in-error\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 125,
+          "context": "voidAndUndo",
+          "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"fact\").status,\"entered-in-error\")"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 111,
+        "context": "voidAndUndo",
+        "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"other-eye\").status,scope===\"finding\"?\"preliminary\":\"entered-in-error\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 126,
+          "context": "voidAndUndo",
+          "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"other-eye\").status,scope===\"finding\"?\"preliminary\":\"entered-in-error\")"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 112,
+        "context": "voidAndUndo",
+        "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"prior\").status,\"preliminary\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 127,
+          "context": "voidAndUndo",
+          "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"prior\").status,\"preliminary\")"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 113,
+        "context": "voidAndUndo",
+        "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"sibling\").status,scope===\"encounter\"?\"entered-in-error\":\"preliminary\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 128,
+          "context": "voidAndUndo",
+          "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"sibling\").status,scope===\"encounter\"?\"entered-in-error\":\"preliminary\")"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 115,
+        "context": "voidAndUndo",
+        "text": "assert.equal(undo.status,200,JSON.stringify(undo.body))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 130,
+          "context": "voidAndUndo",
+          "text": "assert.equal(undo.status,200,JSON.stringify(undo.body))"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 116,
+        "context": "voidAndUndo",
+        "text": "assert.equal(restored.status,\"preliminary\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 131,
+          "context": "voidAndUndo",
+          "text": "assert.equal(restored.status,\"preliminary\")"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 117,
+        "context": "voidAndUndo",
+        "text": "assert.deepEqual(restored.identifier,before.identifier)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 132,
+          "context": "voidAndUndo",
+          "text": "assert.deepEqual(restored.identifier,before.identifier)"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 117,
+        "context": "voidAndUndo",
+        "text": "assert.deepEqual(restored.component,before.component)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 132,
+          "context": "voidAndUndo",
+          "text": "assert.deepEqual(restored.component,before.component)"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 117,
+        "context": "voidAndUndo",
+        "text": "assert.deepEqual(restored.extension,before.extension)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 132,
+          "context": "voidAndUndo",
+          "text": "assert.deepEqual(restored.extension,before.extension)"
+        }
+      ],
+      "rows": [
+        "V26",
+        "V36",
+        "W76",
+        "W127"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 126,
+        "context": "\"T13 lifecycle mutation repairs owed audit before replacing clinical state\"",
+        "text": "assert.equal((await findPendingAudits(c.clinical,c.fhir.all(\"Observation\"))).size,1)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 141,
+          "context": "\"T13 lifecycle mutation repairs owed audit before replacing clinical state\"",
+          "text": "assert.equal((await findPendingAudits(c.clinical,c.fhir.all(\"Observation\"))).size,1)"
+        }
+      ],
+      "rows": [
+        "V31",
+        "W77"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 128,
+        "context": "\"T13 lifecycle mutation repairs owed audit before replacing clinical state\"",
+        "text": "assert.equal((await findPendingAudits(c.clinical,c.fhir.all(\"Observation\"))).size,0)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 144,
+          "context": "\"T13 lifecycle mutation repairs owed audit before replacing clinical state\"",
+          "text": "assert.equal((await findPendingAudits(c.clinical,c.fhir.all(\"Observation\"))).size,0)"
+        }
+      ],
+      "rows": [
+        "V31",
+        "W77"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 133,
+        "context": "\"T14 lifecycle refuses signed canonical facts without downgrading them\"",
+        "text": "assert.ok([409,422].includes(result.status))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 149,
+          "context": "\"T14 lifecycle refuses signed canonical facts without downgrading them\"",
+          "text": "assert.equal(result.status,422)"
+        }
+      ],
+      "rows": [
+        "V26",
+        "W78"
+      ],
+      "rationale": "Strengthened exact signed canonical refusal from accepted 409/422 alternatives to422."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 133,
+        "context": "\"T14 lifecycle refuses signed canonical facts without downgrading them\"",
+        "text": "assert.equal(c.fhir.transactions.length,0)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 149,
+          "context": "\"T14 lifecycle refuses signed canonical facts without downgrading them\"",
+          "text": "assert.equal(c.fhir.transactions.length,0)"
+        }
+      ],
+      "rows": [
+        "V26",
+        "W78"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 133,
+        "context": "\"T14 lifecycle refuses signed canonical facts without downgrading them\"",
+        "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"fact\").status,\"final\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 149,
+          "context": "\"T14 lifecycle refuses signed canonical facts without downgrading them\"",
+          "text": "assert.equal(c.fhir.get<Observation>(\"Observation\",\"fact\").status,\"final\")"
+        }
+      ],
+      "rows": [
+        "V26",
+        "W78"
+      ],
+      "rationale": "Assertion retained; canonical lifecycle fixture and action-bound wire."
+    }
+  ],
+  "notes": "Evidence-only normalization: retained lifecycle assertions are listed individually; action-id setup and added T13 assertions remain in source. No source changes."
+}

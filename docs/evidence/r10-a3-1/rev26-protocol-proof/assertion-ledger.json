@@ -1,0 +1,75 @@
+{
+  "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+  "beforeStartLine": 83,
+  "before": [
+    "  // Seeding precedes the first application/encounter work: one head, one snapshot, five rules.",
+    "  const seedEnd = searches.findIndex(p => p?.code?.endsWith(\"odos-protocol-application\"));",
+    "  const ruleSearches = searches.filter(p => p?.code?.endsWith(\"odos-procedure-charge-rule\"));",
+    "  const definitionSearches = searches.filter(p => /odos-protocol-definition/.test(p?.code ?? \"\"));",
+    "  console.log(JSON.stringify({ mode, total: searches.length, seedEnd, ruleSearches: ruleSearches.length, definitionSearches: definitionSearches.length }));",
+    "  assert.equal(definitionSearches.length, mode === \"tap\" ? 4 : 5);",
+    "  assert.ok(searches.length <= (mode === \"tap\" ? 24 : 52));",
+    "  assert.deepEqual(searches.slice(0, 7).map(p => p?.code?.split(\"|\").at(-1)), [\"odos-protocol-definition\", \"odos-protocol-definition-snapshot\", ...Array(5).fill(\"odos-procedure-charge-rule\")]);",
+    "  assert.ok(ruleSearches.length <= (mode === \"tap\" ? 6 : 10));"
+  ],
+  "afterStartLine": 84,
+  "after": [
+    "  const guardDefinitionQuery = { code: \"https://odos2020.com/fhir/CodeSystem/odos-finding-definition|odos-finding-definition\", _count: \"200\" };",
+    "  const guardEncounterQuery = { encounter: \"Encounter/e\", _count: \"200\" };",
+    "  const guardSearches = searches.filter(p => p?.code === guardDefinitionQuery.code || p?.encounter === \"Encounter/e\");",
+    "  assert.deepEqual(guardSearches, Array.from({ length: mode === \"tap\" ? 3 : 10 }, () =>",
+    "    [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat());",
+    "  const protocolSearches = searches.filter(p => !(guardSearches as typeof searches).includes(p));",
+    "  const ruleSearches = protocolSearches.filter(p => p?.code?.endsWith(\"odos-procedure-charge-rule\"));",
+    "  const definitionSearches = protocolSearches.filter(p => /odos-protocol-definition/.test(p?.code ?? \"\"));",
+    "  assert.equal(definitionSearches.length, mode === \"tap\" ? 4 : 5);",
+    "  assert.ok(protocolSearches.length <= (mode === \"tap\" ? 24 : 52));",
+    "  assert.deepEqual(protocolSearches.slice(0, mode === \"tap\" ? 7 : 8).map(p => p?.code?.split(\"|\").at(-1)), [...(mode === \"whole\" ? [\"odos-protocol-definition\"] : []), \"odos-protocol-definition\", \"odos-protocol-definition-snapshot\", ...Array(5).fill(\"odos-procedure-charge-rule\")]);",
+    "  assert.ok(ruleSearches.length <= (mode === \"tap\" ? 6 : 10));"
+  ],
+  "mapping": "V24/W91 and V23/W108: exact current-state guard searches separated; original protocol-work total, definition and rule bounds retained. Whole prevalidation definition lookup moves ahead of seeding, pinned in prefix.",
+  "assertionsBefore": [
+    {
+      "line": 88,
+      "text": "  assert.equal(definitionSearches.length, mode === \"tap\" ? 4 : 5);"
+    },
+    {
+      "line": 89,
+      "text": "  assert.ok(searches.length <= (mode === \"tap\" ? 24 : 52));"
+    },
+    {
+      "line": 90,
+      "text": "  assert.deepEqual(searches.slice(0, 7).map(p => p?.code?.split(\"|\").at(-1)), [\"odos-protocol-definition\", \"odos-protocol-definition-snapshot\", ...Array(5).fill(\"odos-procedure-charge-rule\")]);"
+    },
+    {
+      "line": 91,
+      "text": "  assert.ok(ruleSearches.length <= (mode === \"tap\" ? 6 : 10));"
+    }
+  ],
+  "assertionsAfter": [
+    {
+      "line": 87,
+      "text": "  assert.deepEqual(guardSearches, Array.from({ length: mode === \"tap\" ? 3 : 10 }, () =>"
+    },
+    {
+      "line": 92,
+      "text": "  assert.equal(definitionSearches.length, mode === \"tap\" ? 4 : 5);"
+    },
+    {
+      "line": 93,
+      "text": "  assert.ok(protocolSearches.length <= (mode === \"tap\" ? 24 : 52));"
+    },
+    {
+      "line": 94,
+      "text": "  assert.deepEqual(protocolSearches.slice(0, mode === \"tap\" ? 7 : 8).map(p => p?.code?.split(\"|\").at(-1)), [...(mode === \"whole\" ? [\"odos-protocol-definition\"] : []), \"odos-protocol-definition\", \"odos-protocol-definition-snapshot\", ...Array(5).fill(\"odos-procedure-charge-rule\")]);"
+    },
+    {
+      "line": 95,
+      "text": "  assert.ok(ruleSearches.length <= (mode === \"tap\" ? 6 : 10));"
+    }
+  ],
+  "mutations": [
+    "guard-search-duplicate-red.tap -> guard-search-duplicate-restored-green.tap",
+    "protocol-search-duplicate-red.tap -> protocol-search-duplicate-restored-green.tap"
+  ]
+}

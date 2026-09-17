@@ -1,0 +1,20 @@
+[
+  {
+    "id": "library-W93-search-index",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W93 finding GET",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W93 finding GET",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": ".filter(field => ownsFact(definition, field)).flatMap((field)",
+        "after": ".flatMap((field)"
+      }
+    ]
+  }
+]

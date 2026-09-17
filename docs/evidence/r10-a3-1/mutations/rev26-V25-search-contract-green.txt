@@ -1,0 +1,44 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/searchParamContract.test.ts
+
+TAP version 13
+# Subtest: contract is frozen from Medplum 5.1.8's published definition bundles
+ok 1 - contract is frozen from Medplum 5.1.8's published definition bundles
+  ---
+  duration_ms: 0.524834
+  type: 'test'
+  ...
+# Subtest: historical ChargeItem status search is rejected while known-valid searches pass
+ok 2 - historical ChargeItem status search is rejected while known-valid searches pass
+  ---
+  duration_ms: 0.258416
+  type: 'test'
+  ...
+# Subtest: all direct fhir.search call sites are statically resolved or explicitly dynamic
+ok 3 - all direct fhir.search call sites are statically resolved or explicitly dynamic
+  ---
+  duration_ms: 395.873709
+  type: 'test'
+  ...
+# Subtest: static audit finds zero invalid search parameters
+ok 4 - static audit finds zero invalid search parameters
+  ---
+  duration_ms: 273.52425
+  type: 'test'
+  ...
+# Subtest: static audit rejects a mistyped dynamic override key
+ok 5 - static audit rejects a mistyped dynamic override key
+  ---
+  duration_ms: 268.249042
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1389.337417

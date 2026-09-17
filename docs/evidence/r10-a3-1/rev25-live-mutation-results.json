@@ -1,0 +1,35 @@
+[
+  {
+    "id": "rev25-W115-live-prebuild",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      ".odos/r10-a3-1/run-live-stdout.mjs",
+      ".odos/r10-a3-1/rev25-live-mutation-current.txt",
+      "tests/r10OcularHealthDoorAuthzLive.test.ts"
+    ]
+  },
+  {
+    "id": "rev25-W115-live-session",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      ".odos/r10-a3-1/run-live-stdout.mjs",
+      ".odos/r10-a3-1/rev25-live-mutation-current.txt",
+      "tests/r10OcularHealthDoorAuthzLive.test.ts"
+    ]
+  },
+  {
+    "id": "rev25-W115-live-identity",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      ".odos/r10-a3-1/run-live-stdout.mjs",
+      ".odos/r10-a3-1/rev25-live-mutation-current.txt",
+      "tests/r10OcularHealthDoorAuthzLive.test.ts"
+    ]
+  }
+]

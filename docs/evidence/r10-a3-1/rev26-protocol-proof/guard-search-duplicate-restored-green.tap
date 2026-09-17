@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: fixback warm tap seeds only its built-in and rules
+ok 1 - fixback warm tap seeds only its built-in and rules
+  ---
+  duration_ms: 36.931208
+  type: 'test'
+  ...
+# Subtest: fixback warm whole seeds only its built-in and rules
+ok 2 - fixback warm whole seeds only its built-in and rules
+  ---
+  duration_ms: 69.320167
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 284.258333

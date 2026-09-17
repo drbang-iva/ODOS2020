@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: contract is frozen from Medplum 5.1.8's published definition bundles
+ok 1 - contract is frozen from Medplum 5.1.8's published definition bundles
+  ---
+  duration_ms: 0.523416
+  type: 'test'
+  ...
+# Subtest: historical ChargeItem status search is rejected while known-valid searches pass
+ok 2 - historical ChargeItem status search is rejected while known-valid searches pass
+  ---
+  duration_ms: 0.241125
+  type: 'test'
+  ...
+# Subtest: all direct fhir.search call sites are statically resolved or explicitly dynamic
+ok 3 - all direct fhir.search call sites are statically resolved or explicitly dynamic
+  ---
+  duration_ms: 405.954625
+  type: 'test'
+  ...
+# Subtest: static audit finds zero invalid search parameters
+ok 4 - static audit finds zero invalid search parameters
+  ---
+  duration_ms: 276.180292
+  type: 'test'
+  ...
+# Subtest: static audit rejects a mistyped dynamic override key
+ok 5 - static audit rejects a mistyped dynamic override key
+  ---
+  duration_ms: 270.198292
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1413.663875

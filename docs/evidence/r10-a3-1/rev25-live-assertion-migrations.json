@@ -1,0 +1,668 @@
+{
+  "scope": "Author assertion migration evidence; NOT EVALUATED. Compares preserved pre-rev25 test with current test; not a base-commit assertion ledger.",
+  "before": {
+    "path": ".odos/r10-a3-1/live-before-rev25.ts",
+    "sha256": "e9d86dd4769a35c9cc33716b2d80fd75c0fcdf4f8a8bbe651be543325329d2f0"
+  },
+  "after": {
+    "path": "mcp/tests/r10OcularHealthDoorAuthzLive.test.ts",
+    "sha256": "d05d251c290a6ca6d1d00736ca51d9373db087d2bfa70378b66c1522e98a69b9"
+  },
+  "counts": {
+    "before": 101,
+    "after": 111,
+    "unchanged": 97,
+    "removedOrReplaced": 4,
+    "addedOrReplacement": 14
+  },
+  "changes": [
+    {
+      "change": "insert",
+      "before": [],
+      "after": [
+        {
+          "line": 192,
+          "text": "assert.ok(preOwner)"
+        },
+        {
+          "line": 193,
+          "text": "assert.notEqual(preRebuildFact.meta?.versionId,preOwner.meta?.versionId)"
+        }
+      ],
+      "contractRows": [
+        "V35",
+        "W115"
+      ],
+      "contract": "rev 2.5 \u00a77 (and \u00a73.13 lifecycle scope)",
+      "reason": "Project-scoped service identity, Observation PATCH preservation rather than lifecycle Provenance success, and real-dispatch pre-rebuild zero-write proof."
+    },
+    {
+      "change": "replace",
+      "before": [
+        {
+          "line": 198,
+          "text": "assert.equal(Boolean(process.env.ODOS_LIVE_MCP_SERVICE_ADMIN_EMAIL),Boolean(process.env.ODOS_LIVE_MCP_SERVICE_ADMIN_PASSWORD),\"Dedicated synthetic MCP service credentials must be configured together\")"
+        }
+      ],
+      "after": [
+        {
+          "line": 206,
+          "text": "assert.equal(sessionResponse.status,200)"
+        },
+        {
+          "line": 208,
+          "text": "assert.ok(session.user?.id,\"Service session exposes its user identity\")"
+        },
+        {
+          "line": 209,
+          "text": "assert.notEqual(session.user.superAdmin,true,\"Never use a super admin for this lifecycle proof\")"
+        },
+        {
+          "line": 210,
+          "text": "assert.equal(session.project?.id,projectId)"
+        }
+      ],
+      "contractRows": [
+        "V35",
+        "W115"
+      ],
+      "contract": "rev 2.5 \u00a77 (and \u00a73.13 lifecycle scope)",
+      "reason": "Project-scoped service identity, Observation PATCH preservation rather than lifecycle Provenance success, and real-dispatch pre-rebuild zero-write proof."
+    },
+    {
+      "change": "replace",
+      "before": [
+        {
+          "line": 206,
+          "text": "assert.ok(servicePolicyReferences.length>0 || memberships[0].admin,\"Service identity has policy references or an explicit admin membership\")"
+        }
+      ],
+      "after": [
+        {
+          "line": 217,
+          "text": "assert.equal(memberships[0].admin,true,\"Project-scoped service admin membership\")"
+        },
+        {
+          "line": 218,
+          "text": "assert.equal(serviceActor,await callerFhir.getAuthenticatedProfileReference())"
+        }
+      ],
+      "contractRows": [
+        "V35",
+        "W115"
+      ],
+      "contract": "rev 2.5 \u00a77 (and \u00a73.13 lifecycle scope)",
+      "reason": "Project-scoped service identity, Observation PATCH preservation rather than lifecycle Provenance success, and real-dispatch pre-rebuild zero-write proof."
+    },
+    {
+      "change": "replace",
+      "before": [
+        {
+          "line": 218,
+          "text": "assert.ok(result.responseBundle.entry.every((entry:any)=>/^2\\d\\d/.test(entry.response?.status??\"\")),\"Both actual transaction entries are 2xx\")"
+        }
+      ],
+      "after": [
+        {
+          "line": 231,
+          "text": "assert.match(String(result.responseBundle.entry[0].response?.status),/^200(?:\\s|$)/,\"Observation PATCH entry is 200\")"
+        }
+      ],
+      "contractRows": [
+        "V35",
+        "W115"
+      ],
+      "contract": "rev 2.5 \u00a77 (and \u00a73.13 lifecycle scope)",
+      "reason": "Project-scoped service identity, Observation PATCH preservation rather than lifecycle Provenance success, and real-dispatch pre-rebuild zero-write proof."
+    },
+    {
+      "change": "delete",
+      "before": [
+        {
+          "line": 220,
+          "text": "assert.ok(provenance.target.some(target=>target.reference===resourceRef(after)))"
+        }
+      ],
+      "after": [],
+      "contractRows": [
+        "V35",
+        "W115"
+      ],
+      "contract": "rev 2.5 \u00a77 (and \u00a73.13 lifecycle scope)",
+      "reason": "Project-scoped service identity, Observation PATCH preservation rather than lifecycle Provenance success, and real-dispatch pre-rebuild zero-write proof."
+    },
+    {
+      "change": "insert",
+      "before": [],
+      "after": [
+        {
+          "line": 242,
+          "text": "assert.equal(preRefusal.isError,true)"
+        },
+        {
+          "line": 242,
+          "text": "assert.match(JSON.stringify(preRefusal),/pre-rebuild-test-encounter/)"
+        },
+        {
+          "line": 242,
+          "text": "assert.equal(processHandle.writes.length,0)"
+        },
+        {
+          "line": 243,
+          "text": "assert.deepEqual(await service.read(\"Observation\",preTarget.id!),beforePre)"
+        },
+        {
+          "line": 244,
+          "text": "assert.deepEqual((await searchAll<Provenance>(service,\"Provenance\",{target:resourceRef(preTarget)})).map(resourceState),preAudits.map(resourceState))"
+        }
+      ],
+      "contractRows": [
+        "V35",
+        "W115"
+      ],
+      "contract": "rev 2.5 \u00a77 (and \u00a73.13 lifecycle scope)",
+      "reason": "Project-scoped service identity, Observation PATCH preservation rather than lifecycle Provenance success, and real-dispatch pre-rebuild zero-write proof."
+    }
+  ],
+  "unchangedAssertions": [
+    {
+      "beforeLine": 34,
+      "afterLine": 34,
+      "text": "assert.equal(result.isError, undefined, JSON.stringify(result))"
+    },
+    {
+      "beforeLine": 36,
+      "afterLine": 36,
+      "text": "assert.ok(text)"
+    },
+    {
+      "beforeLine": 41,
+      "afterLine": 41,
+      "text": "assert.ok([\"localhost\",\"127.0.0.1\"].includes(new URL(explicitPostgres).hostname),\"MCP SQL background workers must stay local\")"
+    },
+    {
+      "beforeLine": 65,
+      "afterLine": 65,
+      "text": "assert.ok([\"localhost\",\"127.0.0.1\"].includes(new URL(postgresUrl).hostname),\"MCP SQL background workers must stay local\")"
+    },
+    {
+      "beforeLine": 84,
+      "afterLine": 84,
+      "text": "assert.ok(Date.now() < deadline,\"MCP startup FHIR requests did not settle\")"
+    },
+    {
+      "beforeLine": 94,
+      "afterLine": 94,
+      "text": "assert.ok([\"localhost\",\"127.0.0.1\"].includes(new URL(baseUrl).hostname),\"Synthetic local stack only\")"
+    },
+    {
+      "beforeLine": 98,
+      "afterLine": 98,
+      "text": "assert.equal(await seederFhir.getActiveProjectId(),projectId,\"Seeder and constrained callers share the disposable project\")"
+    },
+    {
+      "beforeLine": 101,
+      "afterLine": 101,
+      "text": "assert.ok(resource.id)"
+    },
+    {
+      "beforeLine": 108,
+      "afterLine": 108,
+      "text": "assert.equal(matching.length,1)"
+    },
+    {
+      "beforeLine": 108,
+      "afterLine": 108,
+      "text": "assert.ok(policy.id)"
+    },
+    {
+      "beforeLine": 109,
+      "afterLine": 109,
+      "text": "assert.deepEqual(policy.resource,buildMedplumAccessPolicy(getRoleDeclaration(role)).resource,\"Stored canonical policy is synchronized\")"
+    },
+    {
+      "beforeLine": 134,
+      "afterLine": 134,
+      "text": "assert.equal(encounter.status,\"in-progress\")"
+    },
+    {
+      "beforeLine": 134,
+      "afterLine": 134,
+      "text": "assert.ok(encounter.meta?.versionId)"
+    },
+    {
+      "beforeLine": 138,
+      "afterLine": 138,
+      "text": "assert.ok(definition)"
+    },
+    {
+      "beforeLine": 139,
+      "afterLine": 139,
+      "text": "assert.ok(tbut,\"Live effective Tear Film has TBUT field\")"
+    },
+    {
+      "beforeLine": 140,
+      "afterLine": 140,
+      "text": "assert.ok(optionField)"
+    },
+    {
+      "beforeLine": 141,
+      "afterLine": 141,
+      "text": "assert.ok(option)"
+    },
+    {
+      "beforeLine": 143,
+      "afterLine": 143,
+      "text": "assert.equal(response.status,200,JSON.stringify(response.body))"
+    },
+    {
+      "beforeLine": 147,
+      "afterLine": 147,
+      "text": "assert.equal(response.status,status,JSON.stringify(response.body))"
+    },
+    {
+      "beforeLine": 148,
+      "afterLine": 148,
+      "text": "assert.equal(fact.baseline.kind,\"canonical\")"
+    },
+    {
+      "beforeLine": 149,
+      "afterLine": 149,
+      "text": "assert.ok(absent)"
+    },
+    {
+      "beforeLine": 151,
+      "afterLine": 151,
+      "text": "assert.equal(fact.status,\"preliminary\")"
+    },
+    {
+      "beforeLine": 151,
+      "afterLine": 151,
+      "text": "assert.ok(fact.meta?.versionId)"
+    },
+    {
+      "beforeLine": 152,
+      "afterLine": 152,
+      "text": "assert.equal(sheet.eyes.OD.panel.values[tbut.localCode],6)"
+    },
+    {
+      "beforeLine": 155,
+      "afterLine": 155,
+      "text": "assert.equal(fact.status,\"entered-in-error\")"
+    },
+    {
+      "beforeLine": 155,
+      "afterLine": 155,
+      "text": "assert.notEqual(fact.meta?.versionId,before.meta?.versionId)"
+    },
+    {
+      "beforeLine": 156,
+      "afterLine": 156,
+      "text": "assert.equal(fact.id,before.id)"
+    },
+    {
+      "beforeLine": 156,
+      "afterLine": 156,
+      "text": "assert.equal(fact.status,\"preliminary\")"
+    },
+    {
+      "beforeLine": 156,
+      "afterLine": 156,
+      "text": "assert.notEqual(fact.meta?.versionId,before.meta?.versionId)"
+    },
+    {
+      "beforeLine": 158,
+      "afterLine": 158,
+      "text": "assert.equal(sheet.eyes.OD.panel.values[tbut.localCode],9)"
+    },
+    {
+      "beforeLine": 158,
+      "afterLine": 158,
+      "text": "assert.equal(panelAfter.id,panelBefore.id)"
+    },
+    {
+      "beforeLine": 158,
+      "afterLine": 158,
+      "text": "assert.notEqual(panelAfter.meta?.versionId,panelBefore.meta?.versionId)"
+    },
+    {
+      "beforeLine": 160,
+      "afterLine": 160,
+      "text": "assert.ok(negative)"
+    },
+    {
+      "beforeLine": 160,
+      "afterLine": 160,
+      "text": "assert.equal(negative.status,\"preliminary\")"
+    },
+    {
+      "beforeLine": 160,
+      "afterLine": 160,
+      "text": "assert.equal((await searchAll<Provenance>(real,\"Provenance\",{target:resourceRef(negative)})).length,1)"
+    },
+    {
+      "beforeLine": 162,
+      "afterLine": 162,
+      "text": "assert.ok(action1)"
+    },
+    {
+      "beforeLine": 162,
+      "afterLine": 162,
+      "text": "assert.equal(fact.status,\"entered-in-error\")"
+    },
+    {
+      "beforeLine": 164,
+      "afterLine": 164,
+      "text": "assert.equal(fact.status,\"preliminary\")"
+    },
+    {
+      "beforeLine": 164,
+      "afterLine": 164,
+      "text": "assert.notEqual(fact.meta?.versionId,before.meta?.versionId)"
+    },
+    {
+      "beforeLine": 165,
+      "afterLine": 165,
+      "text": "assert.ok(action2)"
+    },
+    {
+      "beforeLine": 165,
+      "afterLine": 165,
+      "text": "assert.notEqual(action2,action1)"
+    },
+    {
+      "beforeLine": 165,
+      "afterLine": 165,
+      "text": "assert.equal((superseded.body as any).code,\"undo-superseded\")"
+    },
+    {
+      "beforeLine": 165,
+      "afterLine": 165,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 167,
+      "afterLine": 167,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 167,
+      "afterLine": 167,
+      "text": "assert.match(JSON.stringify(legacy.body),/pre-rebuild/)"
+    },
+    {
+      "beforeLine": 168,
+      "afterLine": 168,
+      "text": "assert.notEqual(closedSaved.meta?.versionId,closed.meta?.versionId)"
+    },
+    {
+      "beforeLine": 170,
+      "afterLine": 170,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 171,
+      "afterLine": 171,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 172,
+      "afterLine": 172,
+      "text": "assert.ok(carryRow)"
+    },
+    {
+      "beforeLine": 175,
+      "afterLine": 175,
+      "text": "assert.equal(linkedSource.status,\"in-progress\")"
+    },
+    {
+      "beforeLine": 175,
+      "afterLine": 175,
+      "text": "assert.notEqual(linkedSource.meta?.versionId,sourceVisit.meta?.versionId)"
+    },
+    {
+      "beforeLine": 178,
+      "afterLine": 178,
+      "text": "assert.ok(sourceFact)"
+    },
+    {
+      "beforeLine": 181,
+      "afterLine": 181,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 183,
+      "afterLine": 183,
+      "text": "assert.ok(body.conditionReference)"
+    },
+    {
+      "beforeLine": 183,
+      "afterLine": 183,
+      "text": "assert.equal(body.conditionStep,\"applied\")"
+    },
+    {
+      "beforeLine": 183,
+      "afterLine": 183,
+      "text": "assert.equal(body.planStep,\"applied\")"
+    },
+    {
+      "beforeLine": 183,
+      "afterLine": 183,
+      "text": "assert.equal(body.linkStep,\"applied\")"
+    },
+    {
+      "beforeLine": 183,
+      "afterLine": 183,
+      "text": "assert.equal(body.lineageStep,\"applied\")"
+    },
+    {
+      "beforeLine": 183,
+      "afterLine": 183,
+      "text": "assert.equal(body.findings.complete,true)"
+    },
+    {
+      "beforeLine": 184,
+      "afterLine": 184,
+      "text": "assert.ok(storedVisit.diagnosis?.some(row=>row.condition.reference===body.conditionReference))"
+    },
+    {
+      "beforeLine": 184,
+      "afterLine": 184,
+      "text": "assert.notEqual(storedVisit.meta?.versionId,destination.meta?.versionId)"
+    },
+    {
+      "beforeLine": 185,
+      "afterLine": 185,
+      "text": "assert.equal(factsBefore.length,1)"
+    },
+    {
+      "beforeLine": 185,
+      "afterLine": 185,
+      "text": "assert.equal(conditionsBefore.length,1)"
+    },
+    {
+      "beforeLine": 186,
+      "afterLine": 186,
+      "text": "assert.equal(commandAudits.length,2)"
+    },
+    {
+      "beforeLine": 187,
+      "afterLine": 187,
+      "text": "assert.deepEqual(factsAfter.map(resourceState),factsBefore.map(resourceState))"
+    },
+    {
+      "beforeLine": 187,
+      "afterLine": 187,
+      "text": "assert.equal((await searchAll<Condition>(real,\"Condition\",{encounter:resourceRef(destination)})).length,1)"
+    },
+    {
+      "beforeLine": 187,
+      "afterLine": 187,
+      "text": "assert.equal((await searchAll<Provenance>(real,\"Provenance\",{_tag:`urn:odos:carry-command:v1|${pullBody.commandId}:plan,urn:odos:carry-command:v1|${pullBody.commandId}:findings`})).length,2)"
+    },
+    {
+      "beforeLine": 189,
+      "afterLine": 189,
+      "text": "assert.notEqual(finalFact.meta?.versionId,sourceFact.meta?.versionId)"
+    },
+    {
+      "beforeLine": 189,
+      "afterLine": 189,
+      "text": "assert.notEqual(finalVisit.meta?.versionId,linkedSource.meta?.versionId)"
+    },
+    {
+      "beforeLine": 190,
+      "afterLine": 196,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 191,
+      "afterLine": 197,
+      "text": "assert.equal(attempts.length,count)"
+    },
+    {
+      "beforeLine": 192,
+      "afterLine": 198,
+      "text": "assert.ok(marker)"
+    },
+    {
+      "beforeLine": 192,
+      "afterLine": 198,
+      "text": "assert.ok(own,\"Canonical writer has its operation audit\")"
+    },
+    {
+      "beforeLine": 193,
+      "afterLine": 199,
+      "text": "assert.notEqual(forged.meta?.versionId,own.meta?.versionId)"
+    },
+    {
+      "beforeLine": 193,
+      "afterLine": 199,
+      "text": "assert.equal(mismatchHistory.eyes.OD.facts.find((row:any)=>row.key.optionCode===option.code).auditPending,true)"
+    },
+    {
+      "beforeLine": 196,
+      "afterLine": 202,
+      "text": "assert.ok(providerProof,\"Provider setup completed\")"
+    },
+    {
+      "beforeLine": 201,
+      "afterLine": 212,
+      "text": "assert.equal(await service.getActiveProjectId(),projectId)"
+    },
+    {
+      "beforeLine": 204,
+      "afterLine": 215,
+      "text": "assert.equal(memberships.length,1,\"Service identity has one membership in the disposable project\")"
+    },
+    {
+      "beforeLine": 211,
+      "afterLine": 224,
+      "text": "assert.equal(before.status,\"final\")"
+    },
+    {
+      "beforeLine": 211,
+      "afterLine": 224,
+      "text": "assert.equal((await service.read<Encounter>(\"Encounter\",providerProof!.encounter.id!)).status,\"finished\")"
+    },
+    {
+      "beforeLine": 218,
+      "afterLine": 231,
+      "text": "assert.equal(result.responseBundle.entry.length,2)"
+    },
+    {
+      "beforeLine": 219,
+      "afterLine": 232,
+      "text": "assert.equal(after.status,\"amended\")"
+    },
+    {
+      "beforeLine": 219,
+      "afterLine": 232,
+      "text": "assert.notEqual(after.meta?.versionId,before.meta?.versionId)"
+    },
+    {
+      "beforeLine": 219,
+      "afterLine": 232,
+      "text": "assert.deepEqual(after.identifier,before.identifier)"
+    },
+    {
+      "beforeLine": 219,
+      "afterLine": 232,
+      "text": "assert.deepEqual(after.component,before.component)"
+    },
+    {
+      "beforeLine": 219,
+      "afterLine": 232,
+      "text": "assert.deepEqual(after.extension,before.extension)"
+    },
+    {
+      "beforeLine": 222,
+      "afterLine": 235,
+      "text": "assert.equal(invalid.isError,true)"
+    },
+    {
+      "beforeLine": 222,
+      "afterLine": 235,
+      "text": "assert.equal(processHandle.writes.length,0)"
+    },
+    {
+      "beforeLine": 223,
+      "afterLine": 236,
+      "text": "assert.equal(append.isError,true)"
+    },
+    {
+      "beforeLine": 223,
+      "afterLine": 236,
+      "text": "assert.match(JSON.stringify(append),/Shared findings are charted in the finding doors/)"
+    },
+    {
+      "beforeLine": 223,
+      "afterLine": 236,
+      "text": "assert.equal(processHandle.writes.length,0)"
+    },
+    {
+      "beforeLine": 226,
+      "afterLine": 248,
+      "text": "assert.equal(response.isError,true)"
+    },
+    {
+      "beforeLine": 226,
+      "afterLine": 248,
+      "text": "assert.match(JSON.stringify(response),/match.*session/)"
+    },
+    {
+      "beforeLine": 226,
+      "afterLine": 248,
+      "text": "assert.equal(mismatch.writes.length,0)"
+    },
+    {
+      "beforeLine": 226,
+      "afterLine": 248,
+      "text": "assert.deepEqual(await service.read(\"Observation\",before.id!),before)"
+    },
+    {
+      "beforeLine": 226,
+      "afterLine": 248,
+      "text": "assert.deepEqual((await searchAll<Provenance>(service,\"Provenance\",{target:resourceRef(before)})).map(resourceState),auditsBefore.map(resourceState))"
+    },
+    {
+      "beforeLine": 227,
+      "afterLine": 249,
+      "text": "assert.equal(classifyFindingObservation(final,effective,catalog,buildFindingReadAliases(effective,catalog)).kind,\"canonical-fact\")"
+    }
+  ],
+  "countingMethod": "TypeScript AST CallExpressions whose expression starts assert.; assertResponse helper invocations are separate below.",
+  "additionalAssertionHelperChange": {
+    "before": null,
+    "after": {
+      "line": 191,
+      "text": "assertResponse(await handleDiagnosisFindingsMutationRequest(await deps(),{authHeader,params:{encounterId:preRebuildEncounter.id},body:{commandId:randomUUID(),patientReference,operation:\"assert\",targets:[{kind:\"fact\",key:preKey,baseline:{kind:\"absent\",key:preKey},state:{status:\"live\",presence:\"present\",qualifiers:{},homes:[]}}]}}));"
+    },
+    "contractRows": [
+      "V35",
+      "W115"
+    ],
+    "contract": "rev 2.5 \u00a77",
+    "reason": "New pre-rebuild control setup must first successfully create a canonical fact through the real handler."
+  }
+}

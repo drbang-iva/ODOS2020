@@ -1,0 +1,38 @@
+[
+  {
+    "guard": "V26-W76-void",
+    "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+    "before": "if (key) {\n    const definition = definitions.find(row => row.stableKey === key.stableKey);",
+    "mutation": "if (false && key) {\n    const definition = definitions.find(row => row.stableKey === key.stableKey);",
+    "redExit": 1,
+    "greenExit": 0,
+    "restoredSha256": "9cc8736546c909dbd059a99eeebdc57f9f31dea9ddef952ff72b2178cc721a40"
+  },
+  {
+    "guard": "V27-W81-completeness",
+    "file": "mcp/src/clinical-graph/diagnosis-completeness-endpoint.ts",
+    "before": "sharedCredits?.has(`Observation/${observation.id}`) === true",
+    "mutation": "false",
+    "redExit": 1,
+    "greenExit": 0,
+    "restoredSha256": "965c821175f4ff3454e0c71f92c7bd14bf157ef26116f3e75f717be87d089d62"
+  },
+  {
+    "guard": "V27-legacy-overview",
+    "file": "mcp/src/clinical-graph/exam-overview-projection.ts",
+    "before": "const legacyViews = shared.preRebuild ?",
+    "mutation": "const legacyViews = false ?",
+    "redExit": 1,
+    "greenExit": 0,
+    "restoredSha256": "c6a3cd8d09e261f52c3de7070b08409a4bb86c88d4a9f5aa5a77a6194949461b"
+  },
+  {
+    "guard": "V18-history-qualifiers",
+    "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+    "before": "const rows = [...facts, ...conflicts];",
+    "mutation": "const rows = [...facts, ...conflicts].map(row => ({...row, qualifiers: {}}));",
+    "redExit": 1,
+    "greenExit": 0,
+    "restoredSha256": "35c3c93b4d1cbc1966f56967ae47284dd23da296157da7c249b03148a20a4f60"
+  }
+]

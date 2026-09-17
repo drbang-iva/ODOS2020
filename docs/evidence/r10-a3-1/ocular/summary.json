@@ -1,0 +1,32 @@
+{
+  "scope": "A3.1 section3.4 Ocular Health",
+  "applicationFiles": [
+    "mcp/src/clinical-graph/custom-section-endpoint.ts"
+  ],
+  "testFiles": [
+    "mcp/tests/customSectionEndpoint.test.ts",
+    "mcp/tests/r10A3OcularDoor.test.ts"
+  ],
+  "scopedTests": {
+    "tests": 240,
+    "pass": 240,
+    "fail": 0,
+    "skipped": 0
+  },
+  "mcpBuildExit": 0,
+  "diffCheckExit": 0,
+  "mutationVariants": 17,
+  "mutationsAllRedThenGreen": true,
+  "assertionLedger": {
+    "originalAssertions": 485,
+    "retainedAssertions": 278,
+    "removedOrChangedAssertions": 207,
+    "mappedLedgerRows": 207,
+    "initialMissingRowsFilled": [],
+    "unmapped": 0
+  },
+  "sourceSha256": "35c3c93b4d1cbc1966f56967ae47284dd23da296157da7c249b03148a20a4f60",
+  "independentEvaluation": "NOT EVALUATED",
+  "liveProof": "not run by this agent",
+  "commits": []
+}

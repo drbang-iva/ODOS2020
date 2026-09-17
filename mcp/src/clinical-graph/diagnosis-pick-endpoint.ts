@@ -1,5 +1,6 @@
+import { isClosedEncounter } from "./encounter-sign-gate.js";
 import { diagnosisDefinitionViews } from "./diagnosis-candidates-endpoint.js";
-import { currentFindingKeySchema, currentFindingIdentifier } from "./current-finding-identity.js";
+import { currentFindingKeySchema, currentFindingIdentifier, ownsFact } from "./current-finding-identity.js";
 import { customFieldEntries } from "./custom-fields.js";
 import { loadDiagnosisFindingContext, findingTargetReadOnlyReason } from "./diagnosis-findings-endpoint.js";
 import { randomUUID } from "node:crypto";
@@ -107,6 +108,8 @@ async function performDiagnosisPickRequest(
     return { status: 400, body: { error: "Stage can only be deferred when confirming a diagnosis." } };
   }
 
+  let encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  if (isClosedEncounter(encounter)) return { status: 409, body: { result: "invalid", reason: "encounter-closed", error: "Signed or closed encounters cannot be edited." } };
   const encounterReference = `Encounter/${encounterId}`;
   const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();
   const familyMode = FAMILY_RESOLUTION_MODES[parsed.data.diagnosisKey];
@@ -159,7 +162,7 @@ async function performDiagnosisPickRequest(
       observation = definitionViews.find(v => (v.id ?? v.projectionKey) === findingId);
       const raw = context.state.observations.find(o => o.id === findingId);
       const rawDefinition = raw && findingDefinitionForObservation(raw, definitions);
-      if (rawDefinition && customFieldEntries(rawDefinition, true).some(f => f.valueType === "multi-select") && context.projection.preRebuild) {
+      if (rawDefinition && customFieldEntries(rawDefinition, true).some(f => ownsFact(rawDefinition, f)) && context.projection.preRebuild) {
         return { status: 409, body: { result: "invalid", reason: "pre-rebuild-test-encounter", error: "Test data from before the rebuild is read-only." } };
       }
       if (!observation) return { status: 404, body: { error: `Finding ${findingId} does not exist in the current projection.` } };
@@ -217,7 +220,6 @@ async function performDiagnosisPickRequest(
     return { status: 404, body: { error: `No existing Condition for ${diagnosis.stableKey} can be discarded.` } };
   }
 
-  let encounter: Encounter | undefined;
   let patientReference = observation?.subject?.reference;
   if (!patientReference) {
     encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
@@ -405,9 +407,11 @@ async function performDiagnosisPickRequest(
     }
   }
 
+  const after = await staff.fhir.read<Encounter>("Encounter", encounterId);
   return {
     status: 200,
     body: {
+      ...(isClosedEncounter(after) ? { encounterClosedDuringCommand: true } : {}),
       result: "pick",
       ...(parsed.data.commandId ? { commandId: parsed.data.commandId } : {}),
       conditionStep: "applied",

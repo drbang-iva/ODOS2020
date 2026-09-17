@@ -1,0 +1,24 @@
+[
+  {
+    "pass": "vendor-canonical-shapes",
+    "severity": "hard-block",
+    "code": "odos-extension-url-shape",
+    "message": "ODOS-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
+    "source": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+    "line": 20,
+    "column": 32,
+    "ledgerRow": 19,
+    "lesson": "v0.55b Binding #1"
+  },
+  {
+    "pass": "vendor-canonical-shapes",
+    "severity": "hard-block",
+    "code": "odos-extension-url-shape",
+    "message": "ODOS-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
+    "source": "mcp/src/clinical-graph/diagnosis-carry-provenance.ts",
+    "line": 21,
+    "column": 36,
+    "ledgerRow": 19,
+    "lesson": "v0.55b Binding #1"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "originalAssertions": 648,
+  "literalRetained": 642,
+  "literalChangedOrRemoved": 6,
+  "fixtureSensitiveRetainedMappings": 16,
+  "mappedRows": 22,
+  "unmapped": 0,
+  "changedRows": [
+    "mcp/tests/encounterUndoEndpoint.test.ts:192",
+    "mcp/tests/encounterUndoEndpoint.test.ts:436",
+    "mcp/tests/encounterUndoEndpoint.test.ts:437",
+    "mcp/tests/encounterUndoEndpoint.test.ts:448",
+    "mcp/tests/encounterUndoEndpoint.test.ts:450",
+    "mcp/tests/encounterUndoEndpoint.test.ts:495"
+  ]
+}

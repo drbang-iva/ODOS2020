@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { buildFindingDefinitionSeeds } from "../src/clinical-graph/finding-definition-store.js";
+import { materializeAtomicFindingCatalog } from "../src/clinical-graph/diagnosis-findings-endpoint.js";
+import { executeFindingCommand, type FindingCommandTarget } from "../src/clinical-graph/current-finding-writer.js";
+import { randomUUID } from "node:crypto";
 import type {
   Basic,
   Bundle,
@@ -35,6 +39,7 @@ export type VoidBody = {
   count: number;
   sections: Array<{ sectionKey: string; label: string; count: number }>;
   preview: boolean;
+  voidActionId?: string;
   error?: string;
 };
 
@@ -61,16 +66,7 @@ export function fixture(options: {
       actorRole: options.role ?? "provider",
       fhir,
     } : null,
-    findingDefinitions: () => [
-      definition("entrance:cvf", "entrance:cvf", "Confrontation visual fields"),
-      definition("entrance:visual-field-defect", "entrance:visual-field-defect", "Visual Field"),
-      definition("entrance:pupils", "entrance:pupils", "Pupils"),
-      definition("entrance:dilation", "entrance:dilation", "Dilation"),
-      definition("hpi_ros", "hpi", "History narrative and review of systems"),
-      definition("intraocular_pressure", "tonometry", "Intraocular pressure"),
-      definition("ocular-health:anterior:cornea", "ocular-health:anterior:cornea", "Cornea"),
-      definition("ocular-health:anterior:lens", "ocular-health:anterior:lens", "Lens"),
-    ],
+    findingDefinitions: () => buildFindingDefinitionSeeds(),
     now: () => NOW,
   };
   return { deps, fhir };
@@ -81,6 +77,8 @@ export class MemoryFhir {
   private resources: Resource[] = [];
   readonly transactions: Bundle[] = [];
   beforeTransaction?: () => void;
+  readonly writes: Array<{ method: string; resource: Resource }> = [];
+  beforeWrite?: (resource: Resource) => void;
   /** `ResourceType/id` → status code the next read of it throws with (503 for an outage, 404 for a dangling reference). */
   readonly failedReads = new Map<string, number>();
   /**
@@ -143,10 +141,33 @@ export class MemoryFhir {
         if (!coded) return false;
       }
       if (params.subject && (resource as Basic | Condition | Observation).subject?.reference !== params.subject) return false;
+      if (params.identifier && !(resource as Observation).identifier?.some(i => params.identifier.split(",").includes(`${i.system}|${i.value}`))) return false;
+      if (params._tag && !resource.meta?.tag?.some(t => params._tag.split(",").includes(`${t.system}|${t.code}`))) return false;
       if (params["status:not"] && (resource as Observation).status === params["status:not"]) return false;
       return true;
     });
     return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })) };
+  }
+
+  async createWithOutcome<T extends Resource>(resource: T, headers: Record<string,string> = {}): Promise<{resource:T;created:boolean}> {
+    this.writes.push({method:"POST",resource:structuredClone(resource)});
+    this.beforeWrite?.(resource);
+    if (headers["If-None-Exist"]) {
+      const found=(await this.search<T>(resource.resourceType,Object.fromEntries(new URLSearchParams(headers["If-None-Exist"])))).entry ?? [];
+      if(found.length > 1) throw Object.assign(new Error("FHIR 412"),{status:412});
+      if(found.length) return {resource:found[0].resource!,created:false};
+    }
+    return {resource:this.add({...resource,id:resource.id ?? `${resource.resourceType.toLowerCase()}-${++this.sequence}`,meta:{...resource.meta,versionId:"1"}}),created:true};
+  }
+
+  async update<T extends Resource>(type:T["resourceType"],id:string,resource:T,headers:Record<string,string> = {}):Promise<T> {
+    this.writes.push({method:"PUT",resource:structuredClone(resource)});
+    this.beforeWrite?.(resource);
+    const current=await this.read<T>(type,id);
+    if(headers["If-Match"] && headers["If-Match"]!==`W/"${current.meta?.versionId}"`) throw Object.assign(new Error("FHIR 412"),{status:412});
+    const next={...resource,id,meta:{...resource.meta,versionId:String(Number(current.meta?.versionId ?? "0")+1)}};
+    this.replace(next);
+    return structuredClone(next);
   }
 
   async executeTransaction(bundle: Bundle): Promise<Bundle> {
@@ -286,3 +307,22 @@ export function administration(id: string, status: "completed" | "entered-in-err
   };
 }
 
+
+export async function writeFinding(fhir:MemoryFhir, target:FindingCommandTarget, definitions=buildFindingDefinitionSeeds()) {
+  return executeFindingCommand({fhir,definitions,catalog:materializeAtomicFindingCatalog(definitions),staffReference:"Practitioner/doc1",now:()=>NOW},
+    {commandId:randomUUID(),patientReference:PATIENT,encounterReference:ENCOUNTER,surface:"void-fixture",targets:[target]});
+}
+
+export async function seedCanonical(fhir:MemoryFhir,id:string,stableKey:string,eye:"OD"|"OS",optionIndex=0) {
+  const catalog=materializeAtomicFindingCatalog(buildFindingDefinitionSeeds());
+  const row=catalog.filter(r=>r.findingDefinitionKey===stableKey)[optionIndex];
+  assert.ok(row,"real fixture option exists");
+  const key={v:1 as const,patientId:"p1",encounterId:"e1",stableKey,fieldCode:row.fieldCode,optionCode:row.optionCode,eye};
+  const isolated=new MemoryFhir();
+  const result=await writeFinding(isolated,{kind:"fact",key,baseline:{kind:"absent",key},state:{status:"live",presence:"present",qualifiers:{},homes:[]}});
+  assert.equal(result.complete,true,"real writer builds canonical fixture");
+  const owner=isolated.all<Observation>("Observation")[0];
+  // Preserve caller IDs for old scope assertions; markerless canonical owners are valid historical input.
+  const canonical={...owner,id,component:owner.component?.filter(c=>!c.code.coding?.some(x=>x.code==="R10_OPERATION"))};
+  return fhir.add(canonical);
+}

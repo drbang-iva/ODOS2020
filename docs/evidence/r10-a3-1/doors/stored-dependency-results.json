@@ -1,0 +1,67 @@
+[
+  {
+    "id": "W114-door-read",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 read ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ]
+  },
+  {
+    "id": "W114-door-write",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 write ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ]
+  },
+  {
+    "id": "W114-door-repair",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 repair ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ]
+  },
+  {
+    "id": "W114-door-candidates",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 candidates ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ]
+  },
+  {
+    "id": "W114-door-pick",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 pick ",
+      "mcp/tests/r10A3StoredDefinitions.test.ts"
+    ]
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "scope": "A3.1 \u00a73.6 void and undo",
+  "status": "AUTHOR COMPLETE \u2014 NOT EVALUATED",
+  "initialFocused": {
+    "tests": 31,
+    "pass": 8,
+    "fail": 23
+  },
+  "additionalLookupRed": {
+    "tests": 2,
+    "pass": 0,
+    "fail": 2
+  },
+  "finalScoped": {
+    "tests": 221,
+    "pass": 221,
+    "fail": 0,
+    "skip": 0
+  },
+  "focusedTests": 41,
+  "mcpBuildExit": 0,
+  "ownedDiffCheckExit": 0,
+  "mutationVariants": 20,
+  "mutationRedGreenPassed": 20,
+  "sourceRestoration": "Runner byte checks passed for every variant before source release to parent",
+  "assertionLedger": {
+    "originalAssertions": 648,
+    "literalRetained": 642,
+    "literalChangedOrRemoved": 6,
+    "fixtureSensitiveRetainedMappings": 16,
+    "mappedRows": 22,
+    "unmapped": 0,
+    "changedRows": [
+      "mcp/tests/encounterUndoEndpoint.test.ts:192",
+      "mcp/tests/encounterUndoEndpoint.test.ts:436",
+      "mcp/tests/encounterUndoEndpoint.test.ts:437",
+      "mcp/tests/encounterUndoEndpoint.test.ts:448",
+      "mcp/tests/encounterUndoEndpoint.test.ts:450",
+      "mcp/tests/encounterUndoEndpoint.test.ts:495"
+    ]
+  },
+  "files": [
+    "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+    "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+    "mcp/src/clinical-graph/encounter-undo-ledger-store.ts",
+    "mcp/tests/encounterVoidFixture.ts",
+    "mcp/tests/encounterVoidEndpoint.test.ts",
+    "mcp/tests/encounterUndoEndpoint.test.ts",
+    "mcp/tests/encounterUndoLedgerAuthzLive.test.ts",
+    "mcp/tests/r10A3VoidUndo.test.ts"
+  ],
+  "notPerformed": [
+    "commits",
+    "live authorization execution",
+    "container operations",
+    "independent evaluation",
+    "\u00a73.7 implementation"
+  ]
+}

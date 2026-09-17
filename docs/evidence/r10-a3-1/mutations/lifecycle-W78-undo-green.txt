@@ -1,0 +1,53 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 169.438834
+  type: 'test'
+  ...
+# Subtest: W78 undo fact final refuses signed canonical owner
+ok 2 - W78 undo fact final refuses signed canonical owner
+  ---
+  duration_ms: 44.554
+  type: 'test'
+  ...
+# Subtest: W78 undo panel final refuses signed canonical owner
+ok 3 - W78 undo panel final refuses signed canonical owner
+  ---
+  duration_ms: 27.735459
+  type: 'test'
+  ...
+# Subtest: W78 undo fact amended refuses signed canonical owner
+ok 4 - W78 undo fact amended refuses signed canonical owner
+  ---
+  duration_ms: 26.971208
+  type: 'test'
+  ...
+# Subtest: W78 undo panel amended refuses signed canonical owner
+ok 5 - W78 undo panel amended refuses signed canonical owner
+  ---
+  duration_ms: 25.75525
+  type: 'test'
+  ...
+# Subtest: W78 undo fact corrected refuses signed canonical owner
+ok 6 - W78 undo fact corrected refuses signed canonical owner
+  ---
+  duration_ms: 25.922125
+  type: 'test'
+  ...
+# Subtest: W78 undo panel corrected refuses signed canonical owner
+ok 7 - W78 undo panel corrected refuses signed canonical owner
+  ---
+  duration_ms: 24.434417
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 349.453292

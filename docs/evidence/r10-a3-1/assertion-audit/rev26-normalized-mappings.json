@@ -1,0 +1,625 @@
+[
+  {
+    "file": "mcp/tests/currentFindingIdentity.test.ts",
+    "before": {
+      "line": 56,
+      "text": "assert.equal(classify({ ...snapshot(), identifier: [{ system: \"urn:odos:finding-panel:v1\", value: \"panel\" }] }).kind, \"panel-context\")"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/currentFindingIdentity.test.ts",
+        "line": 57,
+        "text": "assert.equal(classify({ ...snapshot(), identifier: [{ system: \"urn:odos:finding-panel:v1\", value: \"panel\" }] }).kind, \"invalid\")",
+        "context": "\"role markers dominate definition matching, conflicting markers are invalid\""
+      },
+      {
+        "file": "mcp/tests/currentFindingIdentity.test.ts",
+        "line": 59,
+        "text": "assert.equal(classify({ ...snapshot(), identifier: [findingPanelIdentifier(panelKey)], component: [comp(\"R10_PANEL_META\", JSON.stringify(panelKey))] }).kind, \"panel-context\")",
+        "context": "\"role markers dominate definition matching, conflicting markers are invalid\""
+      }
+    ],
+    "contracts": [
+      "W71"
+    ],
+    "evidence": "rev26-reader-proof/assertion-ledger.md",
+    "note": "Strict panel envelope requires identifier + validated envelope; malformed control now invalid, valid control panel-context."
+  },
+  {
+    "file": "mcp/tests/findingSectionHelpers.test.ts",
+    "before": {
+      "line": 15,
+      "text": "assert.equal(JSON.stringify(response),JSON.stringify(capture.result))"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 17,
+        "text": "assert.equal(JSON.stringify(response),JSON.stringify(capture.result))",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 20,
+        "text": "assert.equal(response.status, 200)",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 24,
+        "text": "assert.deepEqual(body.rows, legacy?capture.result.body.rows:[])",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 25,
+        "text": "assert.deepEqual(encounters.map((e:any)=>e.encounterReference),input.query.encounter?[input.query.encounter]:[...new Set((bundle.entry??[]).map((e:any)=>e.resource.encounter.reference))])",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 27,
+        "text": "assert.equal(encounter.encounterEditable,!legacy)",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 28,
+        "text": "assert.equal(encounter.readOnlyReason,legacy?\"pre-rebuild-test-encounter\":undefined)",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 30,
+        "text": "assert.equal(encounter.eyes[eye].encounterEditable,!legacy)",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 31,
+        "text": "assert.equal(encounter.eyes[eye].panel.editable,!legacy)",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 32,
+        "text": "assert.ok(encounter.eyes[eye].facts.every((fact:any)=>fact.editable===!legacy))",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      },
+      {
+        "file": "mcp/tests/findingSectionHelpers.test.ts",
+        "line": 33,
+        "text": "assert.deepEqual(encounter.eyes[eye].negativeActs.map((act:any)=>act.source.reference).sort(),(bundle.entry??[]).filter((e:any)=>e.resource.identifier?.some((id:any)=>id.system===\"urn:odos:negative-act\")&&e.resource.extension?.some((ext:any)=>ext.valueCodeableConcept?.coding?.some((c:any)=>c.code===eye))&&e.resource.status!==\"entered-in-error\").map((e:any)=>`Observation/${e.resource.id}`).sort())",
+        "context": "`history preserves legacy rows and exposes shared read-only projection ${index+1}: ${capture.suite}`"
+      }
+    ],
+    "contracts": [
+      "V18",
+      "V23",
+      "V21"
+    ],
+    "evidence": "rev26-reader-proof/assertion-ledger.md",
+    "note": "Nonshared full bytes retained; shared legacy row bytes preserved with read-only projection and explicit negative-act location."
+  },
+  {
+    "file": "mcp/tests/r10-parity.test.ts",
+    "before": {
+      "line": 68,
+      "text": "assert.deepEqual(clean(buildExamOverviewProjection(input)),c.result)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/r10-parity.test.ts",
+        "line": 69,
+        "text": "assert.deepEqual(clean(buildExamOverviewProjection(input)),expected)",
+        "context": "`legacy fixture ${i+1}: ${c.suite} ${c.kind}`"
+      }
+    ],
+    "contracts": [
+      "V27"
+    ],
+    "evidence": "rev26-reader-proof/assertion-ledger.md",
+    "note": "Eight reviewed overview expectations record exact 35-leaf deltas; original captures and five divergences unchanged."
+  },
+  {
+    "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+    "before": {
+      "line": 89,
+      "text": "assert.ok(searches.length <= (mode === \"tap\" ? 24 : 52))"
+    },
+    "after": [
+      {
+        "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+        "line": 87,
+        "text": "assert.deepEqual(guardSearches, Array.from({ length: mode === \"tap\" ? 3 : 10 }, () =>\n    [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat())",
+        "context": "`fixback warm ${mode} seeds only its built-in and rules`"
+      },
+      {
+        "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+        "line": 93,
+        "text": "assert.ok(protocolSearches.length <= (mode === \"tap\" ? 24 : 52))",
+        "context": "`fixback warm ${mode} seeds only its built-in and rules`"
+      }
+    ],
+    "contracts": [
+      "V24",
+      "W91",
+      "V23",
+      "W108"
+    ],
+    "evidence": "rev26-protocol-proof/assertion-ledger.json",
+    "note": "Original protocol search budget retained with exact independently pinned current-state guard searches."
+  },
+  {
+    "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+    "before": {
+      "line": 90,
+      "text": "assert.deepEqual(searches.slice(0, 7).map(p => p?.code?.split(\"|\").at(-1)), [\"odos-protocol-definition\", \"odos-protocol-definition-snapshot\", ...Array(5).fill(\"odos-procedure-charge-rule\")])"
+    },
+    "after": [
+      {
+        "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+        "line": 87,
+        "text": "assert.deepEqual(guardSearches, Array.from({ length: mode === \"tap\" ? 3 : 10 }, () =>\n    [guardDefinitionQuery, guardEncounterQuery, guardEncounterQuery]).flat())",
+        "context": "`fixback warm ${mode} seeds only its built-in and rules`"
+      },
+      {
+        "file": "mcp/src/__tests__/plan-glaucoma-integration.test.ts",
+        "line": 94,
+        "text": "assert.deepEqual(protocolSearches.slice(0, mode === \"tap\" ? 7 : 8).map(p => p?.code?.split(\"|\").at(-1)), [...(mode === \"whole\" ? [\"odos-protocol-definition\"] : []), \"odos-protocol-definition\", \"odos-protocol-definition-snapshot\", ...Array(5).fill(\"odos-procedure-charge-rule\")])",
+        "context": "`fixback warm ${mode} seeds only its built-in and rules`"
+      }
+    ],
+    "contracts": [
+      "V24",
+      "W91",
+      "V23",
+      "W108"
+    ],
+    "evidence": "rev26-protocol-proof/assertion-ledger.json",
+    "note": "Whole prevalidation definition query precedes seed order; exact prefix and guard query counts retained."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 54,
+      "text": "assert.equal(r.status,200,JSON.stringify(r.body))"
+    },
+    "after": [],
+    "contracts": [
+      "V23"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Retired route format is not a successful current write. Historical snapshots now injected explicitly using production builders; assertions on their historical reader behavior retained. E12 separately exercises actual current save.",
+    "removed": true,
+    "removalReason": "Retired route format is not a successful current write. Historical snapshots now injected explicitly using production builders; assertions on their historical reader behavior retained. E12 separately exercises actual current save."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 101,
+      "text": "assert.equal((await get(neg)).length,0)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.equal((await get(neg)).length,0)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.equal(nh[0].state,'normal')",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.deepEqual(nh[0].negativeAct.optionCodes,[lensOption])",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V23"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Same normal state and exact negative option assertion; locate legacy row by act ID rather than relying on old history sort order."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 101,
+      "text": "assert.equal(nh[0].state,'normal')"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.equal((await get(neg)).length,0)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.equal(nh[0].state,'normal')",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.deepEqual(nh[0].negativeAct.optionCodes,[lensOption])",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V23"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Same normal state and exact negative option assertion; locate legacy row by act ID rather than relying on old history sort order."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 101,
+      "text": "assert.deepEqual(nh[0].negativeAct.optionCodes,[lensOption])"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.equal((await get(neg)).length,0)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.equal(nh[0].state,'normal')",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 108,
+        "text": "assert.deepEqual(nh[0].negativeAct.optionCodes,[lensOption])",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V23"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Same normal state and exact negative option assertion; locate legacy row by act ID rather than relying on old history sort order."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 114,
+      "text": "assert.equal(overview([csStored]).findings[0].sheetFindings?.[0].qualifiers[0],'Grade 0')"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 121,
+        "text": "assert.equal(overview([csStored]).findings[0].sheetFindings?.[0].qualifiers[0],undefined)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V27"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Overview reads translated shared definition view, so rejected retired grade is omitted consistently with reader/history; original Grade0 source value remains in storage."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 126,
+      "text": "assert.equal(qr.status,200,JSON.stringify(qr.body))"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 134,
+        "text": "assert.equal(qr.status,200,JSON.stringify(qr.body))",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 134,
+        "text": "assert.equal(qh.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 134,
+        "text": "assert.deepEqual((qh.body as any).eyes.OD.facts.find((r:any)=>r.presence==='present').qualifiers,details.sample)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V18"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Real current save uses loaded/selected canonical claims and history facts qualifier envelope; identical amount/kind/extent asserted. Status200 retained, history200 added."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 126,
+      "text": "assert.deepEqual((await history(qf,synthetic,qdefs))[0].findingDetails,details)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 134,
+        "text": "assert.equal(qr.status,200,JSON.stringify(qr.body))",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 134,
+        "text": "assert.equal(qh.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 134,
+        "text": "assert.deepEqual((qh.body as any).eyes.OD.facts.find((r:any)=>r.presence==='present').qualifiers,details.sample)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V18"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Real current save uses loaded/selected canonical claims and history facts qualifier envelope; identical amount/kind/extent asserted. Status200 retained, history200 added."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 134,
+      "text": "assert.equal(complete.status,200)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 142,
+        "text": "assert.equal(complete.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 142,
+        "text": "assert.equal((complete.body as any).diagnoses.length,0)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 145,
+        "text": "assert.equal(emptyPanel.complete,true,JSON.stringify(emptyPanel))",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 146,
+        "text": "assert.equal((complete.body as any).diagnoses.length,1)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V27",
+      "W81"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Live canonical credits completeness (0missing); retired canonical plus empty normal context migrated to empty canonical panel does not (1missing). Empty-panel write success asserted."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 134,
+      "text": "assert.equal((complete.body as any).diagnoses.length,1)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 142,
+        "text": "assert.equal(complete.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 142,
+        "text": "assert.equal((complete.body as any).diagnoses.length,0)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 145,
+        "text": "assert.equal(emptyPanel.complete,true,JSON.stringify(emptyPanel))",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 146,
+        "text": "assert.equal((complete.body as any).diagnoses.length,1)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V27",
+      "W81"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Live canonical credits completeness (0missing); retired canonical plus empty normal context migrated to empty canonical panel does not (1missing). Empty-panel write success asserted."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 136,
+      "text": "assert.equal((complete.body as any).diagnoses.length,0)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 142,
+        "text": "assert.equal(complete.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 142,
+        "text": "assert.equal((complete.body as any).diagnoses.length,0)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 145,
+        "text": "assert.equal(emptyPanel.complete,true,JSON.stringify(emptyPanel))",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 146,
+        "text": "assert.equal((complete.body as any).diagnoses.length,1)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V27",
+      "W81"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Live canonical credits completeness (0missing); retired canonical plus empty normal context migrated to empty canonical panel does not (1missing). Empty-panel write success asserted."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 138,
+      "text": "assert.equal(vp.status,200)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 148,
+        "text": "assert.equal(vp.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 148,
+        "text": "assert.equal((vp.body as any).count,1)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 175,
+        "text": "assert.equal((vp.body as any).count,1)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V26",
+      "W76"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Canonical section preview count0 becomes1 in probe and E15."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 138,
+      "text": "assert.equal((vp.body as any).count,0)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 148,
+        "text": "assert.equal(vp.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 148,
+        "text": "assert.equal((vp.body as any).count,1)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 175,
+        "text": "assert.equal((vp.body as any).count,1)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V26",
+      "W76"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Canonical section preview count0 becomes1 in probe and E15."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 165,
+      "text": "assert.equal((vp.body as any).count,0)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 148,
+        "text": "assert.equal(vp.status,200)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 148,
+        "text": "assert.equal((vp.body as any).count,1)",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 175,
+        "text": "assert.equal((vp.body as any).count,1)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V26",
+      "W76"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "Canonical section preview count0 becomes1 in probe and E15."
+  },
+  {
+    "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+    "before": {
+      "line": 140,
+      "text": "assert.equal((await get(unk))[0].laterality,'UNKNOWN')"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 150,
+        "text": "assert.equal((await get(unk))[0].laterality,'UNKNOWN')",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 150,
+        "text": "assert.equal((await get(unk))[0].kind,'unresolved')",
+        "context": "helper"
+      },
+      {
+        "file": "mcp/tests/fixtures/r10/premise-replay.ts",
+        "line": 150,
+        "text": "assert.equal((await get(unk))[0].editable,false)",
+        "context": "helper"
+      }
+    ],
+    "contracts": [
+      "V23"
+    ],
+    "evidence": "rev26-premise-replay/assertion-ledger.json",
+    "note": "UNKNOWN assertion unchanged; strengthens malformed visible row as unresolved/editable false, does not hide it."
+  }
+]

@@ -1,0 +1,532 @@
+TAP version 13
+# Subtest: staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)
+ok 1 - staff diagnosis-door assertion refuses before creating an Observation or any other write — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 8.98775
+  type: 'test'
+  ...
+# Subtest: staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)
+ok 2 - staff cannot assign, detach or clear legacy Condition evidence but can edit finding grade and laterality — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.737083
+  type: 'test'
+  ...
+# Subtest: findings payload distinguishes finding write access from diagnosis write access
+ok 3 - findings payload distinguishes finding write access from diagnosis write access
+  ---
+  duration_ms: 1.700416
+  type: 'test'
+  ...
+# Subtest: GET encounter findings returns 401 when unauthenticated
+ok 4 - GET encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 22.771083
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 401 when unauthenticated
+ok 5 - PUT encounter findings returns 401 when unauthenticated
+  ---
+  duration_ms: 11.22675
+  type: 'test'
+  ...
+# Subtest: PUT encounter findings returns 403 for read-only Admin
+ok 6 - PUT encounter findings returns 403 for read-only Admin
+  ---
+  duration_ms: 2.180958
+  type: 'test'
+  ...
+# Subtest: GET expands offered rows and normalizes only the latest section snapshot
+ok 7 - GET expands offered rows and normalizes only the latest section snapshot
+  ---
+  duration_ms: 2.083917
+  type: 'test'
+  ...
+# Subtest: GET finds the selected encounter Condition on a later safe Bundle page
+ok 8 - GET finds the selected encounter Condition on a later safe Bundle page
+  ---
+  duration_ms: 1.451417
+  type: 'test'
+  ...
+# Subtest: GET projects carried present findings and merges prior absence into the exact offered eye only
+ok 9 - GET projects carried present findings and merges prior absence into the exact offered eye only
+  ---
+  duration_ms: 1.194375
+  type: 'test'
+  ...
+# Subtest: GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+ok 10 - GET offers only missing live eyes; a current fact at another diagnosis is search-resolved
+  ---
+  duration_ms: 0.793208
+  type: 'test'
+  ...
+# Subtest: reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)
+ok 11 - reasserting a prior absent offer creates a fresh current row without a carried tag — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.387416
+  type: 'test'
+  ...
+# Subtest: a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)
+ok 12 - a carried finding remains unreasserted until the discriminated Provenance activity exists — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.514958
+  type: 'test'
+  ...
+# Subtest: a reassertion marker older than the current carry does not reassert the carried finding
+ok 13 - a reassertion marker older than the current carry does not reassert the carried finding
+  ---
+  duration_ms: 0.3795
+  type: 'test'
+  ...
+# Subtest: a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)
+ok 14 - a failed reassertion marker write remains retryable without losing the carry signal — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.413541
+  type: 'test'
+  ...
+# Subtest: asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)
+ok 15 - asserting absence round-trips and repeated assertions update one logical Observation — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.366334
+  type: 'test'
+  ...
+# Subtest: assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)
+ok 16 - assertion finds an existing same-eye Observation on page two and never creates a duplicate — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.327958
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cross-origin next page
+ok 17 - findings pagination fails closed for a cross-origin next page
+  ---
+  duration_ms: 0.267625
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a off-root next page
+ok 18 - findings pagination fails closed for a off-root next page
+  ---
+  duration_ms: 0.148208
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a unavailable next page
+ok 19 - findings pagination fails closed for a unavailable next page
+  ---
+  duration_ms: 0.215875
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a cycle next page
+ok 20 - findings pagination fails closed for a cycle next page
+  ---
+  duration_ms: 0.151791
+  type: 'test'
+  ...
+# Subtest: findings pagination fails closed for a upstream next page
+ok 21 - findings pagination fails closed for a upstream next page
+  ---
+  duration_ms: 0.158625
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 401 dependency response without a generic route 500
+ok 22 - findings maps a FHIR 401 dependency response without a generic route 500
+  ---
+  duration_ms: 0.080209
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 403 dependency response without a generic route 500
+ok 23 - findings maps a FHIR 403 dependency response without a generic route 500
+  ---
+  duration_ms: 0.060166
+  type: 'test'
+  ...
+# Subtest: findings maps a FHIR 500 dependency response without a generic route 500
+ok 24 - findings maps a FHIR 500 dependency response without a generic route 500
+  ---
+  duration_ms: 0.04275
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 401 dependency response
+ok 25 - GET findings route preserves the named FHIR 401 dependency response
+  ---
+  duration_ms: 8.006958
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 403 dependency response
+ok 26 - GET findings route preserves the named FHIR 403 dependency response
+  ---
+  duration_ms: 1.813042
+  type: 'test'
+  ...
+# Subtest: GET findings route preserves the named FHIR 500 dependency response
+ok 27 - GET findings route preserves the named FHIR 500 dependency response
+  ---
+  duration_ms: 1.223167
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 404 to a non-leaking 404
+ok 28 - findings maps Encounter FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.098625
+  type: 'test'
+  ...
+# Subtest: findings maps Encounter FHIR 410 to a non-leaking 404
+ok 29 - findings maps Encounter FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.04325
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 404 to a non-leaking 404
+ok 30 - findings maps Condition FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.122542
+  type: 'test'
+  ...
+# Subtest: findings maps Condition FHIR 410 to a non-leaking 404
+ok 31 - findings maps Condition FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.079333
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 404 to a non-leaking 404
+ok 32 - findings maps Observation FHIR 404 to a non-leaking 404
+  ---
+  duration_ms: 0.074458
+  type: 'test'
+  ...
+# Subtest: findings maps Observation FHIR 410 to a non-leaking 404
+ok 33 - findings maps Observation FHIR 410 to a non-leaking 404
+  ---
+  duration_ms: 0.070375
+  type: 'test'
+  ...
+# Subtest: findings gives Condition bodySite laterality precedence over a stale catalog identifier
+ok 34 - findings gives Condition bodySite laterality precedence over a stale catalog identifier
+  ---
+  duration_ms: 0.892542
+  type: 'test'
+  ...
+# Subtest: GET findings route returns missing lineage as visible state and a cyclic next link as 502
+ok 35 - GET findings route returns missing lineage as visible state and a cyclic next link as 502
+  ---
+  duration_ms: 5.054083
+  type: 'test'
+  ...
+# Subtest: 404 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 36 - 404 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.48125
+  type: 'test'
+  ...
+# Subtest: 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 37 - 404 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.373333
+  type: 'test'
+  ...
+# Subtest: 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 38 - 404 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.260209
+  type: 'test'
+  ...
+# Subtest: 410 Condition/prior-unique lineage stays a 200 visible integrity state
+ok 39 - 410 Condition/prior-unique lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.228042
+  type: 'test'
+  ...
+# Subtest: 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+ok 40 - 410 Encounter/prior-e1 lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.233292
+  type: 'test'
+  ...
+# Subtest: 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+ok 41 - 410 Observation/prior-offered-absent-od lineage stays a 200 visible integrity state
+  ---
+  duration_ms: 0.491833
+  type: 'test'
+  ...
+# Subtest: asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)
+ok 42 - asserting the same finding for another eye preserves the existing eye assertion — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.337542
+  type: 'test'
+  ...
+# Subtest: grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)
+ok 43 - grade and laterality mutations enforce the configured scale and restore inherited laterality — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.236459
+  type: 'test'
+  ...
+# Subtest: clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)
+ok 44 - clear enters the atomic Observation in error and rejects cross-encounter patient and Condition boundaries — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.216167
+  type: 'test'
+  ...
+# Subtest: assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)
+ok 45 - assign rehomes Condition evidence idempotently and standalone removes the only binding home — legacy encounter now refuses read-only (V3)
+  ---
+  duration_ms: 0.257459
+  type: 'test'
+  ...
+# Subtest: W7 staff assert uses chart.write, writes preliminary fact and no Condition
+ok 46 - W7 staff assert uses chart.write, writes preliminary fact and no Condition
+  ---
+  duration_ms: 5.368833
+  type: 'test'
+  ...
+# Subtest: W27 missing baseline returns 428 and no-store before writes
+ok 47 - W27 missing baseline returns 428 and no-store before writes
+  ---
+  duration_ms: 0.188458
+  type: 'test'
+  ...
+# Subtest: W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
+ok 48 - W43 pre-rebuild GET is read-only and PUT/repair refuse without writes
+  ---
+  duration_ms: 4.978167
+  type: 'test'
+  ...
+# Subtest: W39 mixed writable and final target refuses entire command at raw status
+ok 49 - W39 mixed writable and final target refuses entire command at raw status
+  ---
+  duration_ms: 2.130333
+  type: 'test'
+  ...
+# Subtest: W26 out-of-domain intended home refuses before any write
+ok 50 - W26 out-of-domain intended home refuses before any write
+  ---
+  duration_ms: 0.931209
+  type: 'test'
+  ...
+# Subtest: W4 assert under Y preserves X in persisted homes and both selected views
+ok 51 - W4 assert under Y preserves X in persisted homes and both selected views
+  ---
+  duration_ms: 10.9675
+  type: 'test'
+  ...
+# Subtest: W28a clear preserves historical homes
+ok 52 - W28a clear preserves historical homes
+  ---
+  duration_ms: 1.249542
+  type: 'test'
+  ...
+# Subtest: W28a clear rejects changed homes without writes
+ok 53 - W28a clear rejects changed homes without writes
+  ---
+  duration_ms: 0.937625
+  type: 'test'
+  ...
+# Subtest: §3.2 move rejects changed qualifiers without writes
+ok 54 - §3.2 move rejects changed qualifiers without writes
+  ---
+  duration_ms: 0.857375
+  type: 'test'
+  ...
+# Subtest: §3.2 standalone rejects changed qualifiers without writes
+ok 55 - §3.2 standalone rejects changed qualifiers without writes
+  ---
+  duration_ms: 0.842208
+  type: 'test'
+  ...
+# Subtest: §3.2 link rejects changed qualifiers without writes
+ok 56 - §3.2 link rejects changed qualifiers without writes
+  ---
+  duration_ms: 0.618292
+  type: 'test'
+  ...
+# Subtest: W28b retired revive links fresh and W33 offered retains revive baseline and same id
+ok 57 - W28b retired revive links fresh and W33 offered retains revive baseline and same id
+  ---
+  duration_ms: 2.789292
+  type: 'test'
+  ...
+# Subtest: W8 unavailable and W41 410 missing retain typed read failures
+ok 58 - W8 unavailable and W41 410 missing retain typed read failures
+  ---
+  duration_ms: 0.751542
+  type: 'test'
+  ...
+# Subtest: W31 conflict carries command result but strips internal fresh
+ok 59 - W31 conflict carries command result but strips internal fresh
+  ---
+  duration_ms: 1.108875
+  type: 'test'
+  ...
+# Subtest: W34 same command with fresh baseline and changed state refuses reuse
+ok 60 - W34 same command with fresh baseline and changed state refuses reuse
+  ---
+  duration_ms: 2.813
+  type: 'test'
+  ...
+# Subtest: W32 eye-change onto differing live destination refuses zero writes
+ok 61 - W32 eye-change onto differing live destination refuses zero writes
+  ---
+  duration_ms: 1.860084
+  type: 'test'
+  ...
+# Subtest: OD to OS eye-change creates destination and retires source
+ok 62 - OD to OS eye-change creates destination and retires source
+  ---
+  duration_ms: 2.096792
+  type: 'test'
+  ...
+# Subtest: W42 repair persists frozen audit debt and clears GET debt without a clinical write
+ok 63 - W42 repair persists frozen audit debt and clears GET debt without a clinical write
+  ---
+  duration_ms: 7.373875
+  type: 'test'
+  ...
+# Subtest: W44 refresh failure selects causal 502 after a confirmed first write
+ok 64 - W44 refresh failure selects causal 502 after a confirmed first write
+  ---
+  duration_ms: 1.070333
+  type: 'test'
+  ...
+# Subtest: retired fact refuses clear without writes
+ok 65 - retired fact refuses clear without writes
+  ---
+  duration_ms: 0.517875
+  type: 'test'
+  ...
+# Subtest: retired fact refuses grade without writes
+ok 66 - retired fact refuses grade without writes
+  ---
+  duration_ms: 0.446875
+  type: 'test'
+  ...
+# Subtest: retired fact refuses move without writes
+ok 67 - retired fact refuses move without writes
+  ---
+  duration_ms: 0.428125
+  type: 'test'
+  ...
+# Subtest: retired fact refuses standalone without writes
+ok 68 - retired fact refuses standalone without writes
+  ---
+  duration_ms: 1.233167
+  type: 'test'
+  ...
+# Subtest: retired fact refuses link without writes
+ok 69 - retired fact refuses link without writes
+  ---
+  duration_ms: 0.540709
+  type: 'test'
+  ...
+# Subtest: retired fact refuses reassert without writes
+ok 70 - retired fact refuses reassert without writes
+  ---
+  duration_ms: 0.655125
+  type: 'test'
+  ...
+# Subtest: move changes only authorized state and rejects another state change before writing
+ok 71 - move changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.379334
+  type: 'test'
+  ...
+# Subtest: standalone changes only authorized state and rejects another state change before writing
+ok 72 - standalone changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.26175
+  type: 'test'
+  ...
+# Subtest: link changes only authorized state and rejects another state change before writing
+ok 73 - link changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.374542
+  type: 'test'
+  ...
+# Subtest: grade changes only authorized state and rejects another state change before writing
+ok 74 - grade changes only authorized state and rejects another state change before writing
+  ---
+  duration_ms: 1.403333
+  type: 'test'
+  ...
+# Subtest: raw amended owner refuses even behind offered row
+ok 75 - raw amended owner refuses even behind offered row
+  ---
+  duration_ms: 2.0005
+  type: 'test'
+  ...
+# Subtest: raw corrected owner refuses even behind offered row
+ok 76 - raw corrected owner refuses even behind offered row
+  ---
+  duration_ms: 3.271
+  type: 'test'
+  ...
+# Subtest: raw cancelled owner refuses even behind offered row
+ok 77 - raw cancelled owner refuses even behind offered row
+  ---
+  duration_ms: 1.85075
+  type: 'test'
+  ...
+# Subtest: all target structure validated before first write including qualifier, scope, home domain and duplicates
+ok 78 - all target structure validated before first write including qualifier, scope, home domain and duplicates
+  ---
+  duration_ms: 1.352375
+  type: 'test'
+  ...
+# Subtest: legacy baseline rejected and missing, null and invalid bodies never reach writes
+ok 79 - legacy baseline rejected and missing, null and invalid bodies never reach writes
+  ---
+  duration_ms: 0.29425
+  type: 'test'
+  ...
+# Subtest: fact with foreign existing home is read-only and cannot be moved away
+ok 80 - fact with foreign existing home is read-only and cannot be moved away
+  ---
+  duration_ms: 2.146833
+  type: 'test'
+  ...
+# Subtest: OD to OU writes only added eye and OU to OD retires only removed eye
+ok 81 - OD to OU writes only added eye and OU to OD retires only removed eye
+  ---
+  duration_ms: 1.925584
+  type: 'test'
+  ...
+# Subtest: eye change revives retired destination and agreeing live destination needs no write
+ok 82 - eye change revives retired destination and agreeing live destination needs no write
+  ---
+  duration_ms: 4.627
+  type: 'test'
+  ...
+# Subtest: OU disagreeing source states cannot collapse and retained eyes cannot be targeted
+ok 83 - OU disagreeing source states cannot collapse and retained eyes cannot be targeted
+  ---
+  duration_ms: 1.365042
+  type: 'test'
+  ...
+# Subtest: command causal response maps every cause by execution order and strips fresh
+ok 84 - command causal response maps every cause by execution order and strips fresh
+  ---
+  duration_ms: 0.160041
+  type: 'test'
+  ...
+# Subtest: W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
+ok 85 - W45 reassert fresh-baseline command reuse refuses after version change with exactly one reassert audit
+  ---
+  duration_ms: 2.963167
+  type: 'test'
+  ...
+# Subtest: reassert lookup failure is typed command audit-lookup with no clinical write
+ok 86 - reassert lookup failure is typed command audit-lookup with no clinical write
+  ---
+  duration_ms: 0.616
+  type: 'test'
+  ...
+# Subtest: eye-change identical retry finishes an added eye after removed-first partial application
+ok 87 - eye-change identical retry finishes an added eye after removed-first partial application
+  ---
+  duration_ms: 2.402375
+  type: 'test'
+  ...
+1..87
+# tests 87
+# suites 0
+# pass 87
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 334.085916

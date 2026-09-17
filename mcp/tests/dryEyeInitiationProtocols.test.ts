@@ -376,6 +376,7 @@ function dryEyeFhir(
   omittedSeries: readonly string[] = [],
 ): MemoryDryEyeFhir {
   const fhir = new MemoryDryEyeFhir();
+  fhir.add({resourceType:"Encounter",id:ENCOUNTER_ID,status:"in-progress",class:{code:"AMB"},subject:{reference:`Patient/${PATIENT_ID}`}});
   fhir.add(condition());
   for (const draft of DRY_EYE_SERIES_PROTOCOL_DRAFTS) {
     if (draft.id && omittedSeries.includes(draft.id)) continue;

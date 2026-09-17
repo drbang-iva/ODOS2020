@@ -1,0 +1,38 @@
+TAP version 13
+# Subtest: W75 completed command resend preserves original witness after a later edit
+not ok 1 - W75 completed command resend preserves original witness after a later edit
+  ---
+  duration_ms: 28.202375
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:101:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"alreadyPresent":false,"conditionStep":"applied","planStep":"applied","linkStep":"applied","lineageStep":"not-attempted","conditionReference":"Condition/96874c08-395b-480e-b93b-05c4e833d8a7","findings":{"result":"command","commandId":"efe9e32d-a4d2-4b26-bb60-943d40f0706e","complete":false,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"none","cause":"verify-read","status":"conflict","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","reference":"Observation/a806bef7-6f00-49be-8a23-3d1f6a5d0766","reason":"Owner changed after command was recorded."},{"clinicalWrite":"none","cause":"halted-by-earlier-target","status":"not-attempted","target":"finding:ee51dc83955592677b43a2ad511dac967d95dbe78f4c071dadaa85c0c2809dbf","reason":"Earlier target did not complete."}]}}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:103:38)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W104 findings witness lost response is recovered once
+ok 2 - W104 findings witness lost response is recovered once
+  ---
+  duration_ms: 19.562208
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 245.80725

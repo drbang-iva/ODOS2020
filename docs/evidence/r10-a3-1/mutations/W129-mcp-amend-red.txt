@@ -1,0 +1,39 @@
+TAP version 13
+# Subtest: W87a W87b W129 exact finding write registry covers every call site including Binary patches
+not ok 1 - W87a W87b W129 exact finding write registry covers every call site including Binary patches
+  ---
+  duration_ms: 1901.883
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseChecker.test.ts:1:4616'
+  failureType: 'testCodeFailure'
+  error: |-
+    T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287
+    + actual - expected
+    
+    + [
+    +   'T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'T22: unregistered call site ["mcp/src/fhir/scribeAttestation.ts","buildAmendmentTransaction","observation-json-patch-entry",1] at line 287'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3ReleaseChecker.test.ts:74:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2347.3905

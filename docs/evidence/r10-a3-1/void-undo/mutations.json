@@ -1,0 +1,427 @@
+[
+  {
+    "id": "lifecycle-W76",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W76",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W76",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  const key = lifecycleFindingKey(observation);",
+        "after": "  const key = undefined;"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W77-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W77 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W77 void",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "    if (!pending.size) return undefined;",
+        "after": "    return undefined;"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W77-undo",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W77 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W77 undo",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "    if (!pending.size) return undefined;",
+        "after": "    return undefined;"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W77-preview",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W77 preview",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W77 preview",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  if (preview || voided.length === 0) {",
+        "after": "  if (voided.length === 0) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W78-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W78 fact final",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W78 fact final",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  if (targetObservations.some(({ observation }) => isSignedCanonical(observation))) {",
+        "after": "  if (false) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W78-undo",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W78 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W78 undo",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "  if (canonicalObservations.some(isSignedCanonical)) {",
+        "after": "  if (false) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W105",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W105",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W105",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "    if (target.entry.markerCommandId === undefined) return false;",
+        "after": "    return false;"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W105-ledger",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W105 fact",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W105 fact",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "      ...(lifecycleFindingKey(observation) ? { markerCommandId: parseFindingOperation(observation)?.commandId ?? null } : {}),",
+        "after": "      ...{},"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W106-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W106 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W106 void",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "{ targets: selected.map(observation => `Observation/${observation.id}`) }",
+        "after": "undefined"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W106-undo",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W106 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W106 undo",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "{ targets: selected.map(observation => `Observation/${observation.id}`) }",
+        "after": "undefined"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W114",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W114",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W114",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "import { randomUUID } from \"node:crypto\";",
+        "after": "import { randomUUID } from \"node:crypto\";\nimport { buildFindingDefinitionSeeds } from \"./finding-definition-store.js\";"
+      },
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  const definitions = deps.findingDefinitions?.() ?? [];",
+        "after": "  const definitions = buildFindingDefinitionSeeds();"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W127-action",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W127 void action",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W127 void action",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": " || slot.voidActionId !== request.voidActionId",
+        "after": ""
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W127-missing",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W127 missing",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W127 missing",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "z.object({ scope: z.literal(\"encounter\"), voidActionId: z.string().uuid() }).strict(),",
+        "after": "z.object({ scope: z.literal(\"encounter\"), voidActionId: z.string().uuid().optional() }).strict(),"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-W127-response",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W127 void action",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*W127 void action",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "ledger: nextLedger, voidActionId };",
+        "after": "ledger: nextLedger };"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-prebuild-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V23 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*V23 void",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  if (findingState.preRebuild) {",
+        "after": "  if (false) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-closed-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V24 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*V24 void",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  if (isClosedEncounter(encounter) && parsed.data.preview !== true) {",
+        "after": "  if (false) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-lookup-void",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V26 void",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*V26 void",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+        "before": "  if (findingState.incomplete) return { status: 503, body: { error: \"Finding state could not be loaded.\", code: \"finding-load-failed\" } };",
+        "after": "  if (findingState.incomplete) throw new Error(\"lookup failure escaped\");"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-prebuild-undo",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V23 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*V23 undo",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "  if (findingState.preRebuild) {",
+        "after": "  if (false) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-closed-undo",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V24 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*V24 undo",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "  if (isClosedEncounter(encounter)) {",
+        "after": "  if (false) {"
+      }
+    ]
+  },
+  {
+    "id": "lifecycle-lookup-undo",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "V26 undo",
+      "mcp/tests/r10A3VoidUndo.test.ts",
+      "mcp/tests/encounterUndoEndpoint.test.ts"
+    ],
+    "failurePattern": "not ok .*V26 undo",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "  if (findingState.incomplete) return { status: 503, body: { error: \"Finding state could not be loaded.\", code: \"finding-load-failed\" } };",
+        "after": "  if (findingState.incomplete) throw new Error(\"lookup failure escaped\");"
+      }
+    ]
+  }
+]

@@ -1280,6 +1280,7 @@ test("unapply removes only charges staged by its protocol application", async ()
 
 test("unapply returns 409 before any mutation when an accepted charge is unresolved", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-unapply", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-unapply" } });
   const service = endpointProtocolService(fhir);
   const application = protocolApplication("application-accepted");
   const acceptedCharge = protocolCharge(application, "charge-accepted", "accepted");
@@ -1308,6 +1309,7 @@ test("unapply returns 409 before any mutation when an accepted charge is unresol
 
 test("unapply succeeds with finalized charges and preserves their billed state", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-unapply", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-unapply" } });
   const service = endpointProtocolService(fhir);
   const application = protocolApplication("application-finalized");
   const finalizedCharge = {
@@ -2089,6 +2091,7 @@ test("publish returns a named 400 reason for every deterministic validation fail
 
 test("persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   const legacyDefinition = structuredClone(DRY_EYE_EVALUATION_PROTOCOL);
   delete legacyDefinition.acceptCharges;
   const condition: Condition = {
@@ -2238,6 +2241,7 @@ test("apply verifies the persisted Condition and creates no prompt-only Observat
   ];
   for (const [label, candidate, code] of invalidCases) {
     const fhir = new EndpointFhir();
+    fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
     fhir.resources.push(buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition), candidate);
     const result = await handleProtocolApplyRequest(endpointDeps(fhir), {
       authHeader: "Bearer test", body: applyBody(code),
@@ -2245,12 +2249,14 @@ test("apply verifies the persisted Condition and creates no prompt-only Observat
     assert.equal(result.status, 400, label);
   }
   const missing = new EndpointFhir();
+  missing.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   missing.resources.push(buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition));
   assert.equal((await handleProtocolApplyRequest(endpointDeps(missing), {
     authHeader: "Bearer test", body: applyBody("H40.021"),
   })).status, 400);
 
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition), condition);
   const result = await handleProtocolApplyRequest(endpointDeps(fhir), {
     authHeader: "Bearer test", body: applyBody("H40.021"),
@@ -2265,6 +2271,7 @@ test("apply verifies the persisted Condition and creates no prompt-only Observat
 
 test("item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     buildProtocolBasic(
@@ -2304,6 +2311,7 @@ test("item-add endpoint stages only the requested order and refuses charge accep
 
 test("item-add endpoint rejects a charge seed before allowing its owning order", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     buildProtocolBasic(
@@ -2333,6 +2341,7 @@ test("item-add endpoint rejects a charge seed before allowing its owning order",
 
 test("item-add endpoint respects an owning application's opted-out charge", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     confirmedCondition(),
@@ -2366,6 +2375,7 @@ test("item-add endpoint respects an owning application's opted-out charge", asyn
 
 test("item-add endpoint returns 409 when an owning application's required charge is missing", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     confirmedCondition(),
@@ -2396,6 +2406,7 @@ test("item-add endpoint returns 409 when an owning application's required charge
 
 test("follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     confirmedCondition(),
@@ -2422,6 +2433,7 @@ test("follow-up materialization stores the six-month due date and verbatim reaso
 
 test("a clinician follow-up override computes from the selected two-week payload", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     confirmedCondition(),
@@ -2571,6 +2583,7 @@ const followUpRefusalCases = [
 for (const refusal of followUpRefusalCases) {
   test(`${refusal.name} refuses only the follow-up and commits the plan's other actions`, async () => {
     const fhir = new EndpointFhir();
+    fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
     const protocol: ProtocolDefinition = {
       ...GLAUCOMA_SUSPECT_PROTOCOL,
       id: `mixed-follow-up-protocol-${refusal.code}`,
@@ -2694,6 +2707,7 @@ test("stored follow-up kind and occurrence support a date-range query without lo
 
 test("applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(
     buildProtocolBasic(GLAUCOMA_SUSPECT_PROTOCOL, PROTOCOL_BASIC_CODES.protocolDefinition),
     buildProtocolBasic({
@@ -3258,6 +3272,7 @@ test("shared ownership J: removed dependency charge allows fresh charge on re-ta
 
 test("shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(confirmedCondition());
   const tap = await handleProtocolItemAddRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: { ...applyBody("H40.021"), itemKey: "order-gonioscopy" } });
   assert.equal(tap.status, 200);
@@ -3350,6 +3365,7 @@ test("shared ownership K failure: undo rolls back after a transfer write fails",
 
 test("shared ownership L route: clash rematerializes one request; confirm and edit clear flag", async () => {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   fhir.resources.push(confirmedCondition());
   await handleProtocolApplyRequest(endpointDeps(fhir), { authHeader: "Bearer test", body: applyBody("H40.021") });
   const service = endpointProtocolService(fhir);
@@ -3660,6 +3676,7 @@ for (const kind of ["action", "finding"] as const) {
 for (const kind of ["action", "finding"] as const) {
   test(`shared rollback endpoint: ${kind} revocation rollback preserves original FHIR IDs and statuses`, async () => {
     const fhir = new EndpointFhir();
+    fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
     fhir.resources.push(confirmedCondition());
     if (kind === "finding") {
       await endpointProtocolService(fhir).definitions.save({ ...structuredClone(GLAUCOMA_SUSPECT_PROTOCOL),
@@ -3700,6 +3717,7 @@ for (const kind of ["action", "finding"] as const) {
 
 async function followUpFixbackFixture() {
   const fhir = new EndpointFhir();
+  fhir.resources.push({ resourceType: "Encounter", id: "enc-1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/patient-1" } });
   let id = 0;
   const service = new ProtocolService(fhir, {
     async commitFinding() { return undefined; },

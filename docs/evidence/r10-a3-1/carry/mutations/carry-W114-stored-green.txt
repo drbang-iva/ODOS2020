@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W114 stored practice option carries through effective definitions and historical read
+ok 1 - W114 stored practice option carries through effective definitions and historical read
+  ---
+  duration_ms: 24.885583
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 202.418042

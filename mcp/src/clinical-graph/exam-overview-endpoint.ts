@@ -1,3 +1,9 @@
+import { findingDefinitionForObservation } from "./finding-observation-match.js";
+import { isDeepStrictEqual } from "node:util";
+import { loadEncounterFindingState, projectCurrentFindings, type CurrentFindingProjection } from "./current-finding-reader.js";
+import { materializeAtomicFindingCatalog } from "./diagnosis-findings-endpoint.js";
+import { carryPlansForCondition, carryFindingsWitness, isFindingReassertionProvenance } from "./diagnosis-carry-provenance.js";
+import { currentFindingIdentifier, parseCurrentFindingEnvelope, parseFindingPanelEnvelope, FINDING_OPERATION_AUDIT_SYSTEM } from "./current-finding-identity.js";
 import { projectHistorySubjectSections } from "./history-subject-projection.js";
 import type {
   Basic,
@@ -94,15 +100,20 @@ export async function handleExamOverviewRequest(
     const encounterConditions = conditions.filter((condition) =>
       condition.subject.reference === patientReference
     );
+    const sharedEvidence = await loadOverviewFindingEvidence(staff.fhir, patientReference, encounterReference, definitions);
+    const homes = new Map(sharedEvidence.projection.currentFacts.flatMap(f=>f.contributors.map(c=>[c.reference,f.homes] as const)));
+    const linkedConditions = encounterConditions.map(condition=>({...condition,evidence:[...(condition.evidence ?? []),{detail:[...homes].filter(([,refs])=>refs.includes(`Condition/${condition.id}`)).map(([reference])=>({reference}))}]}));
     const provenanceByObservation = await findingProvenanceProjection(
       staff.fhir,
-      encounterConditions,
+      linkedConditions,
       current,
+      definitions,
+      sharedEvidence.projection.preRebuild,
     );
     const clinicalContextByObservation = await findingClinicalContextProjection(
       staff.fhir,
       patientReference,
-      encounterConditions,
+      linkedConditions,
       current,
     );
     const projection = buildExamOverviewProjection({
@@ -111,6 +122,8 @@ export async function handleExamOverviewRequest(
       ...(visitTypeCategoryId ? { visitTypeCategoryId } : {}),
       definitions,
       currentObservations: current,
+      sharedProjection: sharedEvidence.projection,
+      carriedWithoutCurrentEvidence: sharedEvidence.carriedWithoutCurrentEvidence,
       priorObservationCandidates: patientObservations.filter((observation) =>
         observation.encounter?.reference !== encounterReference
       ),
@@ -345,13 +358,18 @@ async function findingProvenanceProjection(
   fhir: ExamOverviewFhirClient,
   conditions: readonly Condition[],
   observations: readonly Observation[],
+  definitions: readonly ClinicalFindingDefinition[],
+  preRebuild: boolean,
 ): Promise<Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }>> {
   const states = await Promise.all(conditions.map(async (condition) => {
     const references = conditionObservationReferences(condition);
     const boundObservations = observations.filter((observation) =>
       observation.id && references.has(`Observation/${observation.id}`)
     );
-    return readDiagnosisCarryState(fhir, condition, boundObservations);
+    const unrelatedOnly = boundObservations.length > 0 && boundObservations.every(observation=>
+      parseCurrentFindingEnvelope(observation).status !== "valid" && parseFindingPanelEnvelope(observation).status !== "valid" &&
+      findingDefinitionForObservation(observation,definitions)?.valueSchema.type !== "ocular-health-structure");
+    return readDiagnosisCarryState(fhir, condition, boundObservations, {preRebuild: unrelatedOnly || preRebuild});
   }));
   return states.reduce<Record<string, { state: ExamFindingProvenanceState; sourceDate?: string }>>(
     (projection, state) => mergeCarryState(projection, state),
@@ -459,4 +477,37 @@ function hasStructuredRosAttestation(finding: ExamOverviewFindingProjection): bo
     (component.code === "ROS_ATTESTED_EYE" || component.code === "ROS_ATTESTED_GENERAL") &&
     component.value?.kind === "boolean" && component.value.value
   );
+}
+
+export async function loadOverviewFindingEvidence(
+  fhir: Pick<ExamOverviewFhirClient,"baseUrl"|"read"|"search"|"searchUrl">,
+  patientReference: string, encounterReference: string, definitions: readonly ClinicalFindingDefinition[],
+): Promise<{projection: CurrentFindingProjection; observations: Observation[]; carriedWithoutCurrentEvidence: Set<string>}> {
+  const state = await loadEncounterFindingState(fhir,{patientReference,encounterReference,definitions,catalog:materializeAtomicFindingCatalog(definitions)});
+  if (state.incomplete) throw new Error(state.reason);
+  const projection = projectCurrentFindings(state);
+  const carriedWithoutCurrentEvidence = new Set<string>();
+  for (const condition of state.conditions) {
+    const plans = await carryPlansForCondition(fhir,`Condition/${condition.id}`);
+    for (const {plan} of plans) {
+      const witness = await carryFindingsWitness(fhir,plan);
+      for (const target of plan.targets) {
+        const fact = projection.currentFacts.find(f=>currentFindingIdentifier(f.key).value === currentFindingIdentifier(target.key).value);
+        if (!fact) continue;
+        for (const contributor of fact.contributors) {
+          const reference = contributor.reference;
+          if (!witness || !Object.hasOwn(witness.versions,reference)) { carriedWithoutCurrentEvidence.add(reference); continue; }
+          const sameClinicalContent = fact.presence === target.presence && isDeepStrictEqual(fact.qualifiers,target.qualifiers);
+          if (!sameClinicalContent) continue;
+          const audits = await searchAll<Provenance>(fhir,"Provenance",{target:reference});
+          const reasserted = audits.some(a=>isFindingReassertionProvenance(a) && Date.parse(a.recorded) > Date.parse(plan.recorded) &&
+            a.agent.length === 1 && /^Practitioner\/[^/]+$/.test(a.agent[0].who.reference ?? "") &&
+            new Set(a.target.map(t=>t.reference)).size === 2 && a.target.every(t=>[reference,patientReference].includes(t.reference ?? "")) &&
+            [FINDING_OPERATION_AUDIT_SYSTEM,"urn:odos:finding-command:v1"].every(system=>a.meta?.tag?.filter(t=>t.system === system && /^[a-f0-9]{64}$/.test(t.code ?? "")).length === 1));
+          if (!reasserted) carriedWithoutCurrentEvidence.add(reference);
+        }
+      }
+    }
+  }
+  return {projection,observations:state.observations,carriedWithoutCurrentEvidence};
 }

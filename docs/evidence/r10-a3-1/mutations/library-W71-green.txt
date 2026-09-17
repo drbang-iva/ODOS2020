@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+ok 1 - W71 strict panel identity rejects hash envelope mixed markers and duplicate owners
+  ---
+  duration_ms: 2.790708
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 170.2225

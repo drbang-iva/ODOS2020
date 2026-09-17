@@ -1,0 +1,96 @@
+{
+  "requiredFile": "scripts/fhir-read-grant-check.ts",
+  "allowedBySection4": false,
+  "rows": [
+    {
+      "path": "mcp/src/index.ts",
+      "line": 3251,
+      "callee": "fhir.create",
+      "resourceType": "VisionPrescription",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        3269
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 3633,
+      "callee": "fhir.create",
+      "resourceType": "AllergyIntolerance",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        3651
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 3687,
+      "callee": "fhir.create",
+      "resourceType": "CareTeam",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        3706
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 3836,
+      "callee": "fhir.create",
+      "resourceType": "DeviceDefinition",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        3855
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 3864,
+      "callee": "fhir.create",
+      "resourceType": "ConceptMap",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        3883
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 3887,
+      "callee": "fhir.create",
+      "resourceType": "Substance",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        3906
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 4217,
+      "callee": "fhir.create",
+      "resourceType": "AdverseEvent",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        4240
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 5318,
+      "callee": "fhir.create",
+      "resourceType": "BodyStructure",
+      "reason": "MCP process service client.",
+      "currentMatches": [
+        5345
+      ]
+    },
+    {
+      "path": "mcp/src/index.ts",
+      "line": 7895,
+      "callee": "fhir.patch",
+      "resourceType": "AccessPolicy",
+      "reason": "Policy sync uses the MCP process service client.",
+      "currentMatches": [
+        7923
+      ]
+    }
+  ]
+}

@@ -1,0 +1,308 @@
+[
+  {
+    "id": "ocular-W66",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W66",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W66",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "for (const [id, claim] of loaded) if (!selected.has(id) && !panelState?.deferred)",
+        "after": "for (const [id, claim] of new Map(context.projection.currentFacts.filter(f => f.eye === eye && f.status === \"live\").map(f => [f.projectionKey, {key:f.key, baseline:f.baseline, presence:f.presence, qualifiers:f.qualifiers, homes:f.homes}]))) if (!selected.has(id) && !panelState?.deferred)"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W67",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W67",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W67",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (!baselineMatches(target.baseline, current)) return ocularError(409, \"stale-baseline\", context.projection);",
+        "after": "if (false) return ocularError(409, \"stale-baseline\", context.projection);"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W68",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W68",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W68",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "row.selected.some(c => negative.scope.includes(c.key.optionCode)) || ",
+        "after": ""
+      }
+    ]
+  },
+  {
+    "id": "ocular-W69",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W69",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W69",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (positiveInScope(fresh, definition, step.eye, step.negative.scope))",
+        "after": "if (false)"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W70",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W70",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W70",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "!selected.has(id) && !panelState?.deferred",
+        "after": "!selected.has(id)"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W72",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W72 current",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W72 current",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "map(f => projectRow(context, f, \"fact\"));",
+        "after": "map(f => projectRow(context, {...f,status:\"live\"}, \"fact\"));"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W91",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W91",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W91",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (isClosedEncounter(context.encounter)) return ocularError(409, \"encounter-closed\");",
+        "after": "if (false) return ocularError(409, \"encounter-closed\");"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W96",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W96 TBUT",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W96 TBUT",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "values: current?.values ?? {}, baseline: current?.panelBaseline",
+        "after": "values: {}, baseline: current?.panelBaseline"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W97",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W97 exact",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W97 exact",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (replay === \"exact-replay\") { exact.add(id); continue; }",
+        "after": "if (false) { exact.add(id); continue; }"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W98",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W98",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W98",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (!baselineMatches(target.baseline, current)) return ocularError(409, \"stale-baseline\", context.projection);",
+        "after": "if (false) return ocularError(409, \"stale-baseline\", context.projection);"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W99",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W99",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W99",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "current.presence === claim.presence && ",
+        "after": ""
+      }
+    ]
+  },
+  {
+    "id": "ocular-W100",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W100",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W100",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "complete: !stopped, executionOrder: outcomes.map",
+        "after": "complete: outcomes.filter(o=>o.kind!==\"negative-act\").every(o=>[\"applied\",\"unchanged\",\"already-applied\"].includes(o.status)), executionOrder: outcomes.map"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W110",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W110",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W110",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "...(current?.auditPending ? { auditPending: true } : {})",
+        "after": "...(false ? { auditPending: true } : {})"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W114",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W114",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W114",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "const definitions = deps.findingDefinitions?.() ?? [];",
+        "after": "const definitions = (await import(\"./finding-definition-store.js\")).buildFindingDefinitionSeeds();"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W120",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W120",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W120",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (!existing.length) {",
+        "after": "if (true) {"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W121",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W121",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W121",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "n && n.id === negative.id && n.definitionStableKey",
+        "after": "n && n.actorReference === staff.staffReference && n.id === negative.id && n.definitionStableKey"
+      }
+    ]
+  },
+  {
+    "id": "ocular-W122",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W122",
+      "mcp/tests/r10A3OcularDoor.test.ts"
+    ],
+    "failurePattern": "not ok .*W122",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (current?.status === \"live\" && current.presence === \"absent\" && claim && claim.fromPresence !== \"absent\")",
+        "after": "if (false)"
+      }
+    ]
+  }
+]

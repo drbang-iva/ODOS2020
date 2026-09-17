@@ -1,0 +1,568 @@
+TAP version 13
+# odos-mcp: meibography persistence failed: Error: synthetic FHIR unavailable
+#     at MemoryFhir.create (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/dryEyeMeibography.test.ts:219:32)
+#     at handleDryEyeMeibographyCaptureRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:131:48)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/dryEyeMeibography.test.ts:123:29)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# odos-mcp: meibography persistence failed: Error: DocumentReference create response did not include an id.
+#     at requiredId (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:292:27)
+#     at handleDryEyeMeibographyCaptureRequest (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:135:33)
+#     at async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/dryEyeMeibography.test.ts:135:27)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: dry-eye gland structure writes the exact shared meibography Observation shape and reads it back
+ok 1 - dry-eye gland structure writes the exact shared meibography Observation shape and reads it back
+  ---
+  duration_ms: 3.067708
+  type: 'test'
+  ...
+# Subtest: meibography capture distinguishes input validation from upstream persistence failures
+ok 2 - meibography capture distinguishes input validation from upstream persistence failures
+  ---
+  duration_ms: 2.127584
+  type: 'test'
+  ...
+# Subtest: meibography capture rejects a decoded payload one byte above 1 MiB
+ok 3 - meibography capture rejects a decoded payload one byte above 1 MiB
+  ---
+  duration_ms: 1.126125
+  type: 'test'
+  ...
+# Subtest: meibography history keeps score metadata when one image read fails
+ok 4 - meibography history keeps score metadata when one image read fails
+  ---
+  duration_ms: 0.184167
+  type: 'test'
+  ...
+# Subtest: the meibography upload parser overrides the global four-megabyte JSON limit
+ok 5 - the meibography upload parser overrides the global four-megabyte JSON limit
+  ---
+  duration_ms: 0.534125
+  type: 'test'
+  ...
+# Subtest: myopia finding definitions keep exact stable keys and capture contract
+ok 6 - myopia finding definitions keep exact stable keys and capture contract
+  ---
+  duration_ms: 0.668083
+  type: 'test'
+  ...
+# Subtest: accepted He Table 4 seed satisfies transcription invariants V1-V5
+ok 7 - accepted He Table 4 seed satisfies transcription invariants V1-V5
+  ---
+  duration_ms: 0.287083
+  type: 'test'
+  ...
+# Subtest: supplied Truckenbrod seed transcribes all 40 values and satisfies per-year V1-V5
+ok 8 - supplied Truckenbrod seed transcribes all 40 values and satisfies per-year V1-V5
+  ---
+  duration_ms: 0.282958
+  type: 'test'
+  ...
+# Subtest: a patient without saved settings resolves to the European reference dataset
+ok 9 - a patient without saved settings resolves to the European reference dataset
+  ---
+  duration_ms: 0.081375
+  type: 'test'
+  ...
+# Subtest: registry accepts LMS parameters but provider leaves LMS evaluation unavailable
+ok 10 - registry accepts LMS parameters but provider leaves LMS evaluation unavailable
+  ---
+  duration_ms: 0.214333
+  type: 'test'
+  ...
+# Subtest: non-axial tabulated bands apply V1 and V5 without axial-length V2-V4 bounds
+ok 11 - non-axial tabulated bands apply V1 and V5 without axial-length V2-V4 bounds
+  ---
+  duration_ms: 0.089167
+  type: 'test'
+  ...
+# Subtest: reference provider returns bands only for covered population and in-range ages
+ok 12 - reference provider returns bands only for covered population and in-range ages
+  ---
+  duration_ms: 0.124875
+  type: 'test'
+  ...
+# Subtest: Eye Growth stays default-visible for paediatric ages below and above the active dataset range
+ok 13 - Eye Growth stays default-visible for paediatric ages below and above the active dataset range
+  ---
+  duration_ms: 0.587417
+  type: 'test'
+  ...
+# Subtest: reference history follows each dataset's declared age range
+ok 14 - reference history follows each dataset's declared age range
+  ---
+  duration_ms: 1.700792
+  type: 'test'
+  ...
+# Subtest: empty finding-definition lists fall back to the built-in myopia seed
+ok 15 - empty finding-definition lists fall back to the built-in myopia seed
+  ---
+  duration_ms: 0.280583
+  type: 'test'
+  ...
+# Subtest: section id migration is data-neutral: Eye Growth reads existing AXIAL_LENGTH stable keys and values
+ok 16 - section id migration is data-neutral: Eye Growth reads existing AXIAL_LENGTH stable keys and values
+  ---
+  duration_ms: 5.746833
+  type: 'test'
+  ...
+# Subtest: a persisted NOT_REPRESENTED setting renders on the European curve without rewriting storage
+ok 17 - a persisted NOT_REPRESENTED setting renders on the European curve without rewriting storage
+  ---
+  duration_ms: 0.509875
+  type: 'test'
+  ...
+# Subtest: Eye Growth returns independently classified refraction candidates with a cycloplegic default
+ok 18 - Eye Growth returns independently classified refraction candidates with a cycloplegic default
+  ---
+  duration_ms: 0.437041
+  type: 'test'
+  ...
+# Subtest: a first-visit refraction saved after axial length pairs by encounter and resolves MYOPIC
+ok 19 - a first-visit refraction saved after axial length pairs by encounter and resolves MYOPIC
+  ---
+  duration_ms: 0.201042
+  type: 'test'
+  ...
+# Subtest: latest consecutive same-method readings calculate the rate independently per eye
+ok 20 - latest consecutive same-method readings calculate the rate independently per eye
+  ---
+  duration_ms: 0.07
+  type: 'test'
+  ...
+# Subtest: growth-rate guards suppress short, mixed-method, and first-visit intervals
+ok 21 - growth-rate guards suppress short, mixed-method, and first-visit intervals
+  ---
+  duration_ms: 0.088708
+  type: 'test'
+  ...
+# Subtest: out-of-range history omits bands but preserves the patient series and qualifying rate
+ok 22 - out-of-range history omits bands but preserves the patient series and qualifying rate
+  ---
+  duration_ms: 0.366125
+  type: 'test'
+  ...
+# Subtest: missing growth-rate threshold config returns history with readings and bands but omits rates
+ok 23 - missing growth-rate threshold config returns history with readings and bands but omits rates
+  ---
+  duration_ms: 0.457875
+  type: 'test'
+  ...
+# Subtest: growth-rate classifications honor configured age and rate boundaries
+ok 24 - growth-rate classifications honor configured age and rate boundaries
+  ---
+  duration_ms: 0.121125
+  type: 'test'
+  ...
+# Subtest: reference-population migration succeeds on fresh and populated Postgres databases
+ok 25 - reference-population migration succeeds on fresh and populated Postgres databases
+  ---
+  duration_ms: 170.496375
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses canonical before associated writes through MCP dispatch
+ok 26 - W116 create_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 63.28275
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses panel before associated writes through MCP dispatch
+ok 27 - W116 create_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 31.13775
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses negative before associated writes through MCP dispatch
+ok 28 - W116 create_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 21.877708
+  type: 'test'
+  ...
+# Subtest: W116 create_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 29 - W116 create_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 17.280625
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch
+ok 30 - W116 scribe_write_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.590542
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses panel before associated writes through MCP dispatch
+ok 31 - W116 scribe_write_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 18.031416
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses negative before associated writes through MCP dispatch
+ok 32 - W116 scribe_write_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.627375
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 33 - W116 scribe_write_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.966916
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses canonical before associated writes through MCP dispatch
+ok 34 - W116 save_section_observations refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 18.642791
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses panel before associated writes through MCP dispatch
+ok 35 - W116 save_section_observations refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.77325
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses negative before associated writes through MCP dispatch
+ok 36 - W116 save_section_observations refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.503
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch
+ok 37 - W116 save_section_observations refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 16.300958
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch
+ok 38 - W116 create_smoking_status_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.732833
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch
+ok 39 - W116 create_smoking_status_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 13.842708
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch
+ok 40 - W116 create_smoking_status_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.674125
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 41 - W116 create_smoking_status_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.329375
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch
+ok 42 - W116 create_dry_eye_questionnaire_response refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.471542
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch
+ok 43 - W116 create_dry_eye_questionnaire_response refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.940875
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch
+ok 44 - W116 create_dry_eye_questionnaire_response refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 13.601208
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch
+ok 45 - W116 create_dry_eye_questionnaire_response refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.606584
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch
+ok 46 - W116 create_meibography_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.563041
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses panel before associated writes through MCP dispatch
+ok 47 - W116 create_meibography_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.759125
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses negative before associated writes through MCP dispatch
+ok 48 - W116 create_meibography_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.334916
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 49 - W116 create_meibography_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 12.797708
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch
+ok 50 - W116 record_ortho_k_fit_observation refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.469458
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch
+ok 51 - W116 record_ortho_k_fit_observation refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.701167
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch
+ok 52 - W116 record_ortho_k_fit_observation refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.109958
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch
+ok 53 - W116 record_ortho_k_fit_observation refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 13.322875
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch
+ok 54 - W116 record_eye_growth_axial_length_measurement refuses canonical before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.884125
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch
+ok 55 - W116 record_eye_growth_axial_length_measurement refuses panel before associated writes through MCP dispatch
+  ---
+  duration_ms: 15.2965
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch
+ok 56 - W116 record_eye_growth_axial_length_measurement refuses negative before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.930875
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch
+ok 57 - W116 record_eye_growth_axial_length_measurement refuses legacy-shared before associated writes through MCP dispatch
+  ---
+  duration_ms: 14.490625
+  type: 'test'
+  ...
+# Subtest: W116 append guards target through MCP dispatch
+ok 58 - W116 append guards target through MCP dispatch
+  ---
+  duration_ms: 14.663916
+  type: 'test'
+  ...
+# Subtest: W116 append guards result through MCP dispatch
+ok 59 - W116 append guards result through MCP dispatch
+  ---
+  duration_ms: 14.992875
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild
+ok 60 - W115 clinician_attest_observation allows closed fact, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 33.242
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild
+ok 61 - W115 clinician_attest_observation allows closed panel, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 31.603916
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild
+ok 62 - W115 amend_observation allows closed fact, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 31.164834
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild
+ok 63 - W115 amend_observation allows closed panel, preserves identities and refuses pre-rebuild
+  ---
+  duration_ms: 37.57125
+  type: 'test'
+  ...
+# Subtest: W115 mismatching session practitioner refuses before audit repair or lifecycle writes
+ok 64 - W115 mismatching session practitioner refuses before audit repair or lifecycle writes
+  ---
+  duration_ms: 13.607875
+  type: 'test'
+  ...
+# Subtest: W116 create_observation retains unrelated Observation writes
+ok 65 - W116 create_observation retains unrelated Observation writes
+  ---
+  duration_ms: 15.408666
+  type: 'test'
+  ...
+# Subtest: W116 scribe_write_observation retains unrelated Observation writes
+ok 66 - W116 scribe_write_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.897666
+  type: 'test'
+  ...
+# Subtest: W116 save_section_observations retains unrelated Observation writes
+ok 67 - W116 save_section_observations retains unrelated Observation writes
+  ---
+  duration_ms: 13.586041
+  type: 'test'
+  ...
+# Subtest: W116 create_smoking_status_observation retains unrelated Observation writes
+ok 68 - W116 create_smoking_status_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.583417
+  type: 'test'
+  ...
+# Subtest: W116 create_dry_eye_questionnaire_response retains unrelated Observation writes
+ok 69 - W116 create_dry_eye_questionnaire_response retains unrelated Observation writes
+  ---
+  duration_ms: 14.125084
+  type: 'test'
+  ...
+# Subtest: W116 create_meibography_observation retains unrelated Observation writes
+ok 70 - W116 create_meibography_observation retains unrelated Observation writes
+  ---
+  duration_ms: 14.821167
+  type: 'test'
+  ...
+# Subtest: W116 record_ortho_k_fit_observation retains unrelated Observation writes
+ok 71 - W116 record_ortho_k_fit_observation retains unrelated Observation writes
+  ---
+  duration_ms: 13.677083
+  type: 'test'
+  ...
+# Subtest: W116 record_eye_growth_axial_length_measurement retains unrelated Observation writes
+ok 72 - W116 record_eye_growth_axial_length_measurement retains unrelated Observation writes
+  ---
+  duration_ms: 13.165
+  type: 'test'
+  ...
+# Subtest: W116 eye growth validates optional corneal Observation before axial writes
+ok 73 - W116 eye growth validates optional corneal Observation before axial writes
+  ---
+  duration_ms: 14.345666
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation rejects legacy targets even without other findings
+ok 74 - W115 clinician_attest_observation rejects legacy targets even without other findings
+  ---
+  duration_ms: 14.680875
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation rejects legacy targets even without other findings
+ok 75 - W115 amend_observation rejects legacy targets even without other findings
+  ---
+  duration_ms: 14.057
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation repairs only selected debt before lifecycle
+ok 76 - W115 clinician_attest_observation repairs only selected debt before lifecycle
+  ---
+  duration_ms: 17.268625
+  type: 'test'
+  ...
+# Subtest: W115 clinician_attest_observation refuses mismatched audit
+ok 77 - W115 clinician_attest_observation refuses mismatched audit
+  ---
+  duration_ms: 16.14825
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation repairs only selected debt before lifecycle
+ok 78 - W115 amend_observation repairs only selected debt before lifecycle
+  ---
+  duration_ms: 14.361791
+  type: 'test'
+  ...
+# Subtest: W115 amend_observation refuses mismatched audit
+ok 79 - W115 amend_observation refuses mismatched audit
+  ---
+  duration_ms: 15.678791
+  type: 'test'
+  ...
+# Subtest: Mandate 7b: scribe-write schema accepts text and Binary references, rejects audio bytes and direct final status
+ok 80 - Mandate 7b: scribe-write schema accepts text and Binary references, rejects audio bytes and direct final status
+  ---
+  duration_ms: 1.068292
+  type: 'test'
+  ...
+# Subtest: scribe draft builder emits preliminary Observation with scribe as Observation.performer
+ok 81 - scribe draft builder emits preliminary Observation with scribe as Observation.performer
+  ---
+  duration_ms: 1.061
+  type: 'test'
+  ...
+# Subtest: scribe audio Binary verification reads a Binary id and requires Patient securityContext
+ok 82 - scribe audio Binary verification reads a Binary id and requires Patient securityContext
+  ---
+  duration_ms: 0.245
+  type: 'test'
+  ...
+# Subtest: clinician attestation transaction patches preliminary to final and creates signed CREATE Provenance
+ok 83 - clinician attestation transaction patches preliminary to final and creates signed CREATE Provenance
+  ---
+  duration_ms: 0.483917
+  type: 'test'
+  ...
+# Subtest: attestation audit row carries clinician attribution, policy URL, and Provenance id
+ok 84 - attestation audit row carries clinician attribution, policy URL, and Provenance id
+  ---
+  duration_ms: 0.353583
+  type: 'test'
+  ...
+# Subtest: Mandate 8 negative 5: failed attestation transaction has serious-failure audit row shape
+ok 85 - Mandate 8 negative 5: failed attestation transaction has serious-failure audit row shape
+  ---
+  duration_ms: 0.21925
+  type: 'test'
+  ...
+# Subtest: amendment transactions map target statuses to canonical Provenance.activity codes
+ok 86 - amendment transactions map target statuses to canonical Provenance.activity codes
+  ---
+  duration_ms: 0.177334
+  type: 'test'
+  ...
+# Subtest: successive amendments create distinct Provenance ids, timestamps, and signatures
+ok 87 - successive amendments create distinct Provenance ids, timestamps, and signatures
+  ---
+  duration_ms: 0.137666
+  type: 'test'
+  ...
+# Subtest: APPEND creates a new final Observation linked by derivedFrom and leaves original final status unchanged
+ok 88 - APPEND creates a new final Observation linked by derivedFrom and leaves original final status unchanged
+  ---
+  duration_ms: 0.3415
+  type: 'test'
+  ...
+# Subtest: Mandate 8 negative 6: non-ValueSet Provenance activity is rejected with ledger row 21 message
+ok 89 - Mandate 8 negative 6: non-ValueSet Provenance activity is rejected with ledger row 21 message
+  ---
+  duration_ms: 0.265917
+  type: 'test'
+  ...
+# Subtest: Mandate 8 negative 7: signed Observation hard-delete is rejected with canonical retract path audit row
+ok 90 - Mandate 8 negative 7: signed Observation hard-delete is rejected with canonical retract path audit row
+  ---
+  duration_ms: 0.148167
+  type: 'test'
+  ...
+# Subtest: OCR-style 90-day query surfaces v0.5c audit rows with full attribution
+ok 91 - OCR-style 90-day query surfaces v0.5c audit rows with full attribution
+  ---
+  duration_ms: 4.590375
+  type: 'test'
+  ...
+1..91
+# tests 91
+# suites 0
+# pass 91
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2273.478083

@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: W69 fresh read prevents new negative after concurrent positive
+not ok 1 - W69 fresh read prevents new negative after concurrent positive
+  ---
+  duration_ms: 14.727292
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"command","commandId":"15d13ffc-51ce-48c7-9c72-aa64598f8601","complete":true,"executionOrder":[0,1],"outcomes":[{"clinicalWrite":"confirmed","status":"applied","target":"panel:6e2a57ba624df6db312d221549a941bdc88337f88aa016ed1cda023f7e07a4ae","reference":"Observation/9751cc5a-1e1d-40e2-ba24-de7a331cce5a","versionId":"ec03c4f5-fb6b-4c6a-a6dd-68264238ccae"},{"target":"negative:OD","kind":"negative-act","status":"applied","clinicalWrite":"confirmed","reference":"Observation/c6795a0b-0687-4b89-9122-e4723985bbc0"}]}
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:39:342)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 197.857375

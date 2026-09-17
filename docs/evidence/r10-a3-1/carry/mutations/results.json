@@ -1,0 +1,205 @@
+[
+  {
+    "id": "carry-W73-homes",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W73|T1 previous",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W74-canonical",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W74|T2 carry|pull standalone steps preserve|pull excludes an entered-in-error",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "mcp/tests/diagnosisCarryForward.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W75-version",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W75|T3 later",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W79-prebuild",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W79",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W91-closed",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W91",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W101-conditional",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W101|W123",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W102-fingerprint",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W102",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W103-frozen",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W103",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W104-partial-witness",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W104 frozen|W103 W104",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W113-both-eyes",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W74 W101 W113",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W114-stored",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W114",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W123-command-independent",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W123",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W124-resume",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W124|standalone .* failure .* keeps exact persisted",
+      "mcp/tests/r10A3Carry.test.ts",
+      "mcp/tests/diagnosisCarryForward.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W125-replan",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 replan accepts",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W125-unchanged",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 replan accepts",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W125-audit",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 unchanged auditPending",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W125-missing-version",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W125 unchanged missing-version",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  },
+  {
+    "id": "carry-W126-writer-version",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern=W75 W126",
+      "mcp/tests/r10A3Carry.test.ts"
+    ]
+  }
+]

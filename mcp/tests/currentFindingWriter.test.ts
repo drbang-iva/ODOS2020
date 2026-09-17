@@ -345,7 +345,7 @@ test("review regression: wrong-target audit stays pending and cannot permit mark
   const next=command([factTarget(keyFor(),factBaseline(observations(m)),endState({presence:"absent"}))]);
   const blocked=await run(m,next);
   assert.equal(blocked.outcomes[0].status,"not-attempted");
-  assert.equal(blocked.outcomes[0].reason,"prior-audit-unrepaired");
+  assert.equal(blocked.outcomes[0].reason,"audit-mismatch");
   assert.deepEqual(observations(m)[0],before);
   const replay=await run(m,first);
   assert.equal(replay.complete,false);assert.equal(replay.outcomes[0].auditPending,true);
@@ -357,7 +357,7 @@ test("review regression: a reassertion tag cannot confirm an audit targeting ano
   const m=memoryFhir([canonicalFact()]);const c=command([{kind:"reassert",key:keyFor(),baseline:factBaseline(observations(m))}]);
   await run(m,c);m.save({...audits(m)[0],target:[{reference:"Observation/someone-else"}]});
   const replay=await run(m,c);
-  assert.equal(replay.complete,false);assert.equal(replay.outcomes[0].status,"refused");
+  assert.equal(replay.complete,false);assert.equal(replay.outcomes[0].status,"conflict");assert.equal(replay.outcomes[0].reason,"command-reused");
   assert.equal(observationWrites(m).length,0);assert.equal(audits(m).length,1);
 });
 
@@ -390,7 +390,7 @@ test("W44 refresh failure belongs to first unexecuted target after a confirmed w
 
 test("W-h replay verifier distinguishes exact, new, reused-content and persisted-state mismatch", async () => {
   const m = memoryFhir(); const c = command([factTarget()]) as FindingCommand;
-  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
+  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference });
   assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
   await run(m, c);
   assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
@@ -403,7 +403,7 @@ test("W-h replay verifier distinguishes exact, new, reused-content and persisted
 test("W-h reassert replay uses its new audit witness even after source drift", async () => {
   const m = memoryFhir([canonicalFact()]);
   const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
-  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
+  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference });
   assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
   await run(m, c);
   assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
@@ -430,7 +430,7 @@ test("W-h typed causes distinguish load, owner search, audit lookup and unknown 
 test("W-h successful clinical create remains confirmed when audit create and lookup fail", async () => {
   const m = memoryFhir();
   m.hooks.beforeWrite = w => { if (w.resource.resourceType === "Provenance") throw Error("audit unavailable"); };
-  m.hooks.beforeSearch = type => { if (type === "Provenance") throw Error("audit lookup unavailable"); };
+  m.hooks.beforeSearch = type => { if (type === "Provenance" && observationWrites(m).length) throw Error("audit lookup unavailable"); };
   const result = await run(m, command([factTarget()]));
   assert.equal(result.outcomes[0].status, "unconfirmed");
   assert.equal(result.outcomes[0].clinicalWrite, "confirmed"); assert.equal(result.outcomes[0].cause, "audit-lookup");
@@ -454,7 +454,7 @@ test("W-h reassert replay audit lookup failure has a typed cause", async () => {
   const m = memoryFhir([canonicalFact()]);
   m.hooks.beforeSearch = type => { if (type === "Provenance") throw httpError(502); };
   const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
-  await assert.rejects(writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir }, c, c.targets[0]),
+  await assert.rejects(writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference }, c, c.targets[0]),
     (error: unknown) => (error as { cause?: string }).cause === "audit-lookup");
 });
 
@@ -503,22 +503,22 @@ test("W45 reassert command witness rejects changed-baseline reuse without changi
   m.save({ ...observations(m)[0], valueBoolean: false });
   const retry = { ...c, targets: [{ ...c.targets[0], baseline: factBaseline(observations(m)) }] } as FindingCommand;
   const before = m.writes.length;
-  assert.equal(await writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir }, retry, retry.targets[0]), "reused-with-different-content");
+  assert.equal(await writer.classifyReplay({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference }, retry, retry.targets[0]), "reused-with-different-content");
   assert.equal(m.writes.length, before); assert.equal(audits(m).length, 1);
   const mutation = memoryFhir(); await run(mutation, command([factTarget()]));
   assert.equal(audits(mutation)[0].meta?.tag?.some(t => t.system === "urn:odos:finding-command:v1"), false);
 });
 
-test("W-h old reassert audits without command witness keep exact-key fallback semantics", async () => {
+test("W84 old reassert audits without both tags are rejected", async () => {
   const m = memoryFhir([canonicalFact()]);
   const c = command([{ kind: "reassert", key: keyFor(), baseline: factBaseline(observations(m)) }]) as FindingCommand;
   await run(m, c);
   const audit = audits(m)[0];
   m.save({ ...audit, meta: { ...audit.meta, tag: audit.meta?.tag?.filter(t => t.system !== "urn:odos:finding-command:v1") } });
-  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir });
-  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "exact-replay");
+  const loaded = () => ({ ...state(observations(m)), fhir: m.fhir, staffReference: writerContext(m).staffReference });
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "reused-with-different-content");
   m.save({ ...observations(m)[0], valueBoolean: false });
-  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "not-replay");
+  assert.equal(await writer.classifyReplay(loaded(), c, c.targets[0]), "reused-with-different-content");
   const retry = { ...c, targets: [{ ...c.targets[0], baseline: factBaseline(observations(m)) }] } as FindingCommand;
   assert.equal(await writer.classifyReplay(loaded(), retry, retry.targets[0]), "not-replay");
 });

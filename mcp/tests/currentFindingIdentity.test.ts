@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { currentFindingIdentifier, parseCurrentFindingEnvelope, resolveCatalogRow, classifyFindingObservation, eyeSet, findingQualifiers, parseFindingOperation, findingAuditKey, findPendingAudits } from "../src/clinical-graph/current-finding-identity.js";
+import { findingPanelIdentifier, currentFindingIdentifier, parseCurrentFindingEnvelope, resolveCatalogRow, classifyFindingObservation, eyeSet, findingQualifiers, parseFindingOperation, findingAuditKey, findPendingAudits } from "../src/clinical-graph/current-finding-identity.js";
 import { buildFindingReadAliases } from "../src/clinical-graph/finding-read-aliases.js";
 import { observationNegativeAct } from "../src/clinical-graph/finding-section-helpers.js";
 import { customFieldEntries } from "../src/clinical-graph/custom-fields.js";
+import { V3_DATA_OPERATION_CODE_SYSTEM } from "../src/fhir/ophthalmology/provenance.js";
 import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
 import { definitions, catalog, nuclear, lens, lensField, atomic, snapshot, comp, negative } from "./fixtures/r10/factories.js";
 const key = { v: 1 as const, patientId: "p1", encounterId: "e1", stableKey: lens.stableKey, fieldCode: lensField, optionCode: nuclear.optionCode, eye: "OD" as const };
@@ -53,7 +54,9 @@ test("role markers dominate definition matching, conflicting markers are invalid
   assert.equal(classify(atomic()).kind, "legacy-atomic");
   assert.equal(classify(snapshot()).kind, "legacy-section-snapshot");
   assert.equal(classify(negative()).kind, "negative-act");
-  assert.equal(classify({ ...snapshot(), identifier: [{ system: "urn:odos:finding-panel:v1", value: "panel" }] }).kind, "panel-context");
+  assert.equal(classify({ ...snapshot(), identifier: [{ system: "urn:odos:finding-panel:v1", value: "panel" }] }).kind, "invalid");
+  const panelKey = { v: 1 as const, patientId: "p1", encounterId: "e1", stableKey: lens.stableKey, eye: "OD" as const };
+  assert.equal(classify({ ...snapshot(), identifier: [findingPanelIdentifier(panelKey)], component: [comp("R10_PANEL_META", JSON.stringify(panelKey))] }).kind, "panel-context");
   assert.equal(classify({ ...canonical(), identifier: [...canonical().identifier, ...negative().identifier!] }).kind, "invalid");
   for (const code of ["refraction", "intraocular_pressure", "custom:numeric"]) assert.equal(classify({ ...atomic(), code: odosConcept(code), valueQuantity: { value: 1 } }).kind, "unrelated");
 });
@@ -99,7 +102,7 @@ test("pending audit lookup uses one comma-OR tag search, all pages, and fails cl
   const expectedB=findingAuditKey("two","finding:two","mutation","digest-two");
   const bundle=(rows:unknown[],next?:string)=>({resourceType:"Bundle",type:"searchset",entry:rows.map(resource=>({resource})),...(next?{link:[{relation:"next",url:next}]}:{})});
   const client={baseUrl:"http://localhost:8103/",search:async(_type:string,params:Record<string,string>)=>{seen.push(params);return bundle([],"/fhir/R4/Provenance?_page=2")},
-    searchUrl:async()=>bundle([{resourceType:"Provenance",id:"audit-one",target:[{reference:"Observation/one"}],meta:{tag:[{system:"urn:odos:finding-operation:v1",code:expectedA}]}}])};
+    searchUrl:async()=>bundle([{resourceType:"Provenance",id:"audit-one",target:[{reference:"Observation/one"}],recorded:"2026-09-15T13:00:00Z",agent:[{who:{reference:"Practitioner/test"}}],activity:{coding:[{system:V3_DATA_OPERATION_CODE_SYSTEM,code:"CREATE"}]},meta:{tag:[{system:"urn:odos:finding-operation:v1",code:expectedA}]}}])};
   assert.deepEqual([...await findPendingAudits(client as any,[a,b])],["Observation/two"]);
   assert.equal(seen.length,1);
   assert.equal(seen[0]._tag?.split(",").length,2);
@@ -117,6 +120,6 @@ test("review regression: an audit for a copied marker covers only its actual Obs
   const second={...first,id:"second"};
   const key=findingAuditKey(operation.commandId,operation.target,"mutation",operation.digest);
   const client={baseUrl:"http://localhost:8103/",search:async()=>({resourceType:"Bundle",type:"searchset",entry:[{resource:{
-    resourceType:"Provenance",id:"audit-first",target:[{reference:"Observation/first"}],meta:{tag:[{system:"urn:odos:finding-operation:v1",code:key}]}}}]})};
+    resourceType:"Provenance",id:"audit-first",target:[{reference:"Observation/first"}],recorded:operation.audit.recorded,agent:[{who:{reference:operation.audit.actor}}],activity:{coding:[{system:V3_DATA_OPERATION_CODE_SYSTEM,code:"CREATE"}]},meta:{tag:[{system:"urn:odos:finding-operation:v1",code:key}]}}}]})};
   assert.deepEqual([...await findPendingAudits(client as any,[first,second])],["Observation/second"]);
 });

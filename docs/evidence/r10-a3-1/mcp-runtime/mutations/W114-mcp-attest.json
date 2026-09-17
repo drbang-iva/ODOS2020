@@ -1,0 +1,19 @@
+{
+  "guard": "W114",
+  "id": "mcp-attest",
+  "tool": "clinician_attest_observation",
+  "beforeSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+  "restoredSha256": "96cd021380dc935871ce38f22b3b1b58ab3a2517bdc915446ca1419e30002fd5",
+  "redExit": 1,
+  "greenExit": 0,
+  "mutation": "Relevant tool definition lookup uses actual FhirFindingDefinitionStore compiled seeds instead of effective list",
+  "executedCommand": [
+    "mcp/node_modules/.bin/tsx",
+    ".odos/r10-a3-1/verify-mcp-runtime.ts"
+  ],
+  "replayCommand": [
+    "node",
+    "docs/evidence/r10-a3-1/mcp-runtime/mutate-definitions.mjs",
+    "mcp-attest"
+  ]
+}

@@ -1,0 +1,53 @@
+ok 636 - age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 658 - X-ODOS-Source header visibility in Medplum AuditEvent # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 677 - real Medplum assigns ids and reloads coded Basic singletons # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the singleton persistence integration test.
+ok 678 - section saves reuse BodyStructure by patient and location # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 913 - synced practice policies enforce all repaired clinical writes on running Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 914 - live scoped-clinician exam-start RBAC matrix # SKIP ODOS_TEST_CLINICIAN_TOKEN, ODOS_TEST_OTHER_CLINICIAN_TOKEN, and ODOS_TEST_PATIENT_ID are required for the operator-assisted live RBAC gate.
+ok 1078 - isolated Medplum enforces Consent grants and immutable evidence # SKIP Dedicated synthetic matrix live lane only
+ok 1079 - isolated evidence HTTP route enforces generated staff Consent grant # SKIP Dedicated synthetic matrix live lane only
+ok 1278 - fresh Postgres applies the Credit Bank migration and rejects ledger UPDATE and DELETE # SKIP ODOS_TEST_POSTGRES_URL is required for the destructive local Credit Bank fixture.
+ok 1582 - live ordinary-clinician policy persists standalone carry and resumes an Encounter link conflict # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the diagnosis pull integration proof.
+ok 1808 - Postgres migration preserves legacy New and the doctor's override survives independent reload # SKIP
+ok 1998 - isolated synthetic Medplum enforces scheduled enrollment conditional writes # SKIP
+ok 2092 - comprehensive Encounter lifecycle records history and Provenance per state change # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 2093 - create_encounter MCP write tool integrates with Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 2120 - a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 2357 - reference-population migration succeeds on fresh and populated Postgres databases # SKIP ODOS_TEST_POSTGRES_URL is required for the destructive local myopia migration fixture.
+ok 2843 - local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index # SKIP Local synthetic Medplum credentials are required.
+ok 3341 - update_patient MCP write tool integrates with Medplum # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3611 - profile validation accepts conformant v0.3 resources # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3612 - profile validation accepts standard Equivocal cup-disc interpretation # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3613 - profile validation rejects IOP with non-UCUM pressure unit # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3614 - profile validation rejects Observation missing bodySite reference extension # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3615 - profile validation rejects Observation missing encounter # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3616 - profile validation rejects axial length with non-mm UCUM code # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3617 - profile validation rejects comprehensive Encounter with non-AMB class # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3618 - profile validation rejects finished Encounter without period.end # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3619 - Medplum conditional create gives concurrent protocol-item claims one application # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3620 - Medplum rejects a stale protocol Basic update and the store reports lost ownership # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 3621 - clinical MCP write tools default Provenance ON # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4146 - R10 diagnosis door enforces canonical policies through real handlers for staff and provider # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4147 - R10 A3 Ocular Health saves and lifecycle enforce stored role policies and real MCP dispatch # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4472 - Medplum 5.1.8 accepts ChargeItem occurrence range with sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4473 - Medplum 5.1.8 accepts Invoice subject with date sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4474 - Medplum 5.1.8 accepts Invoice date range search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4475 - Medplum 5.1.8 accepts PaymentReconciliation active status search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4476 - Medplum 5.1.8 accepts PaymentReconciliation created range search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4477 - Medplum 5.1.8 accepts Claim patient with created sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4478 - Medplum 5.1.8 accepts ClaimResponse patient with created sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4479 - Medplum 5.1.8 accepts Task code and business status search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4480 - Medplum 5.1.8 accepts Basic code and identifier search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4481 - Medplum 5.1.8 accepts Provenance target with recorded sort search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4482 - Medplum 5.1.8 accepts AuditEvent patient and date search # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4483 - real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the Medplum search smoke lane.
+ok 4670 - executeTransaction rolls back created entries when a later transaction entry fails # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4731 - profile installer idempotently installs ODOS EpisodeOfCare terminology # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4732 - v0.35 MCP write tools create version-aware FHIR resources with Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4761 - Medplum Observation focus search conformance or documented fallback # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4768 - v0.4 foundation MCP write tools create FHIR resources with mandatory Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 4782 - v0.4b dry-eye MCP write tools create resources with mandatory Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 5146 - v0.4c Ortho-K and myopia MCP write tools create resources with mandatory Provenance # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.
+ok 5166 - audit-only boundary AccessPolicy POST round-trip is accepted by Medplum when integration env is available # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum AccessPolicy round-trip.
+ok 5167 - v0.5a audit-only boundary AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat) # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.
+ok 5180 - live MCP audit worker records actual read, write, and audit-only boundary denial with AuditEvent projection # SKIP MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the live audit worker integration fixture.

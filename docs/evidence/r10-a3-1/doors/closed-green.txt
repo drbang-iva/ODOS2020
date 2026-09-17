@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: W90 door-put refuses a closed encounter before clinical or audit writes
+ok 1 - W90 door-put refuses a closed encounter before clinical or audit writes
+  ---
+  duration_ms: 3.397917
+  type: 'test'
+  ...
+# Subtest: W90 door-audit-repair refuses a closed encounter before clinical or audit writes
+ok 2 - W90 door-audit-repair refuses a closed encounter before clinical or audit writes
+  ---
+  duration_ms: 0.674375
+  type: 'test'
+  ...
+# Subtest: W90 pick refuses a closed encounter before Condition or Encounter writes
+ok 3 - W90 pick refuses a closed encounter before Condition or Encounter writes
+  ---
+  duration_ms: 0.512625
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 736.78025

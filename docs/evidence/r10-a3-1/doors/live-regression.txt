@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: W7 live policy selection excludes composite role policies
+ok 1 - W7 live policy selection excludes composite role policies
+  ---
+  duration_ms: 2.060958
+  type: 'test'
+  ...
+# Subtest: R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+    # Subtest: staff: assert clear revive move link and zero-write refusals
+    ok 1 - staff: assert clear revive move link and zero-write refusals
+      ---
+      duration_ms: 771.450334
+      type: 'test'
+      ...
+    # Subtest: provider: assert clear revive move link and zero-write refusals
+    ok 2 - provider: assert clear revive move link and zero-write refusals
+      ---
+      duration_ms: 602.957792
+      type: 'test'
+      ...
+    1..2
+ok 2 - R10 diagnosis door enforces canonical policies through real handlers for staff and provider
+  ---
+  duration_ms: 1698.997041
+  type: 'test'
+  ...
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"move","before":"Condition/4e6332f9-a6b1-431d-98ab-9b19be1257ee","after":"Condition/552b51da-acca-4a81-9514-f24cbec07dca","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"link","before":"Condition/552b51da-acca-4a81-9514-f24cbec07dca","after":"Condition/552b51da-acca-4a81-9514-f24cbec07dca,Condition/4e6332f9-a6b1-431d-98ab-9b19be1257ee","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Condition","operation":"update/pick","before":"unchanged","after":"403 unchanged","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/281dea6b-23b4-4c15-a827-8e8b825ad4ad","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Encounter","reference":"Encounter/4789271e-1537-4a92-83d1-6143dbcd2c3d","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"staff","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/2a64dbb9-ffea-4cbe-9647-b0713f422913","policyVersion":"7dc9316f-a13b-49b7-8e1b-319c8c97a733","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"assert","before":"absent","after":"preliminary","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"clear","before":"preliminary","after":"entered-in-error","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"revive","before":"entered-in-error","after":"preliminary","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"move","before":"Condition/d54ad23b-d1dd-40b5-8425-41feef173578","after":"Condition/0a8c2290-69f7-4ce9-ad35-b6450e4071f6","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"link","before":"Condition/0a8c2290-69f7-4ce9-ad35-b6450e4071f6","after":"Condition/0a8c2290-69f7-4ce9-ad35-b6450e4071f6,Condition/d54ad23b-d1dd-40b5-8425-41feef173578","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"signed-or-cancelled refusal","before":"final","after":"final","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","reference":"Observation/832f2055-c418-4af0-9ff0-14954c4c8866","operation":"signed-or-cancelled refusal","before":"cancelled","after":"cancelled","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Encounter","reference":"Encounter/929a98f1-ba81-4820-9cb4-1e944796c7d7","operation":"pre-rebuild refusal","before":"legacy read-only","after":"409 unchanged","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","operation":"two-tab eye-change","before":"OS differs","after":"409 zero writes","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+# {"role":"provider","project":"14e0ec2a-cc7f-4ce6-be82-49d9417f3e95","resourceType":"Observation","operation":"lost response then identical Retry","before":"absent","after":"one persisted owner and one clinical write","policyReference":"AccessPolicy/95fa2233-96b0-49df-850b-f34981c88326","policyVersion":"0a1f972c-e60e-4d88-b9b8-2174b7a9502a","lane":"test:live-authz","blocking":true}
+1..2
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1982.575708

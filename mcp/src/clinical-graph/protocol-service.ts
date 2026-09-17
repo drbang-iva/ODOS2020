@@ -1,3 +1,5 @@
+import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
+import type { CurrentFindingProjection } from "./current-finding-reader.js";
 import { normalizeApplicationScope } from "../../../src/protocol-application-scope.js";
 import type { Condition, Observation } from "@medplum/fhirtypes";
 import {
@@ -26,9 +28,10 @@ function clinicianOwnedFollowUp(action: PlanActionInstance): boolean {
 }
 
 export interface ProtocolProjection {
+  validateMutation?(scope: {encounterId: string; patientId: string}, items?: readonly {item: ProtocolItem; payload: Record<string,unknown>}[], references?: readonly string[]): Promise<void>;
   commitFinding(finding: ProtocolFindingInstance): Promise<string | undefined>;
   materializeAction(action: PlanActionInstance): Promise<string | undefined>;
-  removeMaterialized?(reference: string): Promise<void | (() => Promise<void>)>;
+  removeMaterialized?(reference: string, scope?: {encounterId:string;patientId:string}): Promise<void | (() => Promise<void>)>;
 }
 
 export interface OpenProtocolInput {
@@ -36,6 +39,7 @@ export interface OpenProtocolInput {
   patientId: string;
   diagnosis: ProtocolOfferDiagnosis;
   actor: string;
+  selections?: CommitSelection[];
 }
 
 export interface CommitSelection {
@@ -150,6 +154,8 @@ export interface CaptureProtocolInput {
   confirmedDiagnoses: Array<{ code: string }>;
   observations: Observation[];
   findingKeys: ReadonlySet<string>;
+  findingDefinitions?: readonly ClinicalFindingDefinition[];
+  sharedProjection?: CurrentFindingProjection;
 }
 
 export class ProtocolService {
@@ -298,11 +304,28 @@ export class ProtocolService {
       finding.observationReference ? [[finding.observationReference, finding] as const] : []
     ));
     const items: ProtocolItem[] = [];
+    const sharedKeys = new Set((input.findingDefinitions ?? []).filter(d=>d.valueSchema.type === "ocular-health-structure").map(d=>d.stableKey));
+    const activeSharedKeys = new Set((input.findingDefinitions ?? []).filter(d=>d.active && sharedKeys.has(d.stableKey)).map(d=>d.stableKey));
+    const sharedEyes = new Map<string,Set<"OD"|"OS">>();
+    const addShared = (key: string, eyes: readonly string[]) => {
+      if (!activeSharedKeys.has(key)) return;
+      const entry=sharedEyes.get(key) ?? new Set<"OD"|"OS">();
+      for (const eye of eyes) if (eye === "OD" || eye === "OS") entry.add(eye);
+      sharedEyes.set(key,entry);
+    };
+    for (const fact of input.sharedProjection?.currentFacts ?? []) if (fact.status === "live" && !fact.legacy) addShared(fact.key.stableKey,[fact.eye]);
+    for (const panel of input.sharedProjection?.panels ?? []) if (!panel.conflict && Object.keys(panel.values).length && panel.panelBaseline) addShared(panel.stableKey,[panel.eye]);
+    for (const finding of findings.filter(row=>!row.observationReference)) if (sharedKeys.has(finding.findingDefKey)) {
+      const sourceItem = sourceItems.get(`${finding.protocolApplicationId}:${finding.sourceItemKey}`);
+      addShared(finding.findingDefKey,finding.laterality === "OU" || (!finding.laterality && sourceItem?.lateralityMode === "OU-always") ? ["OD","OS"] : finding.laterality ? [finding.laterality] : []);
+    }
+    for (const [findingDefKey,eyes] of sharedEyes) items.push({itemKey:uniqueItemKey(items,`finding-${findingDefKey}`),itemType:"finding-seed",defaultSelected:true,lateralityMode:"inherit-dx",
+      payload:{findingDefKey,mode:"promptOnly",expand:{eyes:[...eyes].sort()}},capture:{source:"observed-estimate"}});
     for (const observation of input.observations.filter((row) =>
       ["final", "amended", "corrected"].includes(row.status)
     )) {
       const findingDefKey = observationFindingKey(observation, input.findingKeys);
-      if (!findingDefKey) continue;
+      if (!findingDefKey || sharedKeys.has(findingDefKey)) continue;
       const protocolFinding = observation.id
         ? findingByObservation.get(`Observation/${observation.id}`)
         : undefined;
@@ -328,7 +351,7 @@ export class ProtocolService {
       });
     }
     for (const finding of findings.filter((row) => !row.observationReference)) {
-      if (!input.findingKeys.has(finding.findingDefKey)) continue;
+      if (!input.findingKeys.has(finding.findingDefKey) || sharedKeys.has(finding.findingDefKey)) continue;
       const sourceItem = sourceItems.get(`${finding.protocolApplicationId}:${finding.sourceItemKey}`);
       const value = structuredFindingValue(finding.value);
       items.push({
@@ -412,6 +435,7 @@ export class ProtocolService {
       !protocol.trigger.dxKeys.some((pattern) => matchesCode(input.diagnosis.code, pattern))) {
       throw new Error("Confirmed diagnosis does not match protocol trigger.");
     }
+    await this.projection.validateMutation?.(input, selectedProtocolItems(protocol.items,input.selections ?? []));
     const at = this.now();
     const application = await this.applications.save({
       id: this.id(),
@@ -487,6 +511,7 @@ export class ProtocolService {
     if (chargeSeedRef && chargeSeed?.itemType !== "charge-seed") {
       throw new Error(`Protocol item ${itemKey} references an invalid charge seed.`);
     }
+    await this.projection.validateMutation?.(input,[{item,payload:item.payload}]);
     const liveState = await this.inspectLiveItemOwner(protocol, item, chargeSeed, input);
     if (liveState.outcome === "already-applied") {
       if (liveState.application.protocolId === protocolId || (await this.applications.list()).some((row) =>
@@ -578,6 +603,7 @@ export class ProtocolService {
       throw new ProtocolItemAddConflictError("Protocol is already applied to this encounter.");
     }
     const protocol = await this.requirePinnedProtocol(application);
+    await this.projection.validateMutation?.(application,selectedProtocolItems(protocol.items,selections));
     const choices = new Map(selections.map((row) => [row.itemKey, row]));
     const at = this.now();
     const proposed = (await this.findings.list()).filter((row) => row.protocolApplicationId === application.id);
@@ -610,7 +636,7 @@ export class ProtocolService {
       await this.cleanupItemAddWrites(writes);
       for (const finding of await this.findings.list()) {
         if (finding.protocolApplicationId !== application.id) continue;
-        if (finding.observationReference) await this.projection.removeMaterialized?.(finding.observationReference);
+        if (finding.observationReference) await this.projection.removeMaterialized?.(finding.observationReference,finding);
         const original = proposed.find((row) => row.id === finding.id);
         await this.findings.save(current?.undoState === "active" && !current.confirmed && original ? original : { ...finding, state: "removed" });
       }
@@ -684,6 +710,12 @@ export class ProtocolService {
 
   private async unapplyLocked(applicationId: string): Promise<{ removed: string[]; preserved: string[] }> {
     const application = await this.requireApplication(applicationId);
+    const removalFindings = (await this.findings.list()).filter(row=>row.protocolApplicationId === application.id);
+    const removalActions = (await this.actions.list()).filter(row=>row.protocolApplicationId === application.id);
+    await this.projection.validateMutation?.(application,[],[
+      ...removalFindings.flatMap(row=>row.observationReference ? [row.observationReference] : []),
+      ...removalActions.flatMap(row=>row.materializedFhirRef ? [row.materializedFhirRef] : []),
+    ]);
     const linkedCharges = (await this.charges.list()).filter((row) => row.protocolApplicationId === application.id);
     const acceptedChargeCount = linkedCharges.filter((charge) => charge.state === "accepted").length;
     if (acceptedChargeCount) {
@@ -736,7 +768,7 @@ export class ProtocolService {
           preserved.push(action.id);
         } else if (action.state === "selected" && action.modifiedFields.length === 0) {
           if (action.materializedFhirRef && this.projection.removeMaterialized) {
-            const restore = await this.projection.removeMaterialized(action.materializedFhirRef);
+            const restore = await this.projection.removeMaterialized(action.materializedFhirRef,action);
             removedProjections.set(action.materializedFhirRef, restore);
           }
           await this.actions.save({ ...action, state: "removed" });
@@ -771,7 +803,7 @@ export class ProtocolService {
       for (const finding of (await this.findings.list()).filter((row) => row.protocolApplicationId === applicationId)) {
         if (finding.state === "committed" && finding.provenance.source === "protocol-default") {
           if (finding.observationReference && this.projection.removeMaterialized) {
-            const restore = await this.projection.removeMaterialized(finding.observationReference);
+            const restore = await this.projection.removeMaterialized(finding.observationReference,finding);
             removedProjections.set(finding.observationReference, restore);
           }
           await this.findings.save({ ...finding, state: "removed" });
@@ -791,6 +823,7 @@ export class ProtocolService {
       return { removed, preserved };
     } catch (error) {
       const projectionFailures: string[] = [];
+      let findingRefusal: ProtocolFindingWriteRefusal | undefined;
       for (const action of actionOriginals.values()) {
         const current = await this.actions.get(action.id);
         const projectionRemoved = Boolean(action.materializedFhirRef && removedProjections.has(action.materializedFhirRef));
@@ -802,6 +835,7 @@ export class ProtocolService {
             if (restore) await restore();
             else restored.materializedFhirRef = await this.projection.materializeAction(action);
           } catch (restoreError) {
+            if (restoreError instanceof ProtocolFindingWriteRefusal) findingRefusal = restoreError;
             projectionFailures.push(`${action.materializedFhirRef}: ${String(restoreError)}`);
           }
         }
@@ -809,6 +843,7 @@ export class ProtocolService {
           try {
             restored.materializedFhirRef = await this.projection.materializeAction(action);
           } catch (restoreError) {
+            if (restoreError instanceof ProtocolFindingWriteRefusal) findingRefusal = restoreError;
             projectionFailures.push(`${action.materializedFhirRef}: ${String(restoreError)}`);
           }
         }
@@ -825,6 +860,7 @@ export class ProtocolService {
             if (restore) await restore();
             else restored.observationReference = await this.projection.commitFinding(finding);
           } catch (restoreError) {
+            if (restoreError instanceof ProtocolFindingWriteRefusal) findingRefusal = restoreError;
             projectionFailures.push(`${finding.observationReference}: ${String(restoreError)}`);
           }
         }
@@ -836,6 +872,7 @@ export class ProtocolService {
       }
       for (const candidate of saved.reverse()) await this.saveApplication(candidate, originals.get(candidate.id)!);
       await this.saveApplication({ ...application, undoState: "unapplied" }, application);
+      if (findingRefusal) throw findingRefusal;
       if (projectionFailures.length) throw new Error(`Unapply failed: ${String(error)}; projection rollback refused: ${projectionFailures.join("; ")}`, { cause: error });
       throw error;
     }
@@ -1158,7 +1195,7 @@ export class ProtocolService {
       candidate.protocolApplicationId === application.id &&
       !["removed", "cancelled"].includes(candidate.state)
     )) {
-      if (action.materializedFhirRef) await this.projection.removeMaterialized?.(action.materializedFhirRef);
+      if (action.materializedFhirRef) await this.projection.removeMaterialized?.(action.materializedFhirRef,action);
       await this.actions.save({ ...action, state: "removed" });
     }
     for (const charge of (await this.charges.list()).filter((candidate) =>
@@ -1178,7 +1215,7 @@ export class ProtocolService {
       const action = await this.actions.get(actionId);
       if (!action || ["removed", "cancelled"].includes(action.state)) continue;
       if (action.materializedFhirRef) {
-        await this.projection.removeMaterialized?.(action.materializedFhirRef);
+        await this.projection.removeMaterialized?.(action.materializedFhirRef,action);
         removedMaterialized.add(action.materializedFhirRef);
       }
       await this.actions.save({ ...action, state: "removed" });
@@ -1481,4 +1518,18 @@ export function protocolFollowUpDue(payload: Record<string, unknown>, at: string
     due.setUTCDate(Math.min(day, new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate()));
   } else due.setUTCDate(due.getUTCDate() + Number(payload.interval) * (payload.unit === "weeks" ? 7 : 1));
   return due.getTime();
+}
+
+export class ProtocolFindingWriteRefusal extends Error {
+  constructor(readonly status: 409|422, message: string) { super(message); }
+}
+export function selectedProtocolItems(items: readonly ProtocolItem[], selections: readonly CommitSelection[]): Array<{item:ProtocolItem;payload:Record<string,unknown>}> {
+  const choices = new Map(selections.map(selection=>[selection.itemKey,selection]));
+  return items.flatMap(item=>{const choice=choices.get(item.itemKey);return (choice?.selected ?? item.defaultSelected) ? [{item,payload:choice?.payload ?? item.payload}] : [];});
+}
+export function assertProtocolFindingSelections(items: readonly {item:ProtocolItem;payload:Record<string,unknown>}[], definitions: readonly ClinicalFindingDefinition[]): void {
+  const shared = new Set(definitions.filter(d=>d.valueSchema.type === "ocular-health-structure").map(d=>d.stableKey));
+  for (const {item,payload} of items) if (item.itemType === "finding-seed" && (shared.has(String(payload.findingDefKey)) || shared.has(String(item.payload.findingDefKey))) &&
+    [payload,item.payload].some(value=>value.defaultValue !== undefined || Object.values((value.defaultValues && typeof value.defaultValues === "object") ? value.defaultValues : {}).some(v=>v !== undefined)))
+    throw new ProtocolFindingWriteRefusal(422,"shared-finding-charted-in-ocular-health");
 }

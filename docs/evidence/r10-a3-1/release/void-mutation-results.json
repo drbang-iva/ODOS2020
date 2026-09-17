@@ -1,0 +1,44 @@
+[
+  {
+    "id": "release-lifecycle-W76",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T1[0-4] ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "release-lifecycle-W77-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T1[0-4] ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  },
+  {
+    "id": "release-lifecycle-W78-void",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T1[0-4] ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ]
+  }
+]

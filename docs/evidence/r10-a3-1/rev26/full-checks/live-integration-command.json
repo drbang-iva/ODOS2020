@@ -1,0 +1,1 @@
+{"mode":"bootstrap","cwd":"/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1","command":["npm","--prefix","mcp","run","test:live-integration"],"exit":1,"out":"docs/evidence/r10-a3-1/rev26/full-checks/live-integration.txt"}

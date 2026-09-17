@@ -1,4 +1,7 @@
-import type { Observation } from "@medplum/fhirtypes";
+import { projectCurrentFindings, type CurrentFindingProjection } from "./current-finding-reader.js";
+import { materializeAtomicFindingCatalog } from "./diagnosis-findings-endpoint.js";
+import { parseCurrentFindingEnvelope, parseFindingPanelEnvelope } from "./current-finding-identity.js";
+import type { Condition, Observation } from "@medplum/fhirtypes";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import {
   customFieldEntries,
@@ -63,6 +66,7 @@ export type ExamOverviewChange =
 
 export interface ExamOverviewFindingProjection {
   observationReference: string;
+  creditsCompleteness?: boolean;
   findingKey: string;
   sectionKey: string;
   display: string;
@@ -177,6 +181,9 @@ export interface BuildExamOverviewProjectionInput {
   visitTypeCategoryId?: string;
   definitions: readonly ClinicalFindingDefinition[];
   currentObservations: readonly Observation[];
+  conditions?: readonly Condition[];
+  sharedProjection?: CurrentFindingProjection;
+  carriedWithoutCurrentEvidence?: ReadonlySet<string>;
   priorObservationCandidates: readonly Observation[];
   assessmentRows: ReadonlyArray<{ problemStatusRecorded: boolean }>;
   provenanceByObservation?: Readonly<Record<string, {
@@ -261,6 +268,12 @@ export function deriveChangeFromPrior(
 export function buildExamOverviewProjection(
   input: BuildExamOverviewProjectionInput,
 ): ExamOverviewProjection {
+  const shared = input.sharedProjection ?? projectCurrentFindings({incomplete:false, patientReference:input.patientReference,
+    encounterReference:input.encounterReference,definitions:input.definitions,catalog:materializeAtomicFindingCatalog(input.definitions),
+    observations:[...input.currentObservations],conditions:[...(input.conditions ?? [])]});
+  const credit = sharedFindingEvidence(shared,input.definitions,input.carriedWithoutCurrentEvidence);
+  const sharedReferences = new Set([...shared.currentFacts.filter(f=>f.status === "live" && !f.legacy).flatMap(f=>f.contributors.map(c=>c.reference)),
+    ...shared.panels.flatMap(p=>[...p.snapshots.filter(s=>s.status === "live").map(s=>s.source.reference),...p.negativeActs.filter(a=>a.status === "live").map(a=>a.source.reference)])]);
   const priorRows = input.priorObservationCandidates.filter((observation) =>
     observation.encounter?.reference !== undefined &&
     observation.encounter.reference !== input.encounterReference
@@ -268,12 +281,20 @@ export function buildExamOverviewProjection(
     const identity = observationIdentity(observation, input.definitions);
     return identity ? [{ observation, identity }] : [];
   });
-  const findings = input.currentObservations
+  const legacyViews = shared.preRebuild ? shared.definitionViews.filter(view=>
+    findingDefinitionForObservation(view,input.definitions)?.valueSchema.type === "ocular-health-structure" &&
+    view.contributors.some(c=>["legacy-atomic","legacy-section-snapshot","negative-act"].includes(c.kind))) : [];
+  const viewedReferences = new Set(legacyViews.flatMap(view=>view.contributors.map(c=>c.reference)));
+  const visibleObservations = [...input.currentObservations.filter(o=>!viewedReferences.has(`Observation/${o.id}`)),
+    ...legacyViews.map(view=>({...view,id:view.contributors[0]?.reference.slice("Observation/".length)}))];
+  const findings = visibleObservations
     .filter(isUsableObservation)
     .flatMap((observation): ExamOverviewFindingProjection[] => {
       const identity = observationIdentity(observation, input.definitions);
       const observationReference = observation.id ? `Observation/${observation.id}` : undefined;
       if (!identity || !observationReference) return [];
+      const sharedDefinition = input.definitions.find(d=>d.stableKey === identity.findingKey && d.valueSchema.type === "ocular-health-structure");
+      if (sharedDefinition && !shared.preRebuild && !sharedReferences.has(observationReference)) return [];
       const laterality = observationLaterality(observation);
       const prior = latestPriorObservation(priorRows, identity.findingKey, laterality, observation);
       const currentSnapshot = observationSnapshot(observation);
@@ -282,9 +303,12 @@ export function buildExamOverviewProjection(
       const clinicalContext = input.clinicalContextByObservation?.[observationReference];
       const changeFromPrior = deriveChangeFromPrior(currentSnapshot, priorSnapshot);
       const definition = input.definitions.find((row) => row.active && row.stableKey === identity.findingKey);
-      const sheet = definition ? sheetFindingProjection(observation, definition, laterality) : {};
+      const fact = shared.currentFacts.find(f=>f.status === "live" && f.contributors.some(c=>c.reference === observationReference));
+      const sheet = fact && !fact.legacy ? {sheetFindings:[{display:materializeAtomicFindingCatalog(input.definitions).find(r=>r.atomicFindingId === `${fact.key.stableKey}::${fact.key.fieldCode}::${fact.key.optionCode}`)?.display ?? fact.key.optionCode,
+        qualifiers:Object.entries(fact.qualifiers).map(([key,value])=>{const qualifier=definition && customFieldEntries(definition,true).find(f=>f.localCode===fact.key.fieldCode)?.options?.find(o=>o.code===fact.key.optionCode)?.qualifiers?.find(q=>q.key===key);return qualifier ? sheetQualifierValueLabel(value,qualifier) : typeof value === "string" ? value : JSON.stringify(value);})}]} : definition ? sheetFindingProjection(observation, definition, laterality) : {};
       return [{
         observationReference,
+        ...(sharedDefinition ? {creditsCompleteness:credit.has(observationReference)} : {}),
         findingKey: identity.findingKey,
         sectionKey: identity.sectionKey,
         display: identity.display,
@@ -455,6 +479,11 @@ function observationIdentity(
   observation: Observation,
   definitions: readonly ClinicalFindingDefinition[],
 ): { findingKey: string; sectionKey: string; display: string } | undefined {
+  const envelope = parseCurrentFindingEnvelope(observation);
+  const panel = parseFindingPanelEnvelope(observation);
+  const sharedKey = envelope.status === "valid" ? envelope.key.stableKey : panel.status === "valid" ? panel.key.stableKey : undefined;
+  const canonicalDefinition = sharedKey ? definitions.find(d=>d.stableKey === sharedKey) : undefined;
+  if (canonicalDefinition) return {findingKey:canonicalDefinition.stableKey,sectionKey:canonicalDefinition.sectionKey ?? canonicalDefinition.stableKey,display:canonicalDefinition.display};
   const definition = findingDefinitionForObservation(observation, definitions.filter((row) => row.active));
   if (definition) {
     return {
@@ -542,7 +571,7 @@ function sectionProjection(
   const carriedUnreassertedCount = rows.filter((row) =>
     row.provenance.state === "carried-unreasserted"
   ).length;
-  const currentRows = rows.filter((row) => row.provenance.state !== "carried-unreasserted");
+  const currentRows = rows.filter((row) => row.creditsCompleteness !== false && (row.creditsCompleteness === true || row.provenance.state !== "carried-unreasserted"));
   const definitionSlots = evidence.kind === "assessment"
     ? []
     : definitions.filter((definition) => definition.active && evidence.sectionKeyPrefixes.some((prefix) =>
@@ -692,6 +721,8 @@ function sheetQualifierLabel(
   if (component.valueQuantity?.value !== undefined) {
     return `${component.valueQuantity.value}${component.valueQuantity.unit ? ` ${component.valueQuantity.unit}` : ""}`;
   }
+  const enumCode = component.valueCodeableConcept?.coding?.find(c=>c.code)?.code;
+  if (qualifier.kind === "enum" && enumCode) return sheetQualifierValueLabel(enumCode,qualifier);
   const coded = conceptDisplay(component.valueCodeableConcept ?? {}) ??
     component.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
   if (coded) return coded;
@@ -702,4 +733,17 @@ function sheetQualifierLabel(
     }
   }
   return component.valueString?.trim() || undefined;
+}
+
+export function sharedFindingEvidence(projection: CurrentFindingProjection, definitions: readonly ClinicalFindingDefinition[], carriedWithoutCurrentEvidence: ReadonlySet<string> = new Set()): Set<string> {
+  const active = new Set(definitions.filter(d=>d.active && d.valueSchema.type === "ocular-health-structure").map(d=>d.stableKey));
+  const references = new Set<string>();
+  for (const fact of projection.currentFacts) if (active.has(fact.key.stableKey) && fact.status === "live" && !fact.legacy) {
+    for (const contributor of fact.contributors) if (!carriedWithoutCurrentEvidence.has(contributor.reference)) references.add(contributor.reference);
+  }
+  for (const panel of projection.panels) if (active.has(panel.stableKey) && !panel.conflict) {
+    if (Object.keys(panel.values).length && panel.panelBaseline) references.add(panel.panelBaseline.reference);
+    for (const act of panel.negativeActs) if (act.status === "live") references.add(act.source.reference);
+  }
+  return references;
 }

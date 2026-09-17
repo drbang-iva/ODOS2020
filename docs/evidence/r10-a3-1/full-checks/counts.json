@@ -1,0 +1,364 @@
+[
+  {
+    "log": "full-checks/assertion-verification.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/diff-check.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/live-authz.txt",
+    "counts": {
+      "tests": [
+        73
+      ],
+      "suites": [
+        0
+      ],
+      "pass": [
+        72
+      ],
+      "fail": [
+        1
+      ],
+      "cancelled": [
+        0
+      ],
+      "skipped": [
+        0
+      ],
+      "todo": [
+        0
+      ]
+    },
+    "failedTests": [
+      "synced practice policies enforce all repaired clinical writes on running Medplum"
+    ]
+  },
+  {
+    "log": "full-checks/mcp-build.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/mcp-test.txt",
+    "counts": {
+      "tests": [
+        6037
+      ],
+      "suites": [
+        0
+      ],
+      "pass": [
+        5911
+      ],
+      "fail": [
+        121
+      ],
+      "cancelled": [
+        0
+      ],
+      "skipped": [
+        5
+      ],
+      "todo": [
+        0
+      ]
+    },
+    "failedTests": [
+      "live FHIR read grant check covers all four chart resources through compiled role policies",
+      "FHIR read grant CLI passes only with full coverage and always prints its limits",
+      "an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type",
+      "an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type",
+      "serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name",
+      "an ungranted FHIR read in ui/src makes the CLI fail with its name",
+      "v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree and fails salted fixture",
+      "the migration CLI scopes both reads to the resolved project and stays dry-run",
+      "the migration CLI refuses a mismatched access-token project before any write",
+      "the migration CLI accepts only admin email and password through the shared PKCE login",
+      "demo seed CLI requires the exact project and loads only the dedicated operator identity",
+      "SMART registration refuses a session project mismatch before POSTing a client",
+      "SMART registration checks auth/me before creating a client in the configured project",
+      "bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read",
+      "bootstrap service identity refuses a foreign-project policy before composing or sending a patch",
+      "bootstrap service identity still refuses a non-local Medplum URL before login",
+      "carried apply maps the losing whole-apply commit race to 409",
+      "carried unapply maps a conditional application save conflict to 409",
+      "carried confirm checks liveness after the encounter lock and returns 404",
+      "carried undo preserves clinician resolution at 4 months",
+      "carried undo preserves clinician resolution at 6 months",
+      "carried ServiceRequest rollback reports a newer version conflict without overwriting it",
+      "carried CarePlan rollback reports a newer version conflict without overwriting it",
+      "carried Observation rollback reports a newer version conflict without overwriting it",
+      "carried rollback restores the captured version conditionally",
+      "carried rollback refuses missing revoke version",
+      "fixback rollback completes past 1 projection restore conflicts",
+      "fixback rollback completes past 2 projection restore conflicts",
+      "mixed suspect and OHT whole applies share every test and charge",
+      "v1 photo remains already added after v2 seed without a second order or charge",
+      "fixback warm tap seeds only its built-in and rules",
+      "fixback warm whole seeds only its built-in and rules",
+      "fixback first apply seeds only requested head and its five rules",
+      "plan order focus and counseling narrative reach FHIR projections",
+      "real education is recorded with the catalog title and truthful delivery note",
+      "unoffered whole apply opts out series and its package before series resolution; item add refuses",
+      "offered series without active configuration keeps 400",
+      "an offered selected order retains the charge shared with an unoffered item",
+      "unapply returns 409 before any mutation when an accepted charge is unresolved",
+      "unapply succeeds with finalized charges and preserves their billed state",
+      "encounter capture does not treat two absent subject references as a patient match",
+      "persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges",
+      "apply verifies the persisted Condition and creates no prompt-only Observations",
+      "item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides",
+      "item-add endpoint rejects a charge seed before allowing its owning order",
+      "item-add endpoint respects an owning application's opted-out charge",
+      "item-add endpoint returns 409 when an owning application's required charge is missing",
+      "follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest",
+      "a clinician follow-up override computes from the selected two-week payload",
+      "an underivable kind refuses only the follow-up and commits the plan's other actions",
+      "a malformed interval refuses only the follow-up and commits the plan's other actions",
+      "a missing reason refuses only the follow-up and commits the plan's other actions",
+      "invalid provenance time refuses only the follow-up and commits the plan's other actions",
+      "an interval that overflows the due date refuses only the follow-up and commits the plan's other actions",
+      "applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected",
+      "shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo",
+      "shared ownership L route: clash rematerializes one request; confirm and edit clear flag",
+      "shared rollback endpoint: action revocation rollback preserves original FHIR IDs and statuses",
+      "shared rollback endpoint: finding revocation rollback preserves original FHIR IDs and statuses",
+      "age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum",
+      "synced practice policies enforce all repaired clinical writes on running Medplum",
+      "role markers dominate definition matching, conflicting markers are invalid",
+      "compiled ocular structure field identities and atomic samples are pinned",
+      "pending audit lookup uses one comma-OR tag search, all pages, and fails closed",
+      "review regression: an audit for a copied marker covers only its actual Observation target",
+      "a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum",
+      "history bytes unchanged 6: customSectionEndpoint.test.ts",
+      "history bytes unchanged 7: customSectionEndpoint.test.ts",
+      "history bytes unchanged 8: customSectionEndpoint.test.ts",
+      "history bytes unchanged 9: customSectionEndpoint.test.ts",
+      "history bytes unchanged 10: customSectionEndpoint.test.ts",
+      "history bytes unchanged 11: customSectionEndpoint.test.ts",
+      "history bytes unchanged 12: customSectionEndpoint.test.ts",
+      "history bytes unchanged 13: customSectionEndpoint.test.ts",
+      "history bytes unchanged 14: customSectionEndpoint.test.ts",
+      "history bytes unchanged 15: customSectionEndpoint.test.ts",
+      "history bytes unchanged 16: customSectionEndpoint.test.ts",
+      "history bytes unchanged 17: customSectionEndpoint.test.ts",
+      "history bytes unchanged 18: customSectionEndpoint.test.ts",
+      "history bytes unchanged 19: customSectionEndpoint.test.ts",
+      "history bytes unchanged 20: customSectionEndpoint.test.ts",
+      "history bytes unchanged 21: customSectionEndpoint.test.ts",
+      "history bytes unchanged 22: customSectionEndpoint.test.ts",
+      "history bytes unchanged 23: customSectionEndpoint.test.ts",
+      "history bytes unchanged 24: customSectionEndpoint.test.ts",
+      "history bytes unchanged 25: customSectionEndpoint.test.ts",
+      "history bytes unchanged 26: customSectionEndpoint.test.ts",
+      "history bytes unchanged 27: customSectionEndpoint.test.ts",
+      "history bytes unchanged 28: customSectionEndpoint.test.ts",
+      "history bytes unchanged 29: customSectionEndpoint.test.ts",
+      "history bytes unchanged 30: customSectionEndpoint.test.ts",
+      "history bytes unchanged 31: customSectionEndpoint.test.ts",
+      "history bytes unchanged 32: customSectionEndpoint.test.ts",
+      "history bytes unchanged 33: customSectionEndpoint.test.ts",
+      "history bytes unchanged 34: customSectionEndpoint.test.ts",
+      "history bytes unchanged 35: customSectionEndpoint.test.ts",
+      "history bytes unchanged 36: customSectionEndpoint.test.ts",
+      "history bytes unchanged 37: customSectionEndpoint.test.ts",
+      "history bytes unchanged 38: customSectionEndpoint.test.ts",
+      "history bytes unchanged 47: customSectionEndpoint.test.ts",
+      "history bytes unchanged 49: customSectionEndpoint.test.ts",
+      "history bytes unchanged 51: customSectionEndpoint.test.ts",
+      "local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index",
+      "profile validation rejects IOP with non-UCUM pressure unit",
+      "profile validation rejects Observation missing bodySite reference extension",
+      "profile validation rejects Observation missing encounter",
+      "profile validation rejects axial length with non-mm UCUM code",
+      "profile validation rejects comprehensive Encounter with non-AMB class",
+      "profile validation rejects finished Encounter without period.end",
+      "legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection",
+      "legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection",
+      "E1\u2013E17 reproduce the original writer/read behaviors and assert the A1 projections",
+      "all direct fhir.search call sites are statically resolved or explicitly dynamic",
+      "static audit finds zero invalid search parameters",
+      "static audit rejects a mistyped dynamic override key"
+    ]
+  },
+  {
+    "log": "full-checks/npm-ci-mcp.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/npm-ci-root.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/npm-ci-ui.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/preflight.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/release-checker.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/release-scenarios.txt",
+    "counts": {
+      "tests": [
+        16
+      ],
+      "suites": [
+        0
+      ],
+      "pass": [
+        16
+      ],
+      "fail": [
+        0
+      ],
+      "cancelled": [
+        0
+      ],
+      "skipped": [
+        0
+      ],
+      "todo": [
+        0
+      ]
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/ui-build.txt",
+    "counts": {
+      "tests": [],
+      "suites": [],
+      "pass": [],
+      "fail": [],
+      "cancelled": [],
+      "skipped": [],
+      "todo": []
+    },
+    "failedTests": []
+  },
+  {
+    "log": "full-checks/ui-test.txt",
+    "counts": {
+      "tests": [
+        1685
+      ],
+      "suites": [
+        0
+      ],
+      "pass": [
+        1673
+      ],
+      "fail": [
+        8
+      ],
+      "cancelled": [
+        0
+      ],
+      "skipped": [
+        0
+      ],
+      "todo": [
+        4
+      ]
+    },
+    "failedTests": [
+      "deferred and recorded ocular findings cannot coexist at the client-server boundary",
+      "fresh ocular-health history restores scoped diagnosis suggestions without a save",
+      "count honesty: Dilation section preview, confirm, void result, section subtotal, and stored statuses all agree",
+      "count honesty: whole-visit preview, confirm, void result, section subtotals, and stored statuses all agree",
+      "custom state writer preserves other-only notes for normal and abnormal findings",
+      "abnormal custom state other-only value leaves the exact unformatted sentinel behind",
+      "exercised EOM and custom-state writers declare every schema-blind component code",
+      "SWEEP-1 guard 1 REAL SEED: Anterior All Normal posts only requests accepted by the real capture handler",
+      "T15 Ocular Health picker accepts a canonical view without one observation id # TODO R10 A3",
+      "T16 DiagnosisPicker proposal evidence resolves through finding homes # TODO R10 A3",
+      "T17 Ocular Health picks link fact targets # TODO R10 A3",
+      "T18 Assessment origin uses finding home sources # TODO R10 A3"
+    ]
+  }
+]

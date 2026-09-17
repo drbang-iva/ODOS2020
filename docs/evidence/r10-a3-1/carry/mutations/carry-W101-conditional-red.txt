@@ -1,0 +1,59 @@
+TAP version 13
+# Subtest: W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+not ok 1 - W74 W101 W113 carry uses standalone conditional steps and preserves source with two canonical eyes
+  ---
+  duration_ms: 20.059792
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:34:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(m.writes.find(w => w.resource.resourceType === 'Condition')!.headers['If-None-Exist']?.startsWith('identifier=urn%3Aodos%3Acarry-diagnosis%3Av1') || m.writes.find(w => w.resource.resourceType === 'Condition')!.headers['If-None-Exist']?.startsWith('identifier=urn:odos:carry-diagnosis:v1'))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:44:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W101 lost Condition response resumes one conditional owner
+ok 2 - W101 lost Condition response resumes one conditional owner
+  ---
+  duration_ms: 19.756917
+  type: 'test'
+  ...
+# Subtest: W123 two different commands race one conditional Condition owner
+not ok 3 - W123 two different commands race one conditional Condition owner
+  ---
+  duration_ms: 14.171208
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:141:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:152:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 1
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 225.740958

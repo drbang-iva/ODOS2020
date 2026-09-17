@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: W114 effective stored practice definition resolves lifecycle identity
+not ok 1 - W114 effective stored practice definition resolves lifecycle identity
+  ---
+  duration_ms: 43.783209
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3VoidUndo.test.ts:1:11038'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"Pre-rebuild test encounters are read-only.","code":"pre-rebuild-test-encounter"}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    ok (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3VoidUndo.test.ts:26:27)
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3VoidUndo.test.ts:78:1101)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 226.924792

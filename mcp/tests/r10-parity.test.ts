@@ -13,6 +13,7 @@ import { buildFindingReadAliases } from "../src/clinical-graph/finding-read-alia
 import { keyFindingSatisfied } from "./fixtures/r10/completeness-predicate.mjs";
 const clean=(v:unknown)=>JSON.parse(JSON.stringify(v));
 const captures=baseline.captures;
+const overviewExpectations=JSON.parse(readFileSync(new URL("./fixtures/r10/a3-overview-expectations.json",import.meta.url),"utf8"));
 const recorded: Record<string, unknown> = {};
 const divergencePath=new URL("./fixtures/r10/parity-divergences.json",import.meta.url);
 const expectedDivergences=process.env.R10_RECORD_DIVERGENCES ? {} : JSON.parse(readFileSync(divergencePath,"utf8"));
@@ -65,11 +66,11 @@ for(const [i,c] of captures.entries()){
     }else if(c.kind==="sectionFindingRows"){
       assert.ok(captures.some(o=>o.suite===c.suite&&o.kind==="atomicFindingRows"&&JSON.stringify(o.args[0])===JSON.stringify(c.args[0])));
     }else if(c.kind==="buildExamOverviewProjection"){
-      const input=c.args[0];assert.deepEqual(clean(buildExamOverviewProjection(input)),c.result);
+      const input=c.args[0];const expected=overviewExpectations[i+1]??c.result;assert.deepEqual(clean(buildExamOverviewProjection(input)),expected);
       const p=project(input.currentObservations,input.definitions);
       const next=clean(buildExamOverviewProjection({...input,currentObservations:p.definitionViews}));
       const reasons=divergenceReasons(input.currentObservations,input.definitions,p);
-      compare(i+1,c,next,c.result,reasons,p);
+      compare(i+1,c,next,expected,reasons,p);
     }else if(c.kind==="findingInstancesFromObservation"){
       const [observation,definitions]=c.args;
       assert.deepEqual(clean(findingInstancesFromObservation(observation,definitions)),c.result);

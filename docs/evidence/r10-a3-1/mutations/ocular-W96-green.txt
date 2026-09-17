@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W96 TBUT panel typed values round trip
+ok 1 - W96 TBUT panel typed values round trip
+  ---
+  duration_ms: 14.159417
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 191.594708

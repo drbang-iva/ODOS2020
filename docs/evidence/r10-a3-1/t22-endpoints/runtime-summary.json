@@ -1,0 +1,164 @@
+{
+  "recorderProbes": 5,
+  "paths": [
+    {
+      "id": "door-put",
+      "scenarioId": "door-put-success",
+      "attempted": 2,
+      "persisted": 2,
+      "observationKinds": [
+        "canonical-fact"
+      ],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "door-audit-repair",
+      "scenarioId": "door-audit-repair-success",
+      "attempted": 1,
+      "persisted": 1,
+      "observationKinds": [],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "pick-condition",
+      "scenarioId": "pick-condition-success",
+      "attempted": 4,
+      "persisted": 4,
+      "observationKinds": [],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "oh-save-fact",
+      "scenarioId": "oh-save-fact-success",
+      "attempted": 2,
+      "persisted": 2,
+      "observationKinds": [
+        "canonical-fact"
+      ],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "oh-save-panel",
+      "scenarioId": "oh-save-panel-success",
+      "attempted": 2,
+      "persisted": 2,
+      "observationKinds": [
+        "panel-context"
+      ],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "oh-negative-act",
+      "scenarioId": "oh-negative-act-success",
+      "attempted": 2,
+      "persisted": 2,
+      "observationKinds": [
+        "negative-act"
+      ],
+      "rejectionStatus": 409,
+      "rejectionReason": "positive-in-negative-scope",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "void",
+      "scenarioId": "lifecycle-success",
+      "attempted": 6,
+      "persisted": 6,
+      "observationKinds": [
+        "canonical-fact",
+        "panel-context"
+      ],
+      "rejectionStatus": 422,
+      "rejectionReason": "signed-or-cancelled",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "undo",
+      "scenarioId": "lifecycle-success",
+      "attempted": 6,
+      "persisted": 6,
+      "observationKinds": [
+        "canonical-fact",
+        "panel-context"
+      ],
+      "rejectionStatus": 409,
+      "rejectionReason": "undo-superseded",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "carry-condition",
+      "scenarioId": "carry-success",
+      "attempted": 1,
+      "persisted": 1,
+      "observationKinds": [],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "carry-plan",
+      "scenarioId": "carry-success",
+      "attempted": 1,
+      "persisted": 1,
+      "observationKinds": [],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "carry-link",
+      "scenarioId": "carry-success",
+      "attempted": 1,
+      "persisted": 1,
+      "observationKinds": [],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "carry-facts",
+      "scenarioId": "carry-success",
+      "attempted": 4,
+      "persisted": 4,
+      "observationKinds": [
+        "canonical-fact"
+      ],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    },
+    {
+      "id": "carry-lineage",
+      "scenarioId": "carry-success",
+      "attempted": 1,
+      "persisted": 1,
+      "observationKinds": [],
+      "rejectionStatus": 409,
+      "rejectionReason": "encounter-closed",
+      "rejectionAttempted": 0,
+      "rejectionPersisted": 0
+    }
+  ]
+}

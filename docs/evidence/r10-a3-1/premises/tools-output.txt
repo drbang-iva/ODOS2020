@@ -1,0 +1,4 @@
+{"premise":"P23","panels":1,"definitionViews":0,"candidateViews":0,"preRebuild":false}
+{"premise":"P24","sameActId":"00000000-0000-4000-8000-000000000001","statuses":[200,200],"observations":2,"provenances":2,"identifiers":[[{"system":"urn:odos:negative-act","value":"243acc142f896da0f886dba540fc0610f525a414712f2993bf73ac32f66d26f5"}],[{"system":"urn:odos:negative-act","value":"1c9955c735191626865d360c83a88a0227fa1a6f3947f1245ac9ff6df45e67d5"}]],"writeAttempts":4}
+{"premise":"P25","void1":["Observation/first"],"undo1":["Observation/first"],"void2":["Observation/second"],"delayedUndoStatus":200,"delayedUndoRestored":["Observation/second"],"transactionDelta":1,"firstStatus":"entered-in-error","secondStatus":"preliminary"}
+{"premise":"P5","encounterStatus":"finished","captureStatus":200,"observations":1,"provenances":1,"writeAttempts":2}

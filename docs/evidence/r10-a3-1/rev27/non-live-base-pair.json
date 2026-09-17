@@ -1,0 +1,38 @@
+{
+  "baseHead": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "command": "npm --prefix mcp test",
+  "sameEnvironment": "../rev26/environment.md",
+  "base": {
+    "counts": {
+      "tests": 5687,
+      "pass": 5618,
+      "fail": 1,
+      "skipped": 52,
+      "todo": 16
+    },
+    "source": "../rev26/full-checks/base-mcp-npm.txt",
+    "failures": [
+      {
+        "test": "installed WeasyPrint 69.0 emits a real PDF/A-3u document",
+        "diagnostic": "  ---\n  duration_ms: 3.711708\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/weasyprintRenderer.test.ts:1:1771'\n  failureType: 'testCodeFailure'\n  error: 'WeasyPrint render failed: spawn weasyprint ENOENT'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/src/correspondence/weasyprint-renderer.ts:52:20)\n    exithandler (node:child_process:424:5)\n    ChildProcess.errorhandler (node:child_process:436:5)\n    ChildProcess.emit (node:events:519:28)\n    ChildProcess._handle.onexit (node:internal/child_process:291:12)\n    onErrorNT (node:internal/child_process:483:16)\n    process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n  ..."
+      }
+    ]
+  },
+  "task": {
+    "counts": {
+      "tests": 5979,
+      "pass": 5925,
+      "fail": 1,
+      "skipped": 53,
+      "todo": 0
+    },
+    "source": "mcp-test.txt",
+    "failures": [
+      {
+        "test": "installed WeasyPrint 69.0 emits a real PDF/A-3u document",
+        "diagnostic": "  ---\n  duration_ms: 3.657959\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/weasyprintRenderer.test.ts:1:1771'\n  failureType: 'testCodeFailure'\n  error: 'WeasyPrint render failed: spawn weasyprint ENOENT'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/correspondence/weasyprint-renderer.ts:52:20)\n    exithandler (node:child_process:424:5)\n    ChildProcess.errorhandler (node:child_process:436:5)\n    ChildProcess.emit (node:events:519:28)\n    ChildProcess._handle.onexit (node:internal/child_process:291:12)\n    onErrorNT (node:internal/child_process:483:16)\n    process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n  ..."
+      }
+    ]
+  },
+  "sameTestSameFailure": true
+}

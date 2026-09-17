@@ -205,7 +205,7 @@ test("a clear persists the encounter undo ledger under the synced Provider and S
           const undone = await handleEncounterUndoRequest(deps, {
             authHeader,
             params,
-            body: { scope: "section", sectionKey: VA_SECTION_KEY },
+            body: { scope: "section", sectionKey: VA_SECTION_KEY, voidActionId: persisted.ledger.sections[VA_SECTION_KEY]?.voidActionId },
           });
           assert.equal(undone.status, 200, `${roleId} undo: ${JSON.stringify(undone.body)}`);
           const undoBody = undone.body as EncounterUndoResponse;
@@ -249,7 +249,7 @@ test("a clear persists the encounter undo ledger under the synced Provider and S
           const beforeUndo = await new FhirEncounterUndoLedgerStore(roleFhir).readRow(encounterId);
           assert.ok(beforeUndo?.ledger.sections[VA_SECTION_KEY]);
           const refused = await handleEncounterUndoRequest(deps, {
-            authHeader, params, body: { scope: "section", sectionKey: VA_SECTION_KEY },
+            authHeader, params, body: { scope: "section", sectionKey: VA_SECTION_KEY, voidActionId: beforeUndo?.ledger.sections[VA_SECTION_KEY]?.voidActionId },
           });
           assert.equal(refused.status, 409, `${roleId} signed Undo: ${JSON.stringify(refused.body)}`);
           assert.equal((refused.body as { code: string }).code, "encounter-closed");

@@ -1,0 +1,374 @@
+{
+  "paths": [
+    {
+      "id": "door-put",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeTarget",
+          "kind": "resource-write",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeTarget",
+          "kind": "resource-write",
+          "ordinal": 2
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeRetire",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "door-audit-repair",
+      "sites": []
+    },
+    {
+      "id": "pick-condition",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+          "function": "performDiagnosisPickRequest",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "oh-save-fact",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeTarget",
+          "kind": "resource-write",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeTarget",
+          "kind": "resource-write",
+          "ordinal": 2
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeRetire",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "oh-save-panel",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executePanel",
+          "kind": "resource-write",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executePanel",
+          "kind": "resource-write",
+          "ordinal": 2
+        }
+      ]
+    },
+    {
+      "id": "oh-negative-act",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+          "function": "executeOcularNegative",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "carry-condition",
+      "sites": []
+    },
+    {
+      "id": "carry-plan",
+      "sites": []
+    },
+    {
+      "id": "carry-link",
+      "sites": []
+    },
+    {
+      "id": "carry-facts",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeTarget",
+          "kind": "resource-write",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeTarget",
+          "kind": "resource-write",
+          "ordinal": 2
+        },
+        {
+          "file": "mcp/src/clinical-graph/current-finding-writer.ts",
+          "function": "executeRetire",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "carry-lineage",
+      "sites": []
+    },
+    {
+      "id": "void",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+          "function": "handleEncounterVoidRequest",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+          "function": "putEntry",
+          "kind": "observation-entry",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "undo",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/encounter-void-endpoint.ts",
+          "function": "putEntry",
+          "kind": "observation-entry",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+          "function": "handleEncounterUndoRequest",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "protocol-commit",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "commitFinding",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "protocol-unapply",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "removeMaterialized",
+          "kind": "known-wrapper-call",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "removeMaterialized",
+          "kind": "known-wrapper-call",
+          "ordinal": 2
+        },
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "projectionRestore",
+          "kind": "known-wrapper-call",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "protocol-restore",
+      "sites": [
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "removeMaterialized",
+          "kind": "known-wrapper-call",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "removeMaterialized",
+          "kind": "known-wrapper-call",
+          "ordinal": 2
+        },
+        {
+          "file": "mcp/src/clinical-graph/protocol-endpoint.ts",
+          "function": "projectionRestore",
+          "kind": "known-wrapper-call",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-attest",
+      "sites": [
+        {
+          "file": "mcp/src/fhir/scribeAttestation.ts",
+          "function": "buildAttestationTransaction",
+          "kind": "observation-json-patch-entry",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:clinician_attest_observation",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-amend",
+      "sites": [
+        {
+          "file": "mcp/src/fhir/scribeAttestation.ts",
+          "function": "buildAmendmentTransaction",
+          "kind": "observation-json-patch-entry",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:amend_observation",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-create-observation",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:create_observation",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-scribe-write",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:scribe_write_observation",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-append-context",
+      "sites": [
+        {
+          "file": "mcp/src/fhir/scribeAttestation.ts",
+          "function": "buildAppendObservationTransaction",
+          "kind": "observation-entry",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:append_observation_context",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-save-section",
+      "sites": [
+        {
+          "file": "mcp/src/fhir/ophthalmology/save-section-bundle.ts",
+          "function": "buildSectionSaveBundle",
+          "kind": "observation-entry",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:save_section_observations",
+          "kind": "transaction-submit",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-smoking-status",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:create_smoking_status_observation",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-dry-eye-questionnaire-score",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:create_dry_eye_questionnaire_response",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-meibography",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:create_meibography_observation",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-ortho-k-fit",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:record_ortho_k_fit_observation",
+          "kind": "resource-write",
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "mcp-eye-growth",
+      "sites": [
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:record_eye_growth_axial_length_measurement",
+          "kind": "resource-write",
+          "ordinal": 1
+        },
+        {
+          "file": "mcp/src/index.ts",
+          "function": "tool:record_eye_growth_axial_length_measurement",
+          "kind": "resource-write",
+          "ordinal": 2
+        }
+      ]
+    }
+  ]
+}

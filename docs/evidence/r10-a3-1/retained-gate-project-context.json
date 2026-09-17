@@ -1,0 +1,51 @@
+[
+  {
+    "method": "POST",
+    "path": "/fhir/R4/Encounter",
+    "status": 201,
+    "resourceType": "Encounter",
+    "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+  },
+  {
+    "method": "POST",
+    "path": "/fhir/R4/Observation",
+    "status": 201,
+    "resourceType": "Observation",
+    "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+  },
+  {
+    "method": "PUT",
+    "path": "/fhir/R4/Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+    "status": 200,
+    "resourceType": "Observation",
+    "project": "14e0ec2a-cc7f-4ce6-be82-49d9417f3e95"
+  },
+  {
+    "method": "POST",
+    "path": "/fhir/R4",
+    "status": 200,
+    "resourceType": "Bundle",
+    "entries": [
+      {
+        "status": "200",
+        "resourceType": "Observation"
+      },
+      {
+        "status": "200",
+        "resourceType": "Provenance"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/fhir/R4/Observation/aba3c695-f49f-4846-ad0e-2e11d6f56ef4",
+    "status": 200,
+    "resourceType": "Observation"
+  },
+  {
+    "method": "GET",
+    "path": "/fhir/R4/Provenance/0b00be2b-26ba-4a92-a8e5-ab0f404c808b",
+    "status": 200,
+    "resourceType": "Provenance"
+  }
+]

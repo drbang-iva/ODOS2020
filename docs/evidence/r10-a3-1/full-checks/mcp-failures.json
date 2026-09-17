@@ -1,0 +1,607 @@
+[
+  {
+    "test": "live FHIR read grant check covers all four chart resources through compiled role policies",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:7617",
+    "error": "'Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription \u2014 MCP process service client.. Remove or update the entry explicitly.'"
+  },
+  {
+    "test": "FHIR read grant CLI passes only with full coverage and always prints its limits",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:11044",
+    "error": "|-\n    /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429\n          throw new Error(\n                ^\n    \n    Error: Service-identity FHIR write exclusion entry no longer matches a real ungranted call site: mcp/src/index.ts:3251 fhir.create VisionPrescription \u2014 MCP process service client.. Remove or update the entry explicitly.\n        at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:429:13)\n        at Array.map (<anonymous>)\n        at matchExactWriteInventory (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:426:29)\n        at runFhirReadGrantCheck (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:333:41)\n        at <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/scripts/fhir-read-grant-check.ts:743:18)\n        at ModuleJob.run (node:internal/modules/esm/module_job:343:25)\n        at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)\n        at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n    \n    Node.js v22.22.3\n    \n    \n    1 !== 0"
+  },
+  {
+    "test": "an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:12560",
+    "error": "|-\n    The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:\n    \n    ''"
+  },
+  {
+    "test": "an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:13292",
+    "error": "|-\n    The input did not match the regular expression /Missing FHIR grants: create RiskAssessment/. Input:\n    \n    ''"
+  },
+  {
+    "test": "serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:13964",
+    "error": "|-\n    The input did not match the regular expression /FHIR read grant check: FAIL/. Input:\n    \n    ''"
+  },
+  {
+    "test": "an ungranted FHIR read in ui/src makes the CLI fail with its name",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/fhir-read-grant-check.test.ts:1:14661",
+    "error": "|-\n    The input did not match the regular expression /FHIR read grant check: FAIL/. Input:\n    \n    ''"
+  },
+  {
+    "test": "v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree and fails salted fixture",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/preflight-lint.test.ts:1:3788",
+    "error": "|-\n    mcp/src/clinical-graph/diagnosis-carry-provenance.ts:20 odos-extension-url-shape\n    mcp/src/clinical-graph/diagnosis-carry-provenance.ts:21 odos-extension-url-shape\n    + actual - expected\n    \n    + 'hard-block'\n    - 'pass'"
+  },
+  {
+    "test": "the migration CLI scopes both reads to the resolved project and stays dry-run",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/migrate-three-role-model.test.ts:1:12580",
+    "error": "|-\n    operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\n    \n    \n    1 !== 0"
+  },
+  {
+    "test": "the migration CLI refuses a mismatched access-token project before any write",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/migrate-three-role-model.test.ts:1:13156",
+    "error": "|-\n    The input did not match the regular expression /Super Admin.*super-admin.*ODOS Local Practice.*practice-1/. Input:\n    \n    'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\\n'"
+  },
+  {
+    "test": "the migration CLI accepts only admin email and password through the shared PKCE login",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/migrate-three-role-model.test.ts:1:13777",
+    "error": "|-\n    operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\n    \n    \n    1 !== 0"
+  },
+  {
+    "test": "demo seed CLI requires the exact project and loads only the dedicated operator identity",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/seed-demo.test.ts:1:6489",
+    "error": "'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.'"
+  },
+  {
+    "test": "SMART registration refuses a session project mismatch before POSTing a client",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/smart-app-registry-adapter.test.ts:1:549",
+    "error": "'Explicit Project/practice-target differs from MEDPLUM_PROJECT_ID Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95. Intentional foreign-project work requires --allow-foreign-project.'"
+  },
+  {
+    "test": "SMART registration checks auth/me before creating a client in the configured project",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/smart-app-registry-adapter.test.ts:1:1336",
+    "error": "'Explicit Project/practice-target differs from MEDPLUM_PROJECT_ID Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95. Intentional foreign-project work requires --allow-foreign-project.'"
+  },
+  {
+    "test": "bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/sync-practice-role-policy-rules.test.ts:1:18297",
+    "error": "|-\n    The input did not match the regular expression /FHIR GET \\/fhir\\/R4\\/AccessPolicy \\[AccessPolicy\\] 403 Forbidden/. Input:\n    \n    'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\\n'"
+  },
+  {
+    "test": "bootstrap service identity refuses a foreign-project policy before composing or sending a patch",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/sync-practice-role-policy-rules.test.ts:1:19358",
+    "error": "|-\n    The input did not match the regular expression /AccessPolicy\\/provider-policy.*foreign-project.*practice-1/i. Input:\n    \n    'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\\n'"
+  },
+  {
+    "test": "bootstrap service identity still refuses a non-local Medplum URL before login",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/setup-wizard/sync-practice-role-policy-rules.test.ts:1:19935",
+    "error": "|-\n    The input did not match the regular expression /local or private HTTP\\(S\\) Medplum server/i. Input:\n    \n    'operator credentials at /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/.odos/operator.env names Project/14e0ec2a-cc7f-4ce6-be82-49d9417f3e95, but the configured installation target is Project/practice-1. Invalidate or recreate stale derived state before continuing.\\n'"
+  },
+  {
+    "test": "carried apply maps the losing whole-apply commit race to 409",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:2117",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried unapply maps a conditional application save conflict to 409",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:2420",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried confirm checks liveness after the encounter lock and returns 404",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:2948",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried undo preserves clinician resolution at 4 months",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:3695",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried undo preserves clinician resolution at 6 months",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:3695",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried ServiceRequest rollback reports a newer version conflict without overwriting it",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:4783",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried CarePlan rollback reports a newer version conflict without overwriting it",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:4783",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried Observation rollback reports a newer version conflict without overwriting it",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:4783",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried rollback restores the captured version conditionally",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:5609",
+    "error": "'Not found'"
+  },
+  {
+    "test": "carried rollback refuses missing revoke version",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:5609",
+    "error": "'Not found'"
+  },
+  {
+    "test": "fixback rollback completes past 1 projection restore conflicts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:6927",
+    "error": "'Not found'"
+  },
+  {
+    "test": "fixback rollback completes past 2 projection restore conflicts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-carried.test.ts:1:6927",
+    "error": "'Not found'"
+  },
+  {
+    "test": "mixed suspect and OHT whole applies share every test and charge",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:2795",
+    "error": "'Not found'"
+  },
+  {
+    "test": "v1 photo remains already added after v2 seed without a second order or charge",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:3641",
+    "error": "'Not found'"
+  },
+  {
+    "test": "fixback warm tap seeds only its built-in and rules",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:4895",
+    "error": "'Not found'"
+  },
+  {
+    "test": "fixback warm whole seeds only its built-in and rules",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:4895",
+    "error": "'Not found'"
+  },
+  {
+    "test": "fixback first apply seeds only requested head and its five rules",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-glaucoma-integration.test.ts:1:6162",
+    "error": "'Not found'"
+  },
+  {
+    "test": "plan order focus and counseling narrative reach FHIR projections",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-materialization.test.ts:1:492",
+    "error": "'Not found'"
+  },
+  {
+    "test": "real education is recorded with the catalog title and truthful delivery note",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-materialization.test.ts:1:2119",
+    "error": "'Not found'"
+  },
+  {
+    "test": "unoffered whole apply opts out series and its package before series resolution; item add refuses",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-offered.test.ts:1:2209",
+    "error": "'Not found'"
+  },
+  {
+    "test": "offered series without active configuration keeps 400",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-offered.test.ts:1:3795",
+    "error": "'Not found'"
+  },
+  {
+    "test": "an offered selected order retains the charge shared with an unoffered item",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/plan-offered.test.ts:1:4191",
+    "error": "'Not found'"
+  },
+  {
+    "test": "unapply returns 409 before any mutation when an accepted charge is unresolved",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:46935",
+    "error": "'Encounter/enc-unapply not found'"
+  },
+  {
+    "test": "unapply succeeds with finalized charges and preserves their billed state",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:48062",
+    "error": "'Encounter/enc-unapply not found'"
+  },
+  {
+    "test": "encounter capture does not treat two absent subject references as a patient match",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:75794",
+    "error": "'Condition search returned a resource outside the requested patient/encounter scope.'"
+  },
+  {
+    "test": "persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:77871",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "apply verifies the persisted Condition and creates no prompt-only Observations",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:81399",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "item-add endpoint stages only the requested order and refuses charge acceptance or payload overrides",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:83118",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "item-add endpoint rejects a charge seed before allowing its owning order",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:84325",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "item-add endpoint respects an owning application's opted-out charge",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:85389",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "item-add endpoint returns 409 when an owning application's required charge is missing",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:86569",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "follow-up materialization stores the six-month due date and verbatim reason on a coded ServiceRequest",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:87920",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "a clinician follow-up override computes from the selected two-week payload",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:88808",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "an underivable kind refuses only the follow-up and commits the plan's other actions",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:92388",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "a malformed interval refuses only the follow-up and commits the plan's other actions",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:92388",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "a missing reason refuses only the follow-up and commits the plan's other actions",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:92388",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "invalid provenance time refuses only the follow-up and commits the plan's other actions",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:92388",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "an interval that overflows the due date refuses only the follow-up and commits the plan's other actions",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:92388",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "applications read enforces chart.read, returns the hydration shape, and duplicate apply is rejected",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:95765",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "shared ownership C route: item then whole lists scopes and preserves tapped order on whole undo",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:116804",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "shared ownership L route: clash rematerializes one request; confirm and edit clear flag",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:121680",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "shared rollback endpoint: action revocation rollback preserves original FHIR IDs and statuses",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:139475",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "shared rollback endpoint: finding revocation rollback preserves original FHIR IDs and statuses",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/__tests__/protocol-phase5.test.ts:1:139475",
+    "error": "'Encounter/enc-1 not found'"
+  },
+  {
+    "test": "age-of-majority singleton grants enforce all-role reads and Admin-only writes on live Medplum",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/ageOfMajorityAuthzLive.test.ts:1:673",
+    "error": "|-\n    The expression evaluated to a falsy value:\n    \n      assert.ok(patient?.id)"
+  },
+  {
+    "test": "synced practice policies enforce all repaired clinical writes on running Medplum",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/clinicalWriteAuthzLive.test.ts:1:1124",
+    "error": "'Live authorization lane requires the synthetic Patient seeded by its contract smoke lane.'"
+  },
+  {
+    "test": "role markers dominate definition matching, conflicting markers are invalid",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:3666",
+    "error": "|-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + 'invalid'\n    - 'panel-context'"
+  },
+  {
+    "test": "compiled ocular structure field identities and atomic samples are pinned",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:5941",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      [\n        {\n          atomicIds: [\n            'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::brow-ptosis',\n            'ocular-health:anterior:periocular-adnexa::CUSTOM_ABNORMAL_FINDINGS_01::dermatitis',\n    ...\n            'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::debris-in-tear-film',\n    -       'ocular-health:anterior:tear-film::CUSTOM_GRADE_TBUT_METHOD::fluorescein',\n            'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::foam',\n    +       'ocular-health:anterior:tear-film::CUSTOM_ABNORMAL_FINDINGS_05::mucus-strands'\n          ],\n          fields: [\n            'CUSTOM_ABNORMAL_FINDINGS_05',\n            'CUSTOM_GRADE_TBUT',\n            'CUSTOM_GRADE_TBUT_METHOD'\n    ...\n            'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::flare',\n    +       'ocular-health:anterior:anterior-chamber::CUSTOM_ABNORMAL_FINDINGS_07::hyphema'\n    -       'ocular-health:anterior:anterior-chamber::CUSTOM_GRADE_VAN_HERICK::grade-0-closed'\n          ],\n          fields: [\n            'CUSTOM_ABNORMAL_FINDINGS_07',\n            'CUSTOM_GRADE_VAN_HERICK'\n          ],\n    ...\n          atomicIds: [\n    +       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::arteriolar-attenuation',\n    +       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-crossing-changes',\n    +       'ocular-health:posterior:vessels::CUSTOM_ABNORMAL_FINDINGS_04::av-nicking'\n    -       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-2',\n    -       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-3',\n    -       'ocular-health:posterior:vessels::CUSTOM_GRADE_A_V_RATIO::1-4'\n          ],\n          fields: [\n            'CUSTOM_ABNORMAL_FINDINGS_04',\n            'CUSTOM_GRADE_A_V_RATIO'\n          ],"
+  },
+  {
+    "test": "pending audit lookup uses one comma-OR tag search, all pages, and fails closed",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:7435",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n    +   'Observation/one',\n        'Observation/two'\n      ]"
+  },
+  {
+    "test": "review regression: an audit for a copied marker covers only its actual Observation target",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/currentFindingIdentity.test.ts:1:9232",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n    +   'Observation/first',\n        'Observation/second'\n      ]"
+  },
+  {
+    "test": "a clear persists the encounter undo ledger under the synced Provider and Staff policies on running Medplum",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/encounterUndoLedgerAuthzLive.test.ts:1:1220",
+    "error": "'Live authorization lane requires the synthetic Patient seeded by its contract smoke lane.'"
+  },
+  {
+    "test": "history bytes unchanged 6: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 7: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 8: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 9: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 10: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 11: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 12: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 13: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 14: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 15: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 16: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 17: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 18: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 19: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 20: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 21: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 22: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 23: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 24: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 25: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 26: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 27: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 28: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 29: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 30: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 31: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 32: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 33: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 34: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 35: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 36: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 37: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 38: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 47: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 49: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "history bytes unchanged 51: customSectionEndpoint.test.ts",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/findingSectionHelpers.test.ts:1:595",
+    "error": "'Ocular Health requires the finding read transport.'"
+  },
+  {
+    "test": "local Medplum seeds 5001 patient answers, paginates reviews, and excludes ROS in the index",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/historyPaginationMedplum.test.ts:1:589",
+    "error": "|-\n    {\"status\":\"429\",\"outcome\":{\"resourceType\":\"OperationOutcome\",\"id\":\"too-many-requests\",\"issue\":[{\"severity\":\"error\",\"code\":\"throttled\",\"details\":{\"text\":\"Too Many Requests\"},\"diagnostics\":\"{\\\"_remainingPoints\\\":0,\\\"_msBeforeNext\\\":26280,\\\"_consumedPoints\\\":50059,\\\"_isFirstInDuration\\\":false,\\\"limit\\\":50000}\"}]}}\n    + actual - expected\n    \n    + {\n    +   response: {\n    +     outcome: {\n    +       id: 'too-many-requests',\n    +       issue: [\n    +         {\n    +           code: 'throttled',\n    +           details: {\n    +             text: 'Too Many Requests'\n    +           },\n    +           diagnostics: '{\"_remainingPoints\":0,\"_msBeforeNext\":26280,\"_consumedPoints\":50059,\"_isFirstInDuration\":false,\"limit\":50000}',\n    +           severity: 'error'\n    +         }\n    +       ],\n    +       resourceType: 'OperationOutcome'\n    +     },\n    +     status: '429'\n    +   }\n    + }\n    - undefined"
+  },
+  {
+    "test": "profile validation rejects IOP with non-UCUM pressure unit",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:4923",
+    "error": "'Missing expected rejection.'"
+  },
+  {
+    "test": "profile validation rejects Observation missing bodySite reference extension",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:5464",
+    "error": "'Missing expected rejection.'"
+  },
+  {
+    "test": "profile validation rejects Observation missing encounter",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:5975",
+    "error": "'Missing expected rejection.'"
+  },
+  {
+    "test": "profile validation rejects axial length with non-mm UCUM code",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:6456",
+    "error": "'Missing expected rejection.'"
+  },
+  {
+    "test": "profile validation rejects comprehensive Encounter with non-AMB class",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:6987",
+    "error": "'Missing expected rejection.'"
+  },
+  {
+    "test": "profile validation rejects finished Encounter without period.end",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:7530",
+    "error": "'Missing expected rejection.'"
+  },
+  {
+    "test": "legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {"
+  },
+  {
+    "test": "legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',\n    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::brunescent',\n                  value: {\n                    kind: 'boolean',\n                    value: true\n                  }\n                },\n    +           {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',\n    +             value: {\n    +               code: '4+ (dark brown/black; brunescent)',\n    +               display: '4+ (dark brown/black; brunescent)',\n    +               kind: 'code',\n    +               text: '4+ (dark brown/black; brunescent)'\n    +             }\n    +           }\n              ],\n              recordedAt: '2026-08-16T12:00:00.000Z'\n            },\n            display: 'Lens',\n            examination: {\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {\n    +             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',\n    +             display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',\n    -             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::brunescent',\n                  value: {\n                    kind: 'boolean',\n                    value: true\n                  }\n                },\n                {\n    +             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',\n    +             display: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis::colour',\n    -             code: 'OS_CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',\n                  value: {\n    +               code: '4+ (dark brown/black; brunescent)',\n    +               display: '4+ (dark brown/black; brunescent)',\n    +               kind: 'code',\n    +               text: '4+ (dark brown/black; brunescent)'\n    -               kind: 'boolean',\n    -               value: true\n                  }\n                },\n                {"
+  },
+  {
+    "test": "legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',\n    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear',\n                  value: {\n                    kind: 'boolean',\n                    value: true\n                  }\n                },\n    +           {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',\n    +             value: {\n    +               code: 'horseshoe',\n    +               display: 'horseshoe',\n    +               kind: 'code',\n    +               text: 'horseshoe'\n    +             }\n    +           }\n              ],\n              recordedAt: '2026-08-16T12:00:00.000Z'\n            },\n            display: 'Periphery',\n            examination: {"
+  },
+  {
+    "test": "legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear',\n    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::horseshoe-tear',\n                  value: {\n                    kind: 'boolean',\n                    value: true\n                  }\n                },\n    +           {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_05::retinal-tear::subtype',\n    +             value: {\n    +               code: 'horseshoe',\n    +               display: 'horseshoe',\n    +               kind: 'code',\n    +               text: 'horseshoe'\n    +             }\n    +           }\n              ],\n              recordedAt: '2026-08-16T12:00:00.000Z'\n            },\n            display: 'Periphery',\n            examination: {"
+  },
+  {
+    "test": "legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {"
+  },
+  {
+    "test": "legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line',\n    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_06::iron-line-hudson-stahli-stocker-s-fleischer-s',\n                  value: {\n                    kind: 'boolean',\n                    value: true\n                  }\n                }"
+  },
+  {
+    "test": "legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {\n    +             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole',\n    +             display: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole',\n    -             code: 'OD_CUSTOM_ABNORMAL_FINDINGS_03::macular-hole-full-lamellar',\n                  value: {\n                    kind: 'boolean',\n                    value: true\n                  }\n                }"
+  },
+  {
+    "test": "legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:4260",
+    "error": "|-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    ... Skipped lines\n    \n      {\n        completeness: {\n          documentationIssues: [],\n          requiredSectionCount: 0,\n          resolvedSectionCount: 0,\n    ...\n          {\n    +       creditsCompleteness: false,\n            current: {\n              components: [\n                {"
+  },
+  {
+    "test": "E1\u2013E17 reproduce the original writer/read behaviors and assert the A1 projections",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10-parity.test.ts:1:6766",
+    "error": "|-\n    Command failed: /Users/ericr.bang/.hermes/node/bin/node --import tsx /Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts\n    node:internal/modules/run_main:123\n        triggerUncaughtException(\n        ^\n    \n    AssertionError [ERR_ASSERTION]: {\"result\":\"invalid\",\"reason\":\"invalid\"}\n    \n    400 !== 200\n    \n        at capture (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:54:9)\n        at async <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/fixtures/r10/premise-replay.ts:75:23) {\n      generatedMessage: false,"
+  },
+  {
+    "test": "all direct fhir.search call sites are statically resolved or explicitly dynamic",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamContract.test.ts:1:6408",
+    "error": "'src/clinical-graph/diagnosis-carry-provenance.ts:40 has unresolved search parameters and no search-contract marker'"
+  },
+  {
+    "test": "static audit finds zero invalid search parameters",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamContract.test.ts:1:7463",
+    "error": "'src/clinical-graph/diagnosis-carry-provenance.ts:40 has unresolved search parameters and no search-contract marker'"
+  },
+  {
+    "test": "static audit rejects a mistyped dynamic override key",
+    "location": "/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/searchParamContract.test.ts:1:7777",
+    "error": "|-\n    The input did not match the regular expression /Contract override referral-service\\.encounter-resource has no matching call site/. Input:\n    \n    'Error: src/clinical-graph/diagnosis-carry-provenance.ts:40 has unresolved search parameters and no search-contract marker'"
+  }
+]

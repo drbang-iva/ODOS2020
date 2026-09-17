@@ -1,0 +1,7 @@
+{
+  "mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts": "804cd9541c6eb78f062bd15bcb4e6743eccc8811a564e7e6d64bdab91d17308a",
+  "mcp/src/clinical-graph/diagnosis-carry-provenance.ts": "98caf010a65b6b7babd41a7970b6460986070ebce1c9b26a6e0acbeeb6f06c5b",
+  "mcp/tests/diagnosisCarryForward.test.ts": "8e2e07f8f84eb3d9641a360d436c1f80a61a8c7faeeb7617e8c6ab49fcb1a1a9",
+  "mcp/tests/r10A3Carry.test.ts": "c61f982e2b41f0d3def8b54e250815f250fa985bc1e59e22a3525475a464c6f2",
+  "mcp/tests/fixtures/r10/carry-harness.ts": "58dd435cdfe33f1be0322af943d89350169b2f343651e288c705c549ced6ed81"
+}

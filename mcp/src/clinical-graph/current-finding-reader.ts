@@ -11,7 +11,7 @@ import { componentString, observationNegativeAct } from "./finding-section-helpe
 import { isLiveObservation } from "./observation-liveness.js";
 import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
 import { classifyFindingObservation, currentFindingIdentifier, eyeSet, findingQualifiers, observationLaterality, SUPPORTS_DIAGNOSIS_URL, findPendingAudits,
-  type CurrentFindingKey, type FindingClassification, type FindingEye } from "./current-finding-identity.js";
+  readFindingPanelState, findingPanelComponents, type FindingPanelState, type PendingFindingAudits, type CurrentFindingKey, type FindingClassification, type FindingEye } from "./current-finding-identity.js";
 
 export interface EncounterFindingInput {
   patientReference: string;
@@ -43,6 +43,9 @@ export interface CurrentFindingFact {
   homeSources: FindingHomeSource[];
   baseline?: FindingBaseline;
   auditPending?: boolean;
+  auditIntegrity?: "mismatch";
+  editable?: boolean;
+  readOnlyReason?: "inactive-definition" | "signed-observation";
   effectiveDateTime?: string;
 }
 export interface FindingHomeSource { condition: string; sources: Array<{ kind: "finding-extension" | "condition-evidence" | "inferred"; contributor: { reference: string; versionId?: string } }> }
@@ -64,6 +67,12 @@ export interface FindingPanel {
   other?: string;
   remarks?: string;
   deferred: boolean;
+  values: FindingPanelState["values"];
+  panelBaseline?: Extract<FindingBaseline, {kind:"canonical"}>;
+  editable?: boolean;
+  readOnlyReason?: "inactive-definition" | "signed-observation";
+  auditPending?: boolean;
+  auditIntegrity?: "mismatch";
   conflict?: boolean;
 }
 export type FindingDefinitionView = Observation & { projectionKey: string; contributors: FindingContributor[] };
@@ -151,7 +160,7 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
   };
   const panel = (stableKey: string, eye: FindingEye): FindingPanel => {
     const id = panelKey(stableKey, eye);
-    if (!panelMap.has(id)) panelMap.set(id, { stableKey, eye, snapshots: [], negativeActs: [], deferred: false });
+    if (!panelMap.has(id)) panelMap.set(id, { stableKey, eye, snapshots: [], negativeActs: [], deferred: false, values: {} });
     return panelMap.get(id)!;
   };
   const add = (a: Assertion) => {
@@ -247,6 +256,9 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
       homes, homeSources, ...(baselineFor(chosen, latestSnapshots.get(panelKey(first.key.stableKey, first.key.eye))) ?
         { baseline: baselineFor(chosen, latestSnapshots.get(panelKey(first.key.stableKey, first.key.eye))) } : {}),
       ...(chosen.some(a => state.pendingAudits?.has(a.contributor.reference)) ? { auditPending: true } : {}),
+      ...((state.pendingAudits as PendingFindingAudits | undefined)?.mismatches && chosen.some(a => (state.pendingAudits as PendingFindingAudits).mismatches.has(a.contributor.reference)) ? {auditIntegrity:"mismatch" as const} : {}),
+      ...(() => { const field=customFieldEntries(first.definition,true).find(f=>f.localCode===first.key.fieldCode);const active=first.definition.active && field?.active && field.options?.some(o=>o.code===first.key.optionCode && o.active);
+        return !active ? {editable:false,readOnlyReason:"inactive-definition" as const} : !["preliminary","entered-in-error"].includes(first.observation.status) ? {editable:false,readOnlyReason:"signed-observation" as const} : {editable:true}; })(),
       effectiveDateTime: contributors.flatMap(c => c.effectiveDateTime ? [c.effectiveDateTime] : []).sort().at(-1) };
     const different = new Set(chosen.map(a => normalized([a.presence, a.qualifiers, a.status]))).size > 1;
     if (canonical.length > 1 || different || chosen.some(a => a.snapshotConflict)) {
@@ -260,16 +272,41 @@ export function projectCurrentFindings(state: EncounterFindingState): CurrentFin
   for (const p of panelMap.values()) {
     p.snapshots.sort((a,b) => a.source.reference.localeCompare(b.source.reference));
     p.negativeActs.sort((a,b) => a.source.reference.localeCompare(b.source.reference));
-    const contexts = p.snapshots.filter(s => s.source.kind === "panel-context" && s.status === "live");
-    if (contexts.length) {
-      const newest = contexts.map(s => time(s.observation)).sort().at(-1);
-      const latest = contexts.filter(s => time(s.observation) === newest);
-      if (new Set(latest.map(s => snapshotContent(s.observation))).size > 1) p.conflict = true;
-      else Object.assign(p, { state: latest[0].state, other: latest[0].other, remarks: latest[0].remarks, deferred: latest[0].state === "deferred" });
+    const contexts = p.snapshots.filter(s => s.source.kind === "panel-context");
+    if (contexts.length > 1) { p.conflict = true; p.editable=false; p.values = {}; delete p.panelBaseline; continue; }
+    if (contexts.length === 1) {
+      const context = contexts[0];
+      const definition = state.definitions.find(d=>d.stableKey===p.stableKey)!;
+      p.editable = definition.active && ["preliminary","entered-in-error"].includes(context.observation.status);
+      if(!definition.active)p.readOnlyReason="inactive-definition";
+      else if(!p.editable)p.readOnlyReason="signed-observation";
+      p.deferred = false; p.values = {}; delete p.state; delete p.other; delete p.remarks;
+      if (context.source.versionId) p.panelBaseline = {kind:"canonical",reference:context.source.reference,versionId:context.source.versionId};
+      if (state.pendingAudits?.has(context.source.reference)) p.auditPending = true;
+      if ((state.pendingAudits as PendingFindingAudits | undefined)?.mismatches?.has(context.source.reference)) p.auditIntegrity = "mismatch";
+      if (context.status === "live") {
+        const definition = state.definitions.find(d=>d.stableKey===p.stableKey)!;
+        Object.assign(p,readFindingPanelState(context.observation,definition));
+        if(p.deferred)p.state="deferred";
+      }
     }
   }
   result.panels = [...panelMap.values()].sort((a,b) => panelKey(a.stableKey,a.eye).localeCompare(panelKey(b.stableKey,b.eye)));
   buildViews(result, state, selected, latestSnapshots, suppressedPanels);
+  for (const p of result.panels) {
+    if (p.conflict || !Object.keys(p.values).length) continue;
+    const definition=state.definitions.find(d=>d.stableKey===p.stableKey)!;
+    const context=p.snapshots.find(s=>s.source.kind==="panel-context" && s.status==="live")!;
+    const components=findingPanelComponents({deferred:p.deferred,other:p.other,remarks:p.remarks,values:p.values},definition);
+    const existing=result.definitionViews.find(v=>v.projectionKey===`definition:${panelKey(p.stableKey,p.eye)}`);
+    if(existing) { existing.component=[...(existing.component ?? []),...components]; existing.contributors=uniqueContributors([...existing.contributors,context.source]); }
+    else if(!result.currentFacts.some(f=>f.key.stableKey===p.stableKey && f.eye===p.eye && f.status==="live") &&
+      !result.conflicts.some(f=>f.key.stableKey===p.stableKey && f.eye===p.eye)) {
+      const view:FindingDefinitionView={...structuredClone(context.observation),projectionKey:`definition:${panelKey(p.stableKey,p.eye)}`,
+        contributors:[context.source],component:components};
+      delete view.id;delete view.identifier;delete view.valueBoolean; result.definitionViews.push(view);
+    }
+  }
   for (const observation of passthrough) result.definitionViews.push({ ...structuredClone(observation), projectionKey: `passthrough:${observation.id ?? normalized(observation.code)}`,
     contributors: observation.id ? [contributor(observation, "unrelated", state)] : [] });
   result.currentFacts.sort(factOrder); result.conflicts.sort(factOrder);

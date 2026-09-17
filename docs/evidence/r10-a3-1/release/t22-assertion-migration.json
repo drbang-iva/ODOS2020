@@ -1,0 +1,86 @@
+[
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 168,
+      "context": "\"T22 section finding writes emit canonical Observations for every option\"",
+      "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/fixtures/r10/endpoint-write-path-runtime.ts",
+        "line": 24,
+        "context": "assertCommand",
+        "text": "assert.equal(result.status,200,`${id}: ${JSON.stringify(result.body)}`)"
+      },
+      {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 206,
+        "context": "\"T22 every registered finding write path uses real handlers and emits permitted Observations\"",
+        "text": "assert.deepEqual(rows.map(row=>row.id).sort(),[...FINDING_WRITE_PATH_IDS].sort(),\"T22 runtime path IDs must match the fixed registry exactly\")"
+      }
+    ],
+    "rows": [
+      "W87a",
+      "W87b",
+      "W129",
+      "V35"
+    ],
+    "rationale": "The original OH response/record/identity claim is represented by the actual endpoint status assertion plus fixed complete-path runtime proof and classification. Panels, negative acts and unrelated specialty outputs are allowed by their effective classifications."
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 168,
+      "context": "\"T22 section finding writes emit canonical Observations for every option\"",
+      "text": "assert.ok(rows.length)"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 208,
+        "context": "\"T22 every registered finding write path uses real handlers and emits permitted Observations\"",
+        "text": "assert.ok(row.attempted.length,`${row.id}: real handler attempted no writes`)"
+      },
+      {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 209,
+        "context": "\"T22 every registered finding write path uses real handlers and emits permitted Observations\"",
+        "text": "assert.ok(row.persisted.length,`${row.id}: real handler persisted no writes`)"
+      }
+    ],
+    "rows": [
+      "W87a",
+      "W87b",
+      "W129",
+      "V35"
+    ],
+    "rationale": "The original OH response/record/identity claim is represented by the actual endpoint status assertion plus fixed complete-path runtime proof and classification. Panels, negative acts and unrelated specialty outputs are allowed by their effective classifications."
+  },
+  {
+    "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+    "before": {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "line": 169,
+      "context": "\"T22 section finding writes emit canonical Observations for every option\"",
+      "text": "assert.ok(rows.every(o=>parseCurrentFindingEnvelope(o).status===\"valid\"))"
+    },
+    "after": [
+      {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 212,
+        "context": "\"T22 every registered finding write path uses real handlers and emits permitted Observations\"",
+        "text": "assert.ok(row.observations.every(observation=>!observation.kind.startsWith(\"legacy-\")&&![\"unresolved-legacy\",\"invalid\"].includes(observation.kind)),`${row.id}: prohibited Observation output`)"
+      }
+    ],
+    "rows": [
+      "W87a",
+      "W87b",
+      "W129",
+      "V35"
+    ],
+    "rationale": "The original OH response/record/identity claim is represented by the actual endpoint status assertion plus fixed complete-path runtime proof and classification. Panels, negative acts and unrelated specialty outputs are allowed by their effective classifications."
+  }
+]

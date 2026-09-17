@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: W120 persisted negative repairs original audit despite new positive
+not ok 1 - W120 persisted negative repairs original audit despite new positive
+  ---
+  duration_ms: 15.543291
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:50:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"positive-in-negative-scope"}
+    
+    409 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 409
+  operator: 'strictEqual'
+  stack: |-
+    ok (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:35:27)
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:50:433)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 223.24125

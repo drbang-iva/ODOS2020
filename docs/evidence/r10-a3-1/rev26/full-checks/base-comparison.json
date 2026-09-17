@@ -1,0 +1,290 @@
+{
+  "base": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "environment": "environment.md; identical local commands and clean environment for each pair",
+  "nonLive": {
+    "base": {
+      "stageCounts": [
+        {
+          "tests": 5687,
+          "pass": 5618,
+          "fail": 1,
+          "skipped": 52,
+          "todo": 16
+        }
+      ],
+      "aggregateCounts": {
+        "tests": 5687,
+        "pass": 5618,
+        "fail": 1,
+        "skipped": 52,
+        "todo": 16
+      },
+      "log": "base-mcp-npm.txt",
+      "sha256": "85d4b09e06a3125dc20df4a53b6d9033880afcc1f8d57133274bd20c160bab41",
+      "counts": {
+        "tests": 5687,
+        "pass": 5618,
+        "fail": 1,
+        "skipped": 52,
+        "todo": 16
+      },
+      "failures": [
+        {
+          "test": "installed WeasyPrint 69.0 emits a real PDF/A-3u document",
+          "error": "'WeasyPrint render failed: spawn weasyprint ENOENT'",
+          "rawDiagnostic": "---\n  duration_ms: 3.711708\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/weasyprintRenderer.test.ts:1:1771'\n  failureType: 'testCodeFailure'\n  error: 'WeasyPrint render failed: spawn weasyprint ENOENT'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/src/correspondence/weasyprint-renderer.ts:52:20)\n    exithandler (node:child_process:424:5)\n    ChildProcess.errorhandler (node:child_process:436:5)\n    ChildProcess.emit (node:events:519:28)\n    ChildProcess._handle.onexit (node:internal/child_process:291:12)\n    onErrorNT (node:internal/child_process:483:16)\n    process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n  ..."
+        }
+      ]
+    },
+    "head": {
+      "stageCounts": [
+        {
+          "tests": 5979,
+          "pass": 5924,
+          "fail": 2,
+          "skipped": 53,
+          "todo": 0
+        }
+      ],
+      "aggregateCounts": {
+        "tests": 5979,
+        "pass": 5924,
+        "fail": 2,
+        "skipped": 53,
+        "todo": 0
+      },
+      "log": "mcp-npm-final.txt",
+      "sha256": "dd47abeae2e5e5b08778904678764dea068c1e8f90112d1d8865f282772057e5",
+      "counts": {
+        "tests": 5979,
+        "pass": 5924,
+        "fail": 2,
+        "skipped": 53,
+        "todo": 0
+      },
+      "failures": [
+        {
+          "test": "v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree and fails salted fixture",
+          "error": "|-",
+          "rawDiagnostic": "---\n  duration_ms: 1002.717166\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/preflight-lint.test.ts:1:3788'\n  failureType: 'testCodeFailure'\n  error: |-\n    mcp/src/clinical-graph/diagnosis-carry-provenance.ts:20 odos-extension-url-shape\n    mcp/src/clinical-graph/diagnosis-carry-provenance.ts:21 odos-extension-url-shape\n    + actual - expected\n    \n    + 'hard-block'\n    - 'pass'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'pass'\n  actual: 'hard-block'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/tests/preflight/preflight-lint.test.ts:102:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "installed WeasyPrint 69.0 emits a real PDF/A-3u document",
+          "error": "'WeasyPrint render failed: spawn weasyprint ENOENT'",
+          "rawDiagnostic": "---\n  duration_ms: 3.661833\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/weasyprintRenderer.test.ts:1:1771'\n  failureType: 'testCodeFailure'\n  error: 'WeasyPrint render failed: spawn weasyprint ENOENT'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/correspondence/weasyprint-renderer.ts:52:20)\n    exithandler (node:child_process:424:5)\n    ChildProcess.errorhandler (node:child_process:436:5)\n    ChildProcess.emit (node:events:519:28)\n    ChildProcess._handle.onexit (node:internal/child_process:291:12)\n    onErrorNT (node:internal/child_process:483:16)\n    process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n  ..."
+        }
+      ]
+    },
+    "environmentalMatches": [
+      {
+        "base": {
+          "test": "installed WeasyPrint 69.0 emits a real PDF/A-3u document",
+          "error": "'WeasyPrint render failed: spawn weasyprint ENOENT'",
+          "rawDiagnostic": "---\n  duration_ms: 3.711708\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/weasyprintRenderer.test.ts:1:1771'\n  failureType: 'testCodeFailure'\n  error: 'WeasyPrint render failed: spawn weasyprint ENOENT'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/src/correspondence/weasyprint-renderer.ts:52:20)\n    exithandler (node:child_process:424:5)\n    ChildProcess.errorhandler (node:child_process:436:5)\n    ChildProcess.emit (node:events:519:28)\n    ChildProcess._handle.onexit (node:internal/child_process:291:12)\n    onErrorNT (node:internal/child_process:483:16)\n    process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n  ..."
+        },
+        "head": {
+          "test": "installed WeasyPrint 69.0 emits a real PDF/A-3u document",
+          "error": "'WeasyPrint render failed: spawn weasyprint ENOENT'",
+          "rawDiagnostic": "---\n  duration_ms: 3.661833\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/weasyprintRenderer.test.ts:1:1771'\n  failureType: 'testCodeFailure'\n  error: 'WeasyPrint render failed: spawn weasyprint ENOENT'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    <anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/src/correspondence/weasyprint-renderer.ts:52:20)\n    exithandler (node:child_process:424:5)\n    ChildProcess.errorhandler (node:child_process:436:5)\n    ChildProcess.emit (node:events:519:28)\n    ChildProcess._handle.onexit (node:internal/child_process:291:12)\n    onErrorNT (node:internal/child_process:483:16)\n    process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n  ..."
+        }
+      }
+    ],
+    "notEnvironmental": [
+      "v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree and fails salted fixture"
+    ]
+  },
+  "liveIntegration": {
+    "base": {
+      "stageCounts": [
+        {
+          "tests": 12,
+          "pass": 12,
+          "fail": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        {
+          "tests": 218,
+          "pass": 212,
+          "fail": 6,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "aggregateCounts": {
+        "tests": 230,
+        "pass": 224,
+        "fail": 6,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "base-live-integration.txt",
+      "sha256": "d9063932107e5c729a3c3a51bc9ac30751ead2bcb051284e0dda739bda7641ed",
+      "counts": {
+        "tests": 218,
+        "pass": 212,
+        "fail": 6,
+        "skipped": 0,
+        "todo": 0
+      },
+      "failures": [
+        {
+          "test": "profile validation rejects IOP with non-UCUM pressure unit",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 14.862042\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:1:4923'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:163:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects Observation missing bodySite reference extension",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 13.415875\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:1:5464'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:178:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects Observation missing encounter",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 16.046916\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:1:5975'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:193:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects axial length with non-mm UCUM code",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 21.711917\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:1:6456'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:212:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects comprehensive Encounter with non-AMB class",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 28.869042\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:1:6987'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:230:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects finished Encounter without period.end",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 10.794583\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:1:7530'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1-base/mcp/tests/profile-validation.test.ts:244:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        }
+      ]
+    },
+    "head": {
+      "stageCounts": [
+        {
+          "tests": 12,
+          "pass": 12,
+          "fail": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        {
+          "tests": 218,
+          "pass": 212,
+          "fail": 6,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "aggregateCounts": {
+        "tests": 230,
+        "pass": 224,
+        "fail": 6,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "live-integration.txt",
+      "sha256": "bd920650407958c8cd6fd6f9d6bde8e7b131a1bdb81102b104eb1d2be805e630",
+      "counts": {
+        "tests": 218,
+        "pass": 212,
+        "fail": 6,
+        "skipped": 0,
+        "todo": 0
+      },
+      "failures": [
+        {
+          "test": "profile validation rejects IOP with non-UCUM pressure unit",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 10.4775\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:4923'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:163:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects Observation missing bodySite reference extension",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 10.671042\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:5464'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:178:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects Observation missing encounter",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 10.799875\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:5975'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:193:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects axial length with non-mm UCUM code",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 9.054834\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:6456'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:212:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects comprehensive Encounter with non-AMB class",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 8.787708\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:6987'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:230:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        },
+        {
+          "test": "profile validation rejects finished Encounter without period.end",
+          "error": "'Missing expected rejection.'",
+          "rawDiagnostic": "---\n  duration_ms: 10.045208\n  type: 'test'\n  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:1:7530'\n  failureType: 'testCodeFailure'\n  error: 'Missing expected rejection.'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    async assertRejectsProfile (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:362:3)\n    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/profile-validation.test.ts:244:3)\n    async Test.run (node:internal/test_runner/test:1054:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ..."
+        }
+      ]
+    },
+    "sameSixProfileFailures": true
+  },
+  "liveAuthorization": {
+    "base": {
+      "stageCounts": [
+        {
+          "tests": 69,
+          "pass": 69,
+          "fail": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "aggregateCounts": {
+        "tests": 69,
+        "pass": 69,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "base-live-authz.txt",
+      "sha256": "642bb0beaf42150396080d9dbf3ea46404bf84a1dc8b1880c1d3a9cec63789a4",
+      "counts": {
+        "tests": 69,
+        "pass": 69,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "failures": []
+    },
+    "head": {
+      "stageCounts": [
+        {
+          "tests": 73,
+          "pass": 73,
+          "fail": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "aggregateCounts": {
+        "tests": 73,
+        "pass": 73,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "log": "live-authz.txt",
+      "sha256": "795947a44253dde84749e4df8ef25a14e47e31f70ed6dac6bc19c05791c74697",
+      "counts": {
+        "tests": 73,
+        "pass": 73,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "failures": []
+    },
+    "cleanup403ReproducedInCiEnvironment": false
+  }
+}

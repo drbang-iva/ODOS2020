@@ -1,0 +1,166 @@
+TAP version 13
+# Subtest: V27 live canonical preliminary credits and overview displays
+ok 1 - V27 live canonical preliminary credits and overview displays
+  ---
+  duration_ms: 22.710084
+  type: 'test'
+  ...
+# Subtest: V27 live canonical final credits and overview displays
+ok 2 - V27 live canonical final credits and overview displays
+  ---
+  duration_ms: 14.333625
+  type: 'test'
+  ...
+# Subtest: V27 live canonical amended credits and overview displays
+ok 3 - V27 live canonical amended credits and overview displays
+  ---
+  duration_ms: 14.57675
+  type: 'test'
+  ...
+# Subtest: W80 extension homes supply overview diagnosis
+ok 4 - W80 extension homes supply overview diagnosis
+  ---
+  duration_ms: 8.006583
+  type: 'test'
+  ...
+# Subtest: W81 cleared canonical cannot credit or display
+ok 5 - W81 cleared canonical cannot credit or display
+  ---
+  duration_ms: 19.898542
+  type: 'test'
+  ...
+# Subtest: W81 explicit absent canonical credits
+ok 6 - W81 explicit absent canonical credits
+  ---
+  duration_ms: 7.239458
+  type: 'test'
+  ...
+# Subtest: W81 explicit negative act credits
+ok 7 - W81 explicit negative act credits
+  ---
+  duration_ms: 7.176875
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 8 credits
+ok 8 - W118 present TBUT 8 credits
+  ---
+  duration_ms: 13.555458
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 0 credits
+ok 9 - W118 present TBUT 0 credits
+  ---
+  duration_ms: 12.752292
+  type: 'test'
+  ...
+# Subtest: W81 panel context other no credit
+ok 10 - W81 panel context other no credit
+  ---
+  duration_ms: 6.775375
+  type: 'test'
+  ...
+# Subtest: W81 panel context remarks no credit
+ok 11 - W81 panel context remarks no credit
+  ---
+  duration_ms: 6.879083
+  type: 'test'
+  ...
+# Subtest: W81 panel context deferred no credit
+ok 12 - W81 panel context deferred no credit
+  ---
+  duration_ms: 5.906458
+  type: 'test'
+  ...
+# Subtest: W81 inactive canonical no credit
+ok 13 - W81 inactive canonical no credit
+  ---
+  duration_ms: 7.002208
+  type: 'test'
+  ...
+# Subtest: W114 stored practice option resolves in both consumers
+ok 14 - W114 stored practice option resolves in both consumers
+  ---
+  duration_ms: 12.937458
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry unchanged evidence
+ok 15 - V27 persisted carry unchanged evidence
+  ---
+  duration_ms: 17.105166
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry link-only evidence
+ok 16 - V27 persisted carry link-only evidence
+  ---
+  duration_ms: 14.835041
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry void-undo evidence
+ok 17 - V27 persisted carry void-undo evidence
+  ---
+  duration_ms: 13.632041
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry reassert evidence
+ok 18 - V27 persisted carry reassert evidence
+  ---
+  duration_ms: 14.187167
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry clinical-edit evidence
+ok 19 - V27 persisted carry clinical-edit evidence
+  ---
+  duration_ms: 13.892291
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness fact
+ok 20 - W81 overview completeness fact
+  ---
+  duration_ms: 0.446917
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-value
+ok 21 - W81 overview completeness panel-value
+  ---
+  duration_ms: 0.328709
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-context
+ok 22 - W81 overview completeness panel-context
+  ---
+  duration_ms: 0.151792
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness cleared
+ok 23 - W81 overview completeness cleared
+  ---
+  duration_ms: 0.114
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness inactive
+ok 24 - W81 overview completeness inactive
+  ---
+  duration_ms: 0.12775
+  type: 'test'
+  ...
+# Subtest: W118 retired panel value does not credit or display
+ok 25 - W118 retired panel value does not credit or display
+  ---
+  duration_ms: 12.189667
+  type: 'test'
+  ...
+# Subtest: V27 pre-rebuild legacy atomic is displayed through reader view without credit
+ok 26 - V27 pre-rebuild legacy atomic is displayed through reader view without credit
+  ---
+  duration_ms: 12.645583
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 426.732167

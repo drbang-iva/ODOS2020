@@ -1,0 +1,250 @@
+{
+  "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+  "baselineLines": "61-86",
+  "rows": [
+    "W73",
+    "W74",
+    "W75",
+    "W126"
+  ],
+  "before": "test(\"T1 previous exams displays canonical finding linked by extension\",todo,async()=>{\n  const c=carryContext();const result=await handlePreviousExamsReadRequest(c.carryDeps as any,{authHeader:AUTH,params:{encounterId:\"e1\"},query:{}});\n  assert.equal(result.status,200,JSON.stringify(result.body));\n  assert.ok((result.body as any).encounters.some((e:any)=>e.diagnoses.some((d:any)=>d.findings.some((f:any)=>f.observationReference===\"Observation/source-fact\"))));\n});\ntest(\"T2 carry pull preserves canonical identity typed qualifiers and destination home\",todo,async()=>{\n  const c=carryContext();const result=await handleDiagnosisPullRequest(c.carryDeps as any,input({sourceEncounterReference:\"Encounter/e0\",sourceConditionReference:\"Condition/source\"}));\n  assert.equal(result.status,200,JSON.stringify(result.body));\n  const copied=c.fhir.all<Observation>(\"Observation\").filter(o=>o.encounter?.reference===\"Encounter/e1\");\n  assert.equal(copied.length,1);assert.equal(parseCurrentFindingEnvelope(copied[0]).status,\"valid\");\n  assert.equal(copied[0].component?.find(v=>v.code.coding?.some(k=>k.code?.endsWith(\"::grade\")))?.valueCodeableConcept?.coding?.[0]?.code,\"2+\");\n  assert.ok(copied[0].extension?.some(e=>e.url===SUPPORTS_DIAGNOSIS_URL&&e.valueReference?.reference===(result.body as any).conditionReference));\n});\ntest(\"T3 pending mutation marker postdating carry is read as edited\",todo,async()=>{\n  const c=carryContext();const current=condition(\"current\",\"e1\");c.fhir.add(current);\n  const m=memoryFhir();m.hooks.beforeWrite=w=>{if(w.resource.resourceType===\"Provenance\")throw Object.assign(Error(\"pending\"),{status:403});};\n  await executeFindingCommand(writerContext(m),command([factTarget()]) as any);\n  const carried=m.all<Observation>(\"Observation\")[0];c.fhir.add(carried);\n  c.fhir.add({...buildProvenance({targetReferences:[\"Condition/current\",`Observation/${carried.id}`],recorded:\"2026-09-16T10:00:00Z\",activityCode:\"CREATE\",activityDisplay:\"Diagnosis pull-forward\",agents:[{whoReference:\"Practitioner/doc1\",typeCode:\"author\"}]}),id:\"carry\",\n    activity:{...buildProvenance({targetReferences:[\"Condition/current\"],recorded:\"2026-09-16T10:00:00Z\",activityCode:\"CREATE\",agents:[{whoReference:\"Practitioner/doc1\",typeCode:\"author\"}]}).activity,text:\"Diagnosis pull-forward\"},\n    entity:[{role:\"source\",what:{reference:\"Condition/source\"}},{role:\"source\",what:{reference:\"Observation/source-fact\"}}]} as Provenance);\n  const state=await readDiagnosisCarryState(c.clinical,current,[carried]);\n  assert.equal(state.edited,true);assert.equal(state.observationCarried[`Observation/${carried.id}`],false);\n});\n",
+  "after": "test(\"T1 previous exams displays canonical finding linked by extension\",async()=>{\n  const c=carryFixture();\n  const retiredRow=catalog.find(row=>row.findingDefinitionKey===lens.stableKey&&row.optionCode!==nuclear.optionCode)!;\n  const retiredKey={...keyFor(\"OD\",retiredRow.optionCode),encounterId:\"past\"};\n  c.save({...fact(\"retired\",\"past\",\"OD\",[\"Condition/source\"]),status:\"entered-in-error\",code:odosConcept(retiredRow.atomicFindingId),identifier:[currentFindingIdentifier(retiredKey)],component:[comp(\"R10_CURRENT_META\",JSON.stringify(retiredKey))]});\n  const result=await handlePreviousExamsReadRequest(c.deps as any,{authHeader:AUTH,params:{encounterId:\"e1\"},query:{}});\n  assert.equal(result.status,200,JSON.stringify(result.body));\n  const facts=(result.body as any).encounters.flatMap((e:any)=>e.diagnoses.flatMap((d:any)=>d.findings));\n  assert.ok(facts.some((f:any)=>f.observationReference===\"Observation/source-OD\"));\n  assert.deepEqual(facts.map((f:any)=>f.laterality).sort(),[\"OD\",\"OS\"]);\n  assert.deepEqual(facts.map((f:any)=>f.qualifiers),[{grade:\"2+\"},{grade:\"2+\"}]);\n});\ntest(\"T2 carry pull preserves canonical identity typed qualifiers and destination home\",async()=>{\n  const c=carryFixture([\"OD\"]);const result=await carryPull(c);\n  assert.equal(result.status,200,JSON.stringify(result.body));\n  const copied=carryFacts(c);\n  assert.equal(copied.length,1);assert.equal(parseCurrentFindingEnvelope(copied[0]).status,\"valid\");\n  assert.equal(copied[0].component?.find(v=>v.code.coding?.some(k=>k.code?.endsWith(\"::grade\")))?.valueCodeableConcept?.coding?.[0]?.code,\"2+\");\n  assert.ok(copied[0].extension?.some(e=>e.url===SUPPORTS_DIAGNOSIS_URL&&e.valueReference?.reference===(result.body as any).conditionReference));\n});\ntest(\"T3 later writer version after carry is read as edited\",async()=>{\n  const c=carryFixture([\"OD\"]);assert.equal((await carryPull(c)).status,200);\n  const current=carryConditions(c)[0],carried=carryFacts(c)[0];\n  const untouched=await readDiagnosisCarryState(c.fhir,current,[carried]);\n  assert.equal(untouched.edited,false,untouched.integrityWarning);\n  assert.equal(untouched.observationCarried[`Observation/${carried.id}`],true);\n  c.hooks.beforeWrite=w=>{if(w.resource.resourceType===\"Provenance\")throw Object.assign(Error(\"pending\"),{status:403});};\n  const changed=await executeFindingCommand(writerContext(c),command([factTarget(keyFor(),{kind:\"canonical\",reference:`Observation/${carried.id}`,versionId:carried.meta!.versionId!},{status:\"live\",presence:\"present\",qualifiers:{grade:\"3+\"},homes:[`Condition/${current.id}`]})]) as any);\n  assert.equal(changed.outcomes[0].auditPending,true);\n  const state=await readDiagnosisCarryState(c.fhir,current,carryFacts(c));\n  assert.equal(state.edited,true);assert.equal(state.observationCarried[`Observation/${carried.id}`],false);\n});\n",
+  "notes": "T1 source fixture id renamed, existence retained and both-eye/qualifier checks added. T2 assertions unchanged. T3 obsolete single legacy carry provenance setup replaced with actual canonical carry plus writer mutation; edited/carried assertions retained and untouched control added. Three TODO flags removed. T1 includes a distinct retired canonical source owner; exact two-eye count proves it is hidden.",
+  "base": "1706d7c8417b04791471d4332b4ecd712883bf11",
+  "mappings": [
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 65,
+        "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+        "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 75,
+          "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+          "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 66,
+        "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+        "text": "assert.ok((result.body as any).encounters.some((e:any)=>e.diagnoses.some((d:any)=>d.findings.some((f:any)=>f.observationReference===\"Observation/source-fact\"))))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 75,
+          "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+          "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+        },
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 77,
+          "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+          "text": "assert.ok(facts.some((f:any)=>f.observationReference===\"Observation/source-OD\"))"
+        },
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 78,
+          "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+          "text": "assert.deepEqual(facts.map((f:any)=>f.laterality).sort(),[\"OD\",\"OS\"])"
+        },
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 79,
+          "context": "\"T1 previous exams displays canonical finding linked by extension\"",
+          "text": "assert.deepEqual(facts.map((f:any)=>f.qualifiers),[{grade:\"2+\"},{grade:\"2+\"}])"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 70,
+        "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+        "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 83,
+          "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+          "text": "assert.equal(result.status,200,JSON.stringify(result.body))"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 72,
+        "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+        "text": "assert.equal(copied.length,1)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 85,
+          "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+          "text": "assert.equal(copied.length,1)"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 72,
+        "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+        "text": "assert.equal(parseCurrentFindingEnvelope(copied[0]).status,\"valid\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 85,
+          "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+          "text": "assert.equal(parseCurrentFindingEnvelope(copied[0]).status,\"valid\")"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 73,
+        "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+        "text": "assert.equal(copied[0].component?.find(v=>v.code.coding?.some(k=>k.code?.endsWith(\"::grade\")))?.valueCodeableConcept?.coding?.[0]?.code,\"2+\")"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 86,
+          "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+          "text": "assert.equal(copied[0].component?.find(v=>v.code.coding?.some(k=>k.code?.endsWith(\"::grade\")))?.valueCodeableConcept?.coding?.[0]?.code,\"2+\")"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 74,
+        "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+        "text": "assert.ok(copied[0].extension?.some(e=>e.url===SUPPORTS_DIAGNOSIS_URL&&e.valueReference?.reference===(result.body as any).conditionReference))"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 87,
+          "context": "\"T2 carry pull preserves canonical identity typed qualifiers and destination home\"",
+          "text": "assert.ok(copied[0].extension?.some(e=>e.url===SUPPORTS_DIAGNOSIS_URL&&e.valueReference?.reference===(result.body as any).conditionReference))"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 85,
+        "context": "\"T3 pending mutation marker postdating carry is read as edited\"",
+        "text": "assert.equal(state.edited,true)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 99,
+          "context": "\"T3 later writer version after carry is read as edited\"",
+          "text": "assert.equal(state.edited,true)"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    },
+    {
+      "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+      "before": {
+        "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+        "line": 85,
+        "context": "\"T3 pending mutation marker postdating carry is read as edited\"",
+        "text": "assert.equal(state.observationCarried[`Observation/${carried.id}`],false)"
+      },
+      "after": [
+        {
+          "file": "mcp/tests/r10A3ReleaseScenarios.test.ts",
+          "line": 99,
+          "context": "\"T3 later writer version after carry is read as edited\"",
+          "text": "assert.equal(state.observationCarried[`Observation/${carried.id}`],false)"
+        }
+      ],
+      "rows": [
+        "W73",
+        "W74",
+        "W75",
+        "W126"
+      ],
+      "rationale": "Carry scenario now runs the actual canonical carry handler; exact preserved assertions or same-slot replacement assertions are enumerated."
+    }
+  ]
+}

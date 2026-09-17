@@ -1,0 +1,25 @@
+[
+  {
+    "id": "W114-undo-dependency",
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern=W114 effective stored practice definition",
+      "mcp/tests/r10A3VoidUndo.test.ts"
+    ],
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/encounter-undo-endpoint.ts",
+        "before": "  const definitions = deps.findingDefinitions?.() ?? [];",
+        "after": "  const definitions = (await import(\"./finding-definition-store.js\")).buildFindingDefinitionSeeds();"
+      }
+    ],
+    "redExit": 1,
+    "greenExit": 0,
+    "redLog": "void-undo/W114-undo-dependency-red.tap",
+    "greenLog": "void-undo/W114-undo-dependency-green.tap",
+    "sourceRestoredSha256": "918c7f9f60b736992100baaa26a64fe1eb40ad361e11cb068950fe5492ef23eb"
+  }
+]

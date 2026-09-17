@@ -1,0 +1,737 @@
+TAP version 13
+# Subtest: staff diagnosis pick refuses all actions with zero writes
+    # Subtest: possible
+    ok 1 - possible
+      ---
+      duration_ms: 1.292084
+      type: 'test'
+      ...
+    # Subtest: confirm
+    ok 2 - confirm
+      ---
+      duration_ms: 0.158209
+      type: 'test'
+      ...
+    # Subtest: discard
+    ok 3 - discard
+      ---
+      duration_ms: 0.071709
+      type: 'test'
+      ...
+    1..3
+ok 1 - staff diagnosis pick refuses all actions with zero writes
+  ---
+  duration_ms: 1.853583
+  type: 'test'
+  ...
+# Subtest: condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+ok 2 - condition code resolution returns zero, one, or two codes only when the catalog declaration permits it
+  ---
+  duration_ms: 0.499416
+  type: 'test'
+  ...
+# Subtest: staged POAG picks persist the chosen member code and keep different per-eye stages separate
+ok 3 - staged POAG picks persist the chosen member code and keep different per-eye stages separate
+  ---
+  duration_ms: 3.387708
+  type: 'test'
+  ...
+# Subtest: Stage later persists a staged family Condition with no ICD-10-CM coding
+ok 4 - Stage later persists a staged family Condition with no ICD-10-CM coding
+  ---
+  duration_ms: 0.987334
+  type: 'test'
+  ...
+# Subtest: Stage later cannot duplicate an existing same-eye staged member Condition
+ok 5 - Stage later cannot duplicate an existing same-eye staged member Condition
+  ---
+  duration_ms: 1.3445
+  type: 'test'
+  ...
+# Subtest: a member pick completes the same-eye pending family Condition instead of creating a duplicate
+ok 6 - a member pick completes the same-eye pending family Condition instead of creating a duplicate
+  ---
+  duration_ms: 1.964167
+  type: 'test'
+  ...
+# Subtest: discarding an absent staged member cannot refute a same-eye pending family Condition
+ok 7 - discarding an absent staged member cannot refute a same-eye pending family Condition
+  ---
+  duration_ms: 1.583458
+  type: 'test'
+  ...
+# Subtest: all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+ok 8 - all three eyelid families write both-lids OD and OS codes and resolve OU without the false 422
+  ---
+  duration_ms: 5.502958
+  type: 'test'
+  ...
+# Subtest: allOf mapping triggers require every nested option trigger
+ok 9 - allOf mapping triggers require every nested option trigger
+  ---
+  duration_ms: 1.347666
+  type: 'test'
+  ...
+# Subtest: EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+ok 10 - EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming
+  ---
+  duration_ms: 23.937917
+  type: 'test'
+  ...
+# Subtest: real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+ok 11 - real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated tally ordering, and refuted audit state
+  ---
+  duration_ms: 94.649084
+  type: 'test'
+  ...
+# Subtest: OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+not ok 12 - OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions
+  ---
+  duration_ms: 10.188834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:23986'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:725:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+not ok 13 - I1 complete ocular qualifiers resolve each selected finding to one diagnosis
+  ---
+  duration_ms: 7.013875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:28600'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:827:24)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+not ok 14 - I2 absent or partial ocular qualifiers retain the specified safe fallbacks
+  ---
+  duration_ms: 5.947417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:30814'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:876:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I3 qualifier triggers are scoped to the option that recorded the shared key
+ok 15 - I3 qualifier triggers are scoped to the option that recorded the shared key
+  ---
+  duration_ms: 0.349792
+  type: 'test'
+  ...
+# Subtest: I4 ocular records without findingDetails retain specific candidate lists
+not ok 16 - I4 ocular records without findingDetails retain specific candidate lists
+  ---
+  duration_ms: 5.770417
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:33074'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:943:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: anterior-chamber ruled findings propose only their seeded diagnoses
+not ok 17 - anterior-chamber ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 6.875125
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:33878'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:973:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: iris ruled findings propose only their seeded diagnoses
+not ok 18 - iris ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 6.02325
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:34275'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:985:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: vitreous ruled findings propose only their seeded diagnoses
+not ok 19 - vitreous ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 6.191334
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:34684'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:996:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: vessels ruled findings propose only their seeded diagnoses
+not ok 20 - vessels ruled findings propose only their seeded diagnoses
+  ---
+  duration_ms: 5.807083
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:35004'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:1008:22)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: palpebral conjunctiva GPC proposes its seeded diagnosis
+not ok 21 - palpebral conjunctiva GPC proposes its seeded diagnosis
+  ---
+  duration_ms: 5.67025
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:35628'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:1025:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: vessels A/V ratio codes follow the field::option delimiter convention
+ok 22 - vessels A/V ratio codes follow the field::option delimiter convention
+  ---
+  duration_ms: 6.218417
+  type: 'test'
+  ...
+# Subtest: active ocular-health diagnosis mappings name active options on their declared fields
+ok 23 - active ocular-health diagnosis mappings name active options on their declared fields
+  ---
+  duration_ms: 6.07225
+  type: 'test'
+  ...
+# Subtest: diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+ok 24 - diagnosis reachability reports mapping, rule, and visual-field descriptor channels against separate baselines
+  ---
+  duration_ms: 54.281417
+  type: 'test'
+  ...
+# Subtest: ocular-health ledger diagnoses never become more globally unreachable
+ok 25 - ocular-health ledger diagnoses never become more globally unreachable
+  ---
+  duration_ms: 7.317083
+  type: 'test'
+  ...
+# Subtest: unspecified ocular diagnosis keys never surface with qualifiers unset or set
+not ok 26 - unspecified ocular diagnosis keys never surface with qualifiers unset or set
+  ---
+  duration_ms: 6.027583
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:44524'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    ocularCandidateKeys (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2500:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:1304:23)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: I5 qualifier components cannot diagnose or suppress without an active parent option
+ok 27 - I5 qualifier components cannot diagnose or suppress without an active parent option
+  ---
+  duration_ms: 26.944
+  type: 'test'
+  ...
+# Subtest: I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+not ok 28 - I6 allOf-wrapped option fallbacks are suppressed like bare option fallbacks
+  ---
+  duration_ms: 6.088792
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:48432'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:1435:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+ok 29 - direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site
+  ---
+  duration_ms: 2.155958
+  type: 'test'
+  ...
+# Subtest: visual-field descriptors derive every approved code while preserving the descriptor through reload
+ok 30 - visual-field descriptors derive every approved code while preserving the descriptor through reload
+  ---
+  duration_ms: 189.412
+  type: 'test'
+  ...
+# Subtest: staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+ok 31 - staged glaucoma visibly suppresses only the visual-field proposal and override never changes glaucoma stage
+  ---
+  duration_ms: 26.787042
+  type: 'test'
+  ...
+# Subtest: prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+ok 32 - prior-encounter confirmed glaucoma reveals both staged glaucoma families without widening encounter suppression scope
+  ---
+  duration_ms: 21.468
+  type: 'test'
+  ...
+# Subtest: posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+not ok 33 - posterior plain drusen returns an ordered leaf and staged family while occasional drusen stays descriptive
+  ---
+  duration_ms: 5.777334
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:2:63365'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"result":"invalid","reason":"invalid"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/diagnosisLinkL2.test.ts:1822:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: homonymous field-side picks never derive field side from eye laterality
+ok 34 - homonymous field-side picks never derive field side from eye laterality
+  ---
+  duration_ms: 1.533458
+  type: 'test'
+  ...
+# Subtest: a concurrent Condition update returns 409 without silently retrying the clinician decision
+ok 35 - a concurrent Condition update returns 409 without silently retrying the clinician decision
+  ---
+  duration_ms: 13.198333
+  type: 'test'
+  ...
+# Subtest: a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+ok 36 - a failed diagnosis pick transaction leaves the Condition and Encounter unchanged
+  ---
+  duration_ms: 1.249208
+  type: 'test'
+  ...
+# Subtest: possible, confirm, and discard use atomic transactions with per-resource version preconditions
+ok 37 - possible, confirm, and discard use atomic transactions with per-resource version preconditions
+  ---
+  duration_ms: 1.459917
+  type: 'test'
+  ...
+# Subtest: direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+ok 38 - direct confirm and discard each send one atomic Condition-and-Encounter transaction with version guards
+  ---
+  duration_ms: 0.990417
+  type: 'test'
+  ...
+# Subtest: laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+ok 39 - laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition
+  ---
+  duration_ms: 29.361792
+  type: 'test'
+  ...
+# Subtest: conditional create makes identical same-eye Possible double-submit idempotent
+ok 40 - conditional create makes identical same-eye Possible double-submit idempotent
+  ---
+  duration_ms: 12.918292
+  type: 'test'
+  ...
+# Subtest: confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+ok 41 - confirmed catalog picks join Encounter.diagnosis once and preserve rank gaps
+  ---
+  duration_ms: 1.309
+  type: 'test'
+  ...
+# Subtest: three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+ok 42 - three confirmed diagnoses can discard the middle row and submit the remaining exact reorder
+  ---
+  duration_ms: 2.742875
+  type: 'test'
+  ...
+# Subtest: discard unlink is idempotent and confirm after discard relinks through the existing path
+ok 43 - discard unlink is idempotent and confirm after discard relinks through the existing path
+  ---
+  duration_ms: 1.989208
+  type: 'test'
+  ...
+# Subtest: discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+ok 44 - discard returns reload-and-retry after the Encounter unlink exhausts conflict retries
+  ---
+  duration_ms: 1.758334
+  type: 'test'
+  ...
+# Subtest: a signed Encounter refuses discard before changing the Condition or Encounter
+ok 45 - a signed Encounter refuses discard before changing the Condition or Encounter
+  ---
+  duration_ms: 0.5475
+  type: 'test'
+  ...
+# Subtest: diagnosis pick Provenance targets the patient
+ok 46 - diagnosis pick Provenance targets the patient
+  ---
+  duration_ms: 1.043708
+  type: 'test'
+  ...
+# Subtest: a failed tally side effect never fails a successful explicit diagnosis pick
+ok 47 - a failed tally side effect never fails a successful explicit diagnosis pick
+  ---
+  duration_ms: 6.666292
+  type: 'test'
+  ...
+# Subtest: dedup keeps rule evidence and the higher-priority mapping when no rule exists
+ok 48 - dedup keeps rule evidence and the higher-priority mapping when no rule exists
+  ---
+  duration_ms: 0.068417
+  type: 'test'
+  ...
+# Subtest: W10 supported pick is a Condition-only step and retains its full response
+ok 49 - W10 supported pick is a Condition-only step and retains its full response
+  ---
+  duration_ms: 7.550208
+  type: 'test'
+  ...
+# Subtest: W35 empty stale foreign supports refuse before Condition writes
+    # Subtest: empty
+    ok 1 - empty
+      ---
+      duration_ms: 0.237166
+      type: 'test'
+      ...
+    # Subtest: stale
+    ok 2 - stale
+      ---
+      duration_ms: 6.945959
+      type: 'test'
+      ...
+    # Subtest: foreign
+    ok 3 - foreign
+      ---
+      duration_ms: 6.291542
+      type: 'test'
+      ...
+    1..3
+ok 50 - W35 empty stale foreign supports refuse before Condition writes
+  ---
+  duration_ms: 13.655167
+  type: 'test'
+  ...
+# Subtest: W30 candidates use current projection and omit superseded snapshot suggestions
+ok 51 - W30 candidates use current projection and omit superseded snapshot suggestions
+  ---
+  duration_ms: 7.759333
+  type: 'test'
+  ...
+# Subtest: mixed option definition preserves numeric panel context in current candidates
+ok 52 - mixed option definition preserves numeric panel context in current candidates
+  ---
+  duration_ms: 15.122584
+  type: 'test'
+  ...
+# Subtest: supported pick validates every support and explicit eye union before all writes
+    # Subtest: duplicate
+    ok 1 - duplicate
+      ---
+      duration_ms: 6.556125
+      type: 'test'
+      ...
+    # Subtest: missing-command
+    ok 2 - missing-command
+      ---
+      duration_ms: 7.090208
+      type: 'test'
+      ...
+    # Subtest: wrong-command
+    ok 3 - wrong-command
+      ---
+      duration_ms: 0.1215
+      type: 'test'
+      ...
+    # Subtest: eye
+    ok 4 - eye
+      ---
+      duration_ms: 6.491625
+      type: 'test'
+      ...
+    # Subtest: retired
+    ok 5 - retired
+      ---
+      duration_ms: 6.214292
+      type: 'test'
+      ...
+    # Subtest: absent
+    ok 6 - absent
+      ---
+      duration_ms: 6.835959
+      type: 'test'
+      ...
+    # Subtest: signed
+    ok 7 - signed
+      ---
+      duration_ms: 6.620208
+      type: 'test'
+      ...
+    # Subtest: cancelled
+    ok 8 - cancelled
+      ---
+      duration_ms: 6.553709
+      type: 'test'
+      ...
+    # Subtest: conflict
+    ok 9 - conflict
+      ---
+      duration_ms: 6.574292
+      type: 'test'
+      ...
+    # Subtest: legacy
+    ok 10 - legacy
+      ---
+      duration_ms: 7.450834
+      type: 'test'
+      ...
+    # Subtest: foreign-home
+    ok 11 - foreign-home
+      ---
+      duration_ms: 6.466375
+      type: 'test'
+      ...
+    # Subtest: wrong-view
+    ok 12 - wrong-view
+      ---
+      duration_ms: 6.336958
+      type: 'test'
+      ...
+    1..12
+ok 53 - supported pick validates every support and explicit eye union before all writes
+  ---
+  duration_ms: 73.887125
+  type: 'test'
+  ...
+# Subtest: supported bilateral pick unions eyes, then discard remains a Condition step without a link
+ok 54 - supported bilateral pick unions eyes, then discard remains a Condition step without a link
+  ---
+  duration_ms: 14.5345
+  type: 'test'
+  ...
+# Subtest: projected no-id pick without supports performs only the Condition step
+ok 55 - projected no-id pick without supports performs only the Condition step
+  ---
+  duration_ms: 14.804708
+  type: 'test'
+  ...
+# Subtest: pick reports failed and unconfirmed Condition steps without pretending load failure
+    # Subtest: 403
+    ok 1 - 403
+      ---
+      duration_ms: 6.889208
+      type: 'test'
+      ...
+    # Subtest: undefined
+    ok 2 - undefined
+      ---
+      duration_ms: 5.938208
+      type: 'test'
+      ...
+    1..2
+ok 56 - pick reports failed and unconfirmed Condition steps without pretending load failure
+  ---
+  duration_ms: 12.975791
+  type: 'test'
+  ...
+# Subtest: W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity
+ok 57 - W29 Cup/Disc measurement pick retains Observation evidence and Provenance entity
+  ---
+  duration_ms: 7.140208
+  type: 'test'
+  ...
+# Subtest: pick finds an existing diagnosis on page two instead of creating another
+ok 58 - pick finds an existing diagnosis on page two instead of creating another
+  ---
+  duration_ms: 1.2875
+  type: 'test'
+  ...
+# Subtest: option candidates recursively collect trigger supports and union duplicate diagnosis supports
+ok 59 - option candidates recursively collect trigger supports and union duplicate diagnosis supports
+  ---
+  duration_ms: 23.086667
+  type: 'test'
+  ...
+# Subtest: §3.7 option-trigger supports exclude unrelated present options without diagnosis deduplication
+ok 60 - §3.7 option-trigger supports exclude unrelated present options without diagnosis deduplication
+  ---
+  duration_ms: 13.491875
+  type: 'test'
+  ...
+# Subtest: mixed panel context uses its unique owner and refuses a second owner regardless of time
+ok 61 - mixed panel context uses its unique owner and refuses a second owner regardless of time
+  ---
+  duration_ms: 26.471208
+  type: 'test'
+  ...
+# Subtest: applied Condition remains reported when the visit-status side effect fails
+ok 62 - applied Condition remains reported when the visit-status side effect fails
+  ---
+  duration_ms: 0.828875
+  type: 'test'
+  ...
+# Subtest: transaction conflict is a failed pick step with its HTTP cause
+ok 63 - transaction conflict is a failed pick step with its HTTP cause
+  ---
+  duration_ms: 6.716875
+  type: 'test'
+  ...
+# Subtest: candidates consume page-two encounter observations and patient diagnosis history
+ok 64 - candidates consume page-two encounter observations and patient diagnosis history
+  ---
+  duration_ms: 7.854
+  type: 'test'
+  ...
+# Subtest: candidate history pagination errors are unavailable rather than empty candidates
+ok 65 - candidate history pagination errors are unavailable rather than empty candidates
+  ---
+  duration_ms: 6.31625
+  type: 'test'
+  ...
+1..65
+# tests 85
+# suites 0
+# pass 73
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1463.711208

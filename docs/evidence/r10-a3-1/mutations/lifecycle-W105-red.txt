@@ -1,0 +1,105 @@
+TAP version 13
+1..0
+# Subtest: mcp/tests/encounterUndoEndpoint.test.ts
+ok 1 - mcp/tests/encounterUndoEndpoint.test.ts
+  ---
+  duration_ms: 205.0035
+  type: 'test'
+  ...
+# Subtest: W105 fact writer supersession refuses whole undo
+not ok 2 - W105 fact writer supersession refuses whole undo
+  ---
+  duration_ms: 88.676625
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:7578'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:70:88)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W105 panel writer supersession refuses whole undo
+not ok 3 - W105 panel writer supersession refuses whole undo
+  ---
+  duration_ms: 52.717334
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:7578'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:70:88)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W105 marker absence transitions refuse without touching unrelated owners
+not ok 4 - W105 marker absence transitions refuse without touching unrelated owners
+  ---
+  duration_ms: 37.026542
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:12667'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:81:820)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W105 forged audit or malformed operation cannot trigger undo repair before supersession
+not ok 5 - W105 forged audit or malformed operation cannot trigger undo repair before supersession
+  ---
+  duration_ms: 24.511209
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3VoidUndo.test.ts:1:15923'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    503 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 503
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3VoidUndo.test.ts:87:495)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 407.434459

@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: W121 same negative id second actor refuses zero writes
+ok 1 - W121 same negative id second actor refuses zero writes
+  ---
+  duration_ms: 12.808625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 189.875125

@@ -1,0 +1,217 @@
+[
+  {
+    "id": "mcp-create-observation",
+    "attempted": 3,
+    "persisted": 3,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 2
+  },
+  {
+    "id": "mcp-scribe-write",
+    "attempted": 1,
+    "persisted": 1,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-save-section",
+    "attempted": 6,
+    "persisted": 6,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 3
+  },
+  {
+    "id": "mcp-append-context",
+    "attempted": 2,
+    "persisted": 2,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 11,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-attest",
+    "attempted": 4,
+    "persisted": 4,
+    "observations": [
+      {
+        "stage": "persisted",
+        "kind": "canonical-fact"
+      },
+      {
+        "stage": "persisted",
+        "kind": "panel-context"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 2,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-amend",
+    "attempted": 4,
+    "persisted": 4,
+    "observations": [
+      {
+        "stage": "persisted",
+        "kind": "canonical-fact"
+      },
+      {
+        "stage": "persisted",
+        "kind": "panel-context"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 2,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-smoking-status",
+    "attempted": 2,
+    "persisted": 2,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-dry-eye-questionnaire-score",
+    "attempted": 3,
+    "persisted": 3,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-meibography",
+    "attempted": 3,
+    "persisted": 3,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-ortho-k-fit",
+    "attempted": 2,
+    "persisted": 2,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 0
+  },
+  {
+    "id": "mcp-eye-growth",
+    "attempted": 4,
+    "persisted": 4,
+    "observations": [
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "attempted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      },
+      {
+        "stage": "persisted",
+        "kind": "unrelated"
+      }
+    ],
+    "rejectionStatus": 409,
+    "refusalControls": 6,
+    "builderControls": 1
+  }
+]
+11/11 real MCP runtime paths verified

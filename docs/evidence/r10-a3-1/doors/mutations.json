@@ -1,0 +1,87 @@
+[
+  {
+    "id": "W90-put",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "        if (isClosedEncounter(context.encounter)) return invalid('encounter-closed');\n        if (body.patientReference",
+        "after": "        if (body.patientReference"
+      },
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "    if (isClosedEncounter(context.encounter)) return 'encounter-closed';",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W90|W111",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W90 door-put"
+  },
+  {
+    "id": "W90-repair",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "        if (isClosedEncounter(context.encounter)) return invalid('encounter-closed');\n        if (context.state.patientReference",
+        "after": "        if (context.state.patientReference"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W90|W111",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W90 door-audit-repair"
+  },
+  {
+    "id": "W90-pick",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+        "before": "  if (isClosedEncounter(encounter)) return { status: 409, body: { result: \"invalid\", reason: \"encounter-closed\", error: \"Signed or closed encounters cannot be edited.\" } };",
+        "after": ""
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W90|W111",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W90 pick"
+  },
+  {
+    "id": "W111-door",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-findings-endpoint.ts",
+        "before": "const response = findingCommandResponse(await executeFindingCommand(writerDeps, command));\n        const after = await staff.fhir.read<Encounter>('Encounter', params.data.encounterId);",
+        "after": "const response = findingCommandResponse(await executeFindingCommand(writerDeps, command));\n        const after = context.encounter;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "W90|W111",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*W111"
+  }
+]

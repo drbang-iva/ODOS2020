@@ -1,0 +1,167 @@
+TAP version 13
+# Subtest: W70 deferred preserves fact bytes and version
+not ok 1 - W70 deferred preserves fact bytes and version
+  ---
+  duration_ms: 15.848542
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3OcularDoor.test.ts:40:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        code: {
+          coding: [
+            {
+              code: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis',
+    ...
+          },
+    +     {
+    +       code: {
+    +         coding: [
+    +           {
+    +             code: 'R10_OPERATION',
+    +             display: 'R10_OPERATION',
+    +             system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+    +           }
+    +         ],
+    +         text: 'R10_OPERATION'
+    +       },
+    +       valueString: '{"commandId":"12c7e64a-c9b0-4636-9588-6b03853b127d","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","digest":"2ed77e86ca95bcf3113c5cda9b70457d802f8bb638cd8a5f601e86e53626f7f6","audit":{"kind":"mutation","actor":"Practitioner/synthetic","recorded":"2026-09-16T12:00:00.000Z","activity":"UPDATE","targetReferences":["self","Patient/p1"]}}'
+    +     }
+        ],
+    +   effectiveDateTime: '2026-09-16T12:00:00.000Z',
+    -   effectiveDateTime: '2026-09-15T12:00:00.000Z',
+        encounter: {
+          reference: 'Encounter/e1'
+        },
+        extension: [
+          {
+    ...
+        meta: {
+    +     versionId: '4f61f6cb-26b4-42a9-ba8e-35fff1b44506'
+    -     versionId: 'v1'
+        },
+        resourceType: 'Observation',
+    +   status: 'entered-in-error',
+    -   status: 'preliminary',
+        subject: {
+          reference: 'Patient/p1'
+        },
+        valueBoolean: true
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    resourceType: 'Observation'
+    id: 'canonical'
+    meta:
+      versionId: 'v1'
+    status: 'preliminary'
+    code:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+          code: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+          display: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+      text: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+    subject:
+      reference: 'Patient/p1'
+    encounter:
+      reference: 'Encounter/e1'
+    effectiveDateTime: '2026-09-15T12:00:00.000Z'
+    extension:
+      0:
+        url: 'https://odos2020.com/fhir/StructureDefinition/eye-laterality'
+        valueCodeableConcept:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'OD'
+              display: 'Right eye'
+          text: 'Right eye'
+    valueBoolean: true
+    identifier:
+      0:
+        system: 'urn:odos:current-finding:v1'
+        value: 'eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0'
+    component:
+      0:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_CURRENT_META'
+              display: 'R10_CURRENT_META'
+          text: 'R10_CURRENT_META'
+        valueString: '{"v":1,"patientId":"p1","encounterId":"e1","stableKey":"ocular-health:anterior:lens","fieldCode":"CUSTOM_ABNORMAL_FINDINGS_09","optionCode":"nuclear-sclerosis","eye":"OD"}'
+  actual:
+    resourceType: 'Observation'
+    id: 'canonical'
+    meta:
+      versionId: '4f61f6cb-26b4-42a9-ba8e-35fff1b44506'
+    status: 'entered-in-error'
+    code:
+      coding:
+        0:
+          system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+          code: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+          display: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+      text: 'ocular-health:anterior:lens::CUSTOM_ABNORMAL_FINDINGS_09::nuclear-sclerosis'
+    subject:
+      reference: 'Patient/p1'
+    encounter:
+      reference: 'Encounter/e1'
+    effectiveDateTime: '2026-09-16T12:00:00.000Z'
+    extension:
+      0:
+        url: 'https://odos2020.com/fhir/StructureDefinition/eye-laterality'
+        valueCodeableConcept:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'OD'
+              display: 'Right eye'
+          text: 'Right eye'
+    valueBoolean: true
+    identifier:
+      0:
+        system: 'urn:odos:current-finding:v1'
+        value: 'eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0'
+    component:
+      0:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_CURRENT_META'
+              display: 'R10_CURRENT_META'
+          text: 'R10_CURRENT_META'
+        valueString: '{"v":1,"patientId":"p1","encounterId":"e1","stableKey":"ocular-health:anterior:lens","fieldCode":"CUSTOM_ABNORMAL_FINDINGS_09","optionCode":"nuclear-sclerosis","eye":"OD"}'
+      1:
+        code:
+          coding:
+            0:
+              system: 'https://odos2020.com/fhir/CodeSystem/ophthalmology'
+              code: 'R10_OPERATION'
+              display: 'R10_OPERATION'
+          text: 'R10_OPERATION'
+        valueString: '{"commandId":"12c7e64a-c9b0-4636-9588-6b03853b127d","target":"finding:eb871784e7862fc22bb3869847242bbb41b3b81358adffa3cb7d2256e26980c0","digest":"2ed77e86ca95bcf3113c5cda9b70457d802f8bb638cd8a5f601e86e53626f7f6","audit":{"kind":"mutation","actor":"Practitioner/synthetic","recorded":"2026-09-16T12:00:00.000Z","activity":"UPDATE","targetReferences":["self","Patient/p1"]}}'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3OcularDoor.test.ts:40:264)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 197.535084

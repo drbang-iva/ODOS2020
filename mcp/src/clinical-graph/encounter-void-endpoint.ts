@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   Basic,
   Bundle,
@@ -44,6 +45,11 @@ import {
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { ClinicalFindingDefinition, ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 import { isLiveObservation } from "./observation-liveness.js";
+import { materializeAtomicFindingCatalog } from "./diagnosis-findings-endpoint.js";
+import { projectCurrentFindings } from "./current-finding-reader.js";
+import { findPendingAudits, parseCurrentFindingEnvelope, parseFindingPanelEnvelope, parseFindingOperation } from "./current-finding-identity.js";
+import { repairPendingAudits, type FindingCommandDeps } from "./current-finding-writer.js";
+
 
 /**
  * POST /clinical-graph/encounters/:encounterId/void
@@ -109,6 +115,8 @@ export interface EncounterVoidFhirClient {
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
+  createWithOutcome?: FindingCommandDeps["fhir"]["createWithOutcome"];
+  update?: FindingCommandDeps["fhir"]["update"];
 }
 
 export interface EncounterVoidEndpointDeps {
@@ -138,6 +146,7 @@ export interface VoidCandidateEntry {
 }
 
 export interface EncounterVoidResponse {
+  voidActionId?: string;
   canWriteDiagnosis: boolean;
   voided: string[];
   count: number;
@@ -225,19 +234,17 @@ export async function handleEncounterVoidRequest(
     return { status: 400, body: { error: "Encounter must reference a Patient subject." } };
   }
   const encounterReference = `Encounter/${encounterId}`;
-  const definitions = (deps.findingDefinitions?.() ?? []).filter((definition) => definition.active);
+  const definitions = deps.findingDefinitions?.() ?? [];
   const request = parsed.data;
 
   // --- Candidate resolution -------------------------------------------------------------
   // The encounter boundary: only this encounter's resources are ever candidates.
-  const observations = (await searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }))
-    .filter((observation): observation is Observation & { id: string } =>
-      typeof observation.id === "string" &&
-      observation.encounter?.reference === encounterReference &&
-      observation.subject?.reference === patientReference &&
-      isLiveObservation(observation)
-    )
-    .map((observation) => identify(observation, definitions));
+  const findingState = await loadLifecycleFindings(staff.fhir, patientReference, encounterReference, definitions);
+  if (findingState.incomplete) return { status: 503, body: { error: "Finding state could not be loaded.", code: "finding-load-failed" } };
+  if (findingState.preRebuild) {
+    return { status: 409, body: { error: "Pre-rebuild test encounters are read-only.", code: "pre-rebuild-test-encounter" } };
+  }
+  const observations = findingState.observations.filter(isLiveObservation).map((observation) => identify(observation, definitions));
 
   let targetObservations: IdentifiedObservation[] = [];
   let includeComplaints = false;
@@ -278,6 +285,10 @@ export async function handleEncounterVoidRequest(
     targetObservations = observations;
     includeComplaints = true;
     includeConditions = true;
+  }
+
+  if (targetObservations.some(({ observation }) => isSignedCanonical(observation))) {
+    return { status: 422, body: { error: "Signed or cancelled findings cannot be voided.", code: "signed-or-cancelled" } };
   }
 
   const conditions: Array<Condition & { id: string }> = includeConditions
@@ -351,14 +362,20 @@ export async function handleEncounterVoidRequest(
     return { status: 403, body: { error: "chart.diagnosis.write role required to clear diagnoses" } };
   }
 
+  const repairFailure = await repairLifecycleAudits(staff.fhir, definitions, staff.staffReference, patientReference, encounterReference,
+    targetObservations.map(row => row.observation), deps.now);
+  if (repairFailure) return repairFailure;
+
   // --- The Undo ledger slot for this action (§4b.4) -------------------------------------
   // priorStatus is recorded per resource so Undo restores what was there, not a constant.
   const now = deps.now?.() ?? new Date().toISOString();
+  const voidActionId = randomUUID();
   const diagnosisRows = new Map((encounter.diagnosis ?? []).map((row) => [row.condition.reference ?? "", row]));
   const ledgerEntries: UndoLedgerEntry[] = [
     ...targetObservations.map(({ observation }): UndoLedgerEntry => ({
       ref: `Observation/${observation.id}`,
       priorStatus: observation.status ?? "",
+      ...(lifecycleFindingKey(observation) ? { markerCommandId: parseFindingOperation(observation)?.commandId ?? null } : {}),
     })),
     ...administrations.map((administration): UndoLedgerEntry => ({
       ref: `MedicationAdministration/${administration.id}`,
@@ -385,6 +402,7 @@ export async function handleEncounterVoidRequest(
         ? asList(request.sectionKey)
         : [...new Set(targetObservations.map((row) => row.sectionKey))];
   const slot: UndoLedgerSlot = {
+    voidActionId,
     voided: ledgerEntries,
     label: request.label ?? (request.scope === "encounter"
       ? ENCOUNTER_UNDO_LABEL
@@ -410,7 +428,7 @@ export async function handleEncounterVoidRequest(
           [slotKeys[0] ?? OTHER_SECTION_KEY]: slot,
         },
       };
-  const response: EncounterVoidResponse = { canWriteDiagnosis, voided, count: voided.length, sections, entries, preview, ledger: nextLedger };
+  const response: EncounterVoidResponse = { canWriteDiagnosis, voided, count: voided.length, sections, entries, preview, ledger: nextLedger, voidActionId };
 
   // --- One transaction ------------------------------------------------------------------
   const complaintProvenance: ClinicalGraphProvenance = {
@@ -505,10 +523,61 @@ export async function handleEncounterVoidRequest(
 
 // ---------------------------------------------------------------------------------------
 
+export function lifecycleFindingKey(observation: Observation) {
+  const fact = parseCurrentFindingEnvelope(observation);
+  if (fact.status === "valid") return fact.key;
+  const panel = parseFindingPanelEnvelope(observation);
+  return panel.status === "valid" ? panel.key : undefined;
+}
+
+export function isSignedCanonical(observation: Observation): boolean {
+  return !!lifecycleFindingKey(observation) && ["final", "amended", "corrected", "cancelled"].includes(observation.status);
+}
+
+export async function loadLifecycleFindings(fhir: EncounterVoidFhirClient, patientReference: string, encounterReference: string,
+  definitions: readonly ClinicalFindingDefinition[]) {
+  try {
+    const observations = (await searchAll<Observation>(fhir, "Observation", { encounter: encounterReference }))
+      .filter((observation): observation is Observation & { id: string } => typeof observation.id === "string" &&
+        observation.encounter?.reference === encounterReference && observation.subject?.reference === patientReference);
+    const projection = projectCurrentFindings({ incomplete: false, patientReference, encounterReference, definitions,
+      catalog: materializeAtomicFindingCatalog(definitions), observations, conditions: [] });
+    return { observations, preRebuild: projection.preRebuild };
+  } catch {
+    return { observations: [], preRebuild: false, incomplete: true };
+  }
+}
+
+export async function repairLifecycleAudits(fhir: EncounterVoidFhirClient, definitions: readonly ClinicalFindingDefinition[],
+  staffReference: string, patientReference: string, encounterReference: string, observations: readonly Observation[], now?: () => string
+): Promise<{ status: number; body: unknown } | undefined> {
+  const selected = observations.filter(observation => lifecycleFindingKey(observation));
+  if (!selected.length) return undefined;
+  try {
+    const pending = await findPendingAudits(fhir, selected);
+    if (!pending.size) return undefined;
+    if (!fhir.createWithOutcome || !fhir.update) throw new Error("Conditional writer is unavailable.");
+    const writerFhir: FindingCommandDeps["fhir"] = { baseUrl: fhir.baseUrl, read: fhir.read.bind(fhir), search: fhir.search.bind(fhir),
+      ...(fhir.searchUrl ? { searchUrl: fhir.searchUrl.bind(fhir) } : {}),
+      createWithOutcome: fhir.createWithOutcome.bind(fhir), update: fhir.update.bind(fhir) };
+    const result = await repairPendingAudits({ fhir: writerFhir, definitions, catalog: materializeAtomicFindingCatalog(definitions), staffReference, now },
+      { commandId: randomUUID(), patientReference, encounterReference }, { targets: selected.map(observation => `Observation/${observation.id}`) });
+    if (!result.complete) return { status: 503, body: { error: "Finding audit repair did not complete.", code: "audit-repair-failed", outcomes: result.outcomes } };
+  } catch {
+    return { status: 503, body: { error: "Finding audit repair could not be verified.", code: "audit-repair-failed" } };
+  }
+  return undefined;
+}
+
 function identify(
   observation: Observation & { id: string },
   definitions: readonly ClinicalFindingDefinition[],
 ): IdentifiedObservation {
+  const key = lifecycleFindingKey(observation);
+  if (key) {
+    const definition = definitions.find(row => row.stableKey === key.stableKey);
+    return { observation, findingKey: key.stableKey, sectionKey: definition?.sectionKey ?? key.stableKey, laterality: key.eye };
+  }
   const laterality = observationLaterality(observation);
   if (isHistoryAnswerObservation(observation)) {
     const answer = parseHistoryAnswerObservation(observation);

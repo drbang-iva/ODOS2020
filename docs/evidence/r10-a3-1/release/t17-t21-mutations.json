@@ -1,0 +1,42 @@
+[
+  {
+    "id": "release-V30-supported-pick",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-pick-endpoint.ts",
+        "before": "const supports = parsed.data.supportingFacts;",
+        "after": "const supports: typeof parsed.data.supportingFacts = undefined;"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T(17|21) ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok .*T17"
+  },
+  {
+    "id": "release-V23-prebuild-save",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/custom-section-endpoint.ts",
+        "before": "if (context.projection.preRebuild) return ocularError(409, \"pre-rebuild-test-encounter\");",
+        "after": "if (false) return ocularError(409, \"pre-rebuild-test-encounter\");"
+      }
+    ],
+    "command": [
+      "node",
+      "--import",
+      "./mcp/node_modules/tsx/dist/loader.mjs",
+      "--test",
+      "--test-name-pattern",
+      "^T(17|21) ",
+      "mcp/tests/r10A3ReleaseScenarios.test.ts"
+    ],
+    "failurePattern": "not ok .*T21"
+  }
+]

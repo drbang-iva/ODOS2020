@@ -1,0 +1,33 @@
+TAP version 13
+# Subtest: W106 W110 selected panel audit repair leaves other debt unchanged
+not ok 1 - W106 W110 selected panel audit repair leaves other debt unchanged
+  ---
+  duration_ms: 8.224875
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Library.test.ts:54:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Library.test.ts:54:565)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 209.216542

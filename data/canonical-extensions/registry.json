@@ -1039,6 +1039,18 @@
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "r10-a1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/carry-plan",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "r10-a3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/carry-versions",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "r10-a3"
     }
   ]
 }

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "library-W94-select-support",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W94 W117 stored select-with-live-fact",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*select-with-live-fact",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/diagnosis-candidates-endpoint.ts",
+        "before": "if (trigger?.kind === \"option\" && (f.key.fieldCode !== trigger.field || !trigger.anyOf.includes(f.key.optionCode))) return [];",
+        "after": "if (false) return [];"
+      }
+    ]
+  },
+  {
+    "id": "library-W117-numeric-candidate",
+    "command": [
+      "mcp/node_modules/.bin/tsx",
+      "--test",
+      "--test-name-pattern",
+      "W94 W117 stored numeric-TBUT-panel-only",
+      "mcp/tests/r10A3DoorGuards.test.ts"
+    ],
+    "failurePattern": "not ok .*numeric-TBUT-panel-only",
+    "edits": [
+      {
+        "file": "mcp/src/clinical-graph/current-finding-reader.ts",
+        "before": "else if(!result.currentFacts.some(f=>f.key.stableKey===p.stableKey && f.eye===p.eye && f.status===\"live\") &&",
+        "after": "else if(false && !result.currentFacts.some(f=>f.key.stableKey===p.stableKey && f.eye===p.eye && f.status===\"live\") &&"
+      }
+    ]
+  }
+]

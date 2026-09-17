@@ -1,0 +1,72 @@
+TAP version 13
+# Subtest: T10 section void selects canonical facts and undo restores exact records
+not ok 1 - T10 section void selects canonical facts and undo restores exact records
+  ---
+  duration_ms: 6.161084
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:1:10601'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    voidAndUndo (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:120:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: T11 finding void and undo preserve identity qualifiers homes and other eye
+not ok 2 - T11 finding void and undo preserve identity qualifiers homes and other eye
+  ---
+  duration_ms: 1.378667
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:1:10709'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    voidAndUndo (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:120:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T12 encounter void and undo include canonical facts with exact counts
+ok 3 - T12 encounter void and undo include canonical facts with exact counts
+  ---
+  duration_ms: 5.399584
+  type: 'test'
+  ...
+# Subtest: T13 lifecycle mutation repairs owed audit before replacing clinical state
+ok 4 - T13 lifecycle mutation repairs owed audit before replacing clinical state
+  ---
+  duration_ms: 4.196625
+  type: 'test'
+  ...
+# Subtest: T14 lifecycle refuses signed canonical facts without downgrading them
+ok 5 - T14 lifecycle refuses signed canonical facts without downgrading them
+  ---
+  duration_ms: 0.528
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 203.921208

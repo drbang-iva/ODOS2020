@@ -1,0 +1,232 @@
+TAP version 13
+# Subtest: W82 selected valued shared default refuses before all writes
+ok 1 - W82 selected valued shared default refuses before all writes
+  ---
+  duration_ms: 12.031458
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared override refuses before all writes
+ok 2 - W82 selected valued shared override refuses before all writes
+  ---
+  duration_ms: 7.750875
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared per-eye refuses before all writes
+ok 3 - W82 selected valued shared per-eye refuses before all writes
+  ---
+  duration_ms: 7.535958
+  type: 'test'
+  ...
+# Subtest: W82 shared prompt applies with no Observation
+ok 4 - W82 shared prompt applies with no Observation
+  ---
+  duration_ms: 20.09825
+  type: 'test'
+  ...
+# Subtest: W82 opted-out valued shared is allowed
+ok 5 - W82 opted-out valued shared is allowed
+  ---
+  duration_ms: 21.1185
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply closed zero writes
+ok 6 - W91 protocol apply closed zero writes
+  ---
+  duration_ms: 1.133666
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply pre-rebuild zero writes
+ok 7 - W91 protocol apply pre-rebuild zero writes
+  ---
+  duration_ms: 8.0325
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply closed zero writes
+not ok 8 - W108 protocol unapply closed zero writes
+  ---
+  duration_ms: 20.588875
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:2159'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:13:347)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W108 protocol unapply pre-rebuild zero writes
+not ok 9 - W108 protocol unapply pre-rebuild zero writes
+  ---
+  duration_ms: 20.069834
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:2159'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:13:347)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: V28 capture preliminary canonical prompt
+ok 10 - V28 capture preliminary canonical prompt
+  ---
+  duration_ms: 7.0585
+  type: 'test'
+  ...
+# Subtest: V28 capture final canonical prompt
+ok 11 - V28 capture final canonical prompt
+  ---
+  duration_ms: 6.714791
+  type: 'test'
+  ...
+# Subtest: V28 capture amended canonical prompt
+ok 12 - V28 capture amended canonical prompt
+  ---
+  duration_ms: 6.44425
+  type: 'test'
+  ...
+# Subtest: W107 capture fact OD + committed prompt OS dedupes
+ok 13 - W107 capture fact OD + committed prompt OS dedupes
+  ---
+  duration_ms: 23.915917
+  type: 'test'
+  ...
+# Subtest: W119 panel value capture
+ok 14 - W119 panel value capture
+  ---
+  duration_ms: 8.064375
+  type: 'test'
+  ...
+# Subtest: W119 panel context-only capture
+ok 15 - W119 panel context-only capture
+  ---
+  duration_ms: 7.257584
+  type: 'test'
+  ...
+# Subtest: W114 capture respects stored shared definition
+ok 16 - W114 capture respects stored shared definition
+  ---
+  duration_ms: 23.955708
+  type: 'test'
+  ...
+# Subtest: V28 unapply shared target rejects before unrelated removals
+not ok 17 - V28 unapply shared target rejects before unrelated removals
+  ---
+  duration_ms: 53.764542
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:1:4763'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    6 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Protocols.test.ts:19:548)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: T22 control actual failed unapply restores unrelated Observation
+ok 18 - T22 control actual failed unapply restores unrelated Observation
+  ---
+  duration_ms: 41.60975
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback closed refuses Observation restore
+ok 19 - W108 actual unapply rollback closed refuses Observation restore
+  ---
+  duration_ms: 33.962375
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback pre-rebuild refuses Observation restore
+ok 20 - W108 actual unapply rollback pre-rebuild refuses Observation restore
+  ---
+  duration_ms: 41.394042
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback shared refuses Observation restore
+ok 21 - W108 actual unapply rollback shared refuses Observation restore
+  ---
+  duration_ms: 40.044083
+  type: 'test'
+  ...
+# Subtest: W82 payload definition override cannot value a shared proposed row
+ok 22 - W82 payload definition override cannot value a shared proposed row
+  ---
+  duration_ms: 6.26025
+  type: 'test'
+  ...
+# Subtest: W82 built-in closed reject precedes seeding
+ok 23 - W82 built-in closed reject precedes seeding
+  ---
+  duration_ms: 0.534084
+  type: 'test'
+  ...
+# Subtest: W82 built-in valued reject precedes seeding
+ok 24 - W82 built-in valued reject precedes seeding
+  ---
+  duration_ms: 5.542458
+  type: 'test'
+  ...
+# Subtest: W114 stored local shared valued item refuses
+ok 25 - W114 stored local shared valued item refuses
+  ---
+  duration_ms: 6.380625
+  type: 'test'
+  ...
+# Subtest: W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+ok 26 - W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+  ---
+  duration_ms: 22.829458
+  type: 'test'
+  ...
+# Subtest: V28 capture excludes cleared canonical and retains unrelated value
+ok 27 - V28 capture excludes cleared canonical and retains unrelated value
+  ---
+  duration_ms: 27.763666
+  type: 'test'
+  ...
+# Subtest: W82 prompt override cannot hide a valued shared proposed item
+ok 28 - W82 prompt override cannot hide a valued shared proposed item
+  ---
+  duration_ms: 6.292917
+  type: 'test'
+  ...
+# Subtest: V28 inactive shared capture cannot seed
+ok 29 - V28 inactive shared capture cannot seed
+  ---
+  duration_ms: 11.672709
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 26
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 716.6715

@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: canonical frozen plan scope is checked before relinking or writing facts
+not ok 1 - canonical frozen plan scope is checked before relinking or writing facts
+  ---
+  duration_ms: 24.7605
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:123:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"FHIR diagnosis carry dependency failed."}
+    
+    502 !== 409
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 502
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:126:38)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: unconfirmed no-op Encounter link never permits fact writes
+not ok 2 - unconfirmed no-op Encounter link never permits fact writes
+  ---
+  duration_ms: 11.027709
+  type: 'test'
+  location: '/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:128:1'
+  failureType: 'testCodeFailure'
+  error: 'Expected "actual" to be strictly unequal to: 200'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 200
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/GitHub/ODOS2020/.worktrees/r10-a3-1/mcp/tests/r10A3Carry.test.ts:130:36)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.46625

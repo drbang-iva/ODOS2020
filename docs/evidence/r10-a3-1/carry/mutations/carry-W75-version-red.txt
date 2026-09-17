@@ -1,0 +1,110 @@
+TAP version 13
+# Subtest: W75 W126 void between facts and witness remains edited
+not ok 1 - W75 W126 void between facts and witness remains edited
+  ---
+  duration_ms: 16.802708
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:159:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:171:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W75 W126 void-undo between facts and witness remains edited
+not ok 2 - W75 W126 void-undo between facts and witness remains edited
+  ---
+  duration_ms: 10.007417
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:159:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:171:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W75 completed command resend preserves original witness after a later edit
+not ok 3 - W75 completed command resend preserves original witness after a later edit
+  ---
+  duration_ms: 19.101667
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:205:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:217:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W75 duplicate findings witness produces integrity warning
+ok 4 - W75 duplicate findings witness produces integrity warning
+  ---
+  duration_ms: 8.687166
+  type: 'test'
+  ...
+# Subtest: W75 wrong-target findings witness produces integrity warning
+ok 5 - W75 wrong-target findings witness produces integrity warning
+  ---
+  duration_ms: 9.066
+  type: 'test'
+  ...
+# Subtest: T3 later writer version after carry is read as edited
+not ok 6 - T3 later writer version after carry is read as edited
+  ---
+  duration_ms: 19.294375
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:85:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3ReleaseScenarios.test.ts:95:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 2
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 250.9975

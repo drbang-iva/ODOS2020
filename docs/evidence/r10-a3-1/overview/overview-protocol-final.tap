@@ -1,0 +1,766 @@
+TAP version 13
+# Subtest: L3 ships empty-tolerant with no seeded clinical key findings or windows
+ok 1 - L3 ships empty-tolerant with no seeded clinical key findings or windows
+  ---
+  duration_ms: 3.007583
+  type: 'test'
+  ...
+# Subtest: the existing confirmation completeness gate surfaces a staged diagnosis with no selected member
+ok 2 - the existing confirmation completeness gate surfaces a staged diagnosis with no selected member
+  ---
+  duration_ms: 21.425334
+  type: 'test'
+  ...
+# Subtest: persisted diagnosis rows enforce the same key-finding bounds as mutations
+ok 3 - persisted diagnosis rows enforce the same key-finding bounds as mutations
+  ---
+  duration_ms: 0.583167
+  type: 'test'
+  ...
+# Subtest: real HTTP L3 routes persist ordered key findings and report only unsatisfied findings for active confirmed diagnoses
+ok 4 - real HTTP L3 routes persist ordered key findings and report only unsatisfied findings for active confirmed diagnoses
+  ---
+  duration_ms: 100.928833
+  type: 'test'
+  ...
+# Subtest: selected IPL initiation creates a real series CarePlan returned by the tracker endpoint
+ok 5 - selected IPL initiation creates a real series CarePlan returned by the tracker endpoint
+  ---
+  duration_ms: 66.151459
+  type: 'test'
+  ...
+# Subtest: item add resolves a series definition and carries its package charge
+ok 6 - item add resolves a series definition and carries its package charge
+  ---
+  duration_ms: 23.824583
+  type: 'test'
+  ...
+# Subtest: series prescriptions reject client payloads that differ from the canonical protocol item
+ok 7 - series prescriptions reject client payloads that differ from the canonical protocol item
+  ---
+  duration_ms: 15.009625
+  type: 'test'
+  ...
+# Subtest: missing service FHIR returns a structured server error before encounter writes
+ok 8 - missing service FHIR returns a structured server error before encounter writes
+  ---
+  duration_ms: 7.653208
+  type: 'test'
+  ...
+# Subtest: deselecting a series prescription records opted-out and creates no series CarePlan
+ok 9 - deselecting a series prescription records opted-out and creates no series CarePlan
+  ---
+  duration_ms: 24.64575
+  type: 'test'
+  ...
+# Subtest: missing and archived series protocols fail pre-flight with zero encounter artifacts
+ok 10 - missing and archived series protocols fail pre-flight with zero encounter artifacts
+  ---
+  duration_ms: 13.602416
+  type: 'test'
+  ...
+# Subtest: retry after a mid-commit action-write failure conditionally reuses the CarePlan
+ok 11 - retry after a mid-commit action-write failure conditionally reuses the CarePlan
+  ---
+  duration_ms: 57.784583
+  type: 'test'
+  ...
+# Subtest: un-apply revokes the series CarePlan and removes it from the tracker view
+ok 12 - un-apply revokes the series CarePlan and removes it from the tracker view
+  ---
+  duration_ms: 42.013167
+  type: 'test'
+  ...
+# Subtest: re-applying after un-apply restores the revoked series to the tracker
+ok 13 - re-applying after un-apply restores the revoked series to the tracker
+  ---
+  duration_ms: 64.616125
+  type: 'test'
+  ...
+# Subtest: un-apply remains blocked while the companion package charge is accepted
+ok 14 - un-apply remains blocked while the companion package charge is accepted
+  ---
+  duration_ms: 30.882708
+  type: 'test'
+  ...
+# Subtest: charge seeds reject client payloads that differ from the canonical protocol item
+ok 15 - charge seeds reject client payloads that differ from the canonical protocol item
+  ---
+  duration_ms: 6.18325
+  type: 'test'
+  ...
+# Subtest: modified charge staging records clinician provenance and changed fields
+ok 16 - modified charge staging records clinician provenance and changed fields
+  ---
+  duration_ms: 0.76625
+  type: 'test'
+  ...
+# Subtest: at-home regimen applies only counseling, education, and instruction with no series or charge
+ok 17 - at-home regimen applies only counseling, education, and instruction with no series or charge
+  ---
+  duration_ms: 38.13875
+  type: 'test'
+  ...
+# Subtest: LLLT initiation creates its four-session CarePlan and package charge proposal
+ok 18 - LLLT initiation creates its four-session CarePlan and package charge proposal
+  ---
+  duration_ms: 26.775375
+  type: 'test'
+  ...
+# Subtest: IPL and RF initiation on one encounter create two independent series and package charges
+ok 19 - IPL and RF initiation on one encounter create two independent series and package charges
+  ---
+  duration_ms: 49.490708
+  type: 'test'
+  ...
+# Subtest: DE-2 compiles all seven eyecare procedure definitions without unverified CPT codes
+ok 20 - DE-2 compiles all seven eyecare procedure definitions without unverified CPT codes
+  ---
+  duration_ms: 0.87275
+  type: 'test'
+  ...
+# Subtest: IPL, RF, and LLLT series and package forks share one procedure vocabulary
+ok 21 - IPL, RF, and LLLT series and package forks share one procedure vocabulary
+  ---
+  duration_ms: 0.230875
+  type: 'test'
+  ...
+# Subtest: dry-eye treatment definitions contain no combination artifacts
+ok 22 - dry-eye treatment definitions contain no combination artifacts
+  ---
+  duration_ms: 0.10025
+  type: 'test'
+  ...
+# Subtest: the first-run treatment seed is idempotent across the authored-only stores
+ok 23 - the first-run treatment seed is idempotent across the authored-only stores
+  ---
+  duration_ms: 0.4395
+  type: 'test'
+  ...
+# Subtest: the first-run treatment seed skips archived definitions without attempting rejected updates
+ok 24 - the first-run treatment seed skips archived definitions without attempting rejected updates
+  ---
+  duration_ms: 0.20775
+  type: 'test'
+  ...
+# Subtest: dry-eye evaluation proposes eight prompt-only sections and materializes one coverage-reviewed charge
+ok 25 - dry-eye evaluation proposes eight prompt-only sections and materializes one coverage-reviewed charge
+  ---
+  duration_ms: 2.198958
+  type: 'test'
+  ...
+# Subtest: punctal occlusion alone resolves an insurance review rule; cash procedures have none
+ok 26 - punctal occlusion alone resolves an insurance review rule; cash procedures have none
+  ---
+  duration_ms: 0.525541
+  type: 'test'
+  ...
+# Subtest: protocol FHIR fake increments versions and refuses stale conditional writes
+ok 27 - protocol FHIR fake increments versions and refuses stale conditional writes
+  ---
+  duration_ms: 0.211
+  type: 'test'
+  ...
+# Subtest: exam overview requires chart read access before touching FHIR
+ok 28 - exam overview requires chart read access before touching FHIR
+  ---
+  duration_ms: 0.583542
+  type: 'test'
+  ...
+# Subtest: derived completeness and prior change survive a fresh reload with zero clinical writes
+ok 29 - derived completeness and prior change survive a fresh reload with zero clinical writes
+  ---
+  duration_ms: 4.237875
+  type: 'test'
+  ...
+# Subtest: one complaint and an eye ROS attestation project the exact History summary
+ok 30 - one complaint and an eye ROS attestation project the exact History summary
+  ---
+  duration_ms: 8.384292
+  type: 'test'
+  ...
+# Subtest: two complaints project both labels in ordinal order
+ok 31 - two complaints project both labels in ordinal order
+  ---
+  duration_ms: 1.697958
+  type: 'test'
+  ...
+# Subtest: three complaints project the first two labels and the exact remainder count
+ok 32 - three complaints project the first two labels and the exact remainder count
+  ---
+  duration_ms: 1.637209
+  type: 'test'
+  ...
+# Subtest: History omits ROS reviewed when no structured attestation was saved
+ok 33 - History omits ROS reviewed when no structured attestation was saved
+  ---
+  duration_ms: 0.779666
+  type: 'test'
+  ...
+# Subtest: History omits ROS reviewed when a structured attestation is explicitly false
+ok 34 - History omits ROS reviewed when a structured attestation is explicitly false
+  ---
+  duration_ms: 1.280542
+  type: 'test'
+  ...
+# Subtest: complaints render before the separate History Observation save without claiming ROS review
+ok 35 - complaints render before the separate History Observation save without claiming ROS review
+  ---
+  duration_ms: 1.368416
+  type: 'test'
+  ...
+# Subtest: endpoint projects carried-unreasserted and carried-reasserted from durable Provenance
+ok 36 - endpoint projects carried-unreasserted and carried-reasserted from durable Provenance
+  ---
+  duration_ms: 2.642542
+  type: 'test'
+  ...
+# Subtest: overview context explicitly allowlists stored human-facing event, diagnosis, attestation, and summary fields
+ok 37 - overview context explicitly allowlists stored human-facing event, diagnosis, attestation, and summary fields
+  ---
+  duration_ms: 1.296333
+  type: 'test'
+  ...
+# Subtest: optional context dependency failures omit enrichment without hiding the core overview
+ok 38 - optional context dependency failures omit enrichment without hiding the core overview
+  ---
+  duration_ms: 0.502834
+  type: 'test'
+  ...
+# Subtest: an unavailable optional attestation search does not hide current findings
+ok 39 - an unavailable optional attestation search does not hide current findings
+  ---
+  duration_ms: 0.28825
+  type: 'test'
+  ...
+# Subtest: an encounter with no patient is rejected without fabricating a projection
+ok 40 - an encounter with no patient is rejected without fabricating a projection
+  ---
+  duration_ms: 0.063125
+  type: 'test'
+  ...
+# Subtest: an entered-in-error Condition cannot resolve Assessment completeness
+ok 41 - an entered-in-error Condition cannot resolve Assessment completeness
+  ---
+  duration_ms: 0.365666
+  type: 'test'
+  ...
+# Subtest: Conditions alone cannot resolve Assessment without diagnosis rows and required problem statuses
+ok 42 - Conditions alone cannot resolve Assessment without diagnosis rows and required problem statuses
+  ---
+  duration_ms: 0.685625
+  type: 'test'
+  ...
+# Subtest: the 14 ocular structures expose the approved affirmative worksheet labels in anatomical order
+ok 43 - the 14 ocular structures expose the approved affirmative worksheet labels in anatomical order
+  ---
+  duration_ms: 5.489042
+  type: 'test'
+  ...
+# Subtest: all three persisted deferred encodings normalize without rewriting source Observations
+ok 44 - all three persisted deferred encodings normalize without rewriting source Observations
+  ---
+  duration_ms: 1.644958
+  type: 'test'
+  ...
+# Subtest: deferred with and without a reason remain independently testable
+ok 45 - deferred with and without a reason remain independently testable
+  ---
+  duration_ms: 0.066666
+  type: 'test'
+  ...
+# Subtest: examined, not-examined, deferred, and not-indicated are separate section states
+ok 46 - examined, not-examined, deferred, and not-indicated are separate section states
+  ---
+  duration_ms: 0.079916
+  type: 'test'
+  ...
+# Subtest: one resolved applicable row cannot make a multi-row section examined
+ok 47 - one resolved applicable row cannot make a multi-row section examined
+  ---
+  duration_ms: 0.340041
+  type: 'test'
+  ...
+# Subtest: ocular findings project affirmative normal text and every selected qualifier without truncation
+ok 48 - ocular findings project affirmative normal text and every selected qualifier without truncation
+  ---
+  duration_ms: 4.833666
+  type: 'test'
+  ...
+# Subtest: historical Lens brunescent selections project through Overview with the same merge semantics as sheet history
+ok 49 - historical Lens brunescent selections project through Overview with the same merge semantics as sheet history
+  ---
+  duration_ms: 11.037583
+  type: 'test'
+  ...
+# Subtest: translated enum qualifiers render their display and preserve unknown codes
+ok 50 - translated enum qualifiers render their display and preserve unknown codes
+  ---
+  duration_ms: 4.399917
+  type: 'test'
+  ...
+# Subtest: corneal iron line exposes the three ruled subtype choices
+ok 51 - corneal iron line exposes the three ruled subtype choices
+  ---
+  duration_ms: 3.041625
+  type: 'test'
+  ...
+# Subtest: newly charted Fleischer's iron-line subtype projects its display instead of its code
+ok 52 - newly charted Fleischer's iron-line subtype projects its display instead of its code
+  ---
+  duration_ms: 3.5235
+  type: 'test'
+  ...
+# Subtest: historical combined iron-line selections project without asserting a subtype
+ok 53 - historical combined iron-line selections project without asserting a subtype
+  ---
+  duration_ms: 3.317875
+  type: 'test'
+  ...
+# Subtest: historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source
+ok 54 - historical ambiguous macular-hole selections project as an ungraded macular hole without mutating the source
+  ---
+  duration_ms: 2.972083
+  type: 'test'
+  ...
+# Subtest: finding projection follows definition order instead of lexical section keys
+ok 55 - finding projection follows definition order instead of lexical section keys
+  ---
+  duration_ms: 0.110584
+  type: 'test'
+  ...
+# Subtest: change from prior is derived from snapshots and no delta is persisted
+ok 56 - change from prior is derived from snapshots and no delta is persisted
+  ---
+  duration_ms: 0.105458
+  type: 'test'
+  ...
+# Subtest: prior comparison ignores future and encounter-less Observations
+ok 57 - prior comparison ignores future and encounter-less Observations
+  ---
+  duration_ms: 0.201625
+  type: 'test'
+  ...
+# Subtest: Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete
+ok 58 - Exams clinical completeness is traceable and missing deferred documentation does not make it incomplete
+  ---
+  duration_ms: 1.220709
+  type: 'test'
+  ...
+# Subtest: carried-unreasserted does not resolve today's section while carried-reasserted does
+ok 59 - carried-unreasserted does not resolve today's section while carried-reasserted does
+  ---
+  duration_ms: 0.171916
+  type: 'test'
+  ...
+# Subtest: section abnormal counts exclude independently classified borderline findings
+ok 60 - section abnormal counts exclude independently classified borderline findings
+  ---
+  duration_ms: 0.092708
+  type: 'test'
+  ...
+# Subtest: standard Equivocal interpretation projects as borderline
+ok 61 - standard Equivocal interpretation projects as borderline
+  ---
+  duration_ms: 0.111958
+  type: 'test'
+  ...
+# Subtest: an unpopulated visit category degrades safely without false completeness
+ok 62 - an unpopulated visit category degrades safely without false completeness
+  ---
+  duration_ms: 0.051166
+  type: 'test'
+  ...
+# Subtest: the applicability registry supports visit-specific not-indicated sections without an office-visit entry
+ok 63 - the applicability registry supports visit-specific not-indicated sections without an office-visit entry
+  ---
+  duration_ms: 0.058542
+  type: 'test'
+  ...
+# Subtest: guard 2: a voided (entered-in-error) CVF row leaves the Overview; when every row is voided the section has no findings
+ok 64 - guard 2: a voided (entered-in-error) CVF row leaves the Overview; when every row is voided the section has no findings
+  ---
+  duration_ms: 0.16825
+  type: 'test'
+  ...
+# Subtest: sign cleanup materializes five accepted proposals once and existing money surfaces consume them
+ok 65 - sign cleanup materializes five accepted proposals once and existing money surfaces consume them
+  ---
+  duration_ms: 15.875916
+  type: 'test'
+  ...
+# Subtest: fee schedule endpoint seeds empty definitions, saves integer cents, and deactivates instead of deleting
+ok 66 - fee schedule endpoint seeds empty definitions, saves integer cents, and deactivates instead of deleting
+  ---
+  duration_ms: 1.408375
+  type: 'test'
+  ...
+# Subtest: fee schedule creation endpoint is admin-only and reports key conflicts without a write
+ok 67 - fee schedule creation endpoint is admin-only and reports key conflicts without a write
+  ---
+  duration_ms: 0.527625
+  type: 'test'
+  ...
+# Subtest: accepted proposals with an invalid patient link fail before any ChargeItem write
+ok 68 - accepted proposals with an invalid patient link fail before any ChargeItem write
+  ---
+  duration_ms: 0.282042
+  type: 'test'
+  ...
+# Subtest: sign cleanup abandons unrelated open applications before a corrupt accepted proposal fails
+ok 69 - sign cleanup abandons unrelated open applications before a corrupt accepted proposal fails
+  ---
+  duration_ms: 0.398125
+  type: 'test'
+  ...
+# Subtest: a retry after ChargeItem creation but before proposal finalization reuses the conditional charge identity
+ok 70 - a retry after ChargeItem creation but before proposal finalization reuses the conditional charge identity
+  ---
+  duration_ms: 0.48775
+  type: 'test'
+  ...
+# Subtest: materialization FHIR fake increments versions and refuses stale conditional writes
+ok 71 - materialization FHIR fake increments versions and refuses stale conditional writes
+  ---
+  duration_ms: 0.102375
+  type: 'test'
+  ...
+# Subtest: V27 live canonical preliminary credits and overview displays
+ok 72 - V27 live canonical preliminary credits and overview displays
+  ---
+  duration_ms: 26.471084
+  type: 'test'
+  ...
+# Subtest: V27 live canonical final credits and overview displays
+ok 73 - V27 live canonical final credits and overview displays
+  ---
+  duration_ms: 18.064916
+  type: 'test'
+  ...
+# Subtest: V27 live canonical amended credits and overview displays
+ok 74 - V27 live canonical amended credits and overview displays
+  ---
+  duration_ms: 16.328625
+  type: 'test'
+  ...
+# Subtest: W80 extension homes supply overview diagnosis
+ok 75 - W80 extension homes supply overview diagnosis
+  ---
+  duration_ms: 8.439542
+  type: 'test'
+  ...
+# Subtest: W81 cleared canonical cannot credit or display
+ok 76 - W81 cleared canonical cannot credit or display
+  ---
+  duration_ms: 21.6015
+  type: 'test'
+  ...
+# Subtest: W81 explicit absent canonical credits
+ok 77 - W81 explicit absent canonical credits
+  ---
+  duration_ms: 7.913125
+  type: 'test'
+  ...
+# Subtest: W81 explicit negative act credits
+ok 78 - W81 explicit negative act credits
+  ---
+  duration_ms: 8.326542
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 8 credits
+ok 79 - W118 present TBUT 8 credits
+  ---
+  duration_ms: 15.906792
+  type: 'test'
+  ...
+# Subtest: W118 present TBUT 0 credits
+ok 80 - W118 present TBUT 0 credits
+  ---
+  duration_ms: 14.43
+  type: 'test'
+  ...
+# Subtest: W81 panel context other no credit
+ok 81 - W81 panel context other no credit
+  ---
+  duration_ms: 7.4865
+  type: 'test'
+  ...
+# Subtest: W81 panel context remarks no credit
+ok 82 - W81 panel context remarks no credit
+  ---
+  duration_ms: 7.931667
+  type: 'test'
+  ...
+# Subtest: W81 panel context deferred no credit
+ok 83 - W81 panel context deferred no credit
+  ---
+  duration_ms: 7.132125
+  type: 'test'
+  ...
+# Subtest: W81 inactive canonical no credit
+ok 84 - W81 inactive canonical no credit
+  ---
+  duration_ms: 7.143875
+  type: 'test'
+  ...
+# Subtest: W114 stored practice option resolves in both consumers
+ok 85 - W114 stored practice option resolves in both consumers
+  ---
+  duration_ms: 14.914
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry unchanged evidence
+ok 86 - V27 persisted carry unchanged evidence
+  ---
+  duration_ms: 18.011208
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry link-only evidence
+ok 87 - V27 persisted carry link-only evidence
+  ---
+  duration_ms: 16.078792
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry void-undo evidence
+ok 88 - V27 persisted carry void-undo evidence
+  ---
+  duration_ms: 17.114125
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry reassert evidence
+ok 89 - V27 persisted carry reassert evidence
+  ---
+  duration_ms: 16.345667
+  type: 'test'
+  ...
+# Subtest: V27 persisted carry clinical-edit evidence
+ok 90 - V27 persisted carry clinical-edit evidence
+  ---
+  duration_ms: 15.700667
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness fact
+ok 91 - W81 overview completeness fact
+  ---
+  duration_ms: 0.518083
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-value
+ok 92 - W81 overview completeness panel-value
+  ---
+  duration_ms: 0.466125
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness panel-context
+ok 93 - W81 overview completeness panel-context
+  ---
+  duration_ms: 0.252084
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness cleared
+ok 94 - W81 overview completeness cleared
+  ---
+  duration_ms: 0.162583
+  type: 'test'
+  ...
+# Subtest: W81 overview completeness inactive
+ok 95 - W81 overview completeness inactive
+  ---
+  duration_ms: 0.164417
+  type: 'test'
+  ...
+# Subtest: W118 retired panel value does not credit or display
+ok 96 - W118 retired panel value does not credit or display
+  ---
+  duration_ms: 14.152458
+  type: 'test'
+  ...
+# Subtest: V27 pre-rebuild legacy atomic is displayed through reader view without credit
+ok 97 - V27 pre-rebuild legacy atomic is displayed through reader view without credit
+  ---
+  duration_ms: 14.664792
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared default refuses before all writes
+ok 98 - W82 selected valued shared default refuses before all writes
+  ---
+  duration_ms: 20.607334
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared override refuses before all writes
+ok 99 - W82 selected valued shared override refuses before all writes
+  ---
+  duration_ms: 10.135292
+  type: 'test'
+  ...
+# Subtest: W82 selected valued shared per-eye refuses before all writes
+ok 100 - W82 selected valued shared per-eye refuses before all writes
+  ---
+  duration_ms: 7.524542
+  type: 'test'
+  ...
+# Subtest: W82 shared prompt applies with no Observation
+ok 101 - W82 shared prompt applies with no Observation
+  ---
+  duration_ms: 24.483958
+  type: 'test'
+  ...
+# Subtest: W82 opted-out valued shared is allowed
+ok 102 - W82 opted-out valued shared is allowed
+  ---
+  duration_ms: 22.77825
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply closed zero writes
+ok 103 - W91 protocol apply closed zero writes
+  ---
+  duration_ms: 0.971
+  type: 'test'
+  ...
+# Subtest: W91 protocol apply pre-rebuild zero writes
+ok 104 - W91 protocol apply pre-rebuild zero writes
+  ---
+  duration_ms: 8.604292
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply closed zero writes
+ok 105 - W108 protocol unapply closed zero writes
+  ---
+  duration_ms: 22.538458
+  type: 'test'
+  ...
+# Subtest: W108 protocol unapply pre-rebuild zero writes
+ok 106 - W108 protocol unapply pre-rebuild zero writes
+  ---
+  duration_ms: 26.465875
+  type: 'test'
+  ...
+# Subtest: V28 capture preliminary canonical prompt
+ok 107 - V28 capture preliminary canonical prompt
+  ---
+  duration_ms: 8.221917
+  type: 'test'
+  ...
+# Subtest: V28 capture final canonical prompt
+ok 108 - V28 capture final canonical prompt
+  ---
+  duration_ms: 6.813083
+  type: 'test'
+  ...
+# Subtest: V28 capture amended canonical prompt
+ok 109 - V28 capture amended canonical prompt
+  ---
+  duration_ms: 7.625041
+  type: 'test'
+  ...
+# Subtest: W107 capture fact OD + committed prompt OS dedupes
+ok 110 - W107 capture fact OD + committed prompt OS dedupes
+  ---
+  duration_ms: 27.176167
+  type: 'test'
+  ...
+# Subtest: W119 panel value capture
+ok 111 - W119 panel value capture
+  ---
+  duration_ms: 9.602041
+  type: 'test'
+  ...
+# Subtest: W119 panel context-only capture
+ok 112 - W119 panel context-only capture
+  ---
+  duration_ms: 7.228667
+  type: 'test'
+  ...
+# Subtest: W114 capture respects stored shared definition
+ok 113 - W114 capture respects stored shared definition
+  ---
+  duration_ms: 26.887292
+  type: 'test'
+  ...
+# Subtest: V28 unapply shared target rejects before unrelated removals
+ok 114 - V28 unapply shared target rejects before unrelated removals
+  ---
+  duration_ms: 37.47375
+  type: 'test'
+  ...
+# Subtest: T22 control actual failed unapply restores unrelated Observation
+ok 115 - T22 control actual failed unapply restores unrelated Observation
+  ---
+  duration_ms: 50.6445
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback closed refuses Observation restore
+ok 116 - W108 actual unapply rollback closed refuses Observation restore
+  ---
+  duration_ms: 43.484125
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback pre-rebuild refuses Observation restore
+ok 117 - W108 actual unapply rollback pre-rebuild refuses Observation restore
+  ---
+  duration_ms: 48.762959
+  type: 'test'
+  ...
+# Subtest: W108 actual unapply rollback shared refuses Observation restore
+ok 118 - W108 actual unapply rollback shared refuses Observation restore
+  ---
+  duration_ms: 48.680291
+  type: 'test'
+  ...
+# Subtest: W82 payload definition override cannot value a shared proposed row
+ok 119 - W82 payload definition override cannot value a shared proposed row
+  ---
+  duration_ms: 6.68975
+  type: 'test'
+  ...
+# Subtest: W82 built-in closed reject precedes seeding
+ok 120 - W82 built-in closed reject precedes seeding
+  ---
+  duration_ms: 0.77925
+  type: 'test'
+  ...
+# Subtest: W82 built-in valued reject precedes seeding
+ok 121 - W82 built-in valued reject precedes seeding
+  ---
+  duration_ms: 6.328709
+  type: 'test'
+  ...
+# Subtest: W114 stored local shared valued item refuses
+ok 122 - W114 stored local shared valued item refuses
+  ---
+  duration_ms: 6.70275
+  type: 'test'
+  ...
+# Subtest: W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+ok 123 - W107 committed bilateral prompt without explicit eye expansion supplies both eyes
+  ---
+  duration_ms: 24.354333
+  type: 'test'
+  ...
+# Subtest: V28 capture excludes cleared canonical and retains unrelated value
+ok 124 - V28 capture excludes cleared canonical and retains unrelated value
+  ---
+  duration_ms: 30.540875
+  type: 'test'
+  ...
+# Subtest: W82 prompt override cannot hide a valued shared proposed item
+ok 125 - W82 prompt override cannot hide a valued shared proposed item
+  ---
+  duration_ms: 6.694667
+  type: 'test'
+  ...
+# Subtest: V28 inactive shared capture cannot seed
+ok 126 - V28 inactive shared capture cannot seed
+  ---
+  duration_ms: 12.552708
+  type: 'test'
+  ...
+1..126
+# tests 126
+# suites 0
+# pass 126
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 912.698792

@@ -1,0 +1,659 @@
+TAP version 13
+# Subtest: standalone condition failure 403 keeps exact persisted state without privileged compensation
+ok 1 - standalone condition failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 56.312583
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 409 keeps exact persisted state without privileged compensation
+ok 2 - standalone condition failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 24.105417
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 412 keeps exact persisted state without privileged compensation
+ok 3 - standalone condition failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 20.103417
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 500 keeps exact persisted state without privileged compensation
+ok 4 - standalone condition failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 19.671666
+  type: 'test'
+  ...
+# Subtest: standalone condition failure 503 keeps exact persisted state without privileged compensation
+ok 5 - standalone condition failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 21.705
+  type: 'test'
+  ...
+# Subtest: standalone plan failure 403 keeps exact persisted state without privileged compensation
+not ok 6 - standalone plan failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.083625
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone plan failure 409 keeps exact persisted state without privileged compensation
+not ok 7 - standalone plan failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.677625
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone plan failure 412 keeps exact persisted state without privileged compensation
+not ok 8 - standalone plan failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.120209
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone plan failure 500 keeps exact persisted state without privileged compensation
+not ok 9 - standalone plan failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 18.428458
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone plan failure 503 keeps exact persisted state without privileged compensation
+not ok 10 - standalone plan failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 15.508709
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone link failure 403 keeps exact persisted state without privileged compensation
+not ok 11 - standalone link failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.432708
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone link failure 409 keeps exact persisted state without privileged compensation
+not ok 12 - standalone link failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 15.256625
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone link failure 412 keeps exact persisted state without privileged compensation
+not ok 13 - standalone link failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.285416
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone link failure 500 keeps exact persisted state without privileged compensation
+not ok 14 - standalone link failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 15.894833
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone link failure 503 keeps exact persisted state without privileged compensation
+not ok 15 - standalone link failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.243709
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone fact failure 403 keeps exact persisted state without privileged compensation
+not ok 16 - standalone fact failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.461958
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone fact failure 409 keeps exact persisted state without privileged compensation
+not ok 17 - standalone fact failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.064458
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone fact failure 412 keeps exact persisted state without privileged compensation
+not ok 18 - standalone fact failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.219834
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone fact failure 500 keeps exact persisted state without privileged compensation
+not ok 19 - standalone fact failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.431125
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone fact failure 503 keeps exact persisted state without privileged compensation
+not ok 20 - standalone fact failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.650917
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:483:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone audit failure 403 keeps exact persisted state without privileged compensation
+not ok 21 - standalone audit failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.912584
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone audit failure 409 keeps exact persisted state without privileged compensation
+not ok 22 - standalone audit failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.205
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone audit failure 412 keeps exact persisted state without privileged compensation
+not ok 23 - standalone audit failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.570375
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone audit failure 500 keeps exact persisted state without privileged compensation
+not ok 24 - standalone audit failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.023583
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone audit failure 503 keeps exact persisted state without privileged compensation
+not ok 25 - standalone audit failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 17.066458
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone witness failure 403 keeps exact persisted state without privileged compensation
+not ok 26 - standalone witness failure 403 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 15.173083
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone witness failure 409 keeps exact persisted state without privileged compensation
+not ok 27 - standalone witness failure 409 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.708458
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone witness failure 412 keeps exact persisted state without privileged compensation
+not ok 28 - standalone witness failure 412 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.864834
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone witness failure 500 keeps exact persisted state without privileged compensation
+not ok 29 - standalone witness failure 500 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.930417
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: standalone witness failure 503 keeps exact persisted state without privileged compensation
+not ok 30 - standalone witness failure 503 keeps exact persisted state without privileged compensation
+  ---
+  duration_ms: 16.780833
+  type: 'test'
+  location: '<worktree>/mcp/tests/diagnosisCarryForward.test.ts:467:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/diagnosisCarryForward.test.ts:484:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: W124 resumes persisted Condition with failed plan
+not ok 31 - W124 resumes persisted Condition with failed plan
+  ---
+  duration_ms: 23.721875
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:124:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:137:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: W124 resumes persisted Condition with failed link
+not ok 32 - W124 resumes persisted Condition with failed link
+  ---
+  duration_ms: 18.218166
+  type: 'test'
+  location: '<worktree>/mcp/tests/r10A3Carry.test.ts:124:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/mcp/tests/r10A3Carry.test.ts:138:16)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 5
+# fail 27
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 852.710958
