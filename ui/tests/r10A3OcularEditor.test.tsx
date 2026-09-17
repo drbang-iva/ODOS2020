@@ -126,6 +126,7 @@ for (const edit of ["remarks", "measurement", "grade", "Other cleared"]) test(`W
   else if (edit === "measurement") await act(async () => h.panel().findByProps({type:"number"}).props.onChange({target:{value:"7"}}));
   else if (edit === "grade") await act(async () => h.panel().findByType(OdosSelect).props.onChange("b"));
   else await act(async () => h.panel().findAllByType("textarea").find(node => !node.props["aria-label"])!.props.onChange({target:{value:""}}));
+  assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/);
   await h.save();
   assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id);
  } finally { h.close(); }
@@ -144,5 +145,39 @@ for (const edit of ["scoped positive", "Other text", "deferred"]) test(`W133 pen
   assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct,undefined);
   if (edit === "scoped positive") assert.equal(JSON.parse(h.posts[0]!).eyes.OD.selected[0].key.optionCode,"scar");
   assert.equal(h.saved(),0);
+ } finally { h.close(); }
+});
+
+for (const eye of ["OD", "OS"]) test(`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`, async () => {
+ const offered = {...fact(eye,"scar"),status:"absent",presence:undefined,baseline:{kind:"absent",key:key(eye,"scar")}};
+ const h = await mount(history([offered]));
+ try {
+  await act(async () => h.button("Anterior All Normal").props.onClick());
+  await act(async () => h.button("Scar",eye).props.onClick());
+  assert.match(text(h.panel(eye)), /All Normal cleared for this eye because a finding was recorded/);
+  assert.doesNotMatch(text(h.panel(eye === "OD" ? "OS" : "OD")), /All Normal cleared for this eye/);
+  await h.remarks("Positive finding reviewed", eye);
+  assert.match(text(h.panel(eye)), /All Normal cleared for this eye/);
+  await h.save();
+  const request = JSON.parse(h.posts[0]!).eyes[eye];
+  assert.equal(request.negativeAct, undefined);
+  assert.equal(request.selected[0].key.optionCode, "scar");
+  assert.equal(h.saved(), 1);
+  assert.doesNotMatch(text(h.panel(eye)), /All Normal cleared for this eye/);
+ } finally { h.close(); }
+});
+test("W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds", async () => {
+ const offered = {...fact("OD","scar"),status:"absent",presence:undefined,baseline:{kind:"absent",key:key("OD","scar")}};
+ const h = await mount(history([offered]), [{status:502,body:{result:"command",complete:false,executionOrder:[0],outcomes:[{target:"panel",status:"unconfirmed",clinicalWrite:"unknown"}]}}]);
+ try {
+  await act(async () => h.button("Anterior All Normal").props.onClick());
+  await act(async () => h.button("Scar","OD").props.onClick());
+  await h.save();
+  assert.equal(h.saved(), 0);
+  assert.match(text(h.panel()), /All Normal cleared for this eye/);
+  await act(async () => h.button("Retry").props.onClick());
+  assert.equal(h.posts[0], h.posts[1]);
+  assert.equal(h.saved(), 1);
+  assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/);
  } finally { h.close(); }
 });

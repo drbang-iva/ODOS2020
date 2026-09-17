@@ -1,0 +1,111 @@
+{
+  "base": "3222c6f28835e182c0ae2e329d9e9157df2cb5b7",
+  "head": "working-tree",
+  "method": "TypeScript AST assertion call source text; full before/after sequence per changed test. New tests have empty before. Renamed tests appear as removal plus addition; carry rename explicitly reconciled in carry-integration ledger.",
+  "files": [
+    {
+      "file": "ui/tests/r10A3OcularEditor.test.tsx",
+      "assertionCountBefore": 57,
+      "assertionCountAfter": 70,
+      "changedGroups": [
+        {
+          "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+          "mapping": "W133 / W148",
+          "before": [
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 130,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id)"
+            }
+          ],
+          "after": [
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 129,
+              "text": "assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "`W133 pending All Normal survives ${edit} with the same act id`",
+              "line": 131,
+              "text": "assert.equal(JSON.parse(h.posts[0]!).eyes.OD.negativeAct?.id, id)"
+            }
+          ]
+        },
+        {
+          "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+          "mapping": "W148",
+          "before": [],
+          "after": [
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 157,
+              "text": "assert.match(text(h.panel(eye)), /All Normal cleared for this eye because a finding was recorded/)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 158,
+              "text": "assert.doesNotMatch(text(h.panel(eye === \"OD\" ? \"OS\" : \"OD\")), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 160,
+              "text": "assert.match(text(h.panel(eye)), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 163,
+              "text": "assert.equal(request.negativeAct, undefined)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 164,
+              "text": "assert.equal(request.selected[0].key.optionCode, \"scar\")"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 165,
+              "text": "assert.equal(h.saved(), 1)"
+            },
+            {
+              "test": "`W148 ${eye} staged All Normal replacement is explained until positive-only save completes`",
+              "line": 166,
+              "text": "assert.doesNotMatch(text(h.panel(eye)), /All Normal cleared for this eye/)"
+            }
+          ]
+        },
+        {
+          "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+          "mapping": "W148",
+          "before": [],
+          "after": [
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 176,
+              "text": "assert.equal(h.saved(), 0)"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 177,
+              "text": "assert.match(text(h.panel()), /All Normal cleared for this eye/)"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 179,
+              "text": "assert.equal(h.posts[0], h.posts[1])"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 180,
+              "text": "assert.equal(h.saved(), 1)"
+            },
+            {
+              "test": "\"W148 replacement notice survives an unconfirmed save and clears after identical Retry succeeds\"",
+              "line": 181,
+              "text": "assert.doesNotMatch(text(h.panel()), /All Normal cleared for this eye/)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

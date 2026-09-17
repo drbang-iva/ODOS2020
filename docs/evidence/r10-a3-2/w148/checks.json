@@ -1,0 +1,42 @@
+{
+  "ui-build": {
+    "exit": 0,
+    "counts": {}
+  },
+  "full-ui": {
+    "exit": 0,
+    "counts": {
+      "tests": 1750,
+      "pass": 1750,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "full-mcp": {
+    "exit": 0,
+    "counts": {
+      "tests": 6005,
+      "pass": 5952,
+      "fail": 0,
+      "skipped": 53,
+      "todo": 0
+    }
+  },
+  "mcp-build": {
+    "exit": 0,
+    "counts": {}
+  },
+  "release-strict": {
+    "exit": 0,
+    "counts": {}
+  },
+  "scripts-typecheck": {
+    "exit": 0,
+    "counts": {}
+  },
+  "preflight": {
+    "exit": 0,
+    "counts": {}
+  }
+}

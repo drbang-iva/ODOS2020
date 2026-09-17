@@ -144,6 +144,7 @@ export function OcularHealthSection({
   const keepChoice = useRef(false);
   const hydratedIdentity = useRef<string>();
   const [retryKeys, setRetryKeys] = useState<string[]>([]);
+  const [clearedNormalNotices, setClearedNormalNotices] = useState<Record<string, string>>({});
   const readOnlyReason = Object.values(canonical).flatMap(eyes => EYES.map(eye => eyes[eye])).find(eye => !eye.encounterEditable)?.readOnlyReason;
   const readOnly = Boolean(readOnlyReason);
   useEffect(() => {
@@ -170,6 +171,7 @@ export function OcularHealthSection({
     [relatedDefinitions],
   );
   const historyIdentity = `${patientReference}\u0000${encounterReference}\u0000${definitionKey}`;
+  useEffect(() => { setClearedNormalNotices({}); }, [historyIdentity]);
   const groups = useMemo(() => segmentGroups(definitions), [definitions]);
   const runnerEnabled = groups.some((group) => group.label === "Anterior Segment") &&
     groups.some((group) => group.label === "Posterior Segment");
@@ -346,9 +348,10 @@ export function OcularHealthSection({
       }
       const act = prior.negativeAct;
       const pending = act && act.id !== pristineRef.current[stableKey]?.[eye].negativeAct?.id;
-      const contradictsAct = pending && (next.state !== "normal" || Boolean(next.other.trim()) ||
-        next.selections.some(code => !prior.selections.includes(code) && act.optionCodes.includes(code) && !act.exclusions.includes(code)));
+      const positiveReplacesAct = pending && next.selections.some(code => !prior.selections.includes(code) && act.optionCodes.includes(code) && !act.exclusions.includes(code));
+      const contradictsAct = pending && (next.state !== "normal" || Boolean(next.other.trim()) || positiveReplacesAct);
       next.negativeAct = contradictsAct ? undefined : act;
+      if (positiveReplacesAct) setClearedNormalNotices(notices => ({ ...notices, [`${stableKey}:${eye}`]: act.id }));
       return { ...current, [stableKey]: { ...current[stableKey], [eye]: next } };
     });
   }
@@ -455,6 +458,14 @@ export function OcularHealthSection({
           setPristine(pristineRef.current);
           successfulKeys.current.add(stableKey);
           failureMessages.current.delete(stableKey);
+          setClearedNormalNotices(notices => {
+            const next = { ...notices };
+            for (const eye of EYES) {
+              const key = `${stableKey}:${eye}`;
+              if (next[key] === clearedNormalNotices[key]) delete next[key];
+            }
+            return next;
+          });
         }
         const outcome = await handleFindingOutcome(result, { encounterReference, refresh: () => { keepChoice.current = true; setReloadVersion(value => value + 1); } });
         if (outcome.retryIdentical) retries.push(stableKey);
@@ -545,6 +556,7 @@ export function OcularHealthSection({
                     panelReadOnly={canonical[definition.stableKey]?.[eye].panel.editable === false}
                     onRemarks={(remarks) => updateEye(definition.stableKey, eye, current => ({ ...current, remarks }))}
                     capture={row[eye]}
+                    normalCleared={Boolean(clearedNormalNotices[`${definition.stableKey}:${eye}`])}
                     prior={prior[eye]}
                     related={related[eye]}
                     field={field}
@@ -653,10 +665,11 @@ function StructureRail({ groups, captures, focusedStableKey, onFocus }: {
   );
 }
 
-function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, prior, related, field, gradeFields, normalTemplate, allowDeferred, onDeferred, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
+function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, normalCleared, prior, related, field, gradeFields, normalTemplate, allowDeferred, onDeferred, onSelections, onFindingDetail, onGrade, onOther, onCopy }: {
   eye: Eye;
   readOnly: boolean; panelReadOnly: boolean; facts?: EncounterFindingRow[]; onRemarks(remarks: string): void;
   capture: EyeCapture;
+  normalCleared: boolean;
   prior: PriorFindingReadings;
   related: RelatedFindingReading[];
   field?: CustomFindingField;
@@ -691,6 +704,7 @@ function EyePanel({ eye, readOnly, panelReadOnly, facts, onRemarks, capture, pri
         onClick={onDeferred}
         className={capture.state === "deferred" ? "rounded border border-brand/70 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-white" : "rounded border border-white/15 px-3 py-1.5 text-xs text-white/55 hover:border-white/30"}
       >Not performed / deferred</button></div>}
+      {normalCleared && <p role="status" className="mt-3 text-sm text-amber-200">All Normal cleared for this eye because a finding was recorded</p>}
       {capture.negativeAct ? <details className="mt-3 text-sm text-white/65" data-negative-act={capture.negativeAct.id}>
         <summary>{capture.negativeAct.optionCodes.length} findings explicitly asserted absent{capture.negativeAct.actorReference ? "" : " · pending save"}</summary>
         <p>{capture.negativeAct.assertedAt}{capture.negativeAct.actorReference ? ` · ${capture.negativeAct.actorReference}` : " · pending save"}</p>
