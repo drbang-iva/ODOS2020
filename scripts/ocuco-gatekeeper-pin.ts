@@ -15,6 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   requestOcucoGatekeeperPinCredentials,
+  type OcucoGatekeeperPinCredentials,
   type OcucoGatekeeperPinRequest,
 } from "../mcp/src/integrations/ocuco-gatekeeper/pinBootstrap.js";
 
@@ -41,10 +42,13 @@ export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstra
   try {
     settings = renderEnvSettings(input.baseUrl, credentials.jwtKey, credentials.jwtSecret);
   } catch {
-    writeFileSync(temporaryPath, JSON.stringify(credentials), { mode: 0o600 });
-    throw new Error(`Ocuco Gatekeeper credentials could not be encoded for .env; they remain in private recovery file ${temporaryPath}.`);
+    const recovery = persistRecovery(JSON.stringify(credentials), credentials, temporaryPath, recoveryDirectory);
+    throw new Error(`Ocuco Gatekeeper credentials could not be encoded for .env; they remain in private recovery file ${recovery}.`);
   }
-  writeFileSync(temporaryPath, settings, { mode: 0o600 });
+  const recovery = persistRecovery(settings, credentials, temporaryPath, recoveryDirectory);
+  if (recovery !== temporaryPath) {
+    throw new Error(`Ocuco Gatekeeper credentials could not be staged for .env; they remain in private recovery file ${recovery}.`);
+  }
   try {
     assertUnconfigured(readEnv(input.envPath), input.baseUrl);
     const fd = openSync(input.envPath, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT, 0o600);
@@ -55,15 +59,39 @@ export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstra
     } finally {
       closeSync(fd);
     }
-    // Defends against filesystem-level write faults surviving fsync; deliberately not
-    // reachable through test interleaving because this entire save section is synchronous.
+    // Read-back catches a filesystem write fault or external replacement after append; this synchronous section has no test interleaving.
     if (!readEnv(input.envPath).includes(settings)) {
       throw new Error("The env file changed while credentials were being saved.");
     }
   } catch {
     throw new Error(`Ocuco Gatekeeper credentials could not be installed; they remain in private recovery file ${temporaryPath}.`);
   }
-  unlinkSync(temporaryPath);
+  try {
+    unlinkSync(temporaryPath);
+  } catch {
+    process.stderr.write(`WARNING: Ocuco Gatekeeper credentials were installed in ${input.envPath}, but recovery file ${temporaryPath} remains. Delete it by hand.\n`);
+  }
+}
+
+function persistRecovery(
+  contents: string,
+  credentials: OcucoGatekeeperPinCredentials,
+  temporaryPath: string,
+  recoveryDirectory: string,
+): string {
+  try {
+    writeFileSync(temporaryPath, contents, { mode: 0o600 });
+    return temporaryPath;
+  } catch {
+    const alternatePath = join(recoveryDirectory, `ocuco-gatekeeper-${randomUUID()}.env`);
+    try {
+      writeFileSync(alternatePath, JSON.stringify(credentials), { flag: "wx", mode: 0o600 });
+      return alternatePath;
+    } catch {
+      process.stderr.write(`WARNING: Ocuco Gatekeeper PIN was consumed, no recovery file could be written. Save these credentials from stderr now: ${JSON.stringify(credentials)}\n`);
+      throw new Error("Ocuco Gatekeeper credentials were printed to stderr because no recovery file could be written.");
+    }
+  }
 }
 
 function readEnv(path: string): string {

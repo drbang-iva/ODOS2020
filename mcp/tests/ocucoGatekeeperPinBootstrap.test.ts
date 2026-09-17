@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -207,6 +207,89 @@ test("bootstrap keeps exchanged credentials in private recovery if another JWT p
     assert.match(readFileSync(recoveryPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
     assert.equal(statSync(recoveryPath).mode & 0o777, 0o600);
   } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap saves spent-PIN credentials at a fresh private path when the first recovery write fails", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  const recoveryDirectory = join(directory, ".odos");
+  try {
+    writeFileSync(envPath, "OTHER=before\n");
+    await assert.rejects(bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => {
+        chmodSync(join(recoveryDirectory, readdirSync(recoveryDirectory)[0]), 0o400);
+        return vendorResponse();
+      },
+    }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /credentials.*private recovery file (.+)/);
+      const recoveryPath = error.message.match(/private recovery file (.+\.env)/)?.[1];
+      assert.ok(recoveryPath);
+      assert.deepEqual(JSON.parse(readFileSync(recoveryPath, "utf8")), {
+        jwtKey: "jwt-key-from-vendor", jwtSecret: "jwt-secret-from-vendor",
+      });
+      assert.equal(statSync(recoveryPath).mode & 0o777, 0o600);
+      return true;
+    });
+    assert.equal(readFileSync(envPath, "utf8"), "OTHER=before\n");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap reports spent-PIN credentials to stderr when no recovery path is writable", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  const recoveryDirectory = join(directory, ".odos");
+  const originalWrite = process.stderr.write;
+  let warning = "";
+  try {
+    writeFileSync(envPath, "OTHER=before\n");
+    process.stderr.write = ((chunk: string | Uint8Array) => { warning += String(chunk); return true; }) as typeof process.stderr.write;
+    await assert.rejects(bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => {
+        chmodSync(join(recoveryDirectory, readdirSync(recoveryDirectory)[0]), 0o400);
+        chmodSync(recoveryDirectory, 0o500);
+        return vendorResponse();
+      },
+    }), /credentials.*stderr/i);
+    assert.match(warning, /WARNING.*jwt-key-from-vendor.*jwt-secret-from-vendor/s);
+    assert.equal(readFileSync(envPath, "utf8"), "OTHER=before\n");
+  } finally {
+    process.stderr.write = originalWrite;
+    chmodSync(recoveryDirectory, 0o700);
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap reports success and warns when installed credentials leave a recovery file behind", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  const recoveryDirectory = join(directory, ".odos");
+  const originalWrite = process.stderr.write;
+  let warning = "";
+  try {
+    writeFileSync(envPath, "OTHER=before\n");
+    process.stderr.write = ((chunk: string | Uint8Array) => { warning += String(chunk); return true; }) as typeof process.stderr.write;
+    await bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => {
+        chmodSync(recoveryDirectory, 0o500);
+        return vendorResponse();
+      },
+    });
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_KEY=jwt-key-from-vendor$/m);
+    const recoveryPath = join(recoveryDirectory, readdirSync(recoveryDirectory)[0]);
+    assert.match(readFileSync(recoveryPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
+    assert.ok(warning.includes(recoveryPath));
+    assert.match(warning, /delete.*by hand/i);
+  } finally {
+    process.stderr.write = originalWrite;
+    chmodSync(recoveryDirectory, 0o700);
     rmSync(directory, { recursive: true, force: true });
   }
 });
