@@ -19,6 +19,14 @@
       "url": "https://www.cms.gov/icd10m/FY2026-nprm-version43-fullcode-cms/fullcode_cms/",
       "accessed": "2026-08-31",
       "authority": "primary"
+    },
+    {
+      "id": "nlm-clinical-tables-icd10cm",
+      "publisher": "NLM/NIH",
+      "title": "Clinical Table Search Service \u2014 ICD-10-CM",
+      "url": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search",
+      "accessed": "2026-09-17",
+      "authority": "primary"
     }
   ],
   "diagnosisCodes": [
@@ -36,6 +44,14 @@
       "sourceRefs": [
         "cdc-fy2026-code-descriptions",
         "cms-fy2026-full-code-manual"
+      ]
+    },
+    {
+      "code": "H51.11",
+      "display": "Convergence insufficiency",
+      "sourceRefs": [
+        "cdc-fy2026-code-descriptions",
+        "nlm-clinical-tables-icd10cm"
       ]
     }
   ]
