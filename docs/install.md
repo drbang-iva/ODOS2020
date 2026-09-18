@@ -262,6 +262,11 @@ Load the updated `.env` into the MCP service environment when restarting it. Kee
 `ODOS_LAB_ORDER_VENDOR_DEFAULT=manual` until the separate live transport gates are
 cleared. If a failure after the exchange reports a private recovery file, recover
 the returned credentials from that file before trying the one-time PIN again.
+If the returned lab ID conflicts with the requested ID, or production returns a
+`staging` environment, the command leaves `.env` unchanged and names the private
+recovery file; resolve the mismatch with Ocuco before using those credentials.
+Missing metadata or an unrecognised environment produces a warning, since the
+production environment string has not yet been observed.
 
 Twilio Voice is all-or-nothing: the five Voice variables above must be present together. The
 adapter does not automatically record calls. Batch Transcription v3 was removed from the adapter;
