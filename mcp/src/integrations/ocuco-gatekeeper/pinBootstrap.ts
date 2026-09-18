@@ -1,6 +1,8 @@
 export interface OcucoGatekeeperPinCredentials {
   jwtKey: string;
   jwtSecret: string;
+  webrxLabId: unknown;
+  environment: unknown;
 }
 
 export interface OcucoGatekeeperPinRequest {
@@ -56,7 +58,7 @@ export async function requestOcucoGatekeeperPinCredentials(
     || typeof jwtSecret !== "string" || !jwtSecret.trim()) {
     throw new Error("Ocuco Gatekeeper PIN exchange response is missing jwt_key or jwt_secret.");
   }
-  return { jwtKey, jwtSecret };
+  return { jwtKey, jwtSecret, webrxLabId: record(lab)?.webrx_lab_id, environment: record(lab)?.environment };
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {

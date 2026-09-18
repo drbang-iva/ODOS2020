@@ -38,16 +38,30 @@ export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstra
     unlinkSync(temporaryPath);
     throw error;
   }
+  const jwtCredentials = { jwtKey: credentials.jwtKey, jwtSecret: credentials.jwtSecret };
   let settings: string;
   try {
     settings = renderEnvSettings(input.baseUrl, credentials.jwtKey, credentials.jwtSecret);
   } catch {
-    const recovery = persistRecovery(JSON.stringify(credentials), credentials, temporaryPath, recoveryDirectory);
+    const recovery = persistRecovery(JSON.stringify(jwtCredentials), jwtCredentials, temporaryPath, recoveryDirectory);
     throw new Error(`Ocuco Gatekeeper credentials could not be encoded for .env; they remain in private recovery file ${recovery}.`);
   }
-  const recovery = persistRecovery(settings, credentials, temporaryPath, recoveryDirectory);
+  const recovery = persistRecovery(settings, jwtCredentials, temporaryPath, recoveryDirectory);
   if (recovery !== temporaryPath) {
     throw new Error(`Ocuco Gatekeeper credentials could not be staged for .env; they remain in private recovery file ${recovery}.`);
+  }
+  if (credentials.webrxLabId == null) {
+    process.stderr.write(`WARNING: Ocuco Gatekeeper response webrx_lab_id is absent; requested lab ${input.webrxLabId} could not be confirmed.\n`);
+  } else if (String(credentials.webrxLabId) !== String(input.webrxLabId)) {
+    throw new Error(`Ocuco Gatekeeper webrx_lab_id mismatch: requested ${input.webrxLabId}, received ${String(credentials.webrxLabId)}; credentials remain in private recovery file ${temporaryPath}.`);
+  }
+  const host = new URL(input.baseUrl).hostname;
+  if (credentials.environment == null) {
+    process.stderr.write(`WARNING: Ocuco Gatekeeper response environment is absent for ${host}; confirm it with Ocuco before sending orders.\n`);
+  } else if (host === "gatekeeper.opticalonline.com" && credentials.environment === "staging") {
+    throw new Error(`Ocuco Gatekeeper returned a staging environment from the production host; credentials remain in private recovery file ${temporaryPath}.`);
+  } else if (credentials.environment !== "staging") {
+    process.stderr.write(`WARNING: Ocuco Gatekeeper response environment is ${String(credentials.environment)} for ${host}; confirm it with Ocuco before sending orders.\n`);
   }
   try {
     assertUnconfigured(readEnv(input.envPath), input.baseUrl);
@@ -75,7 +89,7 @@ export async function bootstrapOcucoGatekeeperPin(input: OcucoGatekeeperBootstra
 
 function persistRecovery(
   contents: string,
-  credentials: OcucoGatekeeperPinCredentials,
+  credentials: Pick<OcucoGatekeeperPinCredentials, "jwtKey" | "jwtSecret">,
   temporaryPath: string,
   recoveryDirectory: string,
 ): string {

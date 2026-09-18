@@ -8,10 +8,11 @@ import { requestOcucoGatekeeperPinCredentials } from "../src/integrations/ocuco-
 import { bootstrapOcucoGatekeeperPin } from "../../scripts/ocuco-gatekeeper-pin.js";
 
 const BASE_URL = "https://gatekeeper-staging.opticalonline.com";
+const PRODUCTION_URL = "https://gatekeeper.opticalonline.com";
 const PIN = "once-only PIN +/";
 const LAB_ID = 1231;
 
-function vendorResponse(): Response {
+function vendorResponse(labOverrides: Record<string, unknown> = {}): Response {
   return new Response(JSON.stringify({
     message: {
       lab: {
@@ -32,12 +33,13 @@ function vendorResponse(): Response {
           receiver_type: "Lab",
         }],
         contractReceiving: [],
+        ...labOverrides,
       },
     },
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
-test("PIN exchange uses the exact pre-auth GET and returns only JWT credentials", async () => {
+test("PIN exchange uses the exact pre-auth GET and returns JWT credentials with lab metadata", async () => {
   let request: { url: string; init?: RequestInit } | undefined;
   const credentials = await requestOcucoGatekeeperPinCredentials({
     baseUrl: `${BASE_URL}/`, webrxLabId: LAB_ID, pinCode: PIN,
@@ -51,7 +53,145 @@ test("PIN exchange uses the exact pre-auth GET and returns only JWT credentials"
   assert.equal(request?.init?.method, "GET");
   assert.equal(request?.init?.redirect, "error");
   assert.equal(request?.init?.headers, undefined);
-  assert.deepEqual(credentials, { jwtKey: "jwt-key-from-vendor", jwtSecret: "jwt-secret-from-vendor" });
+  assert.deepEqual(credentials, {
+    jwtKey: "jwt-key-from-vendor", jwtSecret: "jwt-secret-from-vendor",
+    webrxLabId: "1231", environment: "staging",
+  });
+});
+
+async function captureStderr(action: () => Promise<void>): Promise<string> {
+  const originalWrite = process.stderr.write;
+  let warning = "";
+  try {
+    process.stderr.write = ((chunk: string | Uint8Array) => { warning += String(chunk); return true; }) as typeof process.stderr.write;
+    await action();
+  } finally {
+    process.stderr.write = originalWrite;
+  }
+  return warning;
+}
+
+test("bootstrap refuses a contradictory lab echo after staging recoverable credentials", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    writeFileSync(envPath, "OTHER=before\n");
+    await assert.rejects(bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ webrx_lab_id: "9999" }),
+    }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /webrx_lab_id.*mismatch/);
+      const recoveryPath = error.message.match(/private recovery file (.+\.env)/)?.[1];
+      assert.ok(recoveryPath);
+      assert.match(readFileSync(recoveryPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_KEY=jwt-key-from-vendor$/m);
+      assert.match(readFileSync(recoveryPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
+      assert.equal(statSync(recoveryPath).mode & 0o777, 0o600);
+      return true;
+    });
+    assert.equal(readFileSync(envPath, "utf8"), "OTHER=before\n");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap warns about an absent lab echo and installs the credentials", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ webrx_lab_id: undefined }),
+    }));
+    assert.match(warning, /WARNING.*webrx_lab_id.*absent/i);
+    assert.equal(warning.includes("jwt-key-from-vendor"), false);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_KEY=jwt-key-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap treats a null lab echo as missing rather than contradictory", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ webrx_lab_id: null }),
+    }));
+    assert.match(warning, /WARNING.*webrx_lab_id.*absent/i);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_KEY=jwt-key-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap refuses a staging environment echo from the production host and preserves credentials", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    writeFileSync(envPath, "OTHER=before\n");
+    await assert.rejects(bootstrapOcucoGatekeeperPin({
+      baseUrl: PRODUCTION_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse(),
+    }), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /staging.*production/);
+      const recoveryPath = error.message.match(/private recovery file (.+\.env)/)?.[1];
+      assert.ok(recoveryPath);
+      assert.match(readFileSync(recoveryPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_KEY=jwt-key-from-vendor$/m);
+      assert.equal(statSync(recoveryPath).mode & 0o777, 0o600);
+      return true;
+    });
+    assert.equal(readFileSync(envPath, "utf8"), "OTHER=before\n");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap warns with an unrecognised environment value from the production host and proceeds", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: PRODUCTION_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ environment: "vendor-unknown-value" }),
+    }));
+    assert.match(warning, /WARNING.*environment.*vendor-unknown-value.*gatekeeper\.opticalonline\.com/i);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap warns about an absent environment from the production host and proceeds", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: PRODUCTION_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ environment: undefined }),
+    }));
+    assert.match(warning, /WARNING.*environment.*absent/i);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap treats a null environment as missing on the production host", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: PRODUCTION_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ environment: null }),
+    }));
+    assert.match(warning, /WARNING.*environment.*absent/i);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("PIN exchange refuses insecure URLs and invalid lab IDs before any request", async () => {
