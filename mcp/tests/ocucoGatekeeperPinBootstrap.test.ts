@@ -111,6 +111,21 @@ test("bootstrap warns about an absent lab echo and installs the credentials", as
   }
 });
 
+test("bootstrap treats a null lab echo as missing rather than contradictory", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: BASE_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ webrx_lab_id: null }),
+    }));
+    assert.match(warning, /WARNING.*webrx_lab_id.*absent/i);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_KEY=jwt-key-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("bootstrap refuses a staging environment echo from the production host and preserves credentials", async () => {
   const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
   const envPath = join(directory, ".env");
@@ -156,6 +171,21 @@ test("bootstrap warns about an absent environment from the production host and p
     const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
       baseUrl: PRODUCTION_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
       fetchImpl: async () => vendorResponse({ environment: undefined }),
+    }));
+    assert.match(warning, /WARNING.*environment.*absent/i);
+    assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("bootstrap treats a null environment as missing on the production host", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "odos-ocuco-pin-"));
+  const envPath = join(directory, ".env");
+  try {
+    const warning = await captureStderr(() => bootstrapOcucoGatekeeperPin({
+      baseUrl: PRODUCTION_URL, webrxLabId: LAB_ID, pinCode: PIN, envPath,
+      fetchImpl: async () => vendorResponse({ environment: null }),
     }));
     assert.match(warning, /WARNING.*environment.*absent/i);
     assert.match(readFileSync(envPath, "utf8"), /^OCUCO_GATEKEEPER_JWT_SECRET=jwt-secret-from-vendor$/m);
