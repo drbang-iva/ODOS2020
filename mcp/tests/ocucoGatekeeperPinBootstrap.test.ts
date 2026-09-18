@@ -39,7 +39,7 @@ function vendorResponse(labOverrides: Record<string, unknown> = {}): Response {
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
-test("PIN exchange uses the exact pre-auth GET and returns only JWT credentials", async () => {
+test("PIN exchange uses the exact pre-auth GET and returns JWT credentials with lab metadata", async () => {
   let request: { url: string; init?: RequestInit } | undefined;
   const credentials = await requestOcucoGatekeeperPinCredentials({
     baseUrl: `${BASE_URL}/`, webrxLabId: LAB_ID, pinCode: PIN,
