@@ -21,10 +21,10 @@
       "authority": "primary"
     },
     {
-      "id": "nlm-clinical-tables-icd10cm",
-      "publisher": "NLM/NIH",
-      "title": "Clinical Table Search Service \u2014 ICD-10-CM",
-      "url": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search",
+      "id": "cms-fy2026-final-code-manual",
+      "publisher": "CMS",
+      "title": "ICD-10-CM/PCS MS-DRG v43.0 Definitions Manual, FY 2026 final rule",
+      "url": "https://www.cms.gov/icd10m/FY2026-fr-v43-fullcode-cms/fullcode_cms/P0453.html",
       "accessed": "2026-09-17",
       "authority": "primary"
     }
@@ -51,7 +51,7 @@
       "display": "Convergence insufficiency",
       "sourceRefs": [
         "cdc-fy2026-code-descriptions",
-        "nlm-clinical-tables-icd10cm"
+        "cms-fy2026-final-code-manual"
       ]
     }
   ]
