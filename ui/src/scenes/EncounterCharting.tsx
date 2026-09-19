@@ -430,7 +430,10 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     void loadCatalog();
   }, []);
 
+  const sectionGroupRequestSequence = useRef(0);
+
   async function loadSectionGroupCatalog(signal?: AbortSignal, preserveMessage = false) {
+    const sequence = ++sectionGroupRequestSequence.current;
     try {
       const query = new URLSearchParams({ encounterId });
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-section-groups?${query}`, {
@@ -438,7 +441,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       });
       const body = await response.json() as FindingSectionGroupCatalog;
       if (!response.ok) throw new Error(body.error ?? `Finding section groups failed: ${response.status}`);
-      if (signal?.aborted || !isCurrentEncounter()) return;
+      if (signal?.aborted || !isCurrentEncounter() || sequence !== sectionGroupRequestSequence.current) return;
       setSectionGroupCatalog({
         ...body,
         canWrite: body.canWrite === true,
@@ -450,7 +453,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       });
       if (!preserveMessage) setSectionGroupError(null);
     } catch (caught) {
-      if (signal?.aborted || !isCurrentEncounter()) return;
+      if (signal?.aborted || !isCurrentEncounter() || sequence !== sectionGroupRequestSequence.current) return;
       console.error("Finding section groups unavailable; definitions remain ungated.", caught);
       setSectionGroupCatalog({ canWrite: false, groups: [], visitTypeCategories: [], overrideGroupKeys: [], effectiveGroupKeys: [], contentPinnedGroupKeys: [] });
       if (!preserveMessage) setSectionGroupError("Section-group visibility could not be loaded.");

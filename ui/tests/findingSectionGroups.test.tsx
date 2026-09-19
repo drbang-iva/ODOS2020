@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { WearingSection } from "../src/components/charting/WearingSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { FindingSectionGroupsSettings } from "../src/components/settings/FindingSectionGroupsSettings";
@@ -583,4 +584,39 @@ for (const race of [false,true]) test(`S1 G7 ${race ? "409 race refetches pins a
       assert.equal(renderer.root.findByProps({role:'alert'}).children.join(''),'This section has findings from this visit and stays on the chart.');
     }else assert.equal(renderer.root.findByType(SpineNav).props.customSections.some((s:{id:string})=>s.id==='custom:empty'),false);
   }finally{renderer?.unmount();globalThis.fetch=originalFetch;fhir.read=originalRead;Object.defineProperty(globalThis,'document',{configurable:true,value:originalDocument});}
+});
+
+for (const staleFailure of [false, true]) test(`S1 catalog freshness ignores older ${staleFailure ? "failure" : "success"} after a newer save refresh`, async () => {
+  const originalFetch = globalThis.fetch, originalRead = fhir.read, originalDocument = globalThis.document;
+  const pending: Array<(response: Response) => void> = [];
+  const catalog = (pinned: boolean) => ({ canWrite: false, canPullIn: true, groups: [GROUP], visitTypeCategories: [],
+    overrideGroupKeys: [], defaultGroupKeys: [], effectiveGroupKeys: pinned ? [GROUP.groupKey] : [], contentPinnedGroupKeys: pinned ? [GROUP.groupKey] : [] });
+  let reads = 0;
+  fhir.read = (async () => ({ resourceType: "Encounter", id: "encounter-1", status: "in-progress", class: { code: "AMB" } })) as typeof fhir.read;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/wearing/definition")) return jsonResponse({ definition: { fields: {} } });
+    if (url.includes("/finding-definitions")) return jsonResponse({ canWrite: false, definitions: [
+      { stableKey: "custom:zz-test-marker", sectionKey: "custom:zz-test-marker", display: "Pinned section", active: true },
+    ] });
+    if (url.includes("/finding-section-groups")) {
+      if (++reads === 1) return jsonResponse(catalog(false));
+      return new Promise<Response>(resolve => pending.push(resolve));
+    }
+    return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+  }) as typeof fetch;
+  Object.defineProperty(globalThis, "document", { configurable: true, value: { addEventListener() {}, removeEventListener() {} } });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<RoleProvider><EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" /></RoleProvider>); await flushEffects(); await flushEffects(); });
+    await act(async () => { renderer.root.findByType(SpineNav).props.onSelect("wearing"); await flushEffects(); });
+    await act(async () => { renderer.root.findByType(WearingSection).props.onSaved("saved"); await flushEffects(); });
+    await act(async () => { renderer.root.findByType(WearingSection).props.onSaved("saved"); await flushEffects(); });
+    assert.equal(pending.length, 2);
+    await act(async () => { pending[1](jsonResponse(catalog(true))); await flushEffects(); });
+    await act(async () => { pending[0](staleFailure ? jsonResponse({ error: "stale failure" }, 500) : jsonResponse(catalog(false))); await flushEffects(); });
+    assert.ok(renderer.root.findAllByType("span").some(s => s.children.join("") === "Has findings this visit"));
+    assert.ok(renderer.root.findByType(SpineNav).props.customSections.some((s: { id: string }) => s.id === "custom:zz-test-marker"));
+    assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; fhir.read = originalRead; Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument }); }
 });

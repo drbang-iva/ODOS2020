@@ -66,6 +66,12 @@
     "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
   },
   {
+    "guard": "G9-request-freshness",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "node --import tsx --test ui/tests/findingSectionGroups.test.tsx"
+  },
+  {
     "guard": "G8-score",
     "redExit": 1,
     "greenExit": 0,

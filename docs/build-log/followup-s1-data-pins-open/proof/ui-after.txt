@@ -1,11 +1,11 @@
 $ npm --prefix ui test
-1..1747
-# tests 1760
+1..1749
+# tests 1762
 # suites 0
-# pass 1760
+# pass 1762
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 207000.15575
+# duration_ms 203281.967625
 Runner exit: 0

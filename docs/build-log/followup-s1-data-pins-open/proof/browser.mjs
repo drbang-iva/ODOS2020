@@ -1,3 +1,4 @@
+// Baseline-only defect reproduction: run against origin/main 1bd7a57d before the S1 implementation.
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync} from 'node:fs';

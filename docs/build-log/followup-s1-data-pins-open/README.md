@@ -5,7 +5,7 @@ Removal checks saved content freshly and refuses with the requested 409 response
 The chart displays “Has findings this visit” and refreshes after a save or a removal race.
 Previously removed groups with saved data reappear on the next load without manual re-adding.
 Empty-group removal and the existing no-resurrection behavior remain covered.
-All 12 deliberate mutations failed and all restored focused runs passed.
+All 13 deliberate mutations failed and all restored focused runs passed.
 Full MCP: zero test failures, but runner exit 1 because live lanes remain unconfigured (same at baseline).
 NOT EVALUATED — separate Claude Opus 5 evaluation is required; do not merge.
 
@@ -60,7 +60,7 @@ Pretest vitals (`clinical-graph/pretest-vitals-endpoint.ts:340`) and smoking sta
 ## Guards: deliberately broken, then restored
 
 Commands are recorded in [results.json](proof/guards/results.json). Server: `npm --prefix mcp test -- tests/findingSectionGroup.test.ts`. Client: `node --import tsx --test ui/tests/findingSectionGroups.test.tsx`.
-Every red command exited 1; every restored green command exited 0. The following quotes are extracted from the actual full linked outputs. Trailing whitespace on blank lines in captured logs is normalized.
+Every red command exited 1; every restored green command exited 0. The following quotes are extracted from the actual full linked outputs. Trailing whitespace on blank lines and workstation root paths in captured logs are normalized.
 
 ### G1
 
@@ -155,8 +155,8 @@ exit 0
 [red output](proof/guards/G4-client-red.txt):
 
 ```text
-# tests 9
-# pass 8
+# tests 11
+# pass 10
 # fail 1
 # skipped 0
 exit 1
@@ -165,8 +165,8 @@ exit 1
 [green output](proof/guards/G4-client-green.txt):
 
 ```text
-# tests 9
-# pass 9
+# tests 11
+# pass 11
 # fail 0
 # skipped 0
 exit 0
@@ -221,8 +221,8 @@ exit 0
 [red output](proof/guards/G7-red.txt):
 
 ```text
-# tests 9
-# pass 8
+# tests 11
+# pass 10
 # fail 1
 # skipped 0
 exit 1
@@ -231,8 +231,8 @@ exit 1
 [green output](proof/guards/G7-green.txt):
 
 ```text
-# tests 9
-# pass 9
+# tests 11
+# pass 11
 # fail 0
 # skipped 0
 exit 0
@@ -304,6 +304,28 @@ exit 1
 exit 0
 ```
 
+### G9-request-freshness
+
+[red output](proof/guards/G9-request-freshness-red.txt):
+
+```text
+# tests 11
+# pass 9
+# fail 2
+# skipped 0
+exit 1
+```
+
+[green output](proof/guards/G9-request-freshness-green.txt):
+
+```text
+# tests 11
+# pass 11
+# fail 0
+# skipped 0
+exit 0
+```
+
 ### G8-score
 
 [red output](proof/guards/G8-score-red.txt):
@@ -351,7 +373,7 @@ All patients, identities and findings are synthetic. All screenshots are 1440 pi
 | Command | Before | After | Runner exit |
 |---|---|---|---|
 | `ODOS_POSTGRES_URL=<isolated synthetic database> npm --prefix mcp test` | 6073 total; 6018 pass; 0 fail; 55 skipped | 6083 total; 6028 pass; 0 fail; 55 skipped | 1 both times: required live lanes unconfigured |
-| `npm --prefix ui test` | 1757 total/pass; 0 fail; 0 skipped | 1760 total/pass; 0 fail; 0 skipped | 0 both times |
+| `npm --prefix ui test` | 1757 total/pass; 0 fail; 0 skipped | 1762 total/pass; 0 fail; 0 skipped | 0 both times |
 
 Actual output: [MCP before](proof/mcp-before.txt), [MCP after](proof/mcp-after.txt), [UI before](proof/ui-before.txt), [UI after](proof/ui-after.txt). The MCP runner specifically reports 47 unconfigured registered live tests within 55 total skips. No ungated-run bypass was used. This does not prove the complete live authorization matrix; the scoped provider browser proof above did run against real Medplum.
 
@@ -377,6 +399,14 @@ odos-consent-safety-postgres-1	Up 4 days (healthy)	127.0.0.1:15432->5432/tcp
 odos-history-1d5-postgres-1	Up 4 days (healthy)	127.0.0.1:15832->5432/tcp
 odos-history-1d5-redis-1	Up 4 days (healthy)	127.0.0.1:16779->6379/tcp
 ```
+
+## Review fixback
+
+CodeRabbit identified an out-of-order catalog response race. The chart now applies only the newest request's success or failure. Two regression cases first failed (`# pass 9`, `# fail 2`, exit 1), then passed (`# pass 11`, `# fail 0`, exit 0): [red](proof/freshness-red.txt), [green](proof/freshness-green.txt). G9 below additionally disables request sequencing deliberately and restores it. The full UI suite and served browser proof were repeated after this change.
+
+Workstation paths in evidence were normalized; source hashes remain intact. The comprehensive proof setup now reuses saved/existing visit-type and appointment references and preserves existing encounter appointment links; [rerun evidence](proof/fixture-reuse.txt).
+
+The suggestion to change `proof/browser.mjs` to expect 409 is rejected: it is explicitly the required **unchanged-base defect reproduction**, whose expected result is 200 with hidden content. The branch scripts separately assert 409 and visible pins.
 
 ## Decisions, risks and follow-ups
 

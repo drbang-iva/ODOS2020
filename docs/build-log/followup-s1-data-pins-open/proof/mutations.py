@@ -20,17 +20,21 @@ cases=[
  ('G8-questionnaire-score',content,'if (observation.code.coding?.some(code => questionnaireCodes.some(expected => code.system === expected.system && code.code === expected.code)))','if (false)',server),
  ('G8-questionnaire-response',content,'if (response.status !== "entered-in-error" &&','if (false &&',server),
  ('G8-image',content,'if (document.status !== "entered-in-error" &&','if (false &&',server),
+ ('G9-request-freshness',chart,'const sequence = ++sectionGroupRequestSequence.current;','const sequence = sectionGroupRequestSequence.current;',ui),
  ('G8-score',content,'if (observation.meta?.profile?.includes(OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL))','if (false)',server),
 ]
+def normalized(text):
+ return '\n'.join(line.rstrip() for line in text.replace(str(root),'<repo>').splitlines())+'\n'
+
 results=[]
 for name,file,old,new,cmd in cases:
  p=root/file;s=p.read_text();assert s.count(old)==1,(name,s.count(old))
  try:
   p.write_text(s.replace(old,new));red=subprocess.run(cmd,cwd=root,capture_output=True,text=True)
-  (out/f'{name}-red.txt').write_text(red.stdout+red.stderr)
+  (out/f'{name}-red.txt').write_text(normalized(red.stdout+red.stderr))
  finally:p.write_text(s)
  green=subprocess.run(cmd,cwd=root,capture_output=True,text=True)
- (out/f'{name}-green.txt').write_text(green.stdout+green.stderr)
+ (out/f'{name}-green.txt').write_text(normalized(green.stdout+green.stderr))
  result={'guard':name,'redExit':red.returncode,'greenExit':green.returncode,'command':' '.join(cmd)}
  results.append(result);print(json.dumps(result),flush=True)
  if red.returncode==0 or green.returncode!=0:raise RuntimeError(f'{name} mutation did not prove red and restored green')

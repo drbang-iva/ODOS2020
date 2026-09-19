@@ -1,156 +1,160 @@
 TAP version 13
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: ungrouped definitions remain visible for every category while grouped definitions require an effective group
 ok 1 - ungrouped definitions remain visible for every category while grouped definitions require an effective group
   ---
-  duration_ms: 0.665417
+  duration_ms: 0.65025
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: a custom specialty category renders its configured battery while a general category leaves it absent
 ok 2 - a custom specialty category renders its configured battery while a general category leaves it absent
   ---
-  duration_ms: 61.20325
+  duration_ms: 60.74975
   type: 'test'
   ...
 # Finding section groups unavailable; definitions remain ungated. Error: Synthetic catalog failure
-#     at loadSectionGroupCatalog (<repo>/ui/src/scenes/EncounterCharting.tsx:443:31)
+#     at loadSectionGroupCatalog (<repo>/ui/src/scenes/EncounterCharting.tsx:440:31)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: EncounterCharting pulls a group into only the current encounter and renders it without reloading
 ok 3 - EncounterCharting pulls a group into only the current encounter and renders it without reloading
   ---
-  duration_ms: 20.404875
+  duration_ms: 18.241083
   type: 'test'
   ...
 # Subtest: EncounterCharting fails open when the section-group catalog returns 500
 ok 4 - EncounterCharting fails open when the section-group catalog returns 500
   ---
-  duration_ms: 13.48075
+  duration_ms: 13.048041
   type: 'test'
   ...
 # Subtest: section-group settings creates a keyed group from the existing visit-type category list
 ok 5 - section-group settings creates a keyed group from the existing visit-type category list
   ---
-  duration_ms: 3.55025
+  duration_ms: 2.087416
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: section-group settings dialog closes on Escape
 ok 6 - section-group settings dialog closes on Escape
   ---
-  duration_ms: 2.019875
+  duration_ms: 1.773042
   type: 'test'
   ...
 # Subtest: S1 G4 a pinned inactive group still exposes its definitions
-not ok 7 - S1 G4 a pinned inactive group still exposes its definitions
+ok 7 - S1 G4 a pinned inactive group still exposes its definitions
   ---
-  duration_ms: 1.300917
+  duration_ms: 0.081875
   type: 'test'
-  location: '<repo>/ui/tests/findingSectionGroups.test.tsx:1:14325'
-  failureType: 'testCodeFailure'
-  error: |-
-    Expected values to be strictly deep-equal:
-    + actual - expected
-
-    + []
-    - [
-    -   {
-    -     active: true,
-    -     sectionKey: 'custom:zz-test-marker'
-    -   }
-    - ]
-
-  code: 'ERR_ASSERTION'
-  name: 'AssertionError'
-  expected:
-    0:
-      sectionKey: 'custom:zz-test-marker'
-      active: true
-  actual:
-  operator: 'deepStrictEqual'
-  stack: |-
-    TestContext.<anonymous> (<repo>/ui/tests/findingSectionGroups.test.tsx:542:10)
-    Test.runInAsyncScope (node:async_hooks:214:14)
-    Test.run (node:internal/test_runner/test:1047:25)
-    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
-    Test.postRun (node:internal/test_runner/test:1173:19)
-    Test.run (node:internal/test_runner/test:1101:12)
-    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: S1 G7 pin replaces remove control and survives removing a different group
 ok 8 - S1 G7 pin replaces remove control and survives removing a different group
   ---
-  duration_ms: 16.5835
+  duration_ms: 17.474125
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: S1 G7 409 race refetches pins and preserves specific message
 ok 9 - S1 G7 409 race refetches pins and preserves specific message
   ---
-  duration_ms: 16.185792
+  duration_ms: 15.952541
   type: 'test'
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Subtest: S1 catalog freshness ignores older success after a newer save refresh
-ok 10 - S1 catalog freshness ignores older success after a newer save refresh
+not ok 10 - S1 catalog freshness ignores older success after a newer save refresh
   ---
-  duration_ms: 59.814958
+  duration_ms: 60.650708
   type: 'test'
+  location: '<repo>/ui/tests/findingSectionGroups.test.tsx:1:18156'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(renderer.root.findAllByType("span").some(s => s.children.join("") === "Has findings this visit"))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/findingSectionGroups.test.tsx:618:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
 # Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
-#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1409:46)
+#     at loadExamOverviewProjection (<repo>/ui/src/scenes/EncounterCharting.tsx:1406:46)
 # Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
 #     at <anonymous> (<repo>/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Finding section groups unavailable; definitions remain ungated. Error: stale failure
+#     at loadSectionGroupCatalog (<repo>/ui/src/scenes/EncounterCharting.tsx:440:31)
 # Subtest: S1 catalog freshness ignores older failure after a newer save refresh
-ok 11 - S1 catalog freshness ignores older failure after a newer save refresh
+not ok 11 - S1 catalog freshness ignores older failure after a newer save refresh
   ---
-  duration_ms: 54.629542
+  duration_ms: 59.005
   type: 'test'
+  location: '<repo>/ui/tests/findingSectionGroups.test.tsx:1:18156'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(renderer.root.findAllByType("span").some(s => s.children.join("") === "Has findings this visit"))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (<repo>/ui/tests/findingSectionGroups.test.tsx:618:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
   ...
 1..11
 # tests 11
 # suites 0
-# pass 10
-# fail 1
+# pass 9
+# fail 2
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 465.735917
+# duration_ms 490.072833
