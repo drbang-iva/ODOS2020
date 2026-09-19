@@ -155,6 +155,12 @@ Patient data lives ONLY on the practice's own hardware. No cloud, no vendor tele
 
 Cloud retracted by the private PerformanceOD local-only decision dated 2026-04-30.
 
+**Hosted AI services and patient data — TypeSafe / Jev is NOT approved (2026-09-19).** TypeSafe's Jev model (`api.typesafe.ai`, and the `typesafe` agent skill/plugin that may be installed on the operator's machine) is a cloud-hosted service with no published HIPAA or business-associate-agreement (BAA) terms, and no local or self-hosted option. Therefore, in this repo:
+
+- **Never send patient data, or anything derived from it, to TypeSafe** — not chart text, findings, messages, fax/OCR text, names, dates, or IDs, and not "de-identified" versions unless the operator has ruled on that specific flow in writing.
+- **Do not add Jev/TypeSafe calls, SDKs, keys, or config to ODOS code** without an explicit operator decision. The data-locality rule above already forbids the cloud path; a signed BAA alone would not lift it, because ODOS keeps patient data on the practice's own hardware unless the practice opts in.
+- If a task seems to call for "a fast typed classifier" (routing, tagging, triage, scoring), keep it deterministic or use a local model. Flag the idea to the operator instead of reaching for Jev. Where TypeSafe *is* being trialled — VisionForge, non-patient content only — see `performance-od/decisions/2026-09-19-typesafe-jev-direct-api-and-phi-boundary.md`.
+
 **`docker-compose.yml` is the deployment unit.** Same file works for dev, test, and production.
 
 ### Payments & dispensary contracts (durable — not milestone state)
