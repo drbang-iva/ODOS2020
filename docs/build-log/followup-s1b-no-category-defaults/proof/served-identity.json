@@ -1,7 +1,7 @@
 {
   "root": ".",
-  "head": "aa73bf4d711f6c4a0649e04fe4fe2fa5a50abfad",
-  "dirty": true,
+  "head": "d4bf0d9ab682c0a036ecee43d084b8b2f779cbdf",
+  "dirty": false,
   "mcpHash": "64617b91c47f47ca2a49578a71390dea39ab0d06c5e7fe2aaf73da4c406e6b1b",
   "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
   "servedAssets": {
@@ -19,8 +19,8 @@
     "control": 25336
   },
   "project": "odos-s1b-proof",
-  "mcpPid": 43673,
-  "caddyPid": 43686,
+  "mcpPid": 53970,
+  "caddyPid": 53983,
   "sourceHashes": {
     "mcp/src/clinical-graph/finding-section-group-endpoint.ts": "6f60bed09d44e9ea0ae927acf76b79e07b61fa279f64740accf8a21dc8de31e3",
     "mcp/src/clinical-graph/finding-section-group-store.ts": "7620b123ba3c41184d031d43d8f1b5d41197f6ac15f8b7660c27d11e8fcb9fe4",

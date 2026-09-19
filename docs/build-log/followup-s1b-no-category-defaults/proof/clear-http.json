@@ -3,7 +3,7 @@
   "body": {
     "canWriteDiagnosis": true,
     "voided": [
-      "Observation/a29cde13-deb6-427f-8c8c-9260f8472c45"
+      "Observation/1e788937-fd78-4e7e-8581-e8b37f605804"
     ],
     "count": 1,
     "sections": [
@@ -15,7 +15,7 @@
     ],
     "entries": [
       {
-        "reference": "Observation/a29cde13-deb6-427f-8c8c-9260f8472c45",
+        "reference": "Observation/1e788937-fd78-4e7e-8581-e8b37f605804",
         "sectionKey": "dry-eye:symptoms",
         "findingKey": "dry-eye:symptoms",
         "laterality": "UNKNOWN"
@@ -27,16 +27,16 @@
       "encounter": null,
       "sections": {
         "dry-eye:symptoms": {
-          "voidActionId": "7f3fd573-12f0-4a1a-bc8b-29e5d40b0fe5",
+          "voidActionId": "31b1dcc1-337d-4197-b5b1-5f41003e2507",
           "voided": [
             {
-              "ref": "Observation/a29cde13-deb6-427f-8c8c-9260f8472c45",
+              "ref": "Observation/1e788937-fd78-4e7e-8581-e8b37f605804",
               "priorStatus": "preliminary"
             }
           ],
           "label": "Symptoms",
           "count": 1,
-          "at": "2026-09-19T21:19:16.229Z",
+          "at": "2026-09-19T21:33:17.479Z",
           "sectionKeys": [
             "dry-eye:symptoms"
           ],
@@ -44,6 +44,6 @@
         }
       }
     },
-    "voidActionId": "7f3fd573-12f0-4a1a-bc8b-29e5d40b0fe5"
+    "voidActionId": "31b1dcc1-337d-4197-b5b1-5f41003e2507"
   }
 }
