@@ -3,23 +3,13 @@ export interface FindingSectionGroup {
   groupKey: string;
   label: string;
   sectionKeyPrefixes: string[];
-  defaultForVisitTypeCategories: string[];
   active: boolean;
-}
-
-export interface VisitTypeCategory {
-  id: string;
-  label: string;
-  active?: boolean;
 }
 
 export interface FindingSectionGroupCatalog {
   canWrite: boolean;
   canPullIn?: boolean;
   groups: FindingSectionGroup[];
-  visitTypeCategories: VisitTypeCategory[];
-  visitTypeCategory?: string;
-  defaultGroupKeys?: string[];
   overrideGroupKeys?: string[];
   pulledInGroupKeys?: string[];
   effectiveGroupKeys?: string[];

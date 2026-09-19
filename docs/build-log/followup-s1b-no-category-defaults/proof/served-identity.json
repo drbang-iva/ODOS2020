@@ -1,0 +1,31 @@
+{
+  "root": ".",
+  "head": "d4bf0d9ab682c0a036ecee43d084b8b2f779cbdf",
+  "dirty": false,
+  "mcpHash": "64617b91c47f47ca2a49578a71390dea39ab0d06c5e7fe2aaf73da4c406e6b1b",
+  "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+  "servedAssets": {
+    "/assets/index-0f1iEkr3.js": "2801cd665e3b440cab488eba2a9287c63bb2bc85755843af13ad19703b76086e",
+    "/assets/index-DF84U2Dz.css": "9ae30a7aac6735d2220cd62fdf6da90190f414fbd6eb303d8882c44c2b5782be"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 30090,
+    "medplum": 30103,
+    "postgres": 27433,
+    "redis": 28380,
+    "mcp": 25334,
+    "proxy": 25335,
+    "control": 25336
+  },
+  "project": "odos-s1b-proof",
+  "mcpPid": 53970,
+  "caddyPid": 53983,
+  "sourceHashes": {
+    "mcp/src/clinical-graph/finding-section-group-endpoint.ts": "6f60bed09d44e9ea0ae927acf76b79e07b61fa279f64740accf8a21dc8de31e3",
+    "mcp/src/clinical-graph/finding-section-group-store.ts": "7620b123ba3c41184d031d43d8f1b5d41197f6ac15f8b7660c27d11e8fcb9fe4",
+    "ui/src/lib/finding-section-groups.ts": "4175b6833ea0b615aa52bc1b1d8e1fda12bb6992569de159e33e6a98ce158bca",
+    "ui/src/components/settings/FindingSectionGroupsSettings.tsx": "fea8504ae1f3cc9990040a964a39db2e21e96199ece6c843b9a206a4cf87fb66",
+    "ui/src/scenes/EncounterCharting.tsx": "4e71ffa69283997136acf89381d8994414909ce939e20915f7148c662f919c74"
+  }
+}

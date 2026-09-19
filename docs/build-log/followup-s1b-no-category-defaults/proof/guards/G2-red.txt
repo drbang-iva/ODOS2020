@@ -1,0 +1,33 @@
+$ node --import tsx --test --test-name-pattern=S1b G2 tests/findingSectionGroup.test.ts
+TAP version 13
+# Subtest: S1b G2 legacy category key is ignored on load and omitted on save
+not ok 1 - S1b G2 legacy category key is ignored on load and omitted on save
+  ---
+  duration_ms: 2.64575
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:22800'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:730:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 211.457916

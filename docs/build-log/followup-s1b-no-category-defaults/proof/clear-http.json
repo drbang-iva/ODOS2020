@@ -1,0 +1,49 @@
+{
+  "status": 200,
+  "body": {
+    "canWriteDiagnosis": true,
+    "voided": [
+      "Observation/1e788937-fd78-4e7e-8581-e8b37f605804"
+    ],
+    "count": 1,
+    "sections": [
+      {
+        "sectionKey": "dry-eye:symptoms",
+        "label": "Symptoms",
+        "count": 1
+      }
+    ],
+    "entries": [
+      {
+        "reference": "Observation/1e788937-fd78-4e7e-8581-e8b37f605804",
+        "sectionKey": "dry-eye:symptoms",
+        "findingKey": "dry-eye:symptoms",
+        "laterality": "UNKNOWN"
+      }
+    ],
+    "preview": false,
+    "ledger": {
+      "encounterId": "765cee71-8bb4-406a-b61d-01d7f211ea9f",
+      "encounter": null,
+      "sections": {
+        "dry-eye:symptoms": {
+          "voidActionId": "31b1dcc1-337d-4197-b5b1-5f41003e2507",
+          "voided": [
+            {
+              "ref": "Observation/1e788937-fd78-4e7e-8581-e8b37f605804",
+              "priorStatus": "preliminary"
+            }
+          ],
+          "label": "Symptoms",
+          "count": 1,
+          "at": "2026-09-19T21:33:17.479Z",
+          "sectionKeys": [
+            "dry-eye:symptoms"
+          ],
+          "scope": "section"
+        }
+      }
+    },
+    "voidActionId": "31b1dcc1-337d-4197-b5b1-5f41003e2507"
+  }
+}

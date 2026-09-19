@@ -1,0 +1,33 @@
+$ node --import tsx --test --test-name-pattern=S1b G6 tests/findingSectionGroups.test.tsx
+TAP version 13
+# Subtest: S1b G6 settings creates edits and deactivates without category controls
+not ok 1 - S1b G6 settings creates edits and deactivates without category controls
+  ---
+  duration_ms: 17.310375
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/ui/tests/findingSectionGroups.test.tsx:1:10816'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/ui/tests/findingSectionGroups.test.tsx:456:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 411.653709

@@ -1,0 +1,101 @@
+$ node --import tsx --test --test-name-pattern=S1 G[1-6]|S1b G4 tests/findingSectionGroup.test.ts
+TAP version 13
+# Subtest: S1 G1 removal freshly refuses saved custom-section content without writing
+ok 1 - S1 G1 removal freshly refuses saved custom-section content without writing
+  ---
+  duration_ms: 17.581375
+  type: 'test'
+  ...
+# Subtest: S1 G2 atomic present pins its group
+ok 2 - S1 G2 atomic present pins its group
+  ---
+  duration_ms: 7.445417
+  type: 'test'
+  ...
+# Subtest: S1 G2 atomic explicit absent pins its group
+ok 3 - S1 G2 atomic explicit absent pins its group
+  ---
+  duration_ms: 6.499958
+  type: 'test'
+  ...
+# Subtest: S1 G3 removed-before-fix content repairs effective and pinned keys on load
+not ok 4 - S1 G3 removed-before-fix content repairs effective and pinned keys on load
+  ---
+  duration_ms: 7.791166
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:17870'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'dry-eye-workup'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'dry-eye-workup'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:650:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S1 G4 inactive group with content remains effective
+not ok 5 - S1 G4 inactive group with content remains effective
+  ---
+  duration_ms: 6.666708
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:18187'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'dry-eye-workup'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'dry-eye-workup'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:657:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S1 G5 entered-in-error and another encounter never pin this encounter
+ok 6 - S1 G5 entered-in-error and another encounter never pin this encounter
+  ---
+  duration_ms: 12.835
+  type: 'test'
+  ...
+# Subtest: S1 G6 removing an empty group succeeds and removes it from effective keys
+ok 7 - S1 G6 removing an empty group succeeds and removes it from effective keys
+  ---
+  duration_ms: 17.809792
+  type: 'test'
+  ...
+# Subtest: S1b G4 chart atomic writer live then clear unpins and permits removal
+ok 8 - S1b G4 chart atomic writer live then clear unpins and permits removal
+  ---
+  duration_ms: 32.721875
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 6
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 317.868

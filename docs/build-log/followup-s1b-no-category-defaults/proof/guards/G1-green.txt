@@ -1,0 +1,17 @@
+$ node --import tsx --test --test-name-pattern=S1b G1 tests/findingSectionGroup.test.ts
+TAP version 13
+# Subtest: S1b G1 matching legacy category never makes a group effective
+ok 1 - S1b G1 matching legacy category never makes a group effective
+  ---
+  duration_ms: 11.21625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 193.529833

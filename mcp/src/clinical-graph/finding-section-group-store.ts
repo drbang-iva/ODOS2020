@@ -24,7 +24,6 @@ export interface FindingSectionGroup {
   groupKey: string;
   label: string;
   sectionKeyPrefixes: string[];
-  defaultForVisitTypeCategories: string[];
   active: boolean;
 }
 
@@ -33,7 +32,6 @@ export const DRY_EYE_WORKUP_SECTION_GROUP: FindingSectionGroup = {
   groupKey: "dry-eye-workup",
   label: "Dry Eye Workup",
   sectionKeyPrefixes: ["dry-eye:"],
-  defaultForVisitTypeCategories: [],
   active: true,
 };
 
@@ -190,18 +188,6 @@ export class FhirEncounterSectionOverrideStore {
   }
 }
 
-export function resolveDefaultSectionGroups(
-  groups: readonly FindingSectionGroup[],
-  visitTypeCategory: string | undefined,
-): FindingSectionGroup[] {
-  if (!visitTypeCategory) return [];
-  return groups.filter(
-    (group) =>
-      group.active &&
-      group.defaultForVisitTypeCategories.includes(visitTypeCategory),
-  );
-}
-
 export function buildFindingSectionGroupResource(
   group: FindingSectionGroup,
   existing?: Basic,
@@ -305,13 +291,6 @@ function assertFindingSectionGroup(value: unknown): FindingSectionGroup {
       throw new Error(`Finding section group prefix "${prefix}" cannot contain whitespace.`);
     }
   }
-  const defaultForVisitTypeCategories = stringList(
-    value.defaultForVisitTypeCategories,
-    "defaultForVisitTypeCategories",
-  );
-  for (const category of defaultForVisitTypeCategories) {
-    kebabCase(category, "Visit-type category id");
-  }
   if (typeof value.active !== "boolean") {
     throw new Error("Finding section group active must be boolean.");
   }
@@ -320,7 +299,6 @@ function assertFindingSectionGroup(value: unknown): FindingSectionGroup {
     groupKey: value.groupKey,
     label: value.label.trim(),
     sectionKeyPrefixes,
-    defaultForVisitTypeCategories,
     active: value.active,
   };
 }

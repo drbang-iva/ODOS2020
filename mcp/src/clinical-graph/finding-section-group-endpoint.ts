@@ -2,7 +2,7 @@ import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { encounterContentSectionKeys } from "./finding-section-content.js";
 import type { FhirSearchClient } from "../fhir-search.js";
 import { randomUUID } from "node:crypto";
-import type { Basic, Encounter } from "@medplum/fhirtypes";
+import type { Encounter } from "@medplum/fhirtypes";
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
@@ -10,19 +10,10 @@ import {
   type BusinessAction,
   type PracticeRoleId,
 } from "../authz/roles.js";
-import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
-import {
-  DEFAULT_VISIT_TYPE_CATEGORIES,
-  ODOS_VISIT_TYPE_CONFIG_CODE,
-  ODOS_VISIT_TYPE_CONFIG_SYSTEM,
-  parseVisitTypeConfig,
-  type VisitTypeCategoryConfig,
-} from "../scheduling/visit-type-config.js";
 import {
   FhirEncounterSectionOverrideStore,
   FhirFindingSectionGroupStore,
   FindingSectionGroupAlreadyExistsError,
-  resolveDefaultSectionGroups,
   type FindingSectionGroup,
   type FindingSectionGroupFhirClient,
 } from "./finding-section-group-store.js";
@@ -40,9 +31,6 @@ export interface FindingSectionGroupEndpointDeps {
 const groupFields = {
   label: z.string().trim().min(1).max(120),
   sectionKeyPrefixes: z.array(z.string().trim().min(1).max(120)).min(1).max(64),
-  defaultForVisitTypeCategories: z.array(
-    z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  ).max(64),
   active: z.boolean(),
 };
 
@@ -54,7 +42,6 @@ const createGroupSchema = z.object({
 const updateGroupSchema = z.object({
   label: groupFields.label.optional(),
   sectionKeyPrefixes: groupFields.sectionKeyPrefixes.optional(),
-  defaultForVisitTypeCategories: groupFields.defaultForVisitTypeCategories.optional(),
   active: groupFields.active.optional(),
 }).strict().refine(
   (value) => Object.keys(value).length > 0,
@@ -84,20 +71,12 @@ export async function handleFindingSectionGroupCatalogRequest(
   }
   const serviceFhir = deps.serviceFhir ?? staff.fhir;
   const groups = await new FhirFindingSectionGroupStore(serviceFhir).list();
-  const visitTypeCategories = await loadVisitTypeCategories(serviceFhir);
   const encounterId = input.query?.encounterId?.trim();
   if (!encounterId) {
-    return { status: 200, body: { canWrite, canPullIn, groups, visitTypeCategories } };
+    return { status: 200, body: { canWrite, canPullIn, groups } };
   }
   try {
     const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
-    const visitTypeCategory = await resolveVisitTypeCategoryForEncounter(
-      encounter,
-      undefined,
-      serviceFhir,
-    );
-    const defaultGroupKeys = resolveDefaultSectionGroups(groups, visitTypeCategory)
-      .map((group) => group.groupKey);
     const override = await new FhirEncounterSectionOverrideStore(serviceFhir).get(encounterId);
     const activeGroupKeys = new Set(
       groups.filter((group) => group.active).map((group) => group.groupKey),
@@ -105,16 +84,13 @@ export async function handleFindingSectionGroupCatalogRequest(
     const pulledInGroupKeys = override.groupKeys.filter((groupKey) => activeGroupKeys.has(groupKey));
     const sectionKeys = await encounterContentSectionKeys(staff.fhir, encounter, await new FhirFindingDefinitionStore(serviceFhir).list());
     const contentPinnedGroupKeys = groups.filter(group => group.sectionKeyPrefixes.some(prefix => sectionKeys.some(key => key.startsWith(prefix)))).map(group => group.groupKey);
-    const effectiveGroupKeys = [...new Set([...defaultGroupKeys, ...pulledInGroupKeys, ...contentPinnedGroupKeys])];
+    const effectiveGroupKeys = [...new Set([...pulledInGroupKeys, ...contentPinnedGroupKeys])];
     return {
       status: 200,
       body: {
         canWrite,
         canPullIn,
         groups,
-        visitTypeCategories,
-        visitTypeCategory,
-        defaultGroupKeys,
         overrideGroupKeys: override.groupKeys,
         pulledInGroupKeys,
         effectiveGroupKeys,
@@ -265,29 +241,6 @@ export async function handleEncounterSectionOverrideMutationRequest(
     const status = errorStatus(error) === 404 ? 404 : 400;
     return { status, body: { error: errorMessage(error) } };
   }
-}
-
-async function loadVisitTypeCategories(
-  fhir: FindingSectionGroupFhirClient,
-): Promise<VisitTypeCategoryConfig[]> {
-  const bundle = await fhir.search<Basic>("Basic", {
-    code: `${ODOS_VISIT_TYPE_CONFIG_SYSTEM}|${ODOS_VISIT_TYPE_CONFIG_CODE}`,
-    _count: "10",
-  });
-  const resources = (bundle.entry ?? [])
-    .map((entry) => entry.resource)
-    .filter((resource): resource is Basic => resource?.resourceType === "Basic")
-    .sort((left, right) =>
-      (right.meta?.lastUpdated ?? "").localeCompare(left.meta?.lastUpdated ?? "")
-    );
-  if (resources[0]) {
-    try {
-      return parseVisitTypeConfig(resources[0]).categories;
-    } catch (error) {
-      console.error(`Visit-type config unavailable to section groups: ${errorMessage(error)}`);
-    }
-  }
-  return DEFAULT_VISIT_TYPE_CATEGORIES;
 }
 
 function staffMay(role: PracticeRoleId, action: BusinessAction): boolean {

@@ -1,0 +1,59 @@
+$ node --import tsx --test --test-name-pattern=S1 G[1-6]|S1b G4 tests/findingSectionGroup.test.ts
+TAP version 13
+# Subtest: S1 G1 removal freshly refuses saved custom-section content without writing
+ok 1 - S1 G1 removal freshly refuses saved custom-section content without writing
+  ---
+  duration_ms: 17.229583
+  type: 'test'
+  ...
+# Subtest: S1 G2 atomic present pins its group
+ok 2 - S1 G2 atomic present pins its group
+  ---
+  duration_ms: 7.20025
+  type: 'test'
+  ...
+# Subtest: S1 G2 atomic explicit absent pins its group
+ok 3 - S1 G2 atomic explicit absent pins its group
+  ---
+  duration_ms: 6.48775
+  type: 'test'
+  ...
+# Subtest: S1 G3 removed-before-fix content repairs effective and pinned keys on load
+ok 4 - S1 G3 removed-before-fix content repairs effective and pinned keys on load
+  ---
+  duration_ms: 6.057625
+  type: 'test'
+  ...
+# Subtest: S1 G4 inactive group with content remains effective
+ok 5 - S1 G4 inactive group with content remains effective
+  ---
+  duration_ms: 6.312917
+  type: 'test'
+  ...
+# Subtest: S1 G5 entered-in-error and another encounter never pin this encounter
+ok 6 - S1 G5 entered-in-error and another encounter never pin this encounter
+  ---
+  duration_ms: 12.34175
+  type: 'test'
+  ...
+# Subtest: S1 G6 removing an empty group succeeds and removes it from effective keys
+ok 7 - S1 G6 removing an empty group succeeds and removes it from effective keys
+  ---
+  duration_ms: 18.230125
+  type: 'test'
+  ...
+# Subtest: S1b G4 chart atomic writer live then clear unpins and permits removal
+ok 8 - S1b G4 chart atomic writer live then clear unpins and permits removal
+  ---
+  duration_ms: 31.796042
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 291.138666

@@ -1,0 +1,18 @@
+Fresh saved finding pins immediately; API removal returns 409; section and history stay visible.
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: 'Clear chart', exact: true })[22m
+
+    at /Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/docs/build-log/followup-s1b-no-category-defaults/proof/chart-browser.mjs:55:65 {
+  log: [
+    "  - waiting for getByRole('button', { name: 'Clear chart', exact: true })"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v22.22.3
+Empty group removed with HTTP 200; section disappears.
