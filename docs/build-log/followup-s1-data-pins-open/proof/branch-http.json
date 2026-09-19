@@ -1,0 +1,57 @@
+{
+  "catalog": {
+    "status": 200,
+    "body": {
+      "canWrite": false,
+      "canPullIn": true,
+      "groups": [
+        {
+          "id": "finding-section-group-dry-eye-workup",
+          "groupKey": "dry-eye-workup",
+          "label": "Dry Eye Workup",
+          "sectionKeyPrefixes": [
+            "dry-eye:"
+          ],
+          "defaultForVisitTypeCategories": [],
+          "active": true
+        }
+      ],
+      "visitTypeCategories": [
+        {
+          "id": "exams",
+          "label": "Exams",
+          "order": 0
+        },
+        {
+          "id": "contact-lens",
+          "label": "Contact Lens",
+          "order": 1
+        },
+        {
+          "id": "medical",
+          "label": "Medical",
+          "order": 2
+        }
+      ],
+      "visitTypeCategory": "comprehensive",
+      "defaultGroupKeys": [],
+      "overrideGroupKeys": [],
+      "pulledInGroupKeys": [],
+      "effectiveGroupKeys": [
+        "dry-eye-workup"
+      ],
+      "contentPinnedGroupKeys": [
+        "dry-eye-workup"
+      ]
+    }
+  },
+  "refusal": {
+    "status": 409,
+    "body": {
+      "code": "section-group-has-content",
+      "sectionKeys": [
+        "dry-eye:symptoms"
+      ]
+    }
+  }
+}

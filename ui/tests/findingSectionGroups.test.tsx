@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { WearingSection } from "../src/components/charting/WearingSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { FindingSectionGroupsSettings } from "../src/components/settings/FindingSectionGroupsSettings";
@@ -535,3 +536,87 @@ function jsonResponse(body: unknown, status = 200): Response {
 async function flushEffects(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+test("S1 G4 a pinned inactive group still exposes its definitions",()=>{
+  const definitions=[{sectionKey:"custom:zz-test-marker",active:true}];
+  assert.deepEqual(filterDefinitionsForSectionGroups(definitions,[{...GROUP,active:false}],[],[GROUP.groupKey]),definitions);
+  assert.deepEqual(filterDefinitionsForSectionGroups(definitions,[{...GROUP,active:false}],[],[]),[]);
+});
+
+for (const race of [false,true]) test(`S1 G7 ${race ? "409 race refetches pins and preserves specific message" : "pin replaces remove control and survives removing a different group"}`,async()=>{
+  const originalFetch=globalThis.fetch,originalRead=fhir.read,originalDocument=globalThis.document;
+  const other={...GROUP,groupKey:"empty-group",label:"Empty group",sectionKeyPrefixes:["custom:empty"]};
+  let catalogReads=0;
+  fhir.read=(async()=>({resourceType:"Encounter",id:"encounter-1",status:"in-progress",class:{code:"AMB"}})) as typeof fhir.read;
+  globalThis.fetch=(async(input,init)=>{
+    const url=String(input);
+    if(url.includes('/finding-definitions'))return jsonResponse({canWrite:false,definitions:[
+      {stableKey:"custom:zz-test-marker",sectionKey:"custom:zz-test-marker",display:"Pinned section",active:true},
+      {stableKey:"custom:empty",sectionKey:"custom:empty",display:"Empty section",active:true},
+    ]});
+    if(url.includes('/finding-section-groups')){
+      catalogReads++;
+      const pinned=!race||catalogReads>1;
+      return jsonResponse({canWrite:false,canPullIn:true,groups:[GROUP,other],visitTypeCategories:[],defaultGroupKeys:[],
+        overrideGroupKeys:race?[GROUP.groupKey]:[other.groupKey],pulledInGroupKeys:race?[GROUP.groupKey]:[other.groupKey],
+        contentPinnedGroupKeys:pinned?[GROUP.groupKey]:[],effectiveGroupKeys:[GROUP.groupKey,other.groupKey]});
+    }
+    if(url.endsWith('/section-groups')&&init?.method==='POST')return race?jsonResponse({code:"section-group-has-content",sectionKeys:["custom:zz-test-marker"]},409):jsonResponse({override:{groupKeys:[]}});
+    return jsonResponse({resourceType:"Bundle",type:"searchset",entry:[]});
+  }) as typeof fetch;
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{addEventListener(){},removeEventListener(){}}});
+  let renderer!:ReactTestRenderer;
+  try{
+    await act(async()=>{renderer=create(<RoleProvider><EncounterCharting patient={{resourceType:"Patient",id:"patient-1"}} encounterId="encounter-1"/></RoleProvider>);await flushEffects();await flushEffects();});
+    const buttons=()=>renderer.root.findAllByType('button');
+    if(!race){
+      assert.equal(buttons().some(b=>b.children.join('')==='Remove Dry eye workup'),false);
+      assert.ok(renderer.root.findAllByType('span').some(s=>s.children.join('')==='Has findings this visit'));
+    }
+    await act(async()=>{buttons().find(b=>b.children.join('')===(race?'Remove Dry eye workup':'Remove Empty group'))!.props.onClick();await flushEffects();await flushEffects();});
+    assert.ok(renderer.root.findByType(SpineNav).props.customSections.some((s:{id:string})=>s.id==='custom:zz-test-marker'));
+    assert.equal(buttons().some(b=>b.children.join('')==='Remove Dry eye workup'),false);
+    assert.ok(renderer.root.findAllByType('span').some(s=>s.children.join('')==='Has findings this visit'));
+    const selectors=renderer.root.findAll(node=>node.type===OdosSelect&&node.props.ariaLabel==='Add section group');
+    assert.ok(selectors.every(select=>!select.props.options.some((option:{value:string})=>option.value===GROUP.groupKey)), 'a pinned group stays effective and is never offered for pull-in again');
+    if(race){
+      assert.equal(catalogReads,2);
+      assert.equal(renderer.root.findByProps({role:'alert'}).children.join(''),'This section has findings from this visit and stays on the chart.');
+    }else assert.equal(renderer.root.findByType(SpineNav).props.customSections.some((s:{id:string})=>s.id==='custom:empty'),false);
+  }finally{renderer?.unmount();globalThis.fetch=originalFetch;fhir.read=originalRead;Object.defineProperty(globalThis,'document',{configurable:true,value:originalDocument});}
+});
+
+for (const staleFailure of [false, true]) test(`S1 catalog freshness ignores older ${staleFailure ? "failure" : "success"} after a newer save refresh`, async () => {
+  const originalFetch = globalThis.fetch, originalRead = fhir.read, originalDocument = globalThis.document;
+  const pending: Array<(response: Response) => void> = [];
+  const catalog = (pinned: boolean) => ({ canWrite: false, canPullIn: true, groups: [GROUP], visitTypeCategories: [],
+    overrideGroupKeys: [], defaultGroupKeys: [], effectiveGroupKeys: pinned ? [GROUP.groupKey] : [], contentPinnedGroupKeys: pinned ? [GROUP.groupKey] : [] });
+  let reads = 0;
+  fhir.read = (async () => ({ resourceType: "Encounter", id: "encounter-1", status: "in-progress", class: { code: "AMB" } })) as typeof fhir.read;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/wearing/definition")) return jsonResponse({ definition: { fields: {} } });
+    if (url.includes("/finding-definitions")) return jsonResponse({ canWrite: false, definitions: [
+      { stableKey: "custom:zz-test-marker", sectionKey: "custom:zz-test-marker", display: "Pinned section", active: true },
+    ] });
+    if (url.includes("/finding-section-groups")) {
+      if (++reads === 1) return jsonResponse(catalog(false));
+      return new Promise<Response>(resolve => pending.push(resolve));
+    }
+    return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+  }) as typeof fetch;
+  Object.defineProperty(globalThis, "document", { configurable: true, value: { addEventListener() {}, removeEventListener() {} } });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<RoleProvider><EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" /></RoleProvider>); await flushEffects(); await flushEffects(); });
+    await act(async () => { renderer.root.findByType(SpineNav).props.onSelect("wearing"); await flushEffects(); });
+    await act(async () => { renderer.root.findByType(WearingSection).props.onSaved("saved"); await flushEffects(); });
+    await act(async () => { renderer.root.findByType(WearingSection).props.onSaved("saved"); await flushEffects(); });
+    assert.equal(pending.length, 2);
+    await act(async () => { pending[1](jsonResponse(catalog(true))); await flushEffects(); });
+    await act(async () => { pending[0](staleFailure ? jsonResponse({ error: "stale failure" }, 500) : jsonResponse(catalog(false))); await flushEffects(); });
+    assert.ok(renderer.root.findAllByType("span").some(s => s.children.join("") === "Has findings this visit"));
+    assert.ok(renderer.root.findByType(SpineNav).props.customSections.some((s: { id: string }) => s.id === "custom:zz-test-marker"));
+    assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; fhir.read = originalRead; Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument }); }
+});

@@ -1,0 +1,36 @@
+{
+  "base": "1bd7a57d8a5ef8d40581c9adcd613df154f63994",
+  "note": "Built from task changes on the recorded base; source hashes bind the served proof to the eventual committed files.",
+  "files": {
+    "mcp/src/clinical-graph/finding-section-group-endpoint.ts": "2204baf3af2e5282d92244088933e23ba6410c65d19cedf9919c646bea692caf",
+    "mcp/src/clinical-graph/finding-section-content.ts": "1f9d804a7b786c11dfce66344664f54a0bf904c7d7570cee42c313020934397d",
+    "ui/src/lib/finding-section-groups.ts": "c4d3fdb7f1ff3f39ad33fcdd8aab344ca04ab2630adb36399b30053e9120cbad",
+    "ui/src/scenes/EncounterCharting.tsx": "84c67e5be811e15eb6693d03862faa8fb0ff79d906992e0ba7999a1083df38e4",
+    "mcp/tests/findingSectionGroup.test.ts": "bcca80c5017ec6ec82fd60fbab77a43d66f8e34d13e614132e31529e494c4582",
+    "ui/tests/findingSectionGroups.test.tsx": "bc37afb7eb71377c28660cda4f419e10f743263d4bd57b0f396bd567cd111824"
+  },
+  "served": {
+    "root": ".",
+    "head": "b07663202adb1c095b67a9c6c824e9d0ad0c675a",
+    "dirty": true,
+    "mcpHash": "64617b91c47f47ca2a49578a71390dea39ab0d06c5e7fe2aaf73da4c406e6b1b",
+    "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+    "servedAssets": {
+      "/assets/index-CmBMZvVw.js": "89597cb3bad6ea1602feff6f86d8aa1c5c7cacb4929c994b9464803bfdea8898",
+      "/assets/index-DF84U2Dz.css": "9ae30a7aac6735d2220cd62fdf6da90190f414fbd6eb303d8882c44c2b5782be"
+    },
+    "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+    "ports": {
+      "frontdoor": 29090,
+      "medplum": 29103,
+      "postgres": 26433,
+      "redis": 27380,
+      "mcp": 24334,
+      "proxy": 24335,
+      "control": 24336
+    },
+    "project": "odos-s1-proof",
+    "mcpPid": 62869,
+    "caddyPid": 62882
+  }
+}

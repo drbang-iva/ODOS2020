@@ -1,0 +1,80 @@
+[
+  {
+    "guard": "G1",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G2",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G3",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G4-server",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G4-client",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "node --import tsx --test ui/tests/findingSectionGroups.test.tsx"
+  },
+  {
+    "guard": "G5",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G6",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G7",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "node --import tsx --test ui/tests/findingSectionGroups.test.tsx"
+  },
+  {
+    "guard": "G8-questionnaire-score",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G8-questionnaire-response",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G8-image",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  },
+  {
+    "guard": "G9-request-freshness",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "node --import tsx --test ui/tests/findingSectionGroups.test.tsx"
+  },
+  {
+    "guard": "G8-score",
+    "redExit": 1,
+    "greenExit": 0,
+    "command": "npm --prefix mcp test -- tests/findingSectionGroup.test.ts"
+  }
+]

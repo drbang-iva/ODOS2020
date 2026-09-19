@@ -1,0 +1,38 @@
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:45:const reassertCommandWitness = (commandId:string,target:string):string => createHash("sha256").update(`${commandId}|${target}`).digest("hex");
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:242:    if (update) saved=await deps.fhir.update<Observation>("Observation",prior!.id!,next,{...WRITE_HEADERS,"If-Match":etag(prior!.meta!.versionId!)});
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:244:      const result=await deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:247:      if (!result.created) {
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:343:  try { saved=await deps.fhir.update<Observation>("Observation",source.id!,next,{...WRITE_HEADERS,"If-Match":etag(source.meta!.versionId!)}); }
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:385:  try { const saved=await deps.fhir.createWithOutcome<Provenance>(audit,auditHeaders(key));
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:388:    return {clinicalWrite:"none",status:saved.created?"applied":"already-applied",target:id,reference,versionId:baseline.versionId}; }
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:440:  const saved=await deps.fhir.createWithOutcome<Provenance>(provenance,auditHeaders(key));
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:533:function sha(value:unknown):string {return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");}
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:610:    if(owner)saved=await deps.fhir.update<Observation>("Observation",owner.id!,next,{...WRITE_HEADERS,"If-Match":etag(owner.meta!.versionId!)});
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:611:    else {const result=await deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,"If-None-Exist":`identifier=${FINDING_PANEL_SYSTEM}|${findingPanelIdentifier(target.key).value}`});saved=result.resource;
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:612:      if(!result.created) {
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:314:    results.push(await persistCapture(
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:513:async function persistCapture(
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:521:  const observation = await fhir.create({ ...captured.observation, ...(negativeAct ? { id: undefined } : {}) }, {
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:530:  const provenance = await fhir.create({
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:572:    .update(JSON.stringify([patient, encounter, act.definitionStableKey, act.eye, actor, act.id])).digest("hex") };
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:595:  if (!staff.fhir.read || !staff.fhir.createWithOutcome || !staff.fhir.update || !staff.fhir.baseUrl) throw new Error("Ocular Health requires the conditional finding transport.");
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:748:      const created = await writerDeps.fhir.createWithOutcome(resource, { ...WRITE_HEADERS, "If-None-Exist": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}` });
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:749:      observation = created.resource; clinicalWrite = created.created ? "confirmed" : "none";
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:763:    await writerDeps.fhir.createWithOutcome({ ...original.provenance, id: undefined, target: patientScopedProvenanceTargets(reference, context.state.patientReference) }, { ...WRITE_HEADERS, "If-None-Exist": `target=${encodeURIComponent(reference)}` });
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:358:                const result = await staff.fhir.createWithOutcome(resource, { "If-None-Exist": `identifier=${encodeURIComponent(`${identifier.system}|${identifier.value}`)}`, "X-ODOS-Source": "diagnosis-carry-forward" });
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:360:                created = result.created;
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:407:                const result = await staff.fhir.createWithOutcome(resource, carryHeaders(plan.commandId, "plan"));
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:443:                await staff.fhir.update("Encounter", currentEncounterId, { ...freshEncounter, diagnosis: [...(freshEncounter.diagnosis ?? []), buildEncounterDiagnosisComponent(conditionReference, rank)] }, { "If-Match": `W/"${freshEncounter.meta.versionId}"`, "X-ODOS-Source": "diagnosis-carry-forward" });
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:471:                await staff.fhir.createWithOutcome(resource, carryHeaders(plan.commandId, "findings"));
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:763:    const signature = createHmac("sha256", cursorSigningKey).update(payload).digest("base64url");
+origin/main:mcp/src/clinical-graph/diagnosis-carry-forward-endpoint.ts:771:        const expectedSignature = createHmac("sha256", cursorSigningKey).update(payload).digest();
+origin/main:mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:131:    const documentReference = await staff.fhir.create<DocumentReference>(
+origin/main:mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:136:    const observation = await staff.fhir.create<Observation>(
+origin/main:mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:144:    const provenance = await staff.fhir.create<Provenance>({
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:195:  const protocol = await liveService(staff, deps.now, undefined, deps.educationCatalog).createDraft(
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:930:    async commitFinding(finding) {
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:936:      const saved = await staff.fhir.create(observation, { "X-ODOS-Source": "protocol-module" });
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:946:        const saved = await staff.fhir.create({
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:978:      const saved = await staff.fhir.create(resource, { "X-ODOS-Source": "protocol-module" });
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:1011:  const update = fhir.update as unknown as (
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:1141:  const saved = await fhir.create(intended, {
