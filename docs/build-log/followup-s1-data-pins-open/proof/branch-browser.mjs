@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=resolve(fileURLToPath(new URL('../../../..',import.meta.url)));
+const require=createRequire(join(root,'ui/package.json'));
+const {chromium}=require('playwright-core');
+const runtime=join(root,'.odos/s1-proof');
+const read=n=>JSON.parse(readFileSync(join(runtime,n),'utf8'));
+const {ports}=read('manifest.json'), credentials=read('credentials.json'),fixture=read('fixture.json');
+const base=`http://127.0.0.1:${ports.frontdoor}`;
+const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1100}});
+try {
+ await page.goto(base+'/clinic');
+ await page.getByPlaceholder('Email address').fill(credentials.provider.email);
+ await page.getByPlaceholder('Password',{exact:true}).fill(credentials.provider.password);
+ await page.getByRole('button',{name:'Enter',exact:true}).click();
+ await page.getByPlaceholder('Password',{exact:true}).waitFor({state:'detached'});
+ await page.goto(`${base}/clinic?patientId=${fixture.patientReference.slice(8)}&encounterId=${fixture.current.slice(10)}`);
+ await page.waitForLoadState('networkidle');
+ await page.getByRole('button',{name:'By structure',exact:true}).click();
+ await page.locator('summary').filter({hasText:'Dry Eye Workup'}).click();
+ await page.locator('[data-editor-section-id="dry-eye:symptoms"]').click();
+ await page.getByText('Has findings this visit',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Remove Dry Eye Workup',exact:true}).count(),0);
+ await page.locator('td').filter({hasText:'S1 synthetic dry-eye symptom finding'}).first().waitFor();
+ await page.screenshot({path:join(root,'docs/build-log/followup-s1-data-pins-open/03-repair.png')});
+ const api=async(path,method='GET',body)=>page.evaluate(async({path,method,body})=>{
+   const session=JSON.parse(sessionStorage.getItem('odos.session.v1'));
+   const response=await fetch(path,{method,headers:{Authorization:`Bearer ${session.accessToken}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+   return {status:response.status,body:await response.json()};
+ },{path,method,body});
+ const catalog=await api(`/clinical-graph/finding-section-groups?encounterId=${fixture.current.slice(10)}`);
+ assert.equal(catalog.status,200);assert.deepEqual(catalog.body.overrideGroupKeys,[]);
+ assert.ok(catalog.body.contentPinnedGroupKeys.includes('dry-eye-workup'));
+ const refusal=await api(`/clinical-graph/encounters/${fixture.current.slice(10)}/section-groups`,'POST',{action:'remove',groupKey:'dry-eye-workup'});
+ assert.equal(refusal.status,409);assert.equal(refusal.body.code,'section-group-has-content');
+ assert.ok(refusal.body.sectionKeys.includes('dry-eye:symptoms'));
+ await page.screenshot({path:join(root,'docs/build-log/followup-s1-data-pins-open/04-remove-refused.png'),fullPage:true});
+ writeFileSync(join(root,'docs/build-log/followup-s1-data-pins-open/proof/branch-http.json'),JSON.stringify({catalog,refusal},null,2)+'\n');
+ console.log(JSON.stringify({repair:true,refusal:refusal.status,sectionKeys:refusal.body.sectionKeys,pinVisible:true}));
+}finally{await browser.close();}

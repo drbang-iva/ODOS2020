@@ -1,0 +1,1 @@
+Fresh saved finding pins immediately; API removal returns 409; section and history stay visible.

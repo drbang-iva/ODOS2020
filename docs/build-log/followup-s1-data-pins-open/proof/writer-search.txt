@@ -1,0 +1,53 @@
+origin/main:mcp/src/__tests__/protocol-phase5.test.ts:193:    async commitFinding(finding) {
+origin/main:mcp/src/__tests__/protocol-phase5.test.ts:3055:    async commitFinding() { return undefined; },
+origin/main:mcp/src/__tests__/protocol-phase5.test.ts:3608:    async commitFinding(finding) {
+origin/main:mcp/src/__tests__/protocol-phase5.test.ts:3723:    async commitFinding() { return undefined; },
+origin/main:mcp/src/clinic/patient-overview.ts:366:    ? await fhir.update<DocumentReference>(
+origin/main:mcp/src/clinic/patient-overview.ts:372:    : await fhir.create<DocumentReference>(resource, {
+origin/main:mcp/src/clinic/patient-overview.ts:376:    saved = await fhir.update<DocumentReference>(
+origin/main:mcp/src/clinical-graph/contact-lens-endpoint.ts:877:  const observation = await fhir.create<Observation>(capture.observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/cover-test-endpoint.ts:86:  await staff.fhir.create({ ...captured.provenance, target: patientScopedProvenanceTargets(observationReference, parsed.data.patientReference) }, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/cup-disc-endpoint.ts:190:    const observation = await staff.fhir.create<Observation>(item.captured.observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:50:export async function executeFindingCommand(deps: FindingCommandDeps, command: FindingCommand): Promise<FindingCommandResult> {
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:242:    if (update) saved=await deps.fhir.update<Observation>("Observation",prior!.id!,next,{...WRITE_HEADERS,"If-Match":etag(prior!.meta!.versionId!)});
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:244:      const result=await deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:343:  try { saved=await deps.fhir.update<Observation>("Observation",source.id!,next,{...WRITE_HEADERS,"If-Match":etag(source.meta!.versionId!)}); }
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:610:    if(owner)saved=await deps.fhir.update<Observation>("Observation",owner.id!,next,{...WRITE_HEADERS,"If-Match":etag(owner.meta!.versionId!)});
+origin/main:mcp/src/clinical-graph/current-finding-writer.ts:611:    else {const result=await deps.fhir.createWithOutcome<Observation>(next,{...WRITE_HEADERS,"If-None-Exist":`identifier=${FINDING_PANEL_SYSTEM}|${findingPanelIdentifier(target.key).value}`});saved=result.resource;
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:521:  const observation = await fhir.create({ ...captured.observation, ...(negativeAct ? { id: undefined } : {}) }, {
+origin/main:mcp/src/clinical-graph/custom-section-endpoint.ts:724:    const outcome = "negative" in step ? await executeOcularNegative(deps, writerDeps, context, definition, step) : (await executeFindingCommand(writerDeps, { ...command, targets: [step.target] })).outcomes[0];
+origin/main:mcp/src/clinical-graph/diagnosis-findings-endpoint.ts:513:        const response = findingCommandResponse(await executeFindingCommand(writerDeps, command));
+origin/main:mcp/src/clinical-graph/dilation-endpoint.ts:153:  const observation = await staff.fhir.create<Observation>({
+origin/main:mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:131:    const documentReference = await staff.fhir.create<DocumentReference>(
+origin/main:mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts:136:    const observation = await staff.fhir.create<Observation>(
+origin/main:mcp/src/clinical-graph/eom-endpoint.ts:108:  const observation = await staff.fhir.create(withDocumentationElements(captured.observation, definition, data.state), WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/eom-endpoint.ts:110:  await staff.fhir.create({ ...captured.provenance, target: patientScopedProvenanceTargets(observationReference, data.patientReference) }, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/eye-growth-endpoint.ts:757:  const observation = await fhir.create<Observation>(graph.observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/gonioscopy-endpoint.ts:84:    const saved = await staff.fhir.create(buildGonioQuadrantObservation({
+origin/main:mcp/src/clinical-graph/gonioscopy-endpoint.ts:95:    await staff.fhir.create(simpleObservation("gonio_tm_pigmentation", value!, parsed.data, staff.staffReference, recordedAt, eye), WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/gonioscopy-endpoint.ts:98:    await staff.fhir.create(simpleObservation("gonio_note", parsed.data.note.trim(), parsed.data, staff.staffReference, recordedAt), WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/iop-endpoint.ts:191:    const observation = await staff.fhir.create<Observation>(item.iop.observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/iop-endpoint.ts:206:      const chObservation = await staff.fhir.create<Observation>(item.cornealHysteresis.observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/pretest-endpoint.ts:870:  const observation = await fhir.create<Observation>(capture.observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/pretest-vitals-endpoint.ts:340:  const saved = await fhir.create(observation, WRITE_HEADERS);
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:930:    async commitFinding(finding) {
+origin/main:mcp/src/clinical-graph/protocol-endpoint.ts:936:      const saved = await staff.fhir.create(observation, { "X-ODOS-Source": "protocol-module" });
+origin/main:mcp/src/clinical-graph/protocol-service.ts:32:  commitFinding(finding: ProtocolFindingInstance): Promise<string | undefined>;
+origin/main:mcp/src/clinical-graph/protocol-service.ts:861:            else restored.observationReference = await this.projection.commitFinding(finding);
+origin/main:mcp/src/clinical-graph/protocol-service.ts:1061:          : await this.projection.commitFinding(committed);
+origin/main:mcp/src/clinical-graph/refraction-endpoint.ts:151:    const observation = await staff.fhir.create<Observation>(item.observation, WRITE_HEADERS);
+origin/main:mcp/src/correspondence/correspondence-service.ts:139:    const documentReference = await this.clinicalFhir.create<DocumentReference>(
+origin/main:mcp/src/correspondence/correspondence-service.ts:240:    const documentReference = await this.clinicalFhir.create<DocumentReference>(
+origin/main:mcp/src/fax/fax-endpoint.ts:117:  const record = await deps.serviceFhir.create<DocumentReference>(
+origin/main:mcp/src/fax/fax-endpoint.ts:369:      return await fhir.update<DocumentReference>(
+origin/main:mcp/src/fax/inbound-fax.ts:129:              const created = await deps.fhir.create<DocumentReference>(
+origin/main:mcp/src/index.ts:2989:            fhir.update<Observation>(
+origin/main:mcp/src/index.ts:3674:          const created = await fhir.create<Observation>(
+origin/main:mcp/src/index.ts:3944:          const createdScoreObservation = await fhir.create<Observation>(
+origin/main:mcp/src/index.ts:3990:            createdDocumentReference = await fhir.create<DocumentReference>(
+origin/main:mcp/src/index.ts:4010:          const createdObservation = await fhir.create<Observation>(
+origin/main:mcp/src/index.ts:4317:          const created = await fhir.create<Observation>(observation, auditHeaders("record_ortho_k_fit_observation"));
+origin/main:mcp/src/index.ts:4516:          const created = await fhir.create<Observation>(
+origin/main:mcp/src/index.ts:4533:            cornealRadiusObservation = await fhir.create<Observation>(
+origin/main:mcp/src/legacy-import/visit-document-import.ts:179:    documentReference = await input.fhir.create<DocumentReference>(buildPreliminaryDocument({
+origin/main:mcp/src/legacy-import/visit-document-import.ts:206:  await input.fhir.update<DocumentReference>(

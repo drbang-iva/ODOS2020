@@ -1,0 +1,1 @@
+Empty group removed with HTTP 200; section disappears.

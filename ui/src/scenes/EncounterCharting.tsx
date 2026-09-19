@@ -430,43 +430,39 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     void loadCatalog();
   }, []);
 
+  const sectionGroupRequestSequence = useRef(0);
+
+  async function loadSectionGroupCatalog(signal?: AbortSignal, preserveMessage = false) {
+    const sequence = ++sectionGroupRequestSequence.current;
+    try {
+      const query = new URLSearchParams({ encounterId });
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-section-groups?${query}`, {
+        headers: authHeaders(), signal,
+      });
+      const body = await response.json() as FindingSectionGroupCatalog;
+      if (!response.ok) throw new Error(body.error ?? `Finding section groups failed: ${response.status}`);
+      if (signal?.aborted || !isCurrentEncounter() || sequence !== sectionGroupRequestSequence.current) return;
+      setSectionGroupCatalog({
+        ...body,
+        canWrite: body.canWrite === true,
+        groups: Array.isArray(body.groups) ? body.groups : [],
+        visitTypeCategories: Array.isArray(body.visitTypeCategories) ? body.visitTypeCategories : [],
+        overrideGroupKeys: Array.isArray(body.overrideGroupKeys) ? body.overrideGroupKeys : [],
+        effectiveGroupKeys: Array.isArray(body.effectiveGroupKeys) ? body.effectiveGroupKeys : [],
+        contentPinnedGroupKeys: Array.isArray(body.contentPinnedGroupKeys) ? body.contentPinnedGroupKeys : [],
+      });
+      if (!preserveMessage) setSectionGroupError(null);
+    } catch (caught) {
+      if (signal?.aborted || !isCurrentEncounter() || sequence !== sectionGroupRequestSequence.current) return;
+      console.error("Finding section groups unavailable; definitions remain ungated.", caught);
+      setSectionGroupCatalog({ canWrite: false, groups: [], visitTypeCategories: [], overrideGroupKeys: [], effectiveGroupKeys: [], contentPinnedGroupKeys: [] });
+      if (!preserveMessage) setSectionGroupError("Section-group visibility could not be loaded.");
+    }
+  }
+
   useEffect(() => {
     const controller = new AbortController();
-    const query = new URLSearchParams({ encounterId });
-    fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-section-groups?${query}`, {
-      headers: authHeaders(),
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const body = await response.json() as FindingSectionGroupCatalog;
-        if (!response.ok) {
-          throw new Error(body.error ?? `Finding section groups failed: ${response.status}`);
-        }
-        return body;
-      })
-      .then((body) => {
-        setSectionGroupCatalog({
-          ...body,
-          canWrite: body.canWrite === true,
-          groups: Array.isArray(body.groups) ? body.groups : [],
-          visitTypeCategories: Array.isArray(body.visitTypeCategories) ? body.visitTypeCategories : [],
-          overrideGroupKeys: Array.isArray(body.overrideGroupKeys) ? body.overrideGroupKeys : [],
-          effectiveGroupKeys: Array.isArray(body.effectiveGroupKeys) ? body.effectiveGroupKeys : [],
-        });
-        setSectionGroupError(null);
-      })
-      .catch((caught) => {
-        if ((caught as Error).name === "AbortError") return;
-        console.error("Finding section groups unavailable; definitions remain ungated.", caught);
-        setSectionGroupCatalog({
-          canWrite: false,
-          groups: [],
-          visitTypeCategories: [],
-          overrideGroupKeys: [],
-          effectiveGroupKeys: [],
-        });
-        setSectionGroupError("Section-group visibility could not be loaded.");
-      });
+    void loadSectionGroupCatalog(controller.signal);
     return () => controller.abort();
   }, [encounterId]);
 
@@ -627,7 +623,12 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
           body: JSON.stringify({ action: "remove", groupKey }),
         },
       );
-      const body = await response.json() as { error?: string };
+      const body = await response.json() as { error?: string; code?: string };
+      if (response.status === 409 && body.code === "section-group-has-content") {
+        setSectionGroupError("This section has findings from this visit and stays on the chart.");
+        await loadSectionGroupCatalog(undefined, true);
+        return;
+      }
       if (!response.ok) {
         throw new Error(body.error ?? `Section-group removal failed: ${response.status}`);
       }
@@ -645,6 +646,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
           effectiveGroupKeys: [...new Set([
             ...(current.defaultGroupKeys ?? []),
             ...pulledInGroupKeys,
+            ...(current.contentPinnedGroupKeys ?? []),
           ])],
         };
       });
@@ -661,6 +663,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       [section]: status,
     }));
     refreshExamOverview();
+    void loadSectionGroupCatalog();
   }
 
   const patientReference = `Patient/${patient.id}`;
@@ -670,6 +673,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     catalog.definitions,
     sectionGroupCatalog.groups,
     sectionGroupCatalog.effectiveGroupKeys ?? [],
+    sectionGroupCatalog.contentPinnedGroupKeys ?? [],
   );
   const customDefinitions = visibleDefinitions.filter((definition) =>
     definition.sectionKey?.startsWith("custom:")
@@ -944,7 +948,10 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
               )}
               {sectionGroupCatalog.canPullIn && (
                 <div className="flex flex-wrap justify-end gap-2">
-                  {overrideGroupKeys.map((groupKey) => (
+                  {[...new Set([...overrideGroupKeys, ...(sectionGroupCatalog.contentPinnedGroupKeys ?? [])])].map((groupKey) => (
+                    sectionGroupCatalog.contentPinnedGroupKeys?.includes(groupKey) ? (
+                      <span key={groupKey} title={groupLabel(groupKey)} className="px-3 py-2 text-xs text-[color:var(--odos-muted)]">Has findings this visit</span>
+                    ) : (
                     <button
                       key={groupKey}
                       type="button"
@@ -954,6 +961,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
                     >
                       Remove {groupLabel(groupKey)}
                     </button>
+                    )
                   ))}
                   {availableSectionGroups.length > 0 && (
                     <OdosSelect

@@ -1,3 +1,6 @@
+import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
+import { encounterContentSectionKeys } from "./finding-section-content.js";
+import type { FhirSearchClient } from "../fhir-search.js";
 import { randomUUID } from "node:crypto";
 import type { Basic, Encounter } from "@medplum/fhirtypes";
 import { z } from "zod";
@@ -28,7 +31,7 @@ export interface FindingSectionGroupEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<{
     staffReference: string;
     actorRole: PracticeRoleId;
-    fhir: FindingSectionGroupFhirClient;
+    fhir: FindingSectionGroupFhirClient & FhirSearchClient;
   } | null>;
   serviceFhir?: FindingSectionGroupFhirClient;
   newId?: () => string;
@@ -100,7 +103,9 @@ export async function handleFindingSectionGroupCatalogRequest(
       groups.filter((group) => group.active).map((group) => group.groupKey),
     );
     const pulledInGroupKeys = override.groupKeys.filter((groupKey) => activeGroupKeys.has(groupKey));
-    const effectiveGroupKeys = [...new Set([...defaultGroupKeys, ...pulledInGroupKeys])];
+    const sectionKeys = await encounterContentSectionKeys(staff.fhir, encounter, await new FhirFindingDefinitionStore(serviceFhir).list());
+    const contentPinnedGroupKeys = groups.filter(group => group.sectionKeyPrefixes.some(prefix => sectionKeys.some(key => key.startsWith(prefix)))).map(group => group.groupKey);
+    const effectiveGroupKeys = [...new Set([...defaultGroupKeys, ...pulledInGroupKeys, ...contentPinnedGroupKeys])];
     return {
       status: 200,
       body: {
@@ -113,6 +118,7 @@ export async function handleFindingSectionGroupCatalogRequest(
         overrideGroupKeys: override.groupKeys,
         pulledInGroupKeys,
         effectiveGroupKeys,
+        contentPinnedGroupKeys,
       },
     };
   } catch (error) {
@@ -224,7 +230,7 @@ export async function handleEncounterSectionOverrideMutationRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid encounter section override." } };
   }
   try {
-    await staff.fhir.read<Encounter>("Encounter", encounterId);
+    const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
     const serviceFhir = deps.serviceFhir ?? staff.fhir;
     const groups = await new FhirFindingSectionGroupStore(serviceFhir).list();
     const group = groups.find((candidate) => candidate.groupKey === parsed.data.groupKey);
@@ -233,6 +239,11 @@ export async function handleEncounterSectionOverrideMutationRequest(
         status: 404,
         body: { error: `Active finding section group ${parsed.data.groupKey} does not exist.` },
       };
+    }
+    if (parsed.data.action === "remove" && group) {
+      const content = await encounterContentSectionKeys(staff.fhir, encounter, await new FhirFindingDefinitionStore(serviceFhir).list());
+      const sectionKeys = content.filter(key => group.sectionKeyPrefixes.some(prefix => key.startsWith(prefix)));
+      if (sectionKeys.length) return { status: 409, body: { code: "section-group-has-content", sectionKeys } };
     }
     const store = new FhirEncounterSectionOverrideStore(serviceFhir);
     const current = await store.get(encounterId);

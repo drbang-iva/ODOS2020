@@ -1,0 +1,179 @@
+{
+  "status": 200,
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "id": "f3303fed-03d1-4322-a51e-06d8aed070ad",
+      "status": "preliminary",
+      "code": {
+        "coding": [
+          {
+            "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+            "code": "dry-eye:symptoms",
+            "display": "Symptoms"
+          }
+        ],
+        "text": "Symptoms"
+      },
+      "component": [
+        {
+          "code": {
+            "coding": [
+              {
+                "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                "code": "REMARKS",
+                "display": "Remarks"
+              }
+            ],
+            "text": "Remarks"
+          },
+          "valueString": "S1 synthetic dry-eye symptom finding"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/3779a63b-55aa-4ca0-83c5-e9963ea357a7"
+      },
+      "encounter": {
+        "reference": "Encounter/9f077324-ff5f-4904-b6a9-b09e10ca7f34"
+      },
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "exam",
+              "display": "Exam"
+            }
+          ]
+        }
+      ],
+      "effectiveDateTime": "2026-09-19T16:07:12.658Z",
+      "bodySite": {
+        "coding": [
+          {
+            "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+            "code": "UNKNOWN",
+            "display": "Unknown eye laterality"
+          }
+        ],
+        "text": "Unknown eye laterality"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+          "valueCodeableConcept": {
+            "coding": [
+              {
+                "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                "code": "UNKNOWN",
+                "display": "Unknown eye laterality"
+              }
+            ],
+            "text": "Unknown eye laterality"
+          }
+        }
+      ],
+      "performer": [
+        {
+          "reference": "Practitioner/3939e6cb-6b7f-44b9-910b-7b2067567842"
+        }
+      ],
+      "note": [
+        {
+          "text": "sourceType=manual"
+        }
+      ],
+      "meta": {
+        "versionId": "80e986c4-ebf4-4e2e-9cae-6774c04a452c",
+        "lastUpdated": "2026-09-19T16:07:12.664Z"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "2d566a28-9d93-47b4-9ca4-94280c5c13c9",
+      "status": "preliminary",
+      "code": {
+        "coding": [
+          {
+            "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+            "code": "dry-eye:symptoms",
+            "display": "Symptoms"
+          }
+        ],
+        "text": "Symptoms"
+      },
+      "component": [
+        {
+          "code": {
+            "coding": [
+              {
+                "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                "code": "REMARKS",
+                "display": "Remarks"
+              }
+            ],
+            "text": "Remarks"
+          },
+          "valueString": "S1 synthetic dry-eye symptom finding"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/3779a63b-55aa-4ca0-83c5-e9963ea357a7"
+      },
+      "encounter": {
+        "reference": "Encounter/9f077324-ff5f-4904-b6a9-b09e10ca7f34"
+      },
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "exam",
+              "display": "Exam"
+            }
+          ]
+        }
+      ],
+      "effectiveDateTime": "2026-09-19T16:08:09.966Z",
+      "bodySite": {
+        "coding": [
+          {
+            "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+            "code": "UNKNOWN",
+            "display": "Unknown eye laterality"
+          }
+        ],
+        "text": "Unknown eye laterality"
+      },
+      "extension": [
+        {
+          "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+          "valueCodeableConcept": {
+            "coding": [
+              {
+                "system": "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+                "code": "UNKNOWN",
+                "display": "Unknown eye laterality"
+              }
+            ],
+            "text": "Unknown eye laterality"
+          }
+        }
+      ],
+      "performer": [
+        {
+          "reference": "Practitioner/3939e6cb-6b7f-44b9-910b-7b2067567842"
+        }
+      ],
+      "note": [
+        {
+          "text": "sourceType=manual"
+        }
+      ],
+      "meta": {
+        "versionId": "272428e3-ca26-4134-b3a0-3b2b04d7b6c5",
+        "lastUpdated": "2026-09-19T16:08:09.972Z"
+      }
+    }
+  ]
+}

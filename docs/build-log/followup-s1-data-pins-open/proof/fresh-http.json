@@ -1,0 +1,9 @@
+{
+  "status": 409,
+  "body": {
+    "code": "section-group-has-content",
+    "sectionKeys": [
+      "dry-eye:symptoms"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+vf-prac1b-walk-db	Up 13 hours	127.0.0.1:55481->5432/tcp
+odos-matrix-proof-medplum-server-1	Up 4 days	5000/tcp, 127.0.0.1:19104->8103/tcp
+odos-matrix-proof-postgres-1	Up 4 days (healthy)	127.0.0.1:16433->5432/tcp
+odos-matrix-proof-redis-1	Up 4 days (healthy)	127.0.0.1:17380->6379/tcp
+odos-matrix-1-medplum-server-1	Up 4 days	5000/tcp, 127.0.0.1:19103->8103/tcp
+odos-matrix-1-postgres-1	Up 4 days (healthy)	127.0.0.1:16432->5432/tcp
+odos-matrix-1-redis-1	Up 4 days (healthy)	127.0.0.1:17379->6379/tcp
+odos-consent-safety-redis-1	Up 4 days (healthy)	127.0.0.1:16379->6379/tcp
+odos-consent-safety-postgres-1	Up 4 days (healthy)	127.0.0.1:15432->5432/tcp
+odos-history-1d5-postgres-1	Up 4 days (healthy)	127.0.0.1:15832->5432/tcp
+odos-history-1d5-redis-1	Up 4 days (healthy)	127.0.0.1:16779->6379/tcp
