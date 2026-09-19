@@ -1,0 +1,36 @@
+{
+  "base": "1bd7a57d8a5ef8d40581c9adcd613df154f63994",
+  "note": "Built from task changes on the recorded base; source hashes bind the served proof to the eventual committed files.",
+  "files": {
+    "mcp/src/clinical-graph/finding-section-group-endpoint.ts": "2204baf3af2e5282d92244088933e23ba6410c65d19cedf9919c646bea692caf",
+    "mcp/src/clinical-graph/finding-section-content.ts": "1f9d804a7b786c11dfce66344664f54a0bf904c7d7570cee42c313020934397d",
+    "ui/src/lib/finding-section-groups.ts": "c4d3fdb7f1ff3f39ad33fcdd8aab344ca04ab2630adb36399b30053e9120cbad",
+    "ui/src/scenes/EncounterCharting.tsx": "5bd82710a584f885ed6d25f16deaa508088fbe0d212a5a81b94337633c59de7e",
+    "mcp/tests/findingSectionGroup.test.ts": "bcca80c5017ec6ec82fd60fbab77a43d66f8e34d13e614132e31529e494c4582",
+    "ui/tests/findingSectionGroups.test.tsx": "04e5afc771579aac5cf0ba8758604d1818347c1aa15032fef86919a2abddf680"
+  },
+  "served": {
+    "root": "/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020",
+    "head": "1bd7a57d8a5ef8d40581c9adcd613df154f63994",
+    "dirty": true,
+    "mcpHash": "64617b91c47f47ca2a49578a71390dea39ab0d06c5e7fe2aaf73da4c406e6b1b",
+    "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+    "servedAssets": {
+      "/assets/index-B3l4SgqA.js": "d91a6a63b3cfa0131fe10fbbe695bb655deaa49ba8a3cef5bc5f5e98f215521e",
+      "/assets/index-DF84U2Dz.css": "9ae30a7aac6735d2220cd62fdf6da90190f414fbd6eb303d8882c44c2b5782be"
+    },
+    "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+    "ports": {
+      "frontdoor": 29090,
+      "medplum": 29103,
+      "postgres": 26433,
+      "redis": 27380,
+      "mcp": 24334,
+      "proxy": 24335,
+      "control": 24336
+    },
+    "project": "odos-s1-proof",
+    "mcpPid": 55678,
+    "caddyPid": 55691
+  }
+}

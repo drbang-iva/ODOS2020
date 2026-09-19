@@ -1,0 +1,12 @@
+$ ODOS_POSTGRES_URL=<isolated synthetic database> npm --prefix mcp test
+1..5491
+# tests 6083
+# suites 0
+# pass 6028
+# fail 0
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 145844.96275
+⚠️  LIVE STACK NOT CONFIGURED — 47 tests skipped, including live authorization enforcement (ageOfMajorityAuthzLive, audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, educationCatalogStatusAuthzLive, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, protocolItemClaimLive, provenance-defaults, r10DiagnosisDoorAuthzLive, r10OcularHealthDoorAuthzLive, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them.
+Runner exit: 1 (unconfigured live lanes; zero test failures)

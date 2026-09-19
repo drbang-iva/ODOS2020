@@ -1,0 +1,152 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/findingSectionGroup.test.ts
+
+TAP version 13
+# Subtest: the built-in dry-eye workup carries no visit-category program semantics
+ok 1 - the built-in dry-eye workup carries no visit-category program semantics
+  ---
+  duration_ms: 0.79225
+  type: 'test'
+  ...
+# Subtest: visit-type category resolver follows Encounter appointment to the HealthcareService category
+ok 2 - visit-type category resolver follows Encounter appointment to the HealthcareService category
+  ---
+  duration_ms: 0.898167
+  type: 'test'
+  ...
+# Subtest: visit-type category resolver returns undefined instead of presenting Encounter.type as a category
+ok 3 - visit-type category resolver returns undefined instead of presenting Encounter.type as a category
+  ---
+  duration_ms: 0.092375
+  type: 'test'
+  ...
+# Subtest: visit-type category resolver returns undefined for every unresolved link without throwing
+ok 4 - visit-type category resolver returns undefined for every unresolved link without throwing
+  ---
+  duration_ms: 0.202375
+  type: 'test'
+  ...
+# Subtest: visit-type category resolver logs a dangling Appointment reference and treats it as missing
+ok 5 - visit-type category resolver logs a dangling Appointment reference and treats it as missing
+  ---
+  duration_ms: 0.142791
+  type: 'test'
+  ...
+# Subtest: visit-type category resolver logs and propagates operational FHIR failures
+ok 6 - visit-type category resolver logs and propagates operational FHIR failures
+  ---
+  duration_ms: 0.276875
+  type: 'test'
+  ...
+# Subtest: default group resolution supports zero, one, and two matches and excludes inactive groups
+ok 7 - default group resolution supports zero, one, and two matches and excludes inactive groups
+  ---
+  duration_ms: 0.131166
+  type: 'test'
+  ...
+# Subtest: finding section group resource and store support create, edit, deactivate, and duplicate rejection
+ok 8 - finding section group resource and store support create, edit, deactivate, and duplicate rejection
+  ---
+  duration_ms: 0.685458
+  type: 'test'
+  ...
+# Subtest: stale group and encounter-override writes fail instead of overwriting concurrent versions
+ok 9 - stale group and encounter-override writes fail instead of overwriting concurrent versions
+  ---
+  duration_ms: 0.648
+  type: 'test'
+  ...
+# Subtest: stale HTTP mutations surface a reload-and-retry conflict
+ok 10 - stale HTTP mutations surface a reload-and-retry conflict
+  ---
+  duration_ms: 12.230416
+  type: 'test'
+  ...
+# Subtest: group creation rejects non-kebab keys and duplicate keys through the HTTP boundary
+ok 11 - group creation rejects non-kebab keys and duplicate keys through the HTTP boundary
+  ---
+  duration_ms: 0.9085
+  type: 'test'
+  ...
+# Subtest: pull-in persists for one encounter and does not leak to a second encounter for the same patient
+ok 12 - pull-in persists for one encounter and does not leak to a second encounter for the same patient
+  ---
+  duration_ms: 0.159583
+  type: 'test'
+  ...
+# Subtest: a deactivated pull-in can be removed and does not resurrect after reactivation
+ok 13 - a deactivated pull-in can be removed and does not resurrect after reactivation
+  ---
+  duration_ms: 13.461542
+  type: 'test'
+  ...
+# Subtest: S1 G1 removal freshly refuses saved custom-section content without writing
+ok 14 - S1 G1 removal freshly refuses saved custom-section content without writing
+  ---
+  duration_ms: 13.357875
+  type: 'test'
+  ...
+# Subtest: S1 G2 atomic present pins its group
+ok 15 - S1 G2 atomic present pins its group
+  ---
+  duration_ms: 7.958
+  type: 'test'
+  ...
+# Subtest: S1 G2 atomic explicit absent pins its group
+ok 16 - S1 G2 atomic explicit absent pins its group
+  ---
+  duration_ms: 7.65125
+  type: 'test'
+  ...
+# Subtest: S1 G3 removed-before-fix content repairs effective and pinned keys on load
+ok 17 - S1 G3 removed-before-fix content repairs effective and pinned keys on load
+  ---
+  duration_ms: 7.39675
+  type: 'test'
+  ...
+# Subtest: S1 G4 inactive group with content remains effective
+ok 18 - S1 G4 inactive group with content remains effective
+  ---
+  duration_ms: 7.001334
+  type: 'test'
+  ...
+# Subtest: S1 G5 entered-in-error and another encounter never pin this encounter
+ok 19 - S1 G5 entered-in-error and another encounter never pin this encounter
+  ---
+  duration_ms: 12.711042
+  type: 'test'
+  ...
+# Subtest: S1 G6 removing an empty group succeeds and removes it from effective keys
+ok 20 - S1 G6 removing an empty group succeeds and removes it from effective keys
+  ---
+  duration_ms: 17.558542
+  type: 'test'
+  ...
+# Subtest: S1 G8 meibography writer image and score each independently pin gland structure
+ok 21 - S1 G8 meibography writer image and score each independently pin gland structure
+  ---
+  duration_ms: 13.777833
+  type: 'test'
+  ...
+# Subtest: S1 G8 MCP questionnaire response independently pins symptoms
+ok 22 - S1 G8 MCP questionnaire response independently pins symptoms
+  ---
+  duration_ms: 5.66575
+  type: 'test'
+  ...
+# Subtest: S1 G8 MCP questionnaire score independently pins symptoms
+ok 23 - S1 G8 MCP questionnaire score independently pins symptoms
+  ---
+  duration_ms: 6.467625
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 350.891458

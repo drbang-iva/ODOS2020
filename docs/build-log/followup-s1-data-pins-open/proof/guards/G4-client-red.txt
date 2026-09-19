@@ -1,0 +1,120 @@
+TAP version 13
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:1406:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: ungrouped definitions remain visible for every category while grouped definitions require an effective group
+ok 1 - ungrouped definitions remain visible for every category while grouped definitions require an effective group
+  ---
+  duration_ms: 0.8045
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:1406:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:1406:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: a custom specialty category renders its configured battery while a general category leaves it absent
+ok 2 - a custom specialty category renders its configured battery while a general category leaves it absent
+  ---
+  duration_ms: 152.197375
+  type: 'test'
+  ...
+# Finding section groups unavailable; definitions remain ungated. Error: Synthetic catalog failure
+#     at loadSectionGroupCatalog (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:440:31)
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:1406:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: EncounterCharting pulls a group into only the current encounter and renders it without reloading
+ok 3 - EncounterCharting pulls a group into only the current encounter and renders it without reloading
+  ---
+  duration_ms: 33.511583
+  type: 'test'
+  ...
+# Subtest: EncounterCharting fails open when the section-group catalog returns 500
+ok 4 - EncounterCharting fails open when the section-group catalog returns 500
+  ---
+  duration_ms: 34.550875
+  type: 'test'
+  ...
+# Subtest: section-group settings creates a keyed group from the existing visit-type category list
+ok 5 - section-group settings creates a keyed group from the existing visit-type category list
+  ---
+  duration_ms: 9.441208
+  type: 'test'
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:1406:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: section-group settings dialog closes on Escape
+ok 6 - section-group settings dialog closes on Escape
+  ---
+  duration_ms: 3.19775
+  type: 'test'
+  ...
+# Subtest: S1 G4 a pinned inactive group still exposes its definitions
+not ok 7 - S1 G4 a pinned inactive group still exposes its definitions
+  ---
+  duration_ms: 3.288833
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/tests/findingSectionGroups.test.tsx:1:14255'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     active: true,
+    -     sectionKey: 'custom:zz-test-marker'
+    -   }
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      sectionKey: 'custom:zz-test-marker'
+      active: true
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/tests/findingSectionGroups.test.tsx:541:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Exam overview unavailable; retaining the section editor. Error: Exam overview returned an invalid projection.
+#     at loadExamOverviewProjection (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:1406:46)
+# Unassigned finding count unavailable. TypeError: Cannot read properties of undefined (reading 'length')
+#     at <anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1-data-pins-open/ODOS2020/ui/src/scenes/EncounterCharting.tsx:389:97)
+# Subtest: S1 G7 pin replaces remove control and survives removing a different group
+ok 8 - S1 G7 pin replaces remove control and survives removing a different group
+  ---
+  duration_ms: 49.130042
+  type: 'test'
+  ...
+# Subtest: S1 G7 409 race refetches pins and preserves specific message
+ok 9 - S1 G7 409 race refetches pins and preserves specific message
+  ---
+  duration_ms: 16.998166
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 8
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 590.419875

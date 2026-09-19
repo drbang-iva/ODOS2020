@@ -23,19 +23,21 @@ export interface FindingSectionGroupCatalog {
   overrideGroupKeys?: string[];
   pulledInGroupKeys?: string[];
   effectiveGroupKeys?: string[];
+  contentPinnedGroupKeys?: string[];
   error?: string;
 }
 
-// Inactive registry rows intentionally continue to reserve and hide their matching
-// prefixes. To make those sections universal instead, delete the group or clear its prefixes.
+// Inactive groups reserve their prefixes, except when saved encounter content pins the group open.
 export function filterDefinitionsForSectionGroups<
   T extends { sectionKey?: string; active: boolean },
 >(
   definitions: readonly T[],
   groups: readonly FindingSectionGroup[],
   effectiveGroupKeys: readonly string[],
+  contentPinnedGroupKeys: readonly string[] = [],
 ): T[] {
   const effective = new Set(effectiveGroupKeys);
+  const pinned = new Set(contentPinnedGroupKeys);
   return definitions.filter((definition) => {
     if (!definition.active) return false;
     const matchingGroups = groups.filter((group) =>
@@ -43,6 +45,6 @@ export function filterDefinitionsForSectionGroups<
       group.sectionKeyPrefixes.some((prefix) => definition.sectionKey?.startsWith(prefix))
     );
     if (matchingGroups.length === 0) return true;
-    return matchingGroups.some((group) => group.active && effective.has(group.groupKey));
+    return matchingGroups.some((group) => pinned.has(group.groupKey) || (group.active && effective.has(group.groupKey)));
   });
 }

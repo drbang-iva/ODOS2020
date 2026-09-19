@@ -40,6 +40,7 @@ test("the built-in dry-eye workup carries no visit-category program semantics", 
 });
 
 class MemoryFhir implements FindingSectionGroupFhirClient {
+  readonly baseUrl = "http://localhost:8103/";
   readonly resources: Resource[] = [];
   readonly reads: string[] = [];
   readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
@@ -73,6 +74,8 @@ class MemoryFhir implements FindingSectionGroupFhirClient {
     }
     const resources = this.resources.filter((resource) => {
       if (resource.resourceType !== resourceType) return false;
+      if (params.encounter && "encounter" in resource && resource.encounter?.reference !== params.encounter) return false;
+      if (resource.resourceType === "DocumentReference" && params.encounter && !resource.context?.encounter?.some(r => r.reference === params.encounter)) return false;
       if (resource.resourceType === "Basic" && params.code) {
         const [system, code] = params.code.split("|");
         if (!resource.code?.coding?.some((coding) => coding.system === system && coding.code === code)) {
@@ -403,6 +406,7 @@ test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
     id: "encounter-1",
     status: "in-progress",
     class: { code: "AMB" },
+    subject: { reference: "Patient/patient-1" },
   });
 
   fhir.concurrentVersionBumpOnNextUpdate = true;
@@ -624,6 +628,88 @@ function encounterFixture(id: string, appointmentId: string): Encounter {
     id,
     status: "in-progress",
     class: { code: "AMB" },
+    subject: { reference: "Patient/patient-1" },
     appointment: [{ reference: `Appointment/${appointmentId}` }],
   };
 }
+
+import type { Observation } from "@medplum/fhirtypes";
+import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { canonicalFact } from "./fixtures/r10/writer-harness.js";
+import { handleDryEyeMeibographyCaptureRequest } from "../src/clinical-graph/dry-eye-meibography-endpoint.js";
+
+function pinFixture() {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({resourceType:"Encounter",id:"e1",status:"in-progress",class:{code:"AMB"},subject:{reference:"Patient/p1"}});
+  const deps = endpointDeps("provider", fhir);
+  const remove = (groupKey = "dry-eye-workup") => handleEncounterSectionOverrideMutationRequest(deps, {authHeader:AUTH,params:{encounterId:"e1"},body:{action:"remove",groupKey}});
+  const catalog = async () => {
+    const result = await handleFindingSectionGroupCatalogRequest(deps,{authHeader:AUTH,query:{encounterId:"e1"}});
+    assert.equal(result.status,200);
+    return result.body as {effectiveGroupKeys:string[];contentPinnedGroupKeys:string[]};
+  };
+  return {fhir,deps,remove,catalog};
+}
+function savedSymptoms(status: Observation["status"] = "preliminary", encounter = "e1"): Observation {
+  return {resourceType:"Observation",id:`symptoms-${encounter}`,status,subject:{reference:"Patient/p1"},encounter:{reference:`Encounter/${encounter}`},code:odosConcept("dry-eye:symptoms"),note:[{text:"Synthetic saved symptoms"}]};
+}
+test("S1 G1 removal freshly refuses saved custom-section content without writing", async () => {
+  const {fhir,remove,catalog}=pinFixture();
+  assert.deepEqual((await catalog()).effectiveGroupKeys,[]);
+  fhir.resources.push(savedSymptoms());
+  const writes=fhir.writes.length;
+  assert.deepEqual(await remove(),{status:409,body:{code:"section-group-has-content",sectionKeys:["dry-eye:symptoms"]}});
+  assert.equal(fhir.writes.length,writes);
+});
+for (const presence of [true,false]) test(`S1 G2 atomic ${presence ? "present" : "explicit absent"} pins its group`,async()=>{
+  const {fhir,remove}=pinFixture();
+  await new FhirFindingSectionGroupStore(fhir).save(group("lens-workup",["ocular-health:anterior:lens"],[]));
+  fhir.resources.push({...canonicalFact(),valueBoolean:presence});
+  assert.deepEqual(await remove("lens-workup"),{status:409,body:{code:"section-group-has-content",sectionKeys:["ocular-health:anterior:lens"]}});
+});
+test("S1 G3 removed-before-fix content repairs effective and pinned keys on load",async()=>{
+  const {fhir,catalog}=pinFixture();fhir.resources.push(savedSymptoms());
+  const body=await catalog();
+  assert.deepEqual(body.contentPinnedGroupKeys,["dry-eye-workup"]);
+  assert.deepEqual(body.effectiveGroupKeys,["dry-eye-workup"]);
+});
+test("S1 G4 inactive group with content remains effective",async()=>{
+  const {fhir,catalog}=pinFixture();fhir.resources.push(savedSymptoms());
+  await new FhirFindingSectionGroupStore(fhir).save({...DRY_EYE_WORKUP_SECTION_GROUP,active:false});
+  const body=await catalog();
+  assert.deepEqual(body.contentPinnedGroupKeys,["dry-eye-workup"]);
+  assert.deepEqual(body.effectiveGroupKeys,["dry-eye-workup"]);
+});
+test("S1 G5 entered-in-error and another encounter never pin this encounter",async()=>{
+  const {fhir,catalog,remove}=pinFixture();fhir.resources.push(savedSymptoms("entered-in-error"),savedSymptoms("preliminary","e2"));
+  assert.deepEqual((await catalog()).contentPinnedGroupKeys,[]);
+  assert.equal((await remove()).status,200);
+});
+test("S1 G6 removing an empty group succeeds and removes it from effective keys",async()=>{
+  const {fhir,catalog,remove}=pinFixture();await new FhirEncounterSectionOverrideStore(fhir).setGroupKeys("e1",["dry-eye-workup"]);
+  assert.deepEqual((await catalog()).effectiveGroupKeys,["dry-eye-workup"]);
+  assert.equal((await remove()).status,200);
+  assert.deepEqual((await catalog()).effectiveGroupKeys,[]);
+});
+test("S1 G8 meibography writer image and score each independently pin gland structure",async()=>{
+  const {fhir,deps,remove}=pinFixture();
+  const capture=await handleDryEyeMeibographyCaptureRequest(deps,{authHeader:AUTH,body:{patientReference:"Patient/p1",encounterReference:"Encounter/e1",eye:"OD",lid:"upper",scoringSystem:"meiboscore",totalScore:1,file:{name:"synthetic.png",contentType:"image/png",data:"c3ludGhldGlj"}}});
+  assert.equal(capture.status,201);
+  const observation=fhir.resources.find(r=>r.resourceType==="Observation")!;
+  const document=fhir.resources.find(r=>r.resourceType==="DocumentReference")!;
+  const expected={status:409,body:{code:"section-group-has-content",sectionKeys:["dry-eye:gland-structure"]}};
+  fhir.resources.splice(fhir.resources.indexOf(observation),1);
+  assert.deepEqual(await remove(),expected,"orphan image still contains encounter content");
+  fhir.resources.splice(fhir.resources.indexOf(document),1);fhir.resources.push(observation);
+  assert.deepEqual(await remove(),expected,"score independently pins the section");
+});
+
+import { buildDryEyeQuestionnaireResponse, buildDryEyeQuestionnaireScoreObservation } from "../src/fhir/dryEyeQuestionnaireResponse.js";
+for (const kind of ["response","score"] as const) test(`S1 G8 MCP questionnaire ${kind} independently pins symptoms`,async()=>{
+  const {fhir,remove}=pinFixture();
+  const input={instrument:"OSDI" as const,patientReference:"Patient/p1",encounterReference:"Encounter/e1"};
+  fhir.resources.push(kind==="response"
+    ? {...buildDryEyeQuestionnaireResponse({...input,totalScore:5}),id:"questionnaire"}
+    : {...buildDryEyeQuestionnaireScoreObservation({...input,questionnaireResponseReference:"QuestionnaireResponse/questionnaire",score:5}),id:"score"});
+  assert.deepEqual(await remove(),{status:409,body:{code:"section-group-has-content",sectionKeys:["dry-eye:symptoms"]}});
+});
