@@ -21,7 +21,6 @@ const GROUP: FindingSectionGroup = {
   groupKey: "dry-eye-workup",
   label: "Dry eye workup",
   sectionKeyPrefixes: ["custom:zz-test-"],
-  defaultForVisitTypeCategories: ["dry-eye"],
   active: true,
 };
 
@@ -30,7 +29,6 @@ const SPECIALTY_WORKUP_GROUP: FindingSectionGroup = {
   groupKey: "dry-eye-workup",
   label: "Dry Eye Workup",
   sectionKeyPrefixes: ["dry-eye:"],
-  defaultForVisitTypeCategories: ["specialty-workup"],
   active: true,
 };
 
@@ -63,7 +61,7 @@ test("ungrouped definitions remain visible for every category while grouped defi
   );
 });
 
-test("a custom specialty category renders its configured battery while a general category leaves it absent", async () => {
+test("a pulled-in group renders its battery while an encounter without pull-in leaves it absent", async () => {
   const originalFetch = globalThis.fetch;
   const originalRead = fhir.read;
   const originalDocument = globalThis.document;
@@ -118,13 +116,8 @@ test("a custom specialty category renders its configured battery while a general
         canWrite: false,
         canPullIn: true,
         groups: [SPECIALTY_WORKUP_GROUP],
-        visitTypeCategories: [
-          { id: "specialty-workup", label: "Specialty Workup" },
-          { id: "general", label: "General" },
-        ],
-        visitTypeCategory: dryEye ? "specialty-workup" : "general",
-        defaultGroupKeys: dryEye ? ["dry-eye-workup"] : [],
-        overrideGroupKeys: [],
+        overrideGroupKeys: dryEye ? ["dry-eye-workup"] : [],
+        pulledInGroupKeys: dryEye ? ["dry-eye-workup"] : [],
         effectiveGroupKeys: dryEye ? ["dry-eye-workup"] : [],
       });
     }
@@ -248,9 +241,6 @@ test("EncounterCharting pulls a group into only the current encounter and render
         canWrite: false,
         canPullIn: true,
         groups: [GROUP],
-        visitTypeCategories: [],
-        visitTypeCategory: "comprehensive",
-        defaultGroupKeys: [],
         overrideGroupKeys: [],
         pulledInGroupKeys: [],
         effectiveGroupKeys: [],
@@ -417,22 +407,20 @@ test("EncounterCharting fails open when the section-group catalog returns 500", 
   }
 });
 
-test("section-group settings creates a keyed group from the existing visit-type category list", async () => {
+test("S1b G6 settings creates edits and deactivates without category controls", async () => {
   const originalFetch = globalThis.fetch;
   const requests: Array<{ url: string; init?: RequestInit }> = [];
+  let groups: FindingSectionGroup[] = [];
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     requests.push({ url, init });
     if (init?.method === "POST") {
-      return jsonResponse({ group: GROUP }, 201);
+      groups = [{ ...GROUP, ...groups[0], ...JSON.parse(String(init.body)) }];
+      return jsonResponse({ group: groups[0] }, 201);
     }
     return jsonResponse({
       canWrite: true,
-      groups: [],
-      visitTypeCategories: [
-        { id: "comprehensive", label: "Comprehensive" },
-        { id: "dry-eye", label: "Dry Eye" },
-      ],
+      groups,
     });
   }) as typeof fetch;
   let renderer!: ReactTestRenderer;
@@ -465,14 +453,7 @@ test("section-group settings creates a keyed group from the existing visit-type 
         target: { value: "custom:zz-test-" },
       });
     });
-    const categoryChip = renderer.root.findAllByType("button").find(
-      (button) => button.children.join("") === "Dry Eye",
-    );
-    assert.ok(categoryChip);
-    assert.equal(categoryChip.props["aria-pressed"], false);
-    await act(async () => {
-      categoryChip.props.onClick();
-    });
+    assert.equal(renderer.root.findAllByType("fieldset").length, 0);
     await act(async () => {
       renderer.root.findByType("form").props.onSubmit({ preventDefault: () => undefined });
       await flushEffects();
@@ -484,9 +465,17 @@ test("section-group settings creates a keyed group from the existing visit-type 
       groupKey: "dry-eye-workup",
       label: "Dry eye workup",
       sectionKeyPrefixes: ["custom:zz-test-"],
-      defaultForVisitTypeCategories: ["dry-eye"],
       active: true,
     });
+    await act(async () => { renderer.root.findAllByType("button").find(b => b.children.join("") === "Edit")!.props.onClick(); });
+    assert.equal(renderer.root.findAllByType("fieldset").length, 0);
+    await act(async () => { renderer.root.findAllByType("input").filter(i => i.props.type !== "checkbox")[1].props.onChange({ target: { value: "Edited workup" } }); });
+    await act(async () => { renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }); await flushEffects(); });
+    assert.equal(groups[0].label, "Edited workup");
+    await act(async () => { renderer.root.findAllByType("button").find(b => b.children.join("") === "Deactivate")!.props.onClick(); await flushEffects(); });
+    assert.equal(groups[0].active, false);
+    for (const request of requests.filter(r => r.init?.method === "POST")) assert.equal("defaultForVisitTypeCategories" in JSON.parse(String(request.init!.body)), false);
+    assert.equal(JSON.stringify(renderer.toJSON()).includes("No defaults"), false);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;
@@ -498,7 +487,6 @@ test("section-group settings dialog closes on Escape", async () => {
   globalThis.fetch = (async () => jsonResponse({
     canWrite: true,
     groups: [],
-    visitTypeCategories: [],
   })) as typeof fetch;
   let renderer!: ReactTestRenderer;
   try {
@@ -557,7 +545,7 @@ for (const race of [false,true]) test(`S1 G7 ${race ? "409 race refetches pins a
     if(url.includes('/finding-section-groups')){
       catalogReads++;
       const pinned=!race||catalogReads>1;
-      return jsonResponse({canWrite:false,canPullIn:true,groups:[GROUP,other],visitTypeCategories:[],defaultGroupKeys:[],
+      return jsonResponse({canWrite:false,canPullIn:true,groups:[GROUP,other],
         overrideGroupKeys:race?[GROUP.groupKey]:[other.groupKey],pulledInGroupKeys:race?[GROUP.groupKey]:[other.groupKey],
         contentPinnedGroupKeys:pinned?[GROUP.groupKey]:[],effectiveGroupKeys:[GROUP.groupKey,other.groupKey]});
     }
@@ -589,8 +577,8 @@ for (const race of [false,true]) test(`S1 G7 ${race ? "409 race refetches pins a
 for (const staleFailure of [false, true]) test(`S1 catalog freshness ignores older ${staleFailure ? "failure" : "success"} after a newer save refresh`, async () => {
   const originalFetch = globalThis.fetch, originalRead = fhir.read, originalDocument = globalThis.document;
   const pending: Array<(response: Response) => void> = [];
-  const catalog = (pinned: boolean) => ({ canWrite: false, canPullIn: true, groups: [GROUP], visitTypeCategories: [],
-    overrideGroupKeys: [], defaultGroupKeys: [], effectiveGroupKeys: pinned ? [GROUP.groupKey] : [], contentPinnedGroupKeys: pinned ? [GROUP.groupKey] : [] });
+  const catalog = (pinned: boolean) => ({ canWrite: false, canPullIn: true, groups: [GROUP],
+    overrideGroupKeys: [],  effectiveGroupKeys: pinned ? [GROUP.groupKey] : [], contentPinnedGroupKeys: pinned ? [GROUP.groupKey] : [] });
   let reads = 0;
   fhir.read = (async () => ({ resourceType: "Encounter", id: "encounter-1", status: "in-progress", class: { code: "AMB" } })) as typeof fhir.read;
   globalThis.fetch = (async (input) => {

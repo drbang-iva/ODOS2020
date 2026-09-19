@@ -136,7 +136,6 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const [sectionGroupCatalog, setSectionGroupCatalog] = useState<FindingSectionGroupCatalog>({
     canWrite: false,
     groups: [],
-    visitTypeCategories: [],
     overrideGroupKeys: [],
     effectiveGroupKeys: [],
   });
@@ -446,7 +445,6 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         ...body,
         canWrite: body.canWrite === true,
         groups: Array.isArray(body.groups) ? body.groups : [],
-        visitTypeCategories: Array.isArray(body.visitTypeCategories) ? body.visitTypeCategories : [],
         overrideGroupKeys: Array.isArray(body.overrideGroupKeys) ? body.overrideGroupKeys : [],
         effectiveGroupKeys: Array.isArray(body.effectiveGroupKeys) ? body.effectiveGroupKeys : [],
         contentPinnedGroupKeys: Array.isArray(body.contentPinnedGroupKeys) ? body.contentPinnedGroupKeys : [],
@@ -455,7 +453,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     } catch (caught) {
       if (signal?.aborted || !isCurrentEncounter() || sequence !== sectionGroupRequestSequence.current) return;
       console.error("Finding section groups unavailable; definitions remain ungated.", caught);
-      setSectionGroupCatalog({ canWrite: false, groups: [], visitTypeCategories: [], overrideGroupKeys: [], effectiveGroupKeys: [], contentPinnedGroupKeys: [] });
+      setSectionGroupCatalog({ canWrite: false, groups: [], overrideGroupKeys: [], effectiveGroupKeys: [], contentPinnedGroupKeys: [] });
       if (!preserveMessage) setSectionGroupError("Section-group visibility could not be loaded.");
     }
   }
@@ -644,7 +642,6 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
           overrideGroupKeys,
           pulledInGroupKeys,
           effectiveGroupKeys: [...new Set([
-            ...(current.defaultGroupKeys ?? []),
             ...pulledInGroupKeys,
             ...(current.contentPinnedGroupKeys ?? []),
           ])],

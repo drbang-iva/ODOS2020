@@ -1,0 +1,32 @@
+[
+  {
+    "guard": "G1",
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "guard": "G2",
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "guard": "G3",
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "guard": "G4",
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "guard": "G5",
+    "redExit": 1,
+    "greenExit": 0
+  },
+  {
+    "guard": "G6",
+    "redExit": 1,
+    "greenExit": 0
+  }
+]

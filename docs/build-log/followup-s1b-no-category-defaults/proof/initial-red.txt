@@ -1,0 +1,109 @@
+TAP version 13
+# Subtest: S1b G1 matching legacy category never makes a group effective
+not ok 1 - S1b G1 matching legacy category never makes a group effective
+  ---
+  duration_ms: 13.435958
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:22863'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'legacy-workup'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'legacy-workup'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:737:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: S1b G2 legacy category key is ignored on load and omitted on save
+not ok 2 - S1b G2 legacy category key is ignored on load and omitted on save
+  ---
+  duration_ms: 0.230375
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:23857'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:750:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S1b G3 create rejects category defaults by name
+not ok 3 - S1b G3 create rejects category defaults by name
+  ---
+  duration_ms: 0.830792
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:24638'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    201 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 201
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:768:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S1b G3 update rejects category defaults by name
+not ok 4 - S1b G3 update rejects category defaults by name
+  ---
+  duration_ms: 0.337166
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:1:24638'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/followup-s1b/ODOS2020/mcp/tests/findingSectionGroup.test.ts:768:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: S1b G4 chart atomic writer live then clear unpins and permits removal
+ok 5 - S1b G4 chart atomic writer live then clear unpins and permits removal
+  ---
+  duration_ms: 38.131417
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 325.592041

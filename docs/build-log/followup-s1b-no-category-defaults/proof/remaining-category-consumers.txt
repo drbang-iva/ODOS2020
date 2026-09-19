@@ -1,0 +1,15 @@
+mcp/src/clinic/eye-exam-visit.ts:6:  resolveVisitTypeCategoryForEncounter,
+mcp/src/clinic/eye-exam-visit.ts:16:  const appointmentCategory = await resolveVisitTypeCategoryForEncounter(encounter, appointment, fhir);
+mcp/src/clinical-graph/exam-overview-endpoint.ts:22:import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
+mcp/src/clinical-graph/exam-overview-endpoint.ts:87:    const [definitions, currentObservations, patientObservations, conditions, visitTypeCategoryId, complaintDefinitions, complaints] =
+mcp/src/clinical-graph/exam-overview-endpoint.ts:93:        resolveVisitTypeCategoryForEncounter(encounter, undefined, serviceFhir),
+mcp/src/clinical-graph/exam-overview-endpoint.ts:122:      ...(visitTypeCategoryId ? { visitTypeCategoryId } : {}),
+mcp/src/clinical-graph/exam-overview-projection.ts:135:export const CLINICAL_SECTION_REQUIREMENTS: ClinicalSectionApplicabilityRegistry = {
+mcp/src/clinical-graph/exam-overview-projection.ts:171:  visitTypeCategoryId?: string;
+mcp/src/clinical-graph/exam-overview-projection.ts:181:  visitTypeCategoryId?: string;
+mcp/src/clinical-graph/exam-overview-projection.ts:330:  const registry = input.applicabilityRegistry ?? CLINICAL_SECTION_REQUIREMENTS;
+mcp/src/clinical-graph/exam-overview-projection.ts:331:  const policy = input.visitTypeCategoryId !== undefined &&
+mcp/src/clinical-graph/exam-overview-projection.ts:332:      Object.hasOwn(registry, input.visitTypeCategoryId)
+mcp/src/clinical-graph/exam-overview-projection.ts:333:    ? registry[input.visitTypeCategoryId]
+mcp/src/clinical-graph/exam-overview-projection.ts:339:      ...(input.visitTypeCategoryId ? { visitTypeCategoryId: input.visitTypeCategoryId } : {}),
+mcp/src/clinical-graph/exam-overview-projection.ts:375:    ...(input.visitTypeCategoryId ? { visitTypeCategoryId: input.visitTypeCategoryId } : {}),

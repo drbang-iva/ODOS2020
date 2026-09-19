@@ -4,13 +4,11 @@ import {
   type FindingSectionGroupCatalog,
 } from "../../lib/finding-section-groups";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
-import { OdosChips } from "../inputs/OdosChips";
 
 type Draft = {
   groupKey: string;
   label: string;
   prefixes: string;
-  defaultForVisitTypeCategories: string[];
   active: boolean;
 };
 
@@ -88,7 +86,6 @@ export function FindingSectionGroupsSettings() {
         groupKey: group.groupKey,
         label: group.label,
         prefixes: group.sectionKeyPrefixes.join("\n"),
-        defaultForVisitTypeCategories: group.defaultForVisitTypeCategories,
         active: group.active,
       },
     });
@@ -100,7 +97,6 @@ export function FindingSectionGroupsSettings() {
         groupKey: "",
         label: "",
         prefixes: "",
-        defaultForVisitTypeCategories: [],
         active: true,
       },
     });
@@ -128,14 +124,12 @@ export function FindingSectionGroupsSettings() {
           ? {
               label: body.label,
               sectionKeyPrefixes: body.sectionKeyPrefixes,
-              defaultForVisitTypeCategories: body.defaultForVisitTypeCategories,
               active: body.active,
             }
           : {
               groupKey: body.groupKey,
               label: body.label,
               sectionKeyPrefixes: body.sectionKeyPrefixes,
-              defaultForVisitTypeCategories: body.defaultForVisitTypeCategories,
               active: body.active,
             }),
       });
@@ -177,8 +171,8 @@ export function FindingSectionGroupsSettings() {
       <section className="rounded border border-[color:var(--odos-line)] bg-bg-panel/70 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Visit-type section groups</h2>
-            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Gate specialty section prefixes by visit-type category while leaving ungrouped sections unchanged.</p>
+            <h2 className="font-semibold">Finding section groups</h2>
+            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Group specialty sections for the doctor to pull into an exam. Saved findings keep their groups visible.</p>
           </div>
           {catalog?.canWrite && (
             <button
@@ -205,7 +199,7 @@ export function FindingSectionGroupsSettings() {
             )}
             {catalog.groups.length === 0 && (
               <div className="rounded border border-dashed border-[color:var(--odos-line)] p-3 text-sm text-[color:var(--odos-faint)]">
-                No visit-type section groups
+                No finding section groups
               </div>
             )}
             {catalog.groups.map((group) => (
@@ -220,11 +214,6 @@ export function FindingSectionGroupsSettings() {
                   <div className="mt-1 font-mono text-xs text-[color:var(--odos-faint)]">{group.groupKey}</div>
                   <div className="mt-1 text-xs text-[color:var(--odos-muted)]">{group.sectionKeyPrefixes.join(", ")}</div>
                 </div>
-                <span className="rounded bg-[color:var(--odos-surface-2)] px-2 py-1 text-xs text-[color:var(--odos-muted)]">
-                  {group.defaultForVisitTypeCategories.length > 0
-                    ? group.defaultForVisitTypeCategories.join(", ")
-                    : "No defaults"}
-                </span>
                 <span className={group.active
                   ? "rounded bg-emerald-400/10 px-2 py-1 text-xs text-emerald-200"
                   : "rounded bg-[color:var(--odos-surface-2)] px-2 py-1 text-xs text-[color:var(--odos-faint)]"}
@@ -321,22 +310,6 @@ export function FindingSectionGroupsSettings() {
               />
               <span className="mt-1 block text-xs text-[color:var(--odos-faint)]">One per line or comma-separated.</span>
             </label>
-            <fieldset className="mt-4">
-              <legend className="text-sm text-[color:var(--odos-muted)]">Default visit-type categories</legend>
-              <div className="mt-2">
-                <OdosChips
-                  options={(catalog?.visitTypeCategories ?? [])
-                    .filter((category) => category.active !== false)
-                    .map((category) => ({ value: category.id, label: category.label }))}
-                  selected={editing.draft.defaultForVisitTypeCategories}
-                  onChange={(defaultForVisitTypeCategories) => setEditing({
-                    ...editing,
-                    draft: { ...editing.draft, defaultForVisitTypeCategories },
-                  })}
-                  ariaLabel="Default visit-type categories"
-                />
-              </div>
-            </fieldset>
             <label className="mt-4 flex items-center gap-2 text-sm text-[color:var(--odos-muted)]">
               <input
                 type="checkbox"
