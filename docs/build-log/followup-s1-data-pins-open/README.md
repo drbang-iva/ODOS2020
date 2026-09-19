@@ -60,7 +60,7 @@ Pretest vitals (`clinical-graph/pretest-vitals-endpoint.ts:340`) and smoking sta
 ## Guards: deliberately broken, then restored
 
 Commands are recorded in [results.json](proof/guards/results.json). Server: `npm --prefix mcp test -- tests/findingSectionGroup.test.ts`. Client: `node --import tsx --test ui/tests/findingSectionGroups.test.tsx`.
-Every red command exited 1; every restored green command exited 0. The following quotes are extracted from the actual full linked outputs.
+Every red command exited 1; every restored green command exited 0. The following quotes are extracted from the actual full linked outputs. Trailing whitespace on blank lines in captured logs is normalized.
 
 ### G1
 

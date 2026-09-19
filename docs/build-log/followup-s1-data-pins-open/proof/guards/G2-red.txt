@@ -97,7 +97,7 @@ not ok 15 - S1 G2 atomic present pins its group
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -112,7 +112,7 @@ not ok 15 - S1 G2 atomic present pins its group
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -143,7 +143,7 @@ not ok 16 - S1 G2 atomic explicit absent pins its group
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -158,7 +158,7 @@ not ok 16 - S1 G2 atomic explicit absent pins its group
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

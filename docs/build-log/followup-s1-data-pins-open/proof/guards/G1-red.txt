@@ -91,7 +91,7 @@ not ok 14 - S1 G1 removal freshly refuses saved custom-section content without w
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -106,7 +106,7 @@ not ok 14 - S1 G1 removal freshly refuses saved custom-section content without w
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -137,7 +137,7 @@ not ok 15 - S1 G2 atomic present pins its group
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -152,7 +152,7 @@ not ok 15 - S1 G2 atomic present pins its group
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -183,7 +183,7 @@ not ok 16 - S1 G2 atomic explicit absent pins its group
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -198,7 +198,7 @@ not ok 16 - S1 G2 atomic explicit absent pins its group
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -253,7 +253,7 @@ not ok 21 - S1 G8 meibography writer image and score each independently pin glan
   error: |-
     orphan image still contains encounter content
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -268,7 +268,7 @@ not ok 21 - S1 G8 meibography writer image and score each independently pin glan
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -299,7 +299,7 @@ not ok 22 - S1 G8 MCP questionnaire response independently pins symptoms
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -314,7 +314,7 @@ not ok 22 - S1 G8 MCP questionnaire response independently pins symptoms
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -345,7 +345,7 @@ not ok 23 - S1 G8 MCP questionnaire score independently pins symptoms
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -360,7 +360,7 @@ not ok 23 - S1 G8 MCP questionnaire score independently pins symptoms
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

@@ -67,7 +67,7 @@ not ok 7 - S1 G4 a pinned inactive group still exposes its definitions
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   {
@@ -75,7 +75,7 @@ not ok 7 - S1 G4 a pinned inactive group still exposes its definitions
     -     sectionKey: 'custom:zz-test-marker'
     -   }
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

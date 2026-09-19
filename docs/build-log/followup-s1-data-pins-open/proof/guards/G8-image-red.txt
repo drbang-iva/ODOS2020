@@ -133,7 +133,7 @@ not ok 21 - S1 G8 meibography writer image and score each independently pin glan
   error: |-
     orphan image still contains encounter content
     + actual - expected
-    
+
       {
         body: {
     +     override: {
@@ -148,7 +148,7 @@ not ok 21 - S1 G8 meibography writer image and score each independently pin glan
     +   status: 200
     -   status: 409
       }
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

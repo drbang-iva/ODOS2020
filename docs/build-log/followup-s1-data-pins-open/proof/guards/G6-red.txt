@@ -67,10 +67,10 @@ not ok 10 - stale HTTP mutations surface a reload-and-retry conflict
   error: |-
     Expected values to be strictly equal:
     + actual - expected
-    
+
     + 'section-group-has-content'
     - 'concurrent-edit'
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 'concurrent-edit'
@@ -102,9 +102,9 @@ not ok 13 - a deactivated pull-in can be removed and does not resurrect after re
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -154,9 +154,9 @@ not ok 19 - S1 G5 entered-in-error and another encounter never pin this encounte
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200
@@ -176,9 +176,9 @@ not ok 20 - S1 G6 removing an empty group succeeds and removes it from effective
   failureType: 'testCodeFailure'
   error: |-
     Expected values to be strictly equal:
-    
+
     409 !== 200
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 200

@@ -121,12 +121,12 @@ not ok 19 - S1 G5 entered-in-error and another encounter never pin this encounte
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + [
     +   'dry-eye-workup'
     + ]
     - []
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:

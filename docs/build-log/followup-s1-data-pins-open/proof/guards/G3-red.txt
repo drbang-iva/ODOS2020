@@ -109,12 +109,12 @@ not ok 17 - S1 G3 removed-before-fix content repairs effective and pinned keys o
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'dry-eye-workup'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
@@ -136,12 +136,12 @@ not ok 18 - S1 G4 inactive group with content remains effective
   error: |-
     Expected values to be strictly deep-equal:
     + actual - expected
-    
+
     + []
     - [
     -   'dry-eye-workup'
     - ]
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected:
