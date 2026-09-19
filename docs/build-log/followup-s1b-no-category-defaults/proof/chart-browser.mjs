@@ -11,7 +11,7 @@ const read=n=>JSON.parse(readFileSync(join(runtime,n),'utf8'));
 const {ports}=read('manifest.json'), credentials=read('credentials.json'),fixture=read('fixture.json');
 const target=fixture.current;
 const base=`http://127.0.0.1:${ports.frontdoor}`;
-const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 try {
  await page.goto(base+'/clinic');

@@ -7,6 +7,7 @@ const require=createRequire(join(root,'ui/package.json')), {chromium}=require('p
 const runtime=join(root,'.odos/s1b-proof');
 const {admin}=JSON.parse(readFileSync(join(runtime,'credentials.json'),'utf8'));
 const phase=process.argv[2];
+const groupKey=`synthetic-s1b-${Date.now()}`, label=`Synthetic S1b ${groupKey.slice(-6)}`;
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 try {
@@ -25,19 +26,19 @@ try {
  await page.getByRole('button',{name:'Cancel',exact:true}).click();
  if(phase==='after'){
   await page.getByRole('button',{name:'+ Create group…',exact:true}).click();
-  await page.getByLabel('Group key',{exact:true}).fill('synthetic-s1b');
-  await page.getByLabel('Label',{exact:true}).fill('Synthetic S1b Workup');
+  await page.getByLabel('Group key',{exact:true}).fill(groupKey);
+  await page.getByLabel('Label',{exact:true}).fill(label);
   await page.getByLabel('Section-key prefixes').fill('synthetic:s1b:');
   const [created]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/finding-section-groups')),page.getByRole('button',{name:'Save group',exact:true}).click()]);
   assert.equal(created.status(),201);
   await page.getByRole('dialog').waitFor({state:'detached'});
-  const row=section.locator('div.flex.flex-wrap').filter({hasText:'Synthetic S1b Workup'});
+  const row=section.locator('div.flex.flex-wrap').filter({hasText:label});
   await row.getByRole('button',{name:'Edit',exact:true}).click();
-  await page.getByLabel('Label',{exact:true}).fill('Synthetic S1b Edited');
-  const [edited]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/finding-section-groups/synthetic-s1b')),page.getByRole('button',{name:'Save group',exact:true}).click()]);
+  await page.getByLabel('Label',{exact:true}).fill(label+' Edited');
+  const [edited]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/finding-section-groups/'+groupKey)),page.getByRole('button',{name:'Save group',exact:true}).click()]);
   assert.equal(edited.status(),200);
   await page.getByRole('dialog').waitFor({state:'detached'});
-  await page.getByText('Synthetic S1b Edited',{exact:true}).waitFor();
+  await page.getByText(label+' Edited',{exact:true}).waitFor();
   await page.screenshot({path:join(out,'02-settings-created-edited.png')});
  }
  console.log(JSON.stringify({phase,width:1440,pickerVisible:phase==='before',createEdit:phase==='after'}));
