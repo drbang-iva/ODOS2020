@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const composeProjectLabel = 'com.docker.compose.project';
 const anonymousVolumeLabel = 'com.docker.volume.anonymous';
@@ -50,7 +52,7 @@ function parseArgs(argv) {
     options.project = positional[0];
   } else if (positional.length) throw new Error(`${command} does not accept a project name.`);
   options.minAgeMs = parseDuration(options.minAge);
-  if (command === 'reap' && options.minAgeMs < 3_600_000 && !options.only) throw new Error('Refusing --min-age below 1h without --only <name-prefix>.');
+  if (command === 'reap' && options.minAgeMs < 3_600_000 && (!options.only || options.only.length < 12)) throw new Error('Refusing --min-age below 1h without --only <name-prefix> of at least 12 characters.');
   return options;
 }
 
@@ -66,8 +68,14 @@ function formatBytes(bytes) {
   return `${bytes}B`;
 }
 
-function projectNameForDirectory(directory) {
-  return basename(resolve(directory)).toLowerCase().replace(/[^a-z0-9]+/g, '');
+export function projectNameForDirectory(directory) {
+  return basename(resolve(directory)).toLowerCase().replace(/[^a-z0-9_-]+/g, '');
+}
+
+export function dockerTimestamp(value) {
+  if (!value || value.startsWith('0001-01-01')) return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
 }
 
 function inventory() {
@@ -77,21 +85,23 @@ function inventory() {
     id: item.Id,
     name: item.Name.slice(1),
     labels: item.Config.Labels ?? {},
-    createdAt: Date.parse(item.Created),
+    createdAt: dockerTimestamp(item.Created),
     running: item.State.Running,
+    startedAt: dockerTimestamp(item.State.StartedAt),
+    finishedAt: dockerTimestamp(item.State.FinishedAt),
     volumeNames: item.Mounts.filter((mount) => mount.Type === 'volume').map((mount) => mount.Name),
   }));
   const volumes = inspect('volume', ids(['volume', 'ls', '-q'])).map((item) => ({
     name: item.Name,
     labels: item.Labels ?? {},
-    createdAt: Date.parse(item.CreatedAt),
+    createdAt: dockerTimestamp(item.CreatedAt),
     size: volumeSizes.get(item.Name) ?? 0,
   }));
   const networks = inspect('network', ids(['network', 'ls', '-q'])).map((item) => ({
     id: item.Id,
     name: item.Name,
     labels: item.Labels ?? {},
-    createdAt: Date.parse(item.Created),
+    createdAt: dockerTimestamp(item.Created),
   }));
   return { containers, volumes, networks };
 }
@@ -109,23 +119,32 @@ function projectsFrom(current) {
   return [...projects.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function protectedProjects(options) {
-  return new Set([projectNameForDirectory(process.cwd()), 'visionforge', ...options.protect].map((project) => project.toLowerCase()));
+export function protectedProjects(options, directory = process.cwd()) {
+  return new Set([projectNameForDirectory(directory), 'visionforge', ...(options.protect ?? [])].map((project) => project.toLowerCase()));
 }
 
-function newest(project) {
-  const dates = [...project.containers, ...project.volumes, ...project.networks].map((resource) => resource.createdAt);
-  return dates.length ? Math.max(...dates) : Number.NaN;
+export function projectRecency(project) {
+  const timestamps = [
+    ...[...project.containers, ...project.volumes, ...project.networks].map((resource) => resource.createdAt),
+    ...project.containers.flatMap((container) => [container.startedAt, container.finishedAt]),
+  ].filter((timestamp) => Number.isFinite(timestamp));
+  return timestamps.length ? Math.max(...timestamps) : undefined;
 }
 
-function refusalReasons(project, options, current) {
+function recencyDescription(project) {
+  const timestamp = projectRecency(project);
+  if (!Number.isFinite(timestamp)) return 'unavailable';
+  return `${new Date(timestamp).toISOString()} (${Math.max(0, Math.floor((Date.now() - timestamp) / 60_000))}m ago)`;
+}
+
+export function refusalReasons(project, options, current) {
   const reasons = [];
   if (protectedProjects(options).has(project.name.toLowerCase())) reasons.push('protected project');
   if (project.containers.some((container) => container.running) && !(options.command === 'down' && options.force)) reasons.push('running container');
   if (options.command !== 'down') {
-    const createdAt = newest(project);
-    if (!Number.isFinite(createdAt)) reasons.push('resource age unavailable');
-    else if (Date.now() - createdAt < options.minAgeMs) reasons.push(`newest resource is younger than ${options.minAge}`);
+    const recency = projectRecency(project);
+    if (!Number.isFinite(recency)) reasons.push('resource age unavailable');
+    else if (Date.now() - recency < options.minAgeMs) reasons.push(`most recent activity is younger than ${options.minAge}`);
   }
   const projectVolumes = new Set(project.volumes.map((volume) => volume.name));
   const foreignContainer = current.containers.find((container) => container.labels[composeProjectLabel] !== project.name && container.volumeNames.some((name) => projectVolumes.has(name)));
@@ -146,14 +165,14 @@ function printUnmanaged(current) {
 }
 
 function printPlan(project) {
-  console.log(`REMOVE ${project.name}:`);
+  console.log(`REMOVE ${project.name} (last activity ${recencyDescription(project)}):`);
   for (const container of project.containers) console.log(`  container ${container.name} (${container.id.slice(0, 12)})`);
   for (const network of project.networks) console.log(`  network ${network.name} (${network.id.slice(0, 12)})`);
   for (const volume of project.volumes) console.log(`  volume ${volume.name} (${formatBytes(volume.size)})`);
 }
 
-function remove(project) {
-  for (const container of project.containers) docker(['rm', '-f', container.id]);
+function remove(project, { forceContainers = false } = {}) {
+  for (const container of project.containers) docker(['rm', ...(forceContainers ? ['-f'] : []), container.id]);
   for (const network of project.networks) docker(['network', 'rm', network.id]);
   for (const volume of project.volumes) {
     const current = inspect('volume', [volume.name])[0];
@@ -163,10 +182,8 @@ function remove(project) {
 }
 
 function projectSummary(project) {
-  const newestAt = newest(project);
-  const age = Number.isFinite(newestAt) ? `${Math.max(0, Math.floor((Date.now() - newestAt) / 60_000))}m` : 'unknown';
   const size = project.volumes.reduce((total, volume) => total + volume.size, 0);
-  return `${project.name}: ${project.containers.length} container(s), ${project.containers.filter((container) => container.running).length} running, newest ${age}, volumes ${formatBytes(size)}`;
+  return `${project.name}: ${project.containers.length} container(s), ${project.containers.filter((container) => container.running).length} running, last activity ${recencyDescription(project)}, volumes ${formatBytes(size)}`;
 }
 
 function reap(options) {
@@ -185,9 +202,42 @@ function reap(options) {
     console.log(`DRY RUN: ${removable.length} project(s) would be removed; nothing was removed.`);
     return;
   }
-  const reclaimed = removable.reduce((total, project) => total + project.volumes.reduce((volumeTotal, volume) => volumeTotal + volume.size, 0), 0);
-  for (const project of removable) remove(project);
-  console.log(`REMOVED ${removable.length} project(s); reclaimed ${formatBytes(reclaimed)} from named volumes.`);
+  const removed = [];
+  const skipped = [];
+  const failures = [];
+  for (const planned of removable) {
+    const fresh = inventory();
+    const project = projectsFrom(fresh).find((candidate) => candidate.name === planned.name);
+    if (!project) {
+      skipped.push(`${planned.name}: no compose-labelled resources remain`);
+      console.log(`SKIP ${planned.name}: no compose-labelled resources remain.`);
+      continue;
+    }
+    const reasons = refusalReasons(project, options, fresh);
+    if (reasons.length) {
+      skipped.push(`${project.name}: ${reasons.join(', ')}`);
+      console.log(`SKIP ${project.name}: ${reasons.join(', ')}.`);
+      continue;
+    }
+    try {
+      remove(project);
+      removed.push(project);
+    } catch (error) {
+      const afterFailure = inventory();
+      const changedProject = projectsFrom(afterFailure).find((candidate) => candidate.name === planned.name);
+      const changedReasons = changedProject ? refusalReasons(changedProject, options, afterFailure) : [];
+      if (changedReasons.length) {
+        skipped.push(`${planned.name}: ${changedReasons.join(', ')}`);
+        console.log(`SKIP ${planned.name}: ${changedReasons.join(', ')}.`);
+      } else {
+        failures.push(`${planned.name}: ${error.message}`);
+        console.error(`FAILED ${planned.name}: ${error.message}`);
+      }
+    }
+  }
+  const reclaimed = removed.reduce((total, project) => total + project.volumes.reduce((volumeTotal, volume) => volumeTotal + volume.size, 0), 0);
+  console.log(`REMOVED ${removed.length} project(s); SKIPPED ${skipped.length}; FAILED ${failures.length}; reclaimed ${formatBytes(reclaimed)} from named volumes.`);
+  return failures.length ? 1 : 0;
 }
 
 function list(options) {
@@ -206,7 +256,7 @@ function down(options) {
   const reasons = refusalReasons(project, options, current);
   if (reasons.length) throw new Error(`Refusing ${project.name}: ${reasons.join(', ')}.`);
   printPlan(project);
-  remove(project);
+  remove(project, { forceContainers: options.force });
   const reclaimed = project.volumes.reduce((total, volume) => total + volume.size, 0);
   console.log(`REMOVED ${project.name}; reclaimed ${formatBytes(reclaimed)} from named volumes.`);
 }
@@ -214,9 +264,9 @@ function down(options) {
 export function main(argv = process.argv.slice(2)) {
   try {
     const options = parseArgs(argv);
-    if (options.command === 'reap') reap(options);
-    if (options.command === 'list') list(options);
-    if (options.command === 'down') down(options);
+    if (options.command === 'reap') return reap(options) ?? 0;
+    if (options.command === 'list') return list(options) ?? 0;
+    if (options.command === 'down') return down(options) ?? 0;
     return 0;
   } catch (error) {
     console.error(error.message);
@@ -224,4 +274,14 @@ export function main(argv = process.argv.slice(2)) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exitCode = main();
+if (!process.argv[1]) {
+  console.error('Cannot run stack lifecycle tool: invoked script path is unavailable.');
+  process.exitCode = 1;
+} else {
+  try {
+    if (import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) process.exitCode = main();
+  } catch (error) {
+    console.error(`Cannot run stack lifecycle tool: ${error.message}`);
+    process.exitCode = 1;
+  }
+}

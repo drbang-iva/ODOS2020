@@ -41,9 +41,9 @@ not restart and quietly consume Docker resources after its owner has left.
 all Compose-labelled projects with `npm run stack:list`. Reap stopped, older orphaned stacks with
 `npm run stack:reap`; it is dry-run by default. `npm run stack:reap -- --yes` performs the displayed
 removal and **DESTROYS data**. The reaper never removes an unlabelled resource, protects the default
-ODOS and VisionForge projects, and requires `--only <prefix>` when a minimum age below one hour is
-requested. If your Docker installation provides only `docker compose`, use that equivalent command
-in place of `docker-compose`.
+ODOS and VisionForge projects, and requires an `--only <prefix>` of at least 12 characters when
+a minimum age below one hour is requested. If your Docker installation provides only `docker compose`, use that
+equivalent command in place of `docker-compose`.
 
 ## Start the Local Stack
 
