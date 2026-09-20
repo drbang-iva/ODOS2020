@@ -1,0 +1,110 @@
+TAP version 13
+# Subtest: M8 marketing email and Print follow effective preferences without a legacy consent record
+ok 1 - M8 marketing email and Print follow effective preferences without a legacy consent record
+  ---
+  duration_ms: 24.232708
+  type: 'test'
+  ...
+# Subtest: M8 withheld marketing email and Text stay disabled; Print stays available, legacy=false
+ok 2 - M8 withheld marketing email and Text stay disabled; Print stays available, legacy=false
+  ---
+  duration_ms: 3.041041
+  type: 'test'
+  ...
+# Subtest: M8 withheld marketing email and Text stay disabled; Print stays available, legacy=true
+ok 3 - M8 withheld marketing email and Text stay disabled; Print stays available, legacy=true
+  ---
+  duration_ms: 2.553583
+  type: 'test'
+  ...
+# Subtest: M9 education Text withheld disables; education Email remains enabled with override note
+ok 4 - M9 education Text withheld disables; education Email remains enabled with override note
+  ---
+  duration_ms: 3.706792
+  type: 'test'
+  ...
+# Subtest: STOP still disables Text for both item purposes; email suppression cannot be overridden
+ok 5 - STOP still disables Text for both item purposes; email suppression cannot be overridden
+  ---
+  duration_ms: 2.035125
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names transactional sms
+ok 6 - M10 preference-withheld result names transactional sms
+  ---
+  duration_ms: 3.032209
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names transactional email
+ok 7 - M10 preference-withheld result names transactional email
+  ---
+  duration_ms: 2.329166
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names marketing sms
+ok 8 - M10 preference-withheld result names marketing sms
+  ---
+  duration_ms: 2.100791
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names marketing email
+ok 9 - M10 preference-withheld result names marketing email
+  ---
+  duration_ms: 3.913375
+  type: 'test'
+  ...
+# Subtest: M10 sent preference failure remains success and preserves chart conflict=undefined
+ok 10 - M10 sent preference failure remains success and preserves chart conflict=undefined
+  ---
+  duration_ms: 2.348959
+  type: 'test'
+  ...
+# Subtest: M10 sent preference failure remains success and preserves chart conflict=conflict
+ok 11 - M10 sent preference failure remains success and preserves chart conflict=conflict
+  ---
+  duration_ms: 1.932
+  type: 'test'
+  ...
+# Subtest: failed matrix read is explicit and dispatch remains the enforcement boundary
+ok 12 - failed matrix read is explicit and dispatch remains the enforcement boundary
+  ---
+  duration_ms: 2.001417
+  type: 'test'
+  ...
+# Subtest: matrix read loading holds electronic buttons while Print remains available
+ok 13 - matrix read loading holds electronic buttons while Print remains available
+  ---
+  duration_ms: 1.403209
+  type: 'test'
+  ...
+# Subtest: E1a education email disclosure renders inside confirmation before any send
+not ok 14 - E1a education email disclosure renders inside confirmation before any send
+  ---
+  duration_ms: 2.405334
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/ui/tests/engageCommunicationPreferences.test.tsx:1:9930'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Education email is off for this patient\. Sending will turn it back on\./. Input:
+
+    'Confirm  email  ·  Education guide ✎ Override for this send Cancel Send'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Confirm  email  ·  Education guide ✎ Override for this send Cancel Send'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/ui/tests/engageCommunicationPreferences.test.tsx:129:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 13
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 567.001958

@@ -292,3 +292,14 @@ test("G7 preference cascade: preflight opt-out holds the due row and future same
     assert.equal(e.immediateSends.length, 0);
     assert.equal(f.calls.length, 0);
 });
+
+test("E1a scheduled classification hold preserves the staff-visible reason without sending", async () => {
+  const f = await fixture(["one"], "email");
+  f.deps.prepare = async () => ({ kind: "held", reason: "content-unavailable", detail: "Cosmetic-only content is not enabled for this practice." });
+  await runOnce(f.deps);
+  assert.equal(f.calls.length, 0);
+  assert.ok(f.items.length > 0);
+  assert.ok(f.items.every(item => item.reason === "Cosmetic-only content is not enabled for this practice."));
+  const enrollment = (await f.store.read([...f.data.keys()][0]))!;
+  assert.ok(enrollment.scheduledSends!.every(row => row.disposition === "held" && row.events.at(-1)?.reason === "Cosmetic-only content is not enabled for this practice."));
+});

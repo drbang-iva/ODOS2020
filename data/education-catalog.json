@@ -74,6 +74,7 @@
       "channels": ["sms", "email"],
       "laneHint": "retail",
       "consentClass": "marketing",
+      "offerClass": "eyecare",
       "urls": {
         "web": "https://education.invalid/dry-eye-treatment-options/v1",
         "email": "https://education.invalid/dry-eye-treatment-options/v1/email"
@@ -120,6 +121,7 @@
       "channels": ["sms", "email"],
       "laneHint": "retail",
       "consentClass": "marketing",
+      "offerClass": "eyecare",
       "urls": {
         "web": "https://education.invalid/myopia-program-overview/v1",
         "email": "https://education.invalid/myopia-program-overview/v1/email"

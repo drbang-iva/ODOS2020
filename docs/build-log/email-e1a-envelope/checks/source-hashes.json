@@ -1,0 +1,27 @@
+{
+  "authorCommit": "53dcbdd4bf47176019d69a127338e85e6a2f60f4",
+  "sha256": {
+    ".env.example": "e2521060478792ee2d4dc0f887f4fc0c8e0c665e4c8373add9e35749865c8734",
+    "data/education-catalog.json": "500d9037d097b0e8098aac2a31393691e72729faabab9b54a9813771be5b5f53",
+    "mcp/src/comms/adapters/google-workspace-adapter.ts": "cf2ec9c07d7bc82b8bbf48ac8eaf00ebc83174b49f1fdb39fea377a6dcfda0d7",
+    "mcp/src/comms/comms-api.ts": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "mcp/src/comms/comms-config.ts": "5a4fea07071f86256749ba48af5cdcc506f6ac083d6899898a70bde16a3e412d",
+    "mcp/src/comms/comms-provider.ts": "7d667be6d1d2a01d2d0c2c2198965567f388b9bdf65ac26a0e5997ed690ee583",
+    "mcp/src/comms/education-catalog.ts": "d15ca7fe744069083176a60beab4f281956a4873aa0a85bc5c71cb533902da0b",
+    "mcp/src/comms/education-sequence-worker.ts": "2b6a569ffdb4177a8e56a8e5d774310a11e25e760f64f4ac42a55659c9e82bc6",
+    "mcp/src/comms/patient-email-envelope.ts": "fe408a90fb7113f15958519970c10be9bb52a7c0561a63571d5962632ccae9f6",
+    "mcp/src/comms/suppression-gate.ts": "3350fbd6dfd30605090d2184c88e10d4add998129403dd6eec77ea9cbd8b1be5",
+    "mcp/src/index.ts": "2593d69b354f391e059de7ef593e399c807d3f4961511ccd9932d0ce91b555f0",
+    "mcp/tests/commsApi.test.ts": "f5cdd1c10b5539b16022e341dcbd781a5f5ebae40da00d91300d669ed1d4a90d",
+    "mcp/tests/commsConfig.test.ts": "bcfdc7652cb9f2bb8ce4f69b66bf029795ea71f29f7741fe4a2d34cc44f7c743",
+    "mcp/tests/commsSuppression.test.ts": "a9f3dea620533e16b10e2c29044e22164df0dc7cadde6847121f858020ee15a4",
+    "mcp/tests/educationCatalog.test.ts": "61f1b163dbfe6db97a1d4c43c21e2f243ee5e45a701bd5ce6c5a4193f1c99ed5",
+    "mcp/tests/educationDispatchActor.test.ts": "95571fdd49525a6627ef3b51fd379352bf35ebb4a305a8fa041b055f75b4ed40",
+    "mcp/tests/educationSequenceWorker.test.ts": "e8c7fb8367bbef4abb02fb0234f7c979dd3ff6c8958899f331608a2a7545f967",
+    "mcp/tests/googleWorkspaceAdapter.test.ts": "9408f933843ac4646a5b8be0407441c3d9ed353fed8ccc05d7a562484d286898",
+    "mcp/tests/visionforgeEducationCatalog.test.ts": "ddfd7614040dc5a4ebc292e5f77be3bd1783f1a1f4a0f3cf5f85aa18ebc84184",
+    "scripts/fhir-read-grant-check.ts": "bfc702365de27eb014dac654f8d0d327f2f9dc7b81c3f5da30f59988eb9051b6",
+    "ui/src/components/comms/EngageSheet.tsx": "58b08a9a9ca60c1fbc934fe71e191bfbae24839ab632ce2d2502895d6f25e158",
+    "ui/tests/engageCommunicationPreferences.test.tsx": "ed97e9c5db5ff1a48e40e7fd68fa4f0f606e3adb56c4537b4a56ff1f456e9a15"
+  }
+}

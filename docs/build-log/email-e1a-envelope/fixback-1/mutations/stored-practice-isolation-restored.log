@@ -1,0 +1,22 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=stored migration rejects foreign-practice", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=stored migration rejects foreign-practice tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: stored migration rejects foreign-practice without network or writes
+ok 1 - stored migration rejects foreign-practice without network or writes
+  ---
+  duration_ms: 77.791916
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 239.709083

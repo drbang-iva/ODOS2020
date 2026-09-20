@@ -1,0 +1,276 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/googleWorkspaceAdapter.test.ts tests/educationCatalog.test.ts
+
+TAP version 13
+# Subtest: catalog rejects unknown manifest fields and duplicate id-version pairs
+ok 1 - catalog rejects unknown manifest fields and duplicate id-version pairs
+  ---
+  duration_ms: 2.268084
+  type: 'test'
+  ...
+# Subtest: catalog returns the newest version by default and the exact pinned version
+ok 2 - catalog returns the newest version by default and the exact pinned version
+  ---
+  duration_ms: 0.373916
+  type: 'test'
+  ...
+# Subtest: catalog rejects a plausible-looking seed URL instead of allowing a patient-sendable dead link
+ok 3 - catalog rejects a plausible-looking seed URL instead of allowing a patient-sendable dead link
+  ---
+  duration_ms: 0.120166
+  type: 'test'
+  ...
+# Subtest: catalog refuses unverified diagnosis codes when a JSON ledger entry is removed
+ok 4 - catalog refuses unverified diagnosis codes when a JSON ledger entry is removed
+  ---
+  duration_ms: 0.130708
+  type: 'test'
+  ...
+# Subtest: checked-in catalog is placeholder-only, includes a real internal leak sentinel, and loads against its ledger
+ok 5 - checked-in catalog is placeholder-only, includes a real internal leak sentinel, and loads against its ledger
+  ---
+  duration_ms: 0.503833
+  type: 'test'
+  ...
+# Subtest: E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification
+not ok 6 - E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification
+  ---
+  duration_ms: 0.964708
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/educationCatalog.test.ts:1:4753'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'eyecare'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'eyecare'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/educationCatalog.test.ts:169:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Google Workspace adapter exchanges a delegated service-account JWT and sends base64url MIME through users.messages.send
+not ok 7 - Google Workspace adapter exchanges a delegated service-account JWT and sends base64url MIME through users.messages.send
+  ---
+  duration_ms: 11.404917
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:859'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /^Subject: Information from Synthetic Practice\r$/m. Input:
+
+    'From: info@synthetic-practice.example\r\n' +
+      'To: patient@example.test\r\n' +
+      'Subject: Appointment reminder\r\n' +
+      'MIME-Version: 1.0\r\n' +
+      'Content-Type: text/plain; charset="UTF-8"\r\n' +
+      'Content-Transfer-Encoding: 8bit\r\n' +
+      '\r\n' +
+      'Your appointment is July 31 at 10:00 AM with Dr. Example at Main Office.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    From: info@synthetic-practice.example
+    To: patient@example.test
+    Subject: Appointment reminder
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: 8bit
+
+    Your appointment is July 31 at 10:00 AM with Dr. Example at Main Office.
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:81:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: adapter capability metadata stays honest and warns without hard-blocking consumer Gmail or unconfirmed Workspace posture
+ok 8 - adapter capability metadata stays honest and warns without hard-blocking consumer Gmail or unconfirmed Workspace posture
+  ---
+  duration_ms: 0.153583
+  type: 'test'
+  ...
+# Subtest: Google Workspace adapter rejects missing destinations and header injection before any vendor call
+ok 9 - Google Workspace adapter rejects missing destinations and header injection before any vendor call
+  ---
+  duration_ms: 0.293666
+  type: 'test'
+  ...
+# Subtest: E1a envelope refuses missing or unresolved practiceName= before provider calls
+not ok 10 - E1a envelope refuses missing or unresolved practiceName= before provider calls
+  ---
+  duration_ms: 1.109458
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a envelope refuses missing or unresolved postalAddress= before provider calls
+not ok 11 - E1a envelope refuses missing or unresolved postalAddress= before provider calls
+  ---
+  duration_ms: 0.913166
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a envelope refuses missing or unresolved phone= before provider calls
+not ok 12 - E1a envelope refuses missing or unresolved phone= before provider calls
+  ---
+  duration_ms: 0.798917
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a envelope refuses missing or unresolved postalAddress={{practice.address}} before provider calls
+not ok 13 - E1a envelope refuses missing or unresolved postalAddress={{practice.address}} before provider calls
+  ---
+  duration_ms: 1.145417
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a envelope refuses missing or unresolved phone=${practice.phone} before provider calls
+not ok 14 - E1a envelope refuses missing or unresolved phone=${practice.phone} before provider calls
+  ---
+  duration_ms: 0.733
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a envelope refuses missing or unresolved practiceName=<practice name> before provider calls
+not ok 15 - E1a envelope refuses missing or unresolved practiceName=<practice name> before provider calls
+  ---
+  duration_ms: 0.879875
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a envelope refuses missing or unresolved subject=Information about {{diagnosis}} before provider calls
+not ok 16 - E1a envelope refuses missing or unresolved subject=Information about {{diagnosis}} before provider calls
+  ---
+  duration_ms: 1.086083
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:4973'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:146:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a configured neutral subject and mandatory footer replace author envelope for reminders and education
+not ok 17 - E1a configured neutral subject and mandatory footer replace author envelope for reminders and education
+  ---
+  duration_ms: 1.396917
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:1:5611'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /^Subject: A message from your practice\r$/m. Input:
+
+    'From: info@synthetic-practice.example\r\n' +
+      'To: patient@example.test\r\n' +
+      'Subject: Dry eye condition\r\n' +
+      'MIME-Version: 1.0\r\n' +
+      'Content-Type: text/plain; charset="UTF-8"\r\n' +
+      'Content-Transfer-Encoding: 8bit\r\n' +
+      '\r\n' +
+      'Author body'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    From: info@synthetic-practice.example
+    To: patient@example.test
+    Subject: Dry eye condition
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: 8bit
+
+    Author body
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/googleWorkspaceAdapter.test.ts:167:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 7
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 354.214166

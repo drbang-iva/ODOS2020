@@ -1,0 +1,28 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=R4 ", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=R4  tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: R4 legacy snapshot still refuses real title meaning change
+ok 1 - R4 legacy snapshot still refuses real title meaning change
+  ---
+  duration_ms: 75.711083
+  type: 'test'
+  ...
+# Subtest: R4 legacy snapshot still refuses real hash meaning change
+ok 2 - R4 legacy snapshot still refuses real hash meaning change
+  ---
+  duration_ms: 56.279792
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 296.31

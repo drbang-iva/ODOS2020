@@ -1,0 +1,28 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a catalog|G18", "tests/educationCatalog.test.ts", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a catalog|G18 tests/educationCatalog.test.ts tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification
+ok 1 - E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification
+  ---
+  duration_ms: 2.680375
+  type: 'test'
+  ...
+# Subtest: G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+ok 2 - G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+  ---
+  duration_ms: 2.566583
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 311.193583

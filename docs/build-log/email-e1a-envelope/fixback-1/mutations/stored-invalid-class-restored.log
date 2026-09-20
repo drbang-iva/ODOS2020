@@ -1,0 +1,28 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=stored migration rejects.*class", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=stored migration rejects.*class tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: stored migration rejects null-class without network or writes
+ok 1 - stored migration rejects null-class without network or writes
+  ---
+  duration_ms: 68.804375
+  type: 'test'
+  ...
+# Subtest: stored migration rejects unknown-class without network or writes
+ok 2 - stored migration rejects unknown-class without network or writes
+  ---
+  duration_ms: 44.666041
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 290.238375

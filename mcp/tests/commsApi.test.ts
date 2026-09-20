@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { fixture as guarantorFixture, run as runGuarantor } from "./guarantorScreensFixture.js";
 import { verifyGuarantor } from "../../ui/src/lib/guarantor-editor.js";
 import { fhir as editorFhir } from "../../ui/src/lib/fhir.js";
@@ -32,6 +32,8 @@ import type { EducationContentItem } from "../src/comms/education-catalog.js";
 import { checkMessageSuppression, updateInboundSuppression, ODOS_COMMS_OPT_OUT_EXTENSION_URL, resolveSmsNumber } from "../src/comms/suppression-gate.js";
 import { authenticateStaffRoute } from "../src/payments/payment-endpoint.js";
 import express from "express";
+import { ODOS_COMMS_PROVIDER_MESSAGE_IDENTIFIER_SYSTEM } from "../src/comms/comms-persistence.js";
+import { commsAdapterRegistrationsFromEnv, createCommsDispatch } from "../src/comms/comms-config.js";
 import { createOperatorScriptFhirClient } from "../src/fhir-client.js";
 
 const PATIENT_REFERENCE = "Patient/synthetic-1";
@@ -2061,7 +2063,28 @@ async function startServer(options: {
   smsResult?: SendResult;
   smsError?: Error;
   marketingConsent?: boolean;
+  realEmail?: boolean;
+  emailSettings?: Record<string, string>;
+  emailUnsubscribeEndpoint?: string;
+  catalogItems?: EducationContentItem[];
 } = {}) {
+  const mime: string[] = [];
+  const emailVendorCalls: string[] = [];
+  const realEmail = options.realEmail ? createCommsDispatch(commsAdapterRegistrationsFromEnv({
+    ODOS_COMMS_EMAIL_PROVIDER: "google-workspace",
+    GOOGLE_WORKSPACE_SERVICE_ACCOUNT_EMAIL: "sender@synthetic-project.iam.gserviceaccount.com",
+    GOOGLE_WORKSPACE_PRIVATE_KEY: generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+    GOOGLE_WORKSPACE_DELEGATED_USER: "care@synthetic.example", GOOGLE_WORKSPACE_DOMAIN: "synthetic.example",
+    GOOGLE_WORKSPACE_FROM_ADDRESS: "care@synthetic.example", GOOGLE_WORKSPACE_PLAN_CONFIRMED: "true",
+    ODOS_PRACTICE_NAME: "Synthetic Eye Care", ODOS_PRACTICE_POSTAL_ADDRESS: "100 Example Street, Test City, NY 10001",
+    ODOS_PRACTICE_PHONE: "+12025550101", ...options.emailSettings,
+  }), { now: () => new Date("2026-08-02T15:00:00.000Z"), fetchImpl: async (input, init) => {
+    emailVendorCalls.push(String(input));
+    if (String(input).includes("/token")) return Response.json({ access_token: "synthetic-access", expires_in: 3600 });
+    mime.push(Buffer.from(JSON.parse(String(init?.body)).raw, "base64url").toString());
+    return Response.json({ id: "EM-synthetic" });
+  } }) : undefined;
+  const catalogItems = options.catalogItems ?? EDUCATION_ITEMS;
   const providerCalls: string[] = [];
   const smsRequests: SendSmsRequest[] = [];
   const emailRequests: SendEmailRequest[] = [];
@@ -2345,6 +2368,7 @@ async function startServer(options: {
           if (
             params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/twilio-message-sid|")
             || params.identifier?.startsWith("https://odos2020.com/fhir/NamingSystem/ghl-message-id|")
+            || params.identifier?.startsWith(`${ODOS_COMMS_PROVIDER_MESSAGE_IDENTIFIER_SYSTEM}|`)
           ) {
             const system = params.identifier.slice(0, params.identifier.lastIndexOf("|"));
             const value = params.identifier.slice(params.identifier.lastIndexOf("|") + 1);
@@ -2512,11 +2536,12 @@ async function startServer(options: {
     fhir: serviceFhir,
     dispatch: {
       providers: () => options.providers ?? [options.providerName ?? "twilio"],
-      providerFor: (role) => options.channelRoutes === undefined
+      providerFor: (role) => realEmail && role === "email" ? "google-workspace" : options.channelRoutes === undefined
         ? options.providerName ?? "twilio"
         : options.channelRoutes[role],
       senderNumberFor: (role) => options.senderNumbers?.[role as keyof typeof options.senderNumbers],
       getAdapter: (providerName, callerFhir) => {
+        if (realEmail && providerName === "google-workspace") return realEmail.getAdapterForRole("email", callerFhir);
         adapterProviders.push(providerName);
         adapterFhirs.push(callerFhir);
         const conversationListUnsupported = options.conversationUnsupported?.includes(providerName) === true;
@@ -2558,9 +2583,9 @@ async function startServer(options: {
     educationCatalog: {
       getForNewWork(id, version) { return this.get(id, version); },
       lifecycle(id, version) { return this.get(id, version) ? "active" : undefined; },
-      list: () => structuredClone(EDUCATION_ITEMS),
+      list: () => structuredClone(catalogItems),
       get: (id, version) => {
-        const matches = EDUCATION_ITEMS.filter((item) => item.id === id);
+        const matches = catalogItems.filter((item) => item.id === id);
         const selectedVersion = version ?? Math.max(...matches.map((item) => item.version));
         const item = matches.find((candidate) => candidate.version === selectedVersion);
         return item ? structuredClone(item) : undefined;
@@ -2577,6 +2602,9 @@ async function startServer(options: {
     },
     publicBaseUrl: options.publicBaseUrl === undefined ? "https://practice.example" : options.publicBaseUrl,
     practiceName: "Synthetic Eye Care",
+    // Unknown legacy input must not reintroduce a capability after its removal.
+    ...{ emailUnsubscribeEndpoint: options.emailUnsubscribeEndpoint },
+    emailSubject: options.emailSettings?.ODOS_COMMS_EMAIL_SUBJECT,
     chartDispatchLane: options.chartDispatchLane,
     audit,
     now: () => "2026-08-02T15:00:00.000Z",
@@ -2584,11 +2612,12 @@ async function startServer(options: {
   const app = express();
   app.use(express.json());
   registerCommsApiRoutes(app, deps);
-  const server = app.listen(0);
+  const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address() as AddressInfo;
   return {
     base: `http://127.0.0.1:${address.port}`,
+    mime, emailVendorCalls,
     providerCalls,
     smsRequests,
     emailRequests,
@@ -2806,3 +2835,97 @@ for (const relatedRecipient of [false, true]) for (const markerState of ["active
     } finally { await fixture.close(); }
   });
 }
+
+const E1A_ITEM: EducationContentItem = {
+  id: "synthetic-envelope", version: 1, title: "Synthetic condition handout", kind: "handout", audience: "patient",
+  dxCodes: [], channels: ["email", "sms", "print"], laneHint: "clinical", consentClass: "transactional",
+  urls: { email: "https://education.invalid/synthetic/email", web: "https://education.invalid/synthetic", print: "https://education.invalid/synthetic/print" },
+};
+function sendE1a(f: Awaited<ReturnType<typeof startServer>>, channel: "email" | "sms" | "print", key = `e1a-send-${channel}`) {
+  return request(f.base, "/communications/education/dispatch", "POST", {
+    patientReference: PATIENT_REFERENCE, educationId: E1A_ITEM.id, version: 1, channel, lane: "clinical", idempotencyKey: key,
+  }, "staff");
+}
+test("E1a a neutral MIME envelope keeps the item title on the chart", async () => {
+  const f = await startServer({ realEmail: true, catalogItems: [E1A_ITEM] });
+  try {
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 200); assert.equal((await response.json() as any).outcome, "sent");
+    assert.equal(f.mime.length, 1);
+    assert.match(f.mime[0], /^Subject: Information from Synthetic Eye Care\r$/m);
+    assert.ok(f.mime[0].endsWith("Synthetic Eye Care\n100 Example Street, Test City, NY 10001\n+12025550101\nEmail is not a secure method of communication. Please do not send sensitive medical information by email. Call +12025550101 for anything private or urgent."));
+    assert.doesNotMatch(f.mime[0], /Synthetic condition handout/);
+    const frozenContext = JSON.parse(f.persistedCommunications[0].payload![1].contentString!);
+    assert.equal(frozenContext.item.title, E1A_ITEM.title);
+    assert.ok(JSON.stringify(f.provenances).includes(`Education content: ${E1A_ITEM.id}@${E1A_ITEM.version}`));
+    assert.ok(!JSON.stringify(f.provenances).includes(E1A_ITEM.title));
+  } finally { await f.close(); }
+});
+for (const field of ["ODOS_PRACTICE_POSTAL_ADDRESS", "ODOS_PRACTICE_PHONE"]) test(`E1a b missing ${field} refuses before provider or send reservation`, async () => {
+  const f = await startServer({ realEmail: true, catalogItems: [E1A_ITEM], emailSettings: { [field]: "" } });
+  try {
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as any).reason, /Patient email.*missing/i);
+    assert.equal(f.emailVendorCalls.length, 0); assert.equal(f.persistedCommunications.length, 0);
+  } finally { await f.close(); }
+});
+for (const channel of ["email", "sms", "print"] as const) test(`E1a c cosmetic ${channel} refuses with visible reason`, async () => {
+  const f = await startServer({ realEmail: true, senderNumbers: { "clinical-sms": "+12025550102" }, catalogItems: [{ ...E1A_ITEM, offerClass: "cosmetic" }] });
+  try {
+    const response = await sendE1a(f, channel);
+    assert.equal(response.status, 409);
+    assert.equal((await response.json() as any).reason, "Cosmetic-only content is not enabled for this practice.");
+    assert.equal(f.emailVendorCalls.length + f.providerCalls.length, 0); assert.equal(f.provenances.length, 0);
+  } finally { await f.close(); }
+});
+test("E1a d marketing email needs unsubscribe capability while SMS and print retain behavior", async () => {
+  for (const marketingConsent of [false, true]) {
+    const f = await startServer({ realEmail: true, marketingConsent, senderNumbers: { "clinical-sms": "+12025550102" }, catalogItems: [{ ...E1A_ITEM, consentClass: "marketing", offerClass: "eyecare" }] });
+    try {
+      const email = await sendE1a(f, "email");
+      assert.equal(email.status, 409); assert.match((await email.json() as any).reason, /Promotional email requires a working unsubscribe link/);
+      assert.equal(f.emailVendorCalls.length, 0);
+      const sms = await sendE1a(f, "sms");
+      assert.equal(sms.status, marketingConsent ? 200 : 409);
+      assert.equal(f.smsRequests.length, marketingConsent ? 1 : 0);
+      const print = await sendE1a(f, "print");
+      assert.equal(print.status, 200); assert.equal((await print.json() as any).outcome, "print");
+    } finally { await f.close(); }
+  }
+});
+for (const value of [undefined, "", "x", "https://synthetic.invalid/unsubscribe"]) test(`R3 marketing email refuses obsolete configuration value=${value ?? "unset"}`, async () => {
+  const f = await startServer({ realEmail: true, emailUnsubscribeEndpoint: value,
+    emailSettings: { ODOS_COMMS_EMAIL_UNSUBSCRIBE_ENDPOINT: value ?? "" },
+    catalogItems: [{ ...E1A_ITEM, consentClass: "marketing", offerClass: "eyecare" }] });
+  try {
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 409);
+    assert.equal((await response.json() as any).reason, "Promotional email requires a working unsubscribe link, which is not configured yet.");
+    assert.equal(f.emailVendorCalls.length, 0); assert.equal(f.mime.length, 0);
+    assert.equal(f.persistedCommunications.length, 0);
+  } finally { await f.close(); }
+});
+test("R5 unpublished marketing email reports publication refusal first", async () => {
+  const f = await startServer({ realEmail: true, catalogItems: [{ ...E1A_ITEM, channels: ["sms", "print"], consentClass: "marketing", offerClass: "eyecare" }] });
+  try {
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 409);
+    assert.equal((await response.json() as any).error, "Education content is not published for email.");
+    assert.equal(f.emailVendorCalls.length, 0); assert.equal(f.persistedCommunications.length, 0);
+  } finally { await f.close(); }
+});
+test("E1a f real email suppression preserves staff override and preference write ON", async () => {
+  const { replaceCommsPreferenceCells, readCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
+  const f = await startServer({ realEmail: true, catalogItems: [E1A_ITEM] });
+  try {
+    f.patients[0] = replaceCommsPreferenceCells(f.patients[0], [{ purpose: "education", channel: "email", allowed: false }], {
+      setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
+    });
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 200); assert.equal((await response.json() as any).outcome, "sent");
+    assert.equal(f.mime.length, 1);
+    const cell = readCommsPreferenceCells(f.patients[0])[0];
+    assert.equal(cell.allowed, true); assert.equal(cell.surface, "staff-manual-send");
+  } finally { await f.close(); }
+});

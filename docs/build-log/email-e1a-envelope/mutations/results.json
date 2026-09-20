@@ -1,0 +1,626 @@
+[
+  {
+    "guard": "a-subject",
+    "source": "mcp/src/comms/patient-email-envelope.ts",
+    "sourceSha256": "fe408a90fb7113f15958519970c10be9bb52a7c0561a63571d5962632ccae9f6",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a a",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "a-subject-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "a-subject-restored.log"
+    }
+  },
+  {
+    "guard": "a-footer",
+    "source": "mcp/src/comms/adapters/google-workspace-adapter.ts",
+    "sourceSha256": "cf2ec9c07d7bc82b8bbf48ac8eaf00ebc83174b49f1fdb39fea377a6dcfda0d7",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a a|E1a configured neutral",
+      "tests/commsApi.test.ts",
+      "tests/googleWorkspaceAdapter.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "2",
+      "pass": "0",
+      "fail": "2",
+      "skipped": "0",
+      "log": "a-footer-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0",
+      "log": "a-footer-restored.log"
+    }
+  },
+  {
+    "guard": "a-chart-title",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a a",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "a-chart-title-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "a-chart-title-restored.log"
+    }
+  },
+  {
+    "guard": "a-provenance-title",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a a",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "a-provenance-title-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "a-provenance-title-restored.log"
+    }
+  },
+  {
+    "guard": "b-required",
+    "source": "mcp/src/comms/patient-email-envelope.ts",
+    "sourceSha256": "fe408a90fb7113f15958519970c10be9bb52a7c0561a63571d5962632ccae9f6",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a b",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "2",
+      "pass": "0",
+      "fail": "2",
+      "skipped": "0",
+      "log": "b-required-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0",
+      "log": "b-required-restored.log"
+    }
+  },
+  {
+    "guard": "b-unresolved",
+    "source": "mcp/src/comms/patient-email-envelope.ts",
+    "sourceSha256": "fe408a90fb7113f15958519970c10be9bb52a7c0561a63571d5962632ccae9f6",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a envelope refuses missing or unresolved.*[{}]",
+      "tests/googleWorkspaceAdapter.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "3",
+      "pass": "0",
+      "fail": "3",
+      "skipped": "0",
+      "log": "b-unresolved-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "3",
+      "pass": "3",
+      "fail": "0",
+      "skipped": "0",
+      "log": "b-unresolved-restored.log"
+    }
+  },
+  {
+    "guard": "c-cosmetic",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a c|E1a sequence cosmetic",
+      "tests/commsApi.test.ts",
+      "tests/educationDispatchActor.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "4",
+      "pass": "0",
+      "fail": "4",
+      "skipped": "0",
+      "log": "c-cosmetic-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "4",
+      "pass": "4",
+      "fail": "0",
+      "skipped": "0",
+      "log": "c-cosmetic-restored.log"
+    }
+  },
+  {
+    "guard": "d-unsubscribe",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a d|E1a sequence unsubscribe|E1a prepared email",
+      "tests/commsApi.test.ts",
+      "tests/educationDispatchActor.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "3",
+      "pass": "0",
+      "fail": "3",
+      "skipped": "0",
+      "log": "d-unsubscribe-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "3",
+      "pass": "3",
+      "fail": "0",
+      "skipped": "0",
+      "log": "d-unsubscribe-restored.log"
+    }
+  },
+  {
+    "guard": "e-consent-api",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a e.*allowed=true",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "e-consent-api-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "e-consent-api-restored.log"
+    }
+  },
+  {
+    "guard": "e-consent-wrapper",
+    "source": "mcp/src/comms/suppression-gate.ts",
+    "sourceSha256": "3350fbd6dfd30605090d2184c88e10d4add998129403dd6eec77ea9cbd8b1be5",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a email wrapper",
+      "tests/commsSuppression.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "e-consent-wrapper-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "e-consent-wrapper-restored.log"
+    }
+  },
+  {
+    "guard": "e-explicit-off",
+    "source": "mcp/src/comms/suppression-gate.ts",
+    "sourceSha256": "3350fbd6dfd30605090d2184c88e10d4add998129403dd6eec77ea9cbd8b1be5",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a e.*allowed=false",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "e-explicit-off-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "e-explicit-off-restored.log"
+    }
+  },
+  {
+    "guard": "f-override",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a f",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "f-override-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "f-override-restored.log"
+    }
+  },
+  {
+    "guard": "f-write-on",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a f",
+      "tests/commsApi.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "f-write-on-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "f-write-on-restored.log"
+    }
+  },
+  {
+    "guard": "sequence-probe",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a sequence preflight",
+      "tests/educationDispatchActor.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "2",
+      "pass": "0",
+      "fail": "2",
+      "skipped": "0",
+      "log": "sequence-probe-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0",
+      "log": "sequence-probe-restored.log"
+    }
+  },
+  {
+    "guard": "sequence-send",
+    "source": "mcp/src/comms/comms-api.ts",
+    "sourceSha256": "ef282c86d4e380f250df2f163a47c6ccc38831f6cb2f2c7b3e3b76b0565eb52b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a sequence preflight",
+      "tests/educationDispatchActor.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "2",
+      "pass": "0",
+      "fail": "2",
+      "skipped": "0",
+      "log": "sequence-send-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0",
+      "log": "sequence-send-restored.log"
+    }
+  },
+  {
+    "guard": "wrapper-validation",
+    "source": "mcp/src/comms/suppression-gate.ts",
+    "sourceSha256": "3350fbd6dfd30605090d2184c88e10d4add998129403dd6eec77ea9cbd8b1be5",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a b|E1a email wrapper",
+      "tests/commsApi.test.ts",
+      "tests/commsSuppression.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "3",
+      "pass": "0",
+      "fail": "3",
+      "skipped": "0",
+      "log": "wrapper-validation-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "3",
+      "pass": "3",
+      "fail": "0",
+      "skipped": "0",
+      "log": "wrapper-validation-restored.log"
+    }
+  },
+  {
+    "guard": "scheduled-detail",
+    "source": "mcp/src/comms/education-sequence-worker.ts",
+    "sourceSha256": "2b6a569ffdb4177a8e56a8e5d774310a11e25e760f64f4ac42a55659c9e82bc6",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a scheduled",
+      "tests/educationSequenceWorker.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "scheduled-detail-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "scheduled-detail-restored.log"
+    }
+  },
+  {
+    "guard": "catalog-required",
+    "source": "mcp/src/comms/education-catalog.ts",
+    "sourceSha256": "d15ca7fe744069083176a60beab4f281956a4873aa0a85bc5c71cb533902da0b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a catalog|G18|E1a published marketing",
+      "tests/educationCatalog.test.ts",
+      "tests/visionforgeEducationCatalog.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "3",
+      "pass": "0",
+      "fail": "3",
+      "skipped": "0",
+      "log": "catalog-required-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "3",
+      "pass": "3",
+      "fail": "0",
+      "skipped": "0",
+      "log": "catalog-required-restored.log"
+    }
+  },
+  {
+    "guard": "catalog-default",
+    "source": "mcp/src/comms/education-catalog.ts",
+    "sourceSha256": "d15ca7fe744069083176a60beab4f281956a4873aa0a85bc5c71cb533902da0b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a catalog|G18",
+      "tests/educationCatalog.test.ts",
+      "tests/visionforgeEducationCatalog.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "2",
+      "pass": "0",
+      "fail": "2",
+      "skipped": "0",
+      "log": "catalog-default-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "2",
+      "pass": "2",
+      "fail": "0",
+      "skipped": "0",
+      "log": "catalog-default-restored.log"
+    }
+  },
+  {
+    "guard": "catalog-propagation",
+    "source": "mcp/src/comms/education-catalog.ts",
+    "sourceSha256": "d15ca7fe744069083176a60beab4f281956a4873aa0a85bc5c71cb533902da0b",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=E1a published cosmetic",
+      "tests/visionforgeEducationCatalog.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "catalog-propagation-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "catalog-propagation-restored.log"
+    }
+  },
+  {
+    "guard": "ui-disclosure",
+    "source": "ui/src/components/comms/EngageSheet.tsx",
+    "sourceSha256": "58b08a9a9ca60c1fbc934fe71e191bfbae24839ab632ce2d2502895d6f25e158",
+    "command": [
+      "node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=E1a education email disclosure",
+      "tests/engageCommunicationPreferences.test.tsx"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "ui-disclosure-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "ui-disclosure-restored.log"
+    }
+  },
+  {
+    "guard": "write-inventory",
+    "source": "scripts/fhir-read-grant-check.ts",
+    "sourceSha256": "bfc702365de27eb014dac654f8d0d327f2f9dc7b81c3f5da30f59988eb9051b6",
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--test-name-pattern=FHIR read grant CLI passes",
+      "../tests/preflight/fhir-read-grant-check.test.ts"
+    ],
+    "broken": {
+      "exit": 1,
+      "tests": "1",
+      "pass": "0",
+      "fail": "1",
+      "skipped": "0",
+      "log": "write-inventory-broken.log"
+    },
+    "restored": {
+      "exit": 0,
+      "tests": "1",
+      "pass": "1",
+      "fail": "0",
+      "skipped": "0",
+      "log": "write-inventory-restored.log"
+    }
+  }
+]

@@ -1,0 +1,46 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a e email wrapper", "tests/commsSuppression.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a e email wrapper tests/commsSuppression.test.ts
+
+TAP version 13
+# Subtest: E1a e email wrapper retains envelope validation and marketing preference allowed=true
+not ok 1 - E1a e email wrapper retains envelope validation and marketing preference allowed=true
+  ---
+  duration_ms: 3.492416
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsSuppression.test.ts:1:36067'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'suppressed'
+    - 'sent'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'sent'
+  actual: 'suppressed'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsSuppression.test.ts:1239:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1a e email wrapper retains envelope validation and marketing preference allowed=false
+ok 2 - E1a e email wrapper retains envelope validation and marketing preference allowed=false
+  ---
+  duration_ms: 0.705084
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 183.729459

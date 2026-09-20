@@ -1,0 +1,76 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a a|E1a configured neutral", "tests/commsApi.test.ts", "tests/googleWorkspaceAdapter.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a a|E1a configured neutral tests/commsApi.test.ts tests/googleWorkspaceAdapter.test.ts
+
+TAP version 13
+# Subtest: E1a a neutral MIME envelope keeps the item title on the chart
+not ok 1 - E1a a neutral MIME envelope keeps the item title on the chart
+  ---
+  duration_ms: 66.632916
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:1:101980'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(f.mime[0].endsWith("Synthetic Eye Care\n100 Example Street, Test City, NY 10001\n+12025550101\nEmail is not a secure method of communication. Please do not send sensitive medical information by email. Call +12025550101 for anything private or urgent."))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:2855:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1a configured neutral subject and mandatory footer replace author envelope for reminders and education
+not ok 2 - E1a configured neutral subject and mandatory footer replace author envelope for reminders and education
+  ---
+  duration_ms: 10.410791
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/googleWorkspaceAdapter.test.ts:1:5611'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Author body\n\nSynthetic Practice/. Input:
+
+    'From: info@synthetic-practice.example\r\n' +
+      'To: patient@example.test\r\n' +
+      'Subject: A message from your practice\r\n' +
+      'MIME-Version: 1.0\r\n' +
+      'Content-Type: text/plain; charset="UTF-8"\r\n' +
+      'Content-Transfer-Encoding: 8bit\r\n' +
+      '\r\n' +
+      'Author body'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    From: info@synthetic-practice.example
+    To: patient@example.test
+    Subject: A message from your practice
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: 8bit
+
+    Author body
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/googleWorkspaceAdapter.test.ts:169:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 531.475791

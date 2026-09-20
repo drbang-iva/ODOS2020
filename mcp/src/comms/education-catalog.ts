@@ -13,12 +13,17 @@ const educationItemSchema = z.object({
   channels: z.array(z.enum(["sms", "email", "print"])).min(1),
   laneHint: z.enum(["clinical", "retail"]),
   consentClass: z.enum(["transactional", "marketing"]),
+  offerClass: z.enum(["eyecare", "cosmetic"]).optional(),
   urls: z.object({
     web: z.string().url().optional(),
     email: z.string().url().optional(),
     print: z.string().url().optional(),
   }).strict(),
-}).strict();
+}).strict().superRefine((item, context) => {
+  if (item.consentClass === "marketing" && item.offerClass === undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["offerClass"], message: "Marketing content requires an explicit offerClass." });
+  }
+}).transform(item => ({ ...item, offerClass: item.offerClass ?? "eyecare" }));
 
 const educationCatalogManifestSchema = z.object({
   status: z.literal("seed-placeholder-only"),
@@ -107,9 +112,9 @@ const educationCatalogLedgerSchema = z.object({
   }
 });
 
-export type EducationContentItem = z.infer<typeof educationItemSchema>;
+export type EducationContentItem = z.input<typeof educationItemSchema>;
 export { educationItemSchema };
-export type EducationCatalogManifest = z.infer<typeof educationCatalogManifestSchema>;
+export type EducationCatalogManifest = z.input<typeof educationCatalogManifestSchema>;
 export type EducationCatalogLedger = z.infer<typeof educationCatalogLedgerSchema>;
 
 export interface EducationCatalogReader {

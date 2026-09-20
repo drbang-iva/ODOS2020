@@ -44,7 +44,14 @@ const envelopeSchema = z.object({
   origins: z.object({ education: z.string().url() }).passthrough(), asOf: timestamp.nullable(),
   entries: z.array(entrySchema).max(1000),
 }).passthrough();
-const localCopySchema = z.array(entrySchema.extend({ absentUpstream: z.boolean(), asOf: timestamp.nullable() }));
+// Only persisted pre-classification items inherit their historical eyecare meaning.
+const storedItemSchema = z.preprocess(item => {
+  if (typeof item === "object" && item !== null && !Array.isArray(item) && !("offerClass" in item)) {
+    return { ...item, offerClass: "eyecare" };
+  }
+  return item;
+}, educationItemSchema);
+const localCopySchema = z.array(entrySchema.extend({ item: storedItemSchema, absentUpstream: z.boolean(), asOf: timestamp.nullable() }));
 const key = (entry: Pick<LocalEducationCatalogEntry, "item">) => `${entry.item.id}@${entry.item.version}`;
 const effectiveLifecycle = (entry: LocalEducationCatalogEntry) => entry.lifecycle.state === "withdrawn"
   ? "withdrawn" : entry.absentUpstream ? "retained" : entry.lifecycle.state;
@@ -99,9 +106,9 @@ export function createVisionForgeEducationCatalogReader(
     try {
       const row = await store.load(config.practiceId);
       if (row) {
-        localCopySchema.parse(row.localCopy);
+        const localCopy = localCopySchema.parse(row.localCopy);
         if (row.practiceId !== config.practiceId) throw new Error("Stored practice mismatch");
-        snapshot = structuredClone(row);
+        snapshot = { ...structuredClone(row), localCopy };
         attempt = { lastAttemptAt: row.lastAttemptAt, lastAttemptOutcome: row.lastAttemptOutcome, lastRefusalCode: row.lastRefusalCode };
         baseline = "loaded";
       } else {

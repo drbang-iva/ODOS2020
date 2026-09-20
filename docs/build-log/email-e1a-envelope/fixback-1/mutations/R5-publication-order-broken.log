@@ -1,0 +1,40 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=R5 ", "tests/commsApi.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=R5  tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: R5 unpublished marketing email reports publication refusal first
+not ok 1 - R5 unpublished marketing email reports publication refusal first
+  ---
+  duration_ms: 44.395083
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:1:105683'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'Education content is not published for email.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Education content is not published for email.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:2914:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 425.503834

@@ -1,0 +1,38 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a scheduled", "tests/educationSequenceWorker.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a scheduled tests/educationSequenceWorker.test.ts
+
+TAP version 13
+# Subtest: E1a scheduled classification hold preserves the staff-visible reason without sending
+not ok 1 - E1a scheduled classification hold preserves the staff-visible reason without sending
+  ---
+  duration_ms: 16.078208
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/educationSequenceWorker.test.ts:1:21333'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+
+      assert.ok(f.items.every(item => item.reason === "Cosmetic-only content is not enabled for this practice."))
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/educationSequenceWorker.test.ts:302:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 489.811959

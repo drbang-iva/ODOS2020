@@ -1,0 +1,177 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: C0 accepted through real HTTP; active picker and pinned retained/withdrawn split
+ok 1 - C0 accepted through real HTTP; active picker and pinned retained/withdrawn split
+  ---
+  duration_ms: 68.542792
+  type: 'test'
+  ...
+# Subtest: refusal contract-version-unsupported preserves the entire last-good row and served copy
+ok 2 - refusal contract-version-unsupported preserves the entire last-good row and served copy
+  ---
+  duration_ms: 49.573917
+  type: 'test'
+  ...
+# Subtest: refusal practice-mismatch preserves the entire last-good row and served copy
+ok 3 - refusal practice-mismatch preserves the entire last-good row and served copy
+  ---
+  duration_ms: 31.503459
+  type: 'test'
+  ...
+# Subtest: refusal entry-invalid preserves the entire last-good row and served copy
+ok 4 - refusal entry-invalid preserves the entire last-good row and served copy
+  ---
+  duration_ms: 27.982625
+  type: 'test'
+  ...
+# Subtest: refusal dx-code-unverified preserves the entire last-good row and served copy
+ok 5 - refusal dx-code-unverified preserves the entire last-good row and served copy
+  ---
+  duration_ms: 26.504292
+  type: 'test'
+  ...
+# Subtest: refusal url-origin-mismatch preserves the entire last-good row and served copy
+ok 6 - refusal url-origin-mismatch preserves the entire last-good row and served copy
+  ---
+  duration_ms: 23.509834
+  type: 'test'
+  ...
+# Subtest: refusal catalog-emptied preserves the entire last-good row and served copy
+ok 7 - refusal catalog-emptied preserves the entire last-good row and served copy
+  ---
+  duration_ms: 22.71475
+  type: 'test'
+  ...
+# Subtest: refusal meaning-changed preserves the entire last-good row and served copy
+ok 8 - refusal meaning-changed preserves the entire last-good row and served copy
+  ---
+  duration_ms: 22.431042
+  type: 'test'
+  ...
+# Subtest: refusal lifecycle-regressed preserves the entire last-good row and served copy
+ok 9 - refusal lifecycle-regressed preserves the entire last-good row and served copy
+  ---
+  duration_ms: 29.4605
+  type: 'test'
+  ...
+# Subtest: G2 G20 C0 absence carries forward as retained across restart and normal reappearance
+ok 10 - G2 G20 C0 absence carries forward as retained across restart and normal reappearance
+  ---
+  duration_ms: 29.9075
+  type: 'test'
+  ...
+# Subtest: G12 restart with upstream unreachable serves persisted copy and preserves withdrawal
+ok 11 - G12 restart with upstream unreachable serves persisted copy and preserves withdrawal
+  ---
+  duration_ms: 20.58725
+  type: 'test'
+  ...
+# Subtest: G24 failed boot and failed retry cannot replace an unread withdrawn baseline
+ok 12 - G24 failed boot and failed retry cannot replace an unread withdrawn baseline
+  ---
+  duration_ms: 29.342125
+  type: 'test'
+  ...
+# A–I: boot unavailable; retry storage-unavailable; no writes; withdrawn not offered; history retained; persisted 3; recovered and healthy controls lifecycle-regressed/withdrawn
+# Subtest: G13 captured 304 preserves snapshot and records not-modified
+ok 13 - G13 captured 304 preserves snapshot and records not-modified
+  ---
+  duration_ms: 24.59075
+  type: 'test'
+  ...
+# Subtest: G23 redirected seam never forwards the bearer to the target
+ok 14 - G23 redirected seam never forwards the bearer to the target
+  ---
+  duration_ms: 21.319041
+  type: 'test'
+  ...
+# Subtest: G17 concurrent refreshes coalesce into one HTTP request
+ok 15 - G17 concurrent refreshes coalesce into one HTTP request
+  ---
+  duration_ms: 69.246625
+  type: 'test'
+  ...
+# Subtest: foreign-practice 401 and practice-mismatch store nothing without an accepted copy
+ok 16 - foreign-practice 401 and practice-mismatch store nothing without an accepted copy
+  ---
+  duration_ms: 20.292125
+  type: 'test'
+  ...
+# Subtest: transport http-503 keeps last-good
+ok 17 - transport http-503 keeps last-good
+  ---
+  duration_ms: 21.058041
+  type: 'test'
+  ...
+# Subtest: transport not-json keeps last-good
+ok 18 - transport not-json keeps last-good
+  ---
+  duration_ms: 20.348833
+  type: 'test'
+  ...
+# Subtest: transport timeout keeps last-good
+ok 19 - transport timeout keeps last-good
+  ---
+  duration_ms: 10030.856375
+  type: 'test'
+  ...
+# Subtest: G14 seed only for entirely unset configuration; invalid/partial configuration fails closed without secrets
+ok 20 - G14 seed only for entirely unset configuration; invalid/partial configuration fails closed without secrets
+  ---
+  duration_ms: 1.224125
+  type: 'test'
+  ...
+# Subtest: G22 HTTPS is required except literal IPv4 and IPv6 loopback
+ok 21 - G22 HTTPS is required except literal IPv4 and IPv6 loopback
+  ---
+  duration_ms: 0.98825
+  type: 'test'
+  ...
+# Subtest: G15 configured status contains neither credential nor base URL
+ok 22 - G15 configured status contains neither credential nor base URL
+  ---
+  duration_ms: 33.687833
+  type: 'test'
+  ...
+# Subtest: G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+ok 23 - G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+  ---
+  duration_ms: 0.740916
+  type: 'test'
+  ...
+# Subtest: E1a published marketing without classification is refused without replacing last good content
+ok 24 - E1a published marketing without classification is refused without replacing last good content
+  ---
+  duration_ms: 29.553833
+  type: 'test'
+  ...
+# Subtest: E1a published eyecare classification survives persistence and restart
+ok 25 - E1a published eyecare classification survives persistence and restart
+  ---
+  duration_ms: 25.264791
+  type: 'test'
+  ...
+# Subtest: E1a published cosmetic classification survives persistence and restart
+ok 26 - E1a published cosmetic classification survives persistence and restart
+  ---
+  duration_ms: 26.020792
+  type: 'test'
+  ...
+# Subtest: G19 plan-set and protocol defaults remain the seed placeholder reader
+ok 27 - G19 plan-set and protocol defaults remain the seed placeholder reader
+  ---
+  duration_ms: 0.834292
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10902.723208

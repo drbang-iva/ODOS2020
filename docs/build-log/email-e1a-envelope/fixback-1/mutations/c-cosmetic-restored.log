@@ -1,0 +1,40 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a c|E1a sequence cosmetic", "tests/commsApi.test.ts", "tests/educationDispatchActor.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a c|E1a sequence cosmetic tests/commsApi.test.ts tests/educationDispatchActor.test.ts
+
+TAP version 13
+# Subtest: E1a c cosmetic email refuses with visible reason
+ok 1 - E1a c cosmetic email refuses with visible reason
+  ---
+  duration_ms: 46.899208
+  type: 'test'
+  ...
+# Subtest: E1a c cosmetic sms refuses with visible reason
+ok 2 - E1a c cosmetic sms refuses with visible reason
+  ---
+  duration_ms: 59.843458
+  type: 'test'
+  ...
+# Subtest: E1a c cosmetic print refuses with visible reason
+ok 3 - E1a c cosmetic print refuses with visible reason
+  ---
+  duration_ms: 35.520959
+  type: 'test'
+  ...
+# Subtest: E1a sequence cosmetic hold names the capability before provider access
+ok 4 - E1a sequence cosmetic hold names the capability before provider access
+  ---
+  duration_ms: 0.760042
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 798.731625

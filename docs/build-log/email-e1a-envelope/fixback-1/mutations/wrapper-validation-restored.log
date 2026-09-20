@@ -1,0 +1,40 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a b|E1a e email wrapper", "tests/commsApi.test.ts", "tests/commsSuppression.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a b|E1a e email wrapper tests/commsApi.test.ts tests/commsSuppression.test.ts
+
+TAP version 13
+# Subtest: E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+ok 1 - E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+  ---
+  duration_ms: 92.677375
+  type: 'test'
+  ...
+# Subtest: E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+ok 2 - E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+  ---
+  duration_ms: 67.149792
+  type: 'test'
+  ...
+# Subtest: E1a e email wrapper retains envelope validation and marketing preference allowed=true
+ok 3 - E1a e email wrapper retains envelope validation and marketing preference allowed=true
+  ---
+  duration_ms: 9.807792
+  type: 'test'
+  ...
+# Subtest: E1a e email wrapper retains envelope validation and marketing preference allowed=false
+ok 4 - E1a e email wrapper retains envelope validation and marketing preference allowed=false
+  ---
+  duration_ms: 0.577
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 690.142375

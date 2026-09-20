@@ -1,0 +1,209 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: E1a a neutral MIME envelope keeps the item title on the chart
+not ok 1 - E1a a neutral MIME envelope keeps the item title on the chart
+  ---
+  duration_ms: 66.217208
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:101907'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /^Subject: Information from Synthetic Eye Care\r$/m. Input:
+
+    'From: care@synthetic.example\r\n' +
+      'To: patient@example.test\r\n' +
+      'Subject: Synthetic condition handout\r\n' +
+      'MIME-Version: 1.0\r\n' +
+      'Content-Type: text/plain; charset="UTF-8"\r\n' +
+      'Content-Transfer-Encoding: 8bit\r\n' +
+      '\r\n' +
+      'https://education.invalid/synthetic/email'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    From: care@synthetic.example
+    To: patient@example.test
+    Subject: Synthetic condition handout
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: 8bit
+
+    https://education.invalid/synthetic/email
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2853:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+not ok 2 - E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+  ---
+  duration_ms: 39.804333
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:102860'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2864:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+not ok 3 - E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+  ---
+  duration_ms: 38.453208
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:102860'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2864:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a c cosmetic email refuses with visible reason
+not ok 4 - E1a c cosmetic email refuses with visible reason
+  ---
+  duration_ms: 44.429167
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:103350'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2873:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a c cosmetic sms refuses with visible reason
+not ok 5 - E1a c cosmetic sms refuses with visible reason
+  ---
+  duration_ms: 15.167166
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:103350'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'Cosmetic-only content is not enabled for this practice.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Cosmetic-only content is not enabled for this practice.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2874:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a c cosmetic print refuses with visible reason
+not ok 6 - E1a c cosmetic print refuses with visible reason
+  ---
+  duration_ms: 18.101667
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:103350'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2873:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a d marketing email needs unsubscribe capability while SMS and print retain behavior
+not ok 7 - E1a d marketing email needs unsubscribe capability while SMS and print retain behavior
+  ---
+  duration_ms: 35.193333
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:1:103826'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020/mcp/tests/commsApi.test.ts:2883:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a e email marketing needs no recorded consent and honors explicit preference allowed=true
+ok 8 - E1a e email marketing needs no recorded consent and honors explicit preference allowed=true
+  ---
+  duration_ms: 24.317666
+  type: 'test'
+  ...
+# Subtest: E1a e email marketing needs no recorded consent and honors explicit preference allowed=false
+ok 9 - E1a e email marketing needs no recorded consent and honors explicit preference allowed=false
+  ---
+  duration_ms: 13.827625
+  type: 'test'
+  ...
+# Subtest: E1a f real email suppression preserves staff override and preference write ON
+ok 10 - E1a f real email suppression preserves staff override and preference write ON
+  ---
+  duration_ms: 30.450167
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 3
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 685.28725

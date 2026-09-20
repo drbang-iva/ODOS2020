@@ -1,0 +1,64 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a a", "tests/commsApi.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a a tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: E1a a neutral MIME envelope keeps the item title on the chart
+not ok 1 - E1a a neutral MIME envelope keeps the item title on the chart
+  ---
+  duration_ms: 51.182833
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:1:101985'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /^Subject: Information from Synthetic Eye Care\r$/m. Input:
+
+    'From: care@synthetic.example\r\n' +
+      'To: patient@example.test\r\n' +
+      'Subject: Synthetic condition handout\r\n' +
+      'MIME-Version: 1.0\r\n' +
+      'Content-Type: text/plain; charset="UTF-8"\r\n' +
+      'Content-Transfer-Encoding: 8bit\r\n' +
+      '\r\n' +
+      'https://education.invalid/synthetic/email\n' +
+      '\n' +
+      'Synthetic Eye Care\n' +
+      '100 Example Street, Test City, NY 10001\n' +
+      '+12025550101\n' +
+      'Email is not a secure method of communication. Please do not send sensitive medical information by email. Call +12025550101 for anything private or urgent.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    From: care@synthetic.example
+    To: patient@example.test
+    Subject: Synthetic condition handout
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: 8bit
+
+    https://education.invalid/synthetic/email
+
+    Synthetic Eye Care
+    100 Example Street, Test City, NY 10001
+    +12025550101
+    Email is not a secure method of communication. Please do not send sensitive medical information by email. Call +12025550101 for anything private or urgent.
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:2855:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 526.007625

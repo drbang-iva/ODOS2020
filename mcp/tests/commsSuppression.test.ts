@@ -1220,3 +1220,23 @@ test("J8: unmarked SMS and voice retain sms then mobile then first-active orderi
 test("J9: imported sms still outranks unmarked mobile", () => {
   assert.equal(resolveSmsNumber(patient({ telecom: [currentMobile, { system: "sms", value: "+12025550103" }] }), TEXTABLE_NOW), "+12025550103");
 });
+
+
+// Marketing dispatch is disabled until E1c; this lower-boundary guard retains the unchanged preference contract.
+for (const allowed of [true, false]) test(`E1a e email wrapper retains envelope validation and marketing preference allowed=${allowed}`, async () => {
+  const { replaceCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
+    const sent: SendEmailRequest[] = [];
+    let validations = 0;
+    const subject = allowed ? patient() : replaceCommsPreferenceCells(patient(), [{ purpose: "marketing-promo", channel: "email", allowed: false }], {
+      setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
+    });
+    const provider = createSuppressedCommsProvider({ ...fakeProvider(sent), validateEmailConfiguration: () => { validations++; } }, {
+      fhir: fhirFor(subject), practiceTimeZone: "UTC", now: () => new Date("2026-08-02T15:00:00Z"),
+    });
+    provider.validateEmailConfiguration!();
+    assert.equal(validations, 1);
+    const result = await sendEmail(provider, baseRequest({ campaignType: "clinical-education", suppression: { consentClass: "marketing", requiresMarketingConsent: true, staffEducationOverride: true } }));
+    assert.equal(result.outcome, allowed ? "sent" : "suppressed");
+    if (result.outcome === "suppressed") assert.equal(result.reason, "preference-withheld");
+    assert.equal(sent.length, allowed ? 1 : 0);
+});

@@ -1,0 +1,14 @@
+ok 1758 - P2 a late previous-encounter response cannot replace the new encounter's Wearing values
+  ---
+  duration_ms: 28.921917
+  type: 'test'
+  ...
+1..1758
+# tests 1771
+# suites 0
+# pass 1771
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 215294.348625

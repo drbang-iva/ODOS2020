@@ -1,0 +1,32 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=legacy frozen marketing email receipt", "tests/educationDispatchActor.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=legacy frozen marketing email receipt tests/educationDispatchActor.test.ts
+
+TAP version 13
+# Subtest: legacy frozen marketing email receipt still reconciles without a new send
+not ok 1 - legacy frozen marketing email receipt still reconciles without a new send
+  ---
+  duration_ms: 2.225375
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/educationDispatchActor.test.ts:1:17040'
+  failureType: 'testCodeFailure'
+  error: 'Promotional email requires a working unsubscribe link, which is not configured yet.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertEducationOfferEnabled (/private/tmp/odos-email-e1a-fixback-proof/mcp/src/comms/comms-api.ts:1108:11)
+    dispatchEducationInternal (/private/tmp/odos-email-e1a-fixback-proof/mcp/src/comms/comms-api.ts:1248:7)
+    async TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/educationDispatchActor.test.ts:303:20)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 340.771959

@@ -1,0 +1,28 @@
+{
+  "testedCodeHead": "b2d706a1b3286e44edf5be29596e739a4602e8da",
+  "files": {
+    ".env.example": "a443af2a1964eaa840f036dde01ccd72fcf530202f3c222b67a640258b7c396d",
+    "data/education-catalog.json": "500d9037d097b0e8098aac2a31393691e72729faabab9b54a9813771be5b5f53",
+    "mcp/src/comms/adapters/google-workspace-adapter.ts": "cf2ec9c07d7bc82b8bbf48ac8eaf00ebc83174b49f1fdb39fea377a6dcfda0d7",
+    "mcp/src/comms/comms-api.ts": "edd30103c00f9f2ec090d7d41ecdd827e39dc5ac92664d7f5853034cb9001c7c",
+    "mcp/src/comms/comms-config.ts": "5a4fea07071f86256749ba48af5cdcc506f6ac083d6899898a70bde16a3e412d",
+    "mcp/src/comms/comms-provider.ts": "7d667be6d1d2a01d2d0c2c2198965567f388b9bdf65ac26a0e5997ed690ee583",
+    "mcp/src/comms/education-catalog.ts": "d15ca7fe744069083176a60beab4f281956a4873aa0a85bc5c71cb533902da0b",
+    "mcp/src/comms/education-sequence-worker.ts": "2b6a569ffdb4177a8e56a8e5d774310a11e25e760f64f4ac42a55659c9e82bc6",
+    "mcp/src/comms/patient-email-envelope.ts": "fe408a90fb7113f15958519970c10be9bb52a7c0561a63571d5962632ccae9f6",
+    "mcp/src/comms/suppression-gate.ts": "3350fbd6dfd30605090d2184c88e10d4add998129403dd6eec77ea9cbd8b1be5",
+    "mcp/src/comms/visionforge-education-catalog.ts": "ff71956e3fee9af44df8ac8540fb8552d1f97ea00a36a74937aa63150813f7ff",
+    "mcp/src/index.ts": "30488e9223df34fc28b2ac04c0f90c7348505e1668d92b6bc01e71f52c2cb50d",
+    "mcp/tests/commsApi.test.ts": "5f1c072bee19cf0fb94ab97a05c42245af8bc855601ca7d19a44d57e31383e67",
+    "mcp/tests/commsConfig.test.ts": "bcfdc7652cb9f2bb8ce4f69b66bf029795ea71f29f7741fe4a2d34cc44f7c743",
+    "mcp/tests/commsSuppression.test.ts": "fc401b5987de881618a3f4d0481b0859059ac092088800a31fde7091b2f08ad5",
+    "mcp/tests/educationCatalog.test.ts": "61f1b163dbfe6db97a1d4c43c21e2f243ee5e45a701bd5ce6c5a4193f1c99ed5",
+    "mcp/tests/educationDispatchActor.test.ts": "63606f6a412e9511b39faeeb3d2d096a77e43a36a9ab9532962fa28b929feb83",
+    "mcp/tests/educationSequenceWorker.test.ts": "e8c7fb8367bbef4abb02fb0234f7c979dd3ff6c8958899f331608a2a7545f967",
+    "mcp/tests/googleWorkspaceAdapter.test.ts": "9408f933843ac4646a5b8be0407441c3d9ed353fed8ccc05d7a562484d286898",
+    "mcp/tests/visionforgeEducationCatalog.test.ts": "e2ffdbb99992a382c1f9206ed0648f4f4347d482aa7d918775d00409febd5769",
+    "scripts/fhir-read-grant-check.ts": "e5fc56d902da4e9ee334e50eccfd9b12ba30eff3c9e2e9a9a65b60d8e08fbeea",
+    "ui/src/components/comms/EngageSheet.tsx": "58b08a9a9ca60c1fbc934fe71e191bfbae24839ab632ce2d2502895d6f25e158",
+    "ui/tests/engageCommunicationPreferences.test.tsx": "ed97e9c5db5ff1a48e40e7fd68fa4f0f606e3adb56c4537b4a56ff1f456e9a15"
+  }
+}

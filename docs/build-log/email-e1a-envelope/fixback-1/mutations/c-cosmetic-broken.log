@@ -1,0 +1,107 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a c|E1a sequence cosmetic", "tests/commsApi.test.ts", "tests/educationDispatchActor.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a c|E1a sequence cosmetic tests/commsApi.test.ts tests/educationDispatchActor.test.ts
+
+TAP version 13
+# Subtest: E1a c cosmetic email refuses with visible reason
+not ok 1 - E1a c cosmetic email refuses with visible reason
+  ---
+  duration_ms: 93.518416
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:1:103598'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:2877:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1a c cosmetic sms refuses with visible reason
+not ok 2 - E1a c cosmetic sms refuses with visible reason
+  ---
+  duration_ms: 32.098833
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:1:103598'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:2877:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a c cosmetic print refuses with visible reason
+not ok 3 - E1a c cosmetic print refuses with visible reason
+  ---
+  duration_ms: 21.335041
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:1:103598'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/commsApi.test.ts:2877:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E1a sequence cosmetic hold names the capability before provider access
+not ok 4 - E1a sequence cosmetic hold names the capability before provider access
+  ---
+  duration_ms: 2.538917
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/educationDispatchActor.test.ts:1:15297'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'ready' !== 'held'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'held'
+  actual: 'ready'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/educationDispatchActor.test.ts:275:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 866.285709

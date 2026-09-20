@@ -380,6 +380,7 @@ export function EngageSheet({
         {pending && (
           <section className="grid gap-3 rounded border border-[color:var(--odos-accent-border)] p-4" aria-label="Education send confirmation">
             <h3 className="font-semibold">Confirm {pending.channel} · {pending.item.title}</h3>
+            {pending.educationEmailWithheld && <p className="text-sm text-[color:var(--odos-amber)]">Education email is off for this patient. Sending will turn it back on.</p>}
             {pending.channel === "sms" && chartDispatchLane !== "locked_clinical" && (
               <label className="grid gap-1 text-sm">
                 Send via lane

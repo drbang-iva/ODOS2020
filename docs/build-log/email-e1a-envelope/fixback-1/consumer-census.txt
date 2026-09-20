@@ -1,0 +1,31 @@
+data/education-catalog.json:77:      "offerClass": "eyecare",
+data/education-catalog.json:124:      "offerClass": "eyecare",
+mcp/src/index.ts:131:import { createEducationCatalogFromEnv } from "./comms/visionforge-education-catalog.js";
+mcp/src/index.ts:5809:  const educationCatalog = createEducationCatalogFromEnv(process.env);
+mcp/src/index.ts:5810:  await educationCatalog.ready();
+mcp/src/index.ts:8633:          void educationCatalog.refresh();
+mcp/src/clinical-graph/protocol-endpoint.ts:7:import { loadDefaultEducationCatalogReader, type EducationCatalogReader } from "../comms/education-catalog.js";
+mcp/src/clinical-graph/protocol-endpoint.ts:1154:    ? (catalog ?? loadDefaultEducationCatalogReader()).get(String(action.payload.assetRef ?? "")) : undefined;
+mcp/src/clinical-graph/plan-sets/generator.ts:2:import { loadDefaultEducationCatalogReader, type EducationCatalogReader } from '../../comms/education-catalog.js';
+mcp/src/clinical-graph/plan-sets/generator.ts:7:export function buildPlanSetProtocols(specs: readonly PlanSetSpec[], orderableKeys: ReadonlySet<string>, catalog: EducationCatalogReader = loadDefaultEducationCatalogReader()): { protocols: ProtocolDefinition[]; hidden: HiddenPlanSetItem[] } {
+mcp/src/comms/comms-api.ts:87:  educationCatalog: EducationCatalogLifecycleReader;
+mcp/src/comms/comms-api.ts:180:      const items = deps.educationCatalog.list().filter((item) =>
+mcp/src/comms/comms-api.ts:259:        const item = deps.educationCatalog.get(send.educationId, send.version);
+mcp/src/comms/comms-api.ts:434:        const item = deps.educationCatalog.getForNewWork(send.educationId, send.version);
+mcp/src/comms/comms-api.ts:522:      const item = deps.educationCatalog.get(id, version);
+mcp/src/comms/comms-api.ts:926:      ? deps.educationCatalog.getForNewWork(step.content.id, step.content.version)
+mcp/src/comms/comms-api.ts:927:      : deps.educationCatalog.get(step.content.id, step.content.version);
+mcp/src/comms/comms-api.ts:1075:    ? deps.educationCatalog.getForNewWork(body.educationId, body.version)
+mcp/src/comms/comms-api.ts:1076:    : deps.educationCatalog.get(body.educationId, body.version);
+mcp/src/comms/comms-api.ts:1104:  if (item.offerClass === "cosmetic") {
+mcp/src/comms/comms-api.ts:1262:    if (!deps.educationCatalog.get(body.educationId, body.version)) {
+mcp/src/comms/education-catalog.ts:16:  offerClass: z.enum(["eyecare", "cosmetic"]).optional(),
+mcp/src/comms/education-catalog.ts:23:  if (item.consentClass === "marketing" && item.offerClass === undefined) {
+mcp/src/comms/education-catalog.ts:24:    context.addIssue({ code: z.ZodIssueCode.custom, path: ["offerClass"], message: "Marketing content requires an explicit offerClass." });
+mcp/src/comms/education-catalog.ts:26:}).transform(item => ({ ...item, offerClass: item.offerClass ?? "eyecare" }));
+mcp/src/comms/education-catalog.ts:186:export function loadDefaultEducationCatalogReader(): EducationCatalogReader {
+mcp/src/comms/visionforge-education-catalog.ts:4:  educationItemSchema, loadDefaultEducationCatalogLedger, loadDefaultEducationCatalogReader,
+mcp/src/comms/visionforge-education-catalog.ts:49:  if (typeof item === "object" && item !== null && !Array.isArray(item) && !("offerClass" in item)) {
+mcp/src/comms/visionforge-education-catalog.ts:50:    return { ...item, offerClass: "eyecare" };
+mcp/src/comms/visionforge-education-catalog.ts:65:export function createEducationCatalogFromEnv(
+mcp/src/comms/visionforge-education-catalog.ts:71:    const reader = withSeedLifecycle(loadDefaultEducationCatalogReader());

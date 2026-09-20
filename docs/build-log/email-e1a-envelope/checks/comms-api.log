@@ -1,0 +1,724 @@
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: communications RBAC gives front desk patient content without widening its FHIR scope
+ok 1 - communications RBAC gives front desk patient content without widening its FHIR scope
+  ---
+  duration_ms: 0.857167
+  type: 'test'
+  ...
+# Subtest: SMS opt-out management is held only by the front-desk staff role
+ok 2 - SMS opt-out management is held only by the front-desk staff role
+  ---
+  duration_ms: 0.326541
+  type: 'test'
+  ...
+# Subtest: a multi-role caller cannot attribute opt-out management to a held role that lacks the action
+ok 3 - a multi-role caller cannot attribute opt-out management to a held role that lacks the action
+  ---
+  duration_ms: 29.612167
+  type: 'test'
+  ...
+# Subtest: a membership-only communications grant cites the membership instead of an unrelated AccessPolicy
+ok 4 - a membership-only communications grant cites the membership instead of an unrelated AccessPolicy
+  ---
+  duration_ms: 5.249833
+  type: 'test'
+  ...
+# Subtest: FHIR policy construction preserves a declared hidden-field mask
+ok 5 - FHIR policy construction preserves a declared hidden-field mask
+  ---
+  duration_ms: 0.078458
+  type: 'test'
+  ...
+# Subtest: every communications endpoint rejects missing authentication and audits every authenticated wrong-role denial
+ok 6 - every communications endpoint rejects missing authentication and audits every authenticated wrong-role denial
+  ---
+  duration_ms: 14.772916
+  type: 'test'
+  ...
+# Subtest: education list filters by diagnosis and channel while excluding internal content
+ok 7 - education list filters by diagnosis and channel while excluding internal content
+  ---
+  duration_ms: 4.000791
+  type: 'test'
+  ...
+# Subtest: education list reports dispatchability from the same per-role configuration enforced at send time
+ok 8 - education list reports dispatchability from the same per-role configuration enforced at send time
+  ---
+  duration_ms: 1.472416
+  type: 'test'
+  ...
+# Subtest: education detail returns newest or exact pinned version and never exposes internal content
+ok 9 - education detail returns newest or exact pinned version and never exposes internal content
+  ---
+  duration_ms: 3.356542
+  type: 'test'
+  ...
+# Subtest: education dispatch refuses marketing content when recorded patient consent is absent
+ok 10 - education dispatch refuses marketing content when recorded patient consent is absent
+  ---
+  duration_ms: 2.566541
+  type: 'test'
+  ...
+# Subtest: only transactional staff chart education receives the quiet-hours exemption
+ok 11 - only transactional staff chart education receives the quiet-hours exemption
+  ---
+  duration_ms: 3.560833
+  type: 'test'
+  ...
+# Subtest: clinical education SMS uses the clinical lane, one tracked link, durable send state, and send provenance
+ok 12 - clinical education SMS uses the clinical lane, one tracked link, durable send state, and send provenance
+  ---
+  duration_ms: 3.1325
+  type: 'test'
+  ...
+# Subtest: education print returns the published print artifact without rendering a PDF and records provenance
+ok 13 - education print returns the published print artifact without rendering a PDF and records provenance
+  ---
+  duration_ms: 1.919083
+  type: 'test'
+  ...
+# Subtest: education email sends the published email artifact to the recorded address
+ok 14 - education email sends the published email artifact to the recorded address
+  ---
+  duration_ms: 3.331333
+  type: 'test'
+  ...
+# Subtest: G6: education records the current home instead of an expired mobile using the injected clock
+ok 15 - G6: education records the current home instead of an expired mobile using the injected clock
+  ---
+  duration_ms: 1.935917
+  type: 'test'
+  ...
+# Subtest: G7: education records the explicit SMS entry instead of mobile
+ok 16 - G7: education records the explicit SMS entry instead of mobile
+  ---
+  duration_ms: 1.84425
+  type: 'test'
+  ...
+# Subtest: G8: education records the RelatedPerson current home instead of an expired mobile
+ok 17 - G8: education records the RelatedPerson current home instead of an expired mobile
+  ---
+  duration_ms: 1.758875
+  type: 'test'
+  ...
+# Subtest: education keeps an explicit phone override even when no active phone is recorded
+ok 18 - education keeps an explicit phone override even when no active phone is recorded
+  ---
+  duration_ms: 1.296209
+  type: 'test'
+  ...
+# Subtest: education dispatch refuses an unconfigured lane and enforces the practice clinical lock
+ok 19 - education dispatch refuses an unconfigured lane and enforces the practice clinical lock
+  ---
+  duration_ms: 1.943292
+  type: 'test'
+  ...
+# Subtest: education SMS reports missing or non-HTTPS tracked-link setup as a 409 before minting a token
+ok 20 - education SMS reports missing or non-HTTPS tracked-link setup as a 409 before minting a token
+  ---
+  duration_ms: 2.045041
+  type: 'test'
+  ...
+# Subtest: a terminal SMS suppression is durable and retrying the same key returns the same outcome
+ok 21 - a terminal SMS suppression is durable and retrying the same key returns the same outcome
+  ---
+  duration_ms: 1.775208
+  type: 'test'
+  ...
+# Subtest: a quiet-hours reschedule is durable and retrying the same key returns the same outcome
+ok 22 - a quiet-hours reschedule is durable and retrying the same key returns the same outcome
+  ---
+  duration_ms: 1.667167
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: a failed education send leaves recipient telecom unchanged
+ok 23 - a failed education send leaves recipient telecom unchanged
+  ---
+  duration_ms: 1.124291
+  type: 'test'
+  ...
+# Subtest: education clinical references must belong to the selected patient
+ok 24 - education clinical references must belong to the selected patient
+  ---
+  duration_ms: 1.704791
+  type: 'test'
+  ...
+# Subtest: education recipient override stays send-scoped unless the explicit chart-update flag is set
+ok 25 - education recipient override stays send-scoped unless the explicit chart-update flag is set
+  ---
+  duration_ms: 2.761709
+  type: 'test'
+  ...
+# Subtest: opt-out routes require one explicit Patient reference and expose no phone-number clear
+ok 26 - opt-out routes require one explicit Patient reference and expose no phone-number clear
+  ---
+  duration_ms: 2.921625
+  type: 'test'
+  ...
+# Subtest: B1 record rejects missing reason or identity without a Patient write
+ok 27 - B1 record rejects missing reason or identity without a Patient write
+  ---
+  duration_ms: 3.775875
+  type: 'test'
+  ...
+# Subtest: B2 recorded global suppression blocks every SMS lane like STOP until clear
+ok 28 - B2 recorded global suppression blocks every SMS lane like STOP until clear
+  ---
+  duration_ms: 12.202208
+  type: 'test'
+  ...
+# Subtest: B3 global record widens and preserves every existing extension
+ok 29 - B3 global record widens and preserves every existing extension
+  ---
+  duration_ms: 1.559667
+  type: 'test'
+  ...
+# Subtest: B4 exact-scope repeats preserve bytes and write no second Provenance
+ok 30 - B4 exact-scope repeats preserve bytes and write no second Provenance
+  ---
+  duration_ms: 3.236208
+  type: 'test'
+  ...
+# Subtest: B5 only action-holding staff can record an opt-out
+ok 31 - B5 only action-holding staff can record an opt-out
+  ---
+  duration_ms: 1.755708
+  type: 'test'
+  ...
+# Subtest: B6 record per-number requires E.164 and rejects ambiguous or unexpected fields
+ok 32 - B6 record per-number requires E.164 and rejects ambiguous or unexpected fields
+  ---
+  duration_ms: 2.775541
+  type: 'test'
+  ...
+# Subtest: opt-out clear requires a non-empty reason and a named identity-verification method
+ok 33 - opt-out clear requires a non-empty reason and a named identity-verification method
+  ---
+  duration_ms: 2.574333
+  type: 'test'
+  ...
+# Subtest: opt-out routes return the existing not-found shape for an unknown named Patient
+ok 34 - opt-out routes return the existing not-found shape for an unknown named Patient
+  ---
+  duration_ms: 1.9155
+  type: 'test'
+  ...
+# Subtest: clearing one named patient on a shared handset leaves the other patient suppressed
+ok 35 - clearing one named patient on a shared handset leaves the other patient suppressed
+  ---
+  duration_ms: 1.718166
+  type: 'test'
+  ...
+# Subtest: number-scoped clear reports a surviving legacy opt-out without a second Patient query
+ok 36 - number-scoped clear reports a surviving legacy opt-out without a second Patient query
+  ---
+  duration_ms: 1.066958
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: opt-out clear uses the caller-bound FHIR client for the Patient write
+ok 37 - opt-out clear uses the caller-bound FHIR client for the Patient write
+  ---
+  duration_ms: 1.031166
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: opt-out state uses the caller-bound FHIR client for the Patient read
+ok 38 - opt-out state uses the caller-bound FHIR client for the Patient read
+  ---
+  duration_ms: 0.766416
+  type: 'test'
+  ...
+# Subtest: a bearer-authenticated staff membership reaches the opt-out clear through the real role resolver
+ok 39 - a bearer-authenticated staff membership reaches the opt-out clear through the real role resolver
+  ---
+  duration_ms: 1.932334
+  type: 'test'
+  ...
+# Subtest: a per-person revocation overrides the staff role on communications routes
+ok 40 - a per-person revocation overrides the staff role on communications routes
+  ---
+  duration_ms: 1.006084
+  type: 'test'
+  ...
+# Subtest: conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles
+ok 41 - conversation reads use caller-bound FHIR and expose bodies to front desk and clinical content roles
+  ---
+  duration_ms: 1.799792
+  type: 'test'
+  ...
+# Subtest: a front-desk GHL thread read is on-demand and never runs for the conversation list
+ok 42 - a front-desk GHL thread read is on-demand and never runs for the conversation list
+  ---
+  duration_ms: 1.29575
+  type: 'test'
+  ...
+# Subtest: the API content gate strips previews and bodies and skips thread hydration without content.read
+ok 43 - the API content gate strips previews and bodies and skips thread hydration without content.read
+  ---
+  duration_ms: 0.840583
+  type: 'test'
+  ...
+# Subtest: conversation listing merges distinct routed providers, sorts globally, tags rows, and limits after merge
+ok 44 - conversation listing merges distinct routed providers, sorts globally, tags rows, and limits after merge
+  ---
+  duration_ms: 3.073542
+  type: 'test'
+  ...
+# Subtest: a failed provider degrades to non-PHI status while successful conversations remain
+ok 45 - a failed provider degrades to non-PHI status while successful conversations remain
+  ---
+  duration_ms: 1.927
+  type: 'test'
+  ...
+# Subtest: a routed provider without conversation-list capability is skipped without an error
+ok 46 - a routed provider without conversation-list capability is skipped without an error
+  ---
+  duration_ms: 0.996625
+  type: 'test'
+  ...
+# Subtest: thread hydration resolves the owning provider before limiting and unresolvable ids return 404
+ok 47 - thread hydration resolves the owning provider before limiting and unresolvable ids return 404
+  ---
+  duration_ms: 1.250708
+  type: 'test'
+  ...
+# Subtest: an explicit provider query keeps conversation listing on that one provider
+ok 48 - an explicit provider query keeps conversation listing on that one provider
+  ---
+  duration_ms: 0.830834
+  type: 'test'
+  ...
+# Subtest: front-desk SMS succeeds and reaches a durable sent reservation
+ok 49 - front-desk SMS succeeds and reaches a durable sent reservation
+  ---
+  duration_ms: 4.347958
+  type: 'test'
+  ...
+# Subtest: staff SMS requires a stable idempotency key and retries never dispatch twice
+ok 50 - staff SMS requires a stable idempotency key and retries never dispatch twice
+  ---
+  duration_ms: 2.031375
+  type: 'test'
+  ...
+# Subtest: staff SMS persists the selected provider message identifier
+ok 51 - staff SMS persists the selected provider message identifier
+  ---
+  duration_ms: 1.018708
+  type: 'test'
+  ...
+# Subtest: new SMS uses transactional routing while a reply preserves its explicit thread provider
+ok 52 - new SMS uses transactional routing while a reply preserves its explicit thread provider
+  ---
+  duration_ms: 1.889084
+  type: 'test'
+  ...
+# Subtest: an explicit provider is rejected when it cannot identify one sender lane
+ok 53 - an explicit provider is rejected when it cannot identify one sender lane
+  ---
+  duration_ms: 0.970666
+  type: 'test'
+  ...
+# Subtest: an unassigned channel role is reported as unavailable without resolving an adapter
+ok 54 - an unassigned channel role is reported as unavailable without resolving an adapter
+  ---
+  duration_ms: 0.763834
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: a post-send FHIR failure leaves a durable unknown outcome and blocks duplicate dispatch
+ok 55 - a post-send FHIR failure leaves a durable unknown outcome and blocks duplicate dispatch
+  ---
+  duration_ms: 1.625125
+  type: 'test'
+  ...
+# Subtest: recording retrieval degrades cleanly when media authentication is not acknowledged
+ok 56 - recording retrieval degrades cleanly when media authentication is not acknowledged
+  ---
+  duration_ms: 0.847125
+  type: 'test'
+  ...
+# Subtest: recording retrieval requires a persisted call visible to the caller's FHIR policy
+ok 57 - recording retrieval requires a persisted call visible to the caller's FHIR policy
+  ---
+  duration_ms: 0.788166
+  type: 'test'
+  ...
+# Subtest: call history and detail require persisted calls visible to the caller's FHIR policy
+ok 58 - call history and detail require persisted calls visible to the caller's FHIR policy
+  ---
+  duration_ms: 1.208125
+  type: 'test'
+  ...
+# Subtest: call history applies the requested limit after filtering the provider window by visible calls
+ok 59 - call history applies the requested limit after filtering the provider window by visible calls
+  ---
+  duration_ms: 0.789583
+  type: 'test'
+  ...
+# Subtest: conflict mapping: record toError returns 409 without Patient or Provenance writes
+ok 60 - conflict mapping: record toError returns 409 without Patient or Provenance writes
+  ---
+  duration_ms: 2.192833
+  type: 'test'
+  ...
+# Subtest: conflict mapping: record transaction-entry returns 409 without Patient or Provenance writes
+ok 61 - conflict mapping: record transaction-entry returns 409 without Patient or Provenance writes
+  ---
+  duration_ms: 1.490042
+  type: 'test'
+  ...
+# Subtest: conflict mapping: clear toError returns 409 without Patient or Provenance writes
+ok 62 - conflict mapping: clear toError returns 409 without Patient or Provenance writes
+  ---
+  duration_ms: 3.6715
+  type: 'test'
+  ...
+# Subtest: conflict mapping: clear transaction-entry returns 409 without Patient or Provenance writes
+ok 63 - conflict mapping: clear transaction-entry returns 409 without Patient or Provenance writes
+  ---
+  duration_ms: 1.015
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: conflict mapping: toError 500 remains 502
+ok 64 - conflict mapping: toError 500 remains 502
+  ---
+  duration_ms: 1.53025
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: conflict mapping: malformed batch-response remains 502
+ok 65 - conflict mapping: malformed batch-response remains 502
+  ---
+  duration_ms: 0.859917
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: conflict mapping: malformed transaction-response remains 502
+ok 66 - conflict mapping: malformed transaction-response remains 502
+  ---
+  duration_ms: 1.067375
+  type: 'test'
+  ...
+# Subtest: post-send recipient conflict: sms remains sent with provenance
+ok 67 - post-send recipient conflict: sms remains sent with provenance
+  ---
+  duration_ms: 2.095791
+  type: 'test'
+  ...
+# Subtest: post-send recipient conflict: email remains sent with provenance
+ok 68 - post-send recipient conflict: email remains sent with provenance
+  ---
+  duration_ms: 1.909459
+  type: 'test'
+  ...
+# Subtest: E1: sms preserves a real attached guarantor child and names its guarantor
+ok 69 - E1: sms preserves a real attached guarantor child and names its guarantor
+  ---
+  duration_ms: 10.762875
+  type: 'test'
+  ...
+# Subtest: E1: email preserves a real attached guarantor child and names its guarantor
+ok 70 - E1: email preserves a real attached guarantor child and names its guarantor
+  ---
+  duration_ms: 3.195958
+  type: 'test'
+  ...
+# Subtest: E1: print preserves a real attached guarantor child and names its guarantor
+ok 71 - E1: print preserves a real attached guarantor child and names its guarantor
+  ---
+  duration_ms: 2.487292
+  type: 'test'
+  ...
+# Subtest: E2: sms still updates an unlinked RelatedPerson recipient
+ok 72 - E2: sms still updates an unlinked RelatedPerson recipient
+  ---
+  duration_ms: 4.491042
+  type: 'test'
+  ...
+# Subtest: E2: email still updates an unlinked RelatedPerson recipient
+ok 73 - E2: email still updates an unlinked RelatedPerson recipient
+  ---
+  duration_ms: 2.820583
+  type: 'test'
+  ...
+# Subtest: E2: sms still updates an unlinked Patient recipient
+ok 74 - E2: sms still updates an unlinked Patient recipient
+  ---
+  duration_ms: 2.331834
+  type: 'test'
+  ...
+# Subtest: E2: email still updates an unlinked Patient recipient
+ok 75 - E2: email still updates an unlinked Patient recipient
+  ---
+  duration_ms: 2.537583
+  type: 'test'
+  ...
+# Subtest: print chart update refuses before provenance or output
+ok 76 - print chart update refuses before provenance or output
+  ---
+  duration_ms: 1.183542
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: post-send persistence conflict: compose remains 502
+ok 77 - post-send persistence conflict: compose remains 502
+  ---
+  duration_ms: 1.655792
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: post-send persistence conflict: sms remains 502
+ok 78 - post-send persistence conflict: sms remains 502
+  ---
+  duration_ms: 1.775792
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: post-send persistence conflict: email remains 502
+ok 79 - post-send persistence conflict: email remains 502
+  ---
+  duration_ms: 1.513041
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: post-send provenance conflict: sms remains 502
+ok 80 - post-send provenance conflict: sms remains 502
+  ---
+  duration_ms: 1.70875
+  type: 'test'
+  ...
+# odos-mcp: patient communications route failed.
+# Subtest: post-send provenance conflict: email remains 502
+ok 81 - post-send provenance conflict: email remains 502
+  ---
+  duration_ms: 1.771833
+  type: 'test'
+  ...
+# Subtest: G12 staff email flips withheld Education email ON with staff provenance
+ok 82 - G12 staff email flips withheld Education email ON with staff provenance
+  ---
+  duration_ms: 1.854125
+  type: 'test'
+  ...
+# odos-mcp: education email sent; preference update failed.
+# Subtest: G19 sent email survives preference flip failure
+ok 83 - G19 sent email survives preference flip failure
+  ---
+  duration_ms: 1.365667
+  type: 'test'
+  ...
+# odos-mcp: education email sent; preference update failed.
+# Subtest: G19b sent email survives preference flip failure
+ok 84 - G19b sent email survives preference flip failure
+  ---
+  duration_ms: 1.156875
+  type: 'test'
+  ...
+# Subtest: F1 staff email saves contact before preference flip (withheld=true)
+ok 85 - F1 staff email saves contact before preference flip (withheld=true)
+  ---
+  duration_ms: 3.399208
+  type: 'test'
+  ...
+# Subtest: F1 staff email saves contact before preference flip (withheld=false)
+ok 86 - F1 staff email saves contact before preference flip (withheld=false)
+  ---
+  duration_ms: 1.638208
+  type: 'test'
+  ...
+# Subtest: M5 opt-out record reports the transaction Patient version
+ok 87 - M5 opt-out record reports the transaction Patient version
+  ---
+  duration_ms: 1.584416
+  type: 'test'
+  ...
+# Subtest: M5 opt-out clear reports the transaction Patient version
+ok 88 - M5 opt-out clear reports the transaction Patient version
+  ---
+  duration_ms: 1.369792
+  type: 'test'
+  ...
+# Subtest: M5 opt-out record no-op reports equal opaque versions
+ok 89 - M5 opt-out record no-op reports equal opaque versions
+  ---
+  duration_ms: 1.34675
+  type: 'test'
+  ...
+# Subtest: M5 opt-out record omits unknown version undefined
+ok 90 - M5 opt-out record omits unknown version undefined
+  ---
+  duration_ms: 1.202625
+  type: 'test'
+  ...
+# Subtest: M5 opt-out record omits unknown version Patient/other/_history/opaque-next
+ok 91 - M5 opt-out record omits unknown version Patient/other/_history/opaque-next
+  ---
+  duration_ms: 3.353667
+  type: 'test'
+  ...
+# Subtest: M5 opt-out record omits unknown version Patient/synthetic-1/_history/
+ok 92 - M5 opt-out record omits unknown version Patient/synthetic-1/_history/
+  ---
+  duration_ms: 1.053375
+  type: 'test'
+  ...
+# Subtest: M5 opt-out clear no-op reports equal opaque versions
+ok 93 - M5 opt-out clear no-op reports equal opaque versions
+  ---
+  duration_ms: 0.878166
+  type: 'test'
+  ...
+# Subtest: M5 opt-out clear omits unknown version undefined
+ok 94 - M5 opt-out clear omits unknown version undefined
+  ---
+  duration_ms: 0.823
+  type: 'test'
+  ...
+# Subtest: M5 opt-out clear omits unknown version Patient/other/_history/opaque-next
+ok 95 - M5 opt-out clear omits unknown version Patient/other/_history/opaque-next
+  ---
+  duration_ms: 0.776958
+  type: 'test'
+  ...
+# Subtest: M5 opt-out clear omits unknown version Patient/synthetic-1/_history/
+ok 96 - M5 opt-out clear omits unknown version Patient/synthetic-1/_history/
+  ---
+  duration_ms: 0.735208
+  type: 'test'
+  ...
+# Subtest: M5 opt-out history fallback
+ok 97 - M5 opt-out history fallback
+  ---
+  duration_ms: 0.948625
+  type: 'test'
+  ...
+# Subtest: M5 opt-out disagreement omits report
+ok 98 - M5 opt-out disagreement omits report
+  ---
+  duration_ms: 1.063084
+  type: 'test'
+  ...
+# Subtest: H7: education refuses a marked patient's recorded mobile through the shared resolver
+ok 99 - H7: education refuses a marked patient's recorded mobile through the shared resolver
+  ---
+  duration_ms: 1.009917
+  type: 'test'
+  ...
+# Subtest: H13: marked patient refuses own SMS while education sends to the RelatedPerson's own mobile
+ok 100 - H13: marked patient refuses own SMS while education sends to the RelatedPerson's own mobile
+  ---
+  duration_ms: 1.13475
+  type: 'test'
+  ...
+# Subtest: J12: education delegates active textable selection for Patient
+ok 101 - J12: education delegates active textable selection for Patient
+  ---
+  duration_ms: 1.169791
+  type: 'test'
+  ...
+# Subtest: J12: education delegates false textable selection for Patient
+ok 102 - J12: education delegates false textable selection for Patient
+  ---
+  duration_ms: 0.861208
+  type: 'test'
+  ...
+# Subtest: J12: education delegates expired textable selection for Patient
+ok 103 - J12: education delegates expired textable selection for Patient
+  ---
+  duration_ms: 0.836083
+  type: 'test'
+  ...
+# Subtest: J12: education delegates active textable selection for RelatedPerson
+ok 104 - J12: education delegates active textable selection for RelatedPerson
+  ---
+  duration_ms: 0.869084
+  type: 'test'
+  ...
+# Subtest: J12: education delegates false textable selection for RelatedPerson
+ok 105 - J12: education delegates false textable selection for RelatedPerson
+  ---
+  duration_ms: 1.035916
+  type: 'test'
+  ...
+# Subtest: J12: education delegates expired textable selection for RelatedPerson
+ok 106 - J12: education delegates expired textable selection for RelatedPerson
+  ---
+  duration_ms: 1.2345
+  type: 'test'
+  ...
+# Subtest: E1a a neutral MIME envelope keeps the item title on the chart
+ok 107 - E1a a neutral MIME envelope keeps the item title on the chart
+  ---
+  duration_ms: 44.726708
+  type: 'test'
+  ...
+# Subtest: E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+ok 108 - E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+  ---
+  duration_ms: 22.712083
+  type: 'test'
+  ...
+# Subtest: E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+ok 109 - E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+  ---
+  duration_ms: 25.079041
+  type: 'test'
+  ...
+# Subtest: E1a c cosmetic email refuses with visible reason
+ok 110 - E1a c cosmetic email refuses with visible reason
+  ---
+  duration_ms: 8.223166
+  type: 'test'
+  ...
+# Subtest: E1a c cosmetic sms refuses with visible reason
+ok 111 - E1a c cosmetic sms refuses with visible reason
+  ---
+  duration_ms: 32.846083
+  type: 'test'
+  ...
+# Subtest: E1a c cosmetic print refuses with visible reason
+ok 112 - E1a c cosmetic print refuses with visible reason
+  ---
+  duration_ms: 48.893167
+  type: 'test'
+  ...
+# Subtest: E1a d marketing email needs unsubscribe capability while SMS and print retain behavior
+ok 113 - E1a d marketing email needs unsubscribe capability while SMS and print retain behavior
+  ---
+  duration_ms: 67.040916
+  type: 'test'
+  ...
+# Subtest: E1a e email marketing needs no recorded consent and honors explicit preference allowed=true
+ok 114 - E1a e email marketing needs no recorded consent and honors explicit preference allowed=true
+  ---
+  duration_ms: 8.024458
+  type: 'test'
+  ...
+# Subtest: E1a e email marketing needs no recorded consent and honors explicit preference allowed=false
+ok 115 - E1a e email marketing needs no recorded consent and honors explicit preference allowed=false
+  ---
+  duration_ms: 20.733791
+  type: 'test'
+  ...
+# Subtest: E1a f real email suppression preserves staff override and preference write ON
+ok 116 - E1a f real email suppression preserves staff override and preference write ON
+  ---
+  duration_ms: 16.202958
+  type: 'test'
+  ...
+1..116
+# tests 116
+# suites 0
+# pass 116
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 903.683292

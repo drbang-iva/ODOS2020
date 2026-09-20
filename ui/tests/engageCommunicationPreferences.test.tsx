@@ -117,3 +117,17 @@ test("matrix read loading holds electronic buttons while Print remains available
     assert.equal(renderer.root.findByProps({ "aria-label": "Email Education guide" }).props.disabled, false);
   } finally { if (renderer) act(() => renderer.unmount()); globalThis.fetch = originalFetch; }
 });
+
+
+test("E1a education email disclosure renders inside confirmation before any send", async () => {
+  const view = preferences(); view.matrix.education.email = { value: false, source: "explicit" };
+  const f = await fixture({ view });
+  try {
+    act(() => f.button("Email Education guide").props.onClick());
+    const confirmation = f.renderer.root.findByProps({ "aria-label": "Education send confirmation" });
+    const words = confirmation.findAll(() => true).flatMap(node => node.children.filter(child => typeof child === "string")).join(" ");
+    assert.match(words, /Education email is off for this patient\. Sending will turn it back on\./);
+    assert.equal(f.sends.length, 0);
+    assert.equal(f.button("Confirm education send").props.disabled, false);
+  } finally { f.close(); }
+});

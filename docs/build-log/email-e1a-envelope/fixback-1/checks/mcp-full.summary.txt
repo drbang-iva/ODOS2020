@@ -1,0 +1,7 @@
+# tests 6144
+# pass 6089
+# fail 0
+# cancelled 0
+# skipped 55
+# duration_ms 151170.681375
+⚠️  LIVE STACK NOT CONFIGURED — 47 tests skipped, including live authorization enforcement (ageOfMajorityAuthzLive, audit-header, billingIdentityConfigParity, body-structure-idempotency, clinicalWriteAuthzLive, diagnosisCarryForward, educationCatalogStatusAuthzLive, encounter-lifecycle, encounter, encounterUndoLedgerAuthzLive, historyPaginationMedplum, patient-update, profile-validation, protocolItemClaimLive, provenance-defaults, r10DiagnosisDoorAuthzLive, r10OcularHealthDoorAuthzLive, searchParamMedplumSmoke, transaction-atomicity, v035-terminology-install, v035-write-tools, v04-observation-focus-conformance, v04-write-tools, v04b-write-tools, v04c-write-tools, v05a-authz, v05b-audit-ib-backup). This run does NOT gate authz. Set MEDPLUM_ADMIN_EMAIL/PASSWORD to run them. ODOS_ALLOW_UNGATED_MCP=1 acknowledged; exit code reflects executed tests only.
