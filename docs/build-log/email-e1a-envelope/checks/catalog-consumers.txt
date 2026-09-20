@@ -1,0 +1,35 @@
+mcp/src/comms/education-catalog.ts:6:const educationItemSchema = z.object({
+mcp/src/comms/education-catalog.ts:32:  items: z.array(educationItemSchema).min(1),
+mcp/src/comms/education-catalog.ts:115:export type EducationContentItem = z.input<typeof educationItemSchema>;
+mcp/src/comms/education-catalog.ts:116:export { educationItemSchema };
+mcp/src/comms/education-catalog.ts:120:export interface EducationCatalogReader {
+mcp/src/comms/education-catalog.ts:128:export interface EducationCatalogLifecycleReader extends EducationCatalogReader {
+mcp/src/comms/education-catalog.ts:133:export function withSeedLifecycle(reader: EducationCatalogReader): EducationCatalogLifecycleReader {
+mcp/src/comms/education-catalog.ts:143:export function createManifestEducationCatalogReader(
+mcp/src/comms/education-catalog.ts:146:): EducationCatalogReader {
+mcp/src/comms/education-catalog.ts:179:export function loadManifestEducationCatalogReader(
+mcp/src/comms/education-catalog.ts:182:): EducationCatalogReader {
+mcp/src/comms/education-catalog.ts:183:  return createManifestEducationCatalogReader(readJson(manifestPath), readJson(ledgerPath));
+mcp/src/comms/education-catalog.ts:186:export function loadDefaultEducationCatalogReader(): EducationCatalogReader {
+mcp/src/comms/education-catalog.ts:188:  return loadManifestEducationCatalogReader(
+mcp/src/clinical-graph/protocol-endpoint.ts:7:import { loadDefaultEducationCatalogReader, type EducationCatalogReader } from "../comms/education-catalog.js";
+mcp/src/clinical-graph/protocol-endpoint.ts:98:  educationCatalog?: EducationCatalogReader;
+mcp/src/clinical-graph/protocol-endpoint.ts:911:  educationCatalog?: EducationCatalogReader,
+mcp/src/clinical-graph/protocol-endpoint.ts:1152:function carePlan(action: PlanActionInstance, catalog?: EducationCatalogReader): CarePlan {
+mcp/src/clinical-graph/protocol-endpoint.ts:1154:    ? (catalog ?? loadDefaultEducationCatalogReader()).get(String(action.payload.assetRef ?? "")) : undefined;
+mcp/src/comms/visionforge-education-catalog.ts:4:  educationItemSchema, loadDefaultEducationCatalogLedger, loadDefaultEducationCatalogReader,
+mcp/src/comms/visionforge-education-catalog.ts:5:  withSeedLifecycle, type EducationCatalogLifecycleReader, type EducationCatalogReader,
+mcp/src/comms/visionforge-education-catalog.ts:27:export interface EducationCatalogRuntime extends EducationCatalogLifecycleReader {
+mcp/src/comms/visionforge-education-catalog.ts:41:const entrySchema = z.object({ item: educationItemSchema, lifecycle: lifecycleSchema, manifestSha256: z.string().regex(/^[a-f0-9]{64}$/) }).passthrough();
+mcp/src/comms/visionforge-education-catalog.ts:52:export function seedEducationCatalogStatus(reader: EducationCatalogReader): EducationCatalogStatus {
+mcp/src/comms/visionforge-education-catalog.ts:61:): EducationCatalogRuntime {
+mcp/src/comms/visionforge-education-catalog.ts:64:    const reader = withSeedLifecycle(loadDefaultEducationCatalogReader());
+mcp/src/comms/visionforge-education-catalog.ts:85:  const reader = createVisionForgeEducationCatalogReader({ baseUrl: base!.href.replace(/\/$/, ""), practiceId: env.VISIONFORGE_PRACTICE_ID!, token: env.VISIONFORGE_SEAM_TOKEN! }, options.store ?? ownedStore!, options.fetch);
+mcp/src/comms/visionforge-education-catalog.ts:89:export function createVisionForgeEducationCatalogReader(
+mcp/src/comms/visionforge-education-catalog.ts:91:): EducationCatalogRuntime {
+mcp/src/clinical-graph/plan-sets/generator.ts:2:import { loadDefaultEducationCatalogReader, type EducationCatalogReader } from '../../comms/education-catalog.js';
+mcp/src/clinical-graph/plan-sets/generator.ts:7:export function buildPlanSetProtocols(specs: readonly PlanSetSpec[], orderableKeys: ReadonlySet<string>, catalog: EducationCatalogReader = loadDefaultEducationCatalogReader()): { protocols: ProtocolDefinition[]; hidden: HiddenPlanSetItem[] } {
+mcp/src/comms/comms-api.ts:3:import { seedEducationCatalogStatus, type EducationCatalogRuntime } from "./visionforge-education-catalog.js";
+mcp/src/comms/comms-api.ts:88:  educationCatalogControl?: Pick<EducationCatalogRuntime, "status" | "refresh">;
+mcp/src/__tests__/plan-set-generator.test.ts:15:import type { EducationCatalogReader, EducationContentItem } from '../comms/education-catalog.js';
+mcp/src/__tests__/plan-set-generator.test.ts:54:const reader = (item?: EducationContentItem): EducationCatalogReader => ({placeholderUrlHost:'placeholder.example.org',list:()=>item?[item]:[],get:id=>item?.id===id?item:undefined});

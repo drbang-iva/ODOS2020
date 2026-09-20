@@ -1,0 +1,28 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a b", "tests/commsApi.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a b tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+ok 1 - E1a b missing ODOS_PRACTICE_POSTAL_ADDRESS refuses before provider or send reservation
+  ---
+  duration_ms: 103.096542
+  type: 'test'
+  ...
+# Subtest: E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+ok 2 - E1a b missing ODOS_PRACTICE_PHONE refuses before provider or send reservation
+  ---
+  duration_ms: 56.384292
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 505.730791

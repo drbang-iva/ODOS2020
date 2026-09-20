@@ -1,0 +1,44 @@
+{
+  "state": "before",
+  "base": "http://127.0.0.1:32191",
+  "identity": {
+    "status": 200,
+    "project": "aa097324-3473-42c4-864d-5801c2e9d275",
+    "profile": "1c0f1e7e-10ad-40c8-aea2-4184c643d1d1",
+    "admin": false,
+    "membership": "61dd88e7-72e6-4675-8ea2-ae67abb28854",
+    "membershipKeys": [
+      "resourceType",
+      "id",
+      "user",
+      "profile",
+      "admin"
+    ]
+  },
+  "staffPolicy": "AccessPolicy/cd4adb71-aae1-406d-b5eb-242eb6048f7e",
+  "route": "/clinic",
+  "disclosurePresent": false,
+  "confirmEnabled": true,
+  "confirmClicked": false,
+  "dispatchRequests": 0,
+  "communicationsResponses": [
+    {
+      "path": "/communications/opt-out",
+      "status": 200
+    },
+    {
+      "path": "/communications/education",
+      "status": 200
+    },
+    {
+      "path": "/communications/preferences",
+      "status": 200
+    }
+  ],
+  "servedAsset": {
+    "path": "/assets/index-CA3LJOli.js",
+    "sha256": "02998f1c36a27877cd72ff1eb115aa72e4f39d2813428bbdb657ac105ebd3e95"
+  },
+  "screenshot": "staff-before.png",
+  "confirmationText": "Confirm email · Understanding dry eye\n✎ Override for this send\nCancel\nSend"
+}

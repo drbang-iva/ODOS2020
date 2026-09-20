@@ -1,0 +1,44 @@
+{
+  "state": "after",
+  "base": "http://127.0.0.1:32190",
+  "identity": {
+    "status": 200,
+    "project": "aa097324-3473-42c4-864d-5801c2e9d275",
+    "profile": "1c0f1e7e-10ad-40c8-aea2-4184c643d1d1",
+    "admin": false,
+    "membership": "61dd88e7-72e6-4675-8ea2-ae67abb28854",
+    "membershipKeys": [
+      "resourceType",
+      "id",
+      "user",
+      "profile",
+      "admin"
+    ]
+  },
+  "staffPolicy": "AccessPolicy/cd4adb71-aae1-406d-b5eb-242eb6048f7e",
+  "route": "/clinic",
+  "disclosurePresent": true,
+  "confirmEnabled": true,
+  "confirmClicked": false,
+  "dispatchRequests": 0,
+  "communicationsResponses": [
+    {
+      "path": "/communications/opt-out",
+      "status": 200
+    },
+    {
+      "path": "/communications/education",
+      "status": 200
+    },
+    {
+      "path": "/communications/preferences",
+      "status": 200
+    }
+  ],
+  "servedAsset": {
+    "path": "/assets/index-eESeQNkv.js",
+    "sha256": "2b9968da3f7d298e9d261fc2d4dbaa7806f0243cf9eb7ee4a3e40b27a43ec916"
+  },
+  "screenshot": "staff-after.png",
+  "confirmationText": "Confirm email · Understanding dry eye\n\nEducation email is off for this patient. Sending will turn it back on.\n\n✎ Override for this send\nCancel\nSend"
+}

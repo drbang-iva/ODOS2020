@@ -1,0 +1,78 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a d|E1a sequence unsubscribe|E1a prepared email", "tests/commsApi.test.ts", "tests/educationDispatchActor.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a d|E1a sequence unsubscribe|E1a prepared email tests/commsApi.test.ts tests/educationDispatchActor.test.ts
+
+TAP version 13
+# Subtest: E1a d marketing email needs unsubscribe capability while SMS and print retain behavior
+not ok 1 - E1a d marketing email needs unsubscribe capability while SMS and print retain behavior
+  ---
+  duration_ms: 66.694833
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:1:104115'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    200 !== 409
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 409
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:2886:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1a sequence unsubscribe hold names the capability before provider access
+not ok 2 - E1a sequence unsubscribe hold names the capability before provider access
+  ---
+  duration_ms: 2.419708
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/educationDispatchActor.test.ts:1:15806'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    'ready' !== 'held'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'held'
+  actual: 'ready'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/educationDispatchActor.test.ts:298:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E1a prepared email rechecks unsubscribe capability before reservation
+not ok 3 - E1a prepared email rechecks unsubscribe capability before reservation
+  ---
+  duration_ms: 1.629708
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/educationDispatchActor.test.ts:1:16998'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/educationDispatchActor.test.ts:310:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 691.519125

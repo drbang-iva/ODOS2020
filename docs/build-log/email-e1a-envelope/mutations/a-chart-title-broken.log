@@ -1,0 +1,41 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a a", "tests/commsApi.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a a tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: E1a a neutral MIME envelope keeps the item title on the chart
+not ok 1 - E1a a neutral MIME envelope keeps the item title on the chart
+  ---
+  duration_ms: 73.04225
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:1:101980'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + ''
+    - 'Synthetic condition handout'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Synthetic condition handout'
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:2858:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 382.565208

@@ -1,0 +1,41 @@
+cwd: /private/tmp/odos-email-e1a-proof-base/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a e.*allowed=false", "tests/commsApi.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a e.*allowed=false tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: E1a e email marketing needs no recorded consent and honors explicit preference allowed=false
+not ok 1 - E1a e email marketing needs no recorded consent and honors explicit preference allowed=false
+  ---
+  duration_ms: 63.091208
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:1:104975'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'sent'
+    - 'suppressed'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'suppressed'
+  actual: 'sent'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-proof-base/mcp/tests/commsApi.test.ts:2904:48)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 388.501083

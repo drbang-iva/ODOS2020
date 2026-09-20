@@ -1,0 +1,220 @@
+TAP version 13
+# Subtest: M8 marketing email and Print follow effective preferences without a legacy consent record
+ok 1 - M8 marketing email and Print follow effective preferences without a legacy consent record
+  ---
+  duration_ms: 24.924458
+  type: 'test'
+  ...
+# Subtest: M8 withheld marketing email and Text stay disabled; Print stays available, legacy=false
+ok 2 - M8 withheld marketing email and Text stay disabled; Print stays available, legacy=false
+  ---
+  duration_ms: 3.343666
+  type: 'test'
+  ...
+# Subtest: M8 withheld marketing email and Text stay disabled; Print stays available, legacy=true
+ok 3 - M8 withheld marketing email and Text stay disabled; Print stays available, legacy=true
+  ---
+  duration_ms: 2.337709
+  type: 'test'
+  ...
+# Subtest: M9 education Text withheld disables; education Email remains enabled with override note
+ok 4 - M9 education Text withheld disables; education Email remains enabled with override note
+  ---
+  duration_ms: 4.1615
+  type: 'test'
+  ...
+# Subtest: STOP still disables Text for both item purposes; email suppression cannot be overridden
+ok 5 - STOP still disables Text for both item purposes; email suppression cannot be overridden
+  ---
+  duration_ms: 2.588417
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names transactional sms
+ok 6 - M10 preference-withheld result names transactional sms
+  ---
+  duration_ms: 3.498667
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names transactional email
+ok 7 - M10 preference-withheld result names transactional email
+  ---
+  duration_ms: 2.797083
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names marketing sms
+ok 8 - M10 preference-withheld result names marketing sms
+  ---
+  duration_ms: 2.572084
+  type: 'test'
+  ...
+# Subtest: M10 preference-withheld result names marketing email
+ok 9 - M10 preference-withheld result names marketing email
+  ---
+  duration_ms: 4.055459
+  type: 'test'
+  ...
+# Subtest: M10 sent preference failure remains success and preserves chart conflict=undefined
+ok 10 - M10 sent preference failure remains success and preserves chart conflict=undefined
+  ---
+  duration_ms: 2.817334
+  type: 'test'
+  ...
+# Subtest: M10 sent preference failure remains success and preserves chart conflict=conflict
+ok 11 - M10 sent preference failure remains success and preserves chart conflict=conflict
+  ---
+  duration_ms: 2.178125
+  type: 'test'
+  ...
+# Subtest: failed matrix read is explicit and dispatch remains the enforcement boundary
+ok 12 - failed matrix read is explicit and dispatch remains the enforcement boundary
+  ---
+  duration_ms: 2.690875
+  type: 'test'
+  ...
+# Subtest: matrix read loading holds electronic buttons while Print remains available
+ok 13 - matrix read loading holds electronic buttons while Print remains available
+  ---
+  duration_ms: 1.446167
+  type: 'test'
+  ...
+# Subtest: E1a education email disclosure renders inside confirmation before any send
+ok 14 - E1a education email disclosure renders inside confirmation before any send
+  ---
+  duration_ms: 1.754084
+  type: 'test'
+  ...
+# Subtest: diagnosis Engage prefilters content, names guardian recipients, blocks marketing, and warns on a front-desk override
+ok 15 - diagnosis Engage prefilters content, names guardian recipients, blocks marketing, and warns on a front-desk override
+  ---
+  duration_ms: 24.900208
+  type: 'test'
+  ...
+# Subtest: marketing companion: a withheld cell disables despite no legacy record
+ok 16 - marketing companion: a withheld cell disables despite no legacy record
+  ---
+  duration_ms: 3.352167
+  type: 'test'
+  ...
+# Subtest: toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle
+ok 17 - toolbar Engage stays unfiltered and a locked practice pins retail content to clinical without a toggle
+  ---
+  duration_ms: 3.637625
+  type: 'test'
+  ...
+# Subtest: the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet
+ok 18 - the chart routes diagnosis-row and permanent-tab doors to the same Engage sheet
+  ---
+  duration_ms: 1.463958
+  type: 'test'
+  ...
+# Subtest: the shared communications client lists filtered education and posts the exact dispatch body
+ok 19 - the shared communications client lists filtered education and posts the exact dispatch body
+  ---
+  duration_ms: 1.155291
+  type: 'test'
+  ...
+# Subtest: the education client rejects missing or malformed channel availability
+ok 20 - the education client rejects missing or malformed channel availability
+  ---
+  duration_ms: 0.372041
+  type: 'test'
+  ...
+# Subtest: an unavailable email channel stays visible, disabled, and explained
+ok 21 - an unavailable email channel stays visible, disabled, and explained
+  ---
+  duration_ms: 2.162333
+  type: 'test'
+  ...
+# Subtest: card notices distinguish no SMS lane from the unavailable default lane
+ok 22 - card notices distinguish no SMS lane from the unavailable default lane
+  ---
+  duration_ms: 5.7705
+  type: 'test'
+  ...
+# Subtest: the SMS lane toggle explains only the unavailable selected lane
+ok 23 - the SMS lane toggle explains only the unavailable selected lane
+  ---
+  duration_ms: 5.362417
+  type: 'test'
+  ...
+# Subtest: a minor without a recorded consent-authority guardian cannot dispatch education
+ok 24 - a minor without a recorded consent-authority guardian cannot dispatch education
+  ---
+  duration_ms: 1.78525
+  type: 'test'
+  ...
+# Subtest: a suppressed default SMS lane disables Text before compose and names the suppression
+ok 25 - a suppressed default SMS lane disables Text before compose and names the suppression
+  ---
+  duration_ms: 4.607667
+  type: 'test'
+  ...
+# Subtest: a provider-shaped 403 preference probe keeps Text available for dispatch enforcement
+ok 26 - a provider-shaped 403 preference probe keeps Text available for dispatch enforcement
+  ---
+  duration_ms: 1.853417
+  type: 'test'
+  ...
+# Subtest: suppressed and rescheduled education outcomes render actionable sentences
+ok 27 - suppressed and rescheduled education outcomes render actionable sentences
+  ---
+  duration_ms: 2.785875
+  type: 'test'
+  ...
+# Subtest: a failed confirmation reuses its idempotency key until the send succeeds
+ok 28 - a failed confirmation reuses its idempotency key until the send succeeds
+  ---
+  duration_ms: 2.530042
+  type: 'test'
+  ...
+# Subtest: selecting a second guardian clears and disables a one-person override
+ok 29 - selecting a second guardian clears and disables a one-person override
+  ---
+  duration_ms: 3.377
+  type: 'test'
+  ...
+# Subtest: chart update appears only after an override value and print returns a user-clicked link
+ok 30 - chart update appears only after an override value and print returns a user-clicked link
+  ---
+  duration_ms: 2.971333
+  type: 'test'
+  ...
+# Subtest: chart contact conflict is sent success and clears pending using real dispatch client
+ok 31 - chart contact conflict is sent success and clears pending using real dispatch client
+  ---
+  duration_ms: 2.65075
+  type: 'test'
+  ...
+# Subtest: education dispatch client rejects malformed chart update metadata
+ok 32 - education dispatch client rejects malformed chart update metadata
+  ---
+  duration_ms: 0.585209
+  type: 'test'
+  ...
+# Subtest: E1 notice: sms names the guarantor after successful education dispatch
+ok 33 - E1 notice: sms names the guarantor after successful education dispatch
+  ---
+  duration_ms: 3.20725
+  type: 'test'
+  ...
+# Subtest: E1 notice: email names the guarantor after successful education dispatch
+ok 34 - E1 notice: email names the guarantor after successful education dispatch
+  ---
+  duration_ms: 2.637417
+  type: 'test'
+  ...
+# Subtest: E1 notice: print names the guarantor after successful education dispatch
+ok 35 - E1 notice: print names the guarantor after successful education dispatch
+  ---
+  duration_ms: 3.262875
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 534.102667

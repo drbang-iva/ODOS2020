@@ -1,0 +1,8 @@
+
+> odos-mcp@0.1.0 build
+> tsc
+
+../scripts/access-policy-rules.ts(1,35): error TS2307: Cannot find module '@medplum/fhirtypes' or its corresponding type declarations.
+../scripts/access-policy-rules.ts(34,13): error TS7006: Parameter 'rule' implicitly has an 'any' type.
+../scripts/access-policy-rules.ts(35,14): error TS7006: Parameter 'left' implicitly has an 'any' type.
+../scripts/access-policy-rules.ts(35,20): error TS7006: Parameter 'right' implicitly has an 'any' type.
