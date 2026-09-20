@@ -80,7 +80,7 @@ import { EncounterCharting } from "../src/scenes/EncounterCharting";
 const PROJECTION: ExamOverviewProjection = {
   encounterReference: "Encounter/exam-1",
   patientReference: "Patient/patient-1",
-  visitTypeCategoryId: "exams",
+  examScope: "comprehensive",
   findings: [
     {
       observationReference: "Observation/iop-os",
@@ -198,7 +198,7 @@ const PROJECTION: ExamOverviewProjection = {
 const BY_EXCEPTION_PROJECTION = {
   encounterReference: "Encounter/exam-1",
   patientReference: "Patient/patient-1",
-  visitTypeCategoryId: "exams",
+  examScope: "comprehensive",
   findings: [
     {
       observationReference: "Observation/eom-od",
@@ -2833,7 +2833,7 @@ test("worksheet rows expose owners and keep Contact Lenses visibly optional", ()
       const section = renderer.root.findByProps({ "data-section-key": sectionKey });
       assert.equal(section.props["data-required"], false);
       assert.match(section.props.className, /is-optional/);
-      assert.match(textContent(section), /Not required for this visit type/);
+      assert.match(textContent(section), /Not required for this exam's scope/);
       assert.doesNotMatch(textContent(section), /Not configured/);
     }
   } finally {
@@ -3153,7 +3153,7 @@ test("completeness moves to the chart bar, opens its trace, and disclaims billin
     assert.match(textContent(trace), /Not examined/);
     assert.match(
       textContent(trace),
-      /This count is relative to the visit type and is not a billing-code check\./,
+      /This count is relative to this exam's scope and is not a billing-code check\./,
     );
     assert.doesNotMatch(textContent(trace), /Comprehensive: 1 of 2/);
   } finally {
@@ -3164,7 +3164,7 @@ test("completeness moves to the chart bar, opens its trace, and disclaims billin
 test("unconfigured completeness renders as a neutral state instead of complete or erroneous", async () => {
   const harness = await renderEncounter({
     ...PROJECTION,
-    visitTypeCategoryId: undefined,
+    examScope: undefined,
     sections: [],
     findings: [],
     completeness: {
@@ -3981,6 +3981,9 @@ test("a diagnosis-led finding mutation refreshes permanent completeness", async 
 });
 
 interface RenderEncounterOptions {
+  scopeRequests?: unknown[];
+  canWriteScope?: boolean;
+  scopeWriteStatus?: number;
   discipline?: SchedulingDiscipline;
   findingDefinitions?: CustomFindingDefinition[];
   procedureDefinitions?: CustomFindingDefinition[];
@@ -4040,6 +4043,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
         : {}),
     };
   }) as typeof fhir.read;
+  let scopeState = { examScope: "comprehensive", canWrite: options.canWriteScope ?? true, versionId: "1" };
   let overviewFetches = 0;
   let findingsFetches = 0;
   let hpiCaptures = 0;
@@ -4053,6 +4057,14 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/clinical-graph/encounters/exam-1/exam-scope")) {
+      if (init?.method === "PUT") {
+        options.scopeRequests?.push(JSON.parse(String(init.body)));
+        if (options.scopeWriteStatus) return new Response(JSON.stringify({ error: "Scope refused" }), { status: options.scopeWriteStatus });
+        scopeState = { ...scopeState, examScope: JSON.parse(String(init.body)).examScope, versionId: "2" };
+      }
+      return jsonResponse(scopeState);
+    }
     if (url.endsWith("/clinical-graph/encounters/exam-1/void/ledger")) {
       ledgerFetches += 1;
       return jsonResponse({ canWriteDiagnosis: options.canWriteDiagnosis, ledger: undoLedgerState ?? { encounterId: "exam-1", encounter: null, sections: {} } });
@@ -4340,7 +4352,7 @@ function zeroFindingComprehensiveProjection(): ExamOverviewProjection {
   return buildExamOverviewProjection({
     encounterReference: "Encounter/exam-1",
     patientReference: "Patient/patient-1",
-    visitTypeCategoryId: "exams",
+    examScope: "comprehensive",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
@@ -4385,3 +4397,80 @@ function jsonResponse(body: unknown): Response {
 async function flushEffects(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
+
+test("S2a G1 G2 G3 comprehensive draws the same full board without a category", () => {
+  const p = zeroFindingComprehensiveProjection();
+  const renderer = create(<ExamOverviewBoard projection={p} editorEntries={chartEditorInventory()} refreshing={false} onOpenEditor={() => {}} onRefresh={() => {}} />);
+  try {
+    assert.deepEqual(renderer.root.findAllByProps({ "data-testid": "exam-overview-section" }).map(r => r.props["data-section-key"]),
+      ["history", "pretest", "refraction", "contact-lenses", "ocular-health", "assessment"]);
+  } finally { renderer.unmount(); }
+});
+
+test("S2a G4 G6 office scope retains recorded findings across both switches and uses exact scope copy", () => {
+  const original = structuredClone(PROJECTION);
+  const renderer = create(<ExamOverviewBoard projection={PROJECTION} editorEntries={chartEditorInventory()} refreshing={false} onOpenEditor={() => {}} onRefresh={() => {}} />);
+  try {
+    for (const examScope of ["office-visit", "comprehensive", "office-visit"]) {
+      const required = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1", examScope,
+        definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+      const p = { ...PROJECTION, examScope, completeness: required.completeness };
+      act(() => renderer.update(<ExamOverviewBoard projection={p} editorEntries={chartEditorInventory()} refreshing={false} onOpenEditor={() => {}} onRefresh={() => {}} />));
+      assert.ok(renderer.root.findAllByProps({ "data-finding-key": "intraocular-pressure" }).length > 0);
+      assert.match(textContent(renderer.root), /Not required for this exam's scope/);
+    }
+    assert.deepEqual(PROJECTION, original);
+  } finally { renderer.unmount(); }
+});
+
+test("S2a G2 G5 G6 picker saves scope, reloads board and leaves visit billing props unchanged", async () => {
+  const office = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1", examScope: "office-visit",
+    definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+  const scopeRequests: unknown[] = [];
+  const h = await renderEncounter(zeroFindingComprehensiveProjection(), { scopeRequests, overviewResponses: [zeroFindingComprehensiveProjection(), office] });
+  try {
+    await act(async () => { h.renderer.root.findByProps({ "data-testid": "visit-chip" }).props.onClick(); await flushEffects(); });
+    const picked = { options: [{ procedureConceptKey: "office-visit-synthetic", display: "Synthetic office visit" }], diagnoses: [],
+      selectedProcedureConceptKey: "office-visit-synthetic", procedureFamily: "em", proposal: { id: "picked-charge", procedureConceptKey: "office-visit-synthetic", dxPointers: [], state: "accepted" } };
+    await act(async () => { h.renderer.root.findByType(VisitCodeSelector).props.onVisitChargeChange(picked); });
+    const before = h.renderer.root.findByType(EncounterHeader).props;
+    assert.deepEqual(before.visitCharge, picked);
+    const beforeFetch = h.overviewFetchCount();
+    const picker = h.renderer.root.findByProps({ "aria-label": "Exam scope" });
+    await act(async () => { await picker.props.onChange({ target: { value: "office-visit" } }); await flushEffects(); });
+    assert.deepEqual(scopeRequests, [{ examScope: "office-visit", expectedVersion: "1" }]);
+    assert.ok(h.overviewFetchCount() > beforeFetch);
+    const after = h.renderer.root.findByType(EncounterHeader).props;
+    for (const key of ["visitCharge", "visitUnavailableReason", "brokenDiagnosisDisplay"]) assert.deepEqual(after[key], before[key]);
+    assert.match(textContent(h.renderer.root), /Exam sections: 0 of 2/);
+    act(() => h.renderer.root.findByProps({ "data-testid": "exam-completeness-trigger" }).props.onClick());
+    assert.ok(textContent(h.renderer.root).includes("This count is relative to this exam's scope and is not a billing-code check."));
+  } finally { h.restore(); }
+});
+
+test("S2a G8 unavailable projection retains the full SpineNav inventory and an available scope picker", async () => {
+  const h = await renderEncounter(null);
+  try {
+    const nav = h.renderer.root.findByType(SpineNav);
+    const inventory = chartEditorInventory({ customSections: nav.props.customSections, ocularHealthSections: nav.props.ocularHealthSections, eyeGrowthDefaultVisible: nav.props.eyeGrowthDefaultVisible });
+    for (const entry of inventory) assert.ok(nav.findAllByType("button").some(b => textContent(b).includes(entry.label)), entry.id);
+    assert.equal(h.renderer.root.findByProps({ "aria-label": "Exam scope" }).props.disabled, false);
+  } finally { h.restore(); }
+});
+
+for (const status of [403, 409, 502]) {
+  test(`S2a refused scope write ${status} preserves selection and shows the error`, async () => {
+    const h = await renderEncounter(PROJECTION, { scopeWriteStatus: status });
+    try {
+      await act(async () => { await h.renderer.root.findByProps({ "aria-label": "Exam scope" }).props.onChange({ target: { value: "office-visit" } }); });
+      assert.equal(h.renderer.root.findByProps({ "aria-label": "Exam scope" }).props.value, "comprehensive");
+      assert.ok(textContent(h.renderer.root).includes("Scope refused"));
+    } finally { h.restore(); }
+  });
+}
+
+test("S2a scope picker follows chart.write capability", async () => {
+  const h = await renderEncounter(PROJECTION, { canWriteScope: false });
+  try { assert.equal(h.renderer.root.findByProps({ "aria-label": "Exam scope" }).props.disabled, true); }
+  finally { h.restore(); }
+});

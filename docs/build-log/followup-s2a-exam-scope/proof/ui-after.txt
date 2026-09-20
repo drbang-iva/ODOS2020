@@ -1,0 +1,12 @@
+Command: npm --prefix ui test
+not ok 834 - EncounterCharting fails open when the section-group catalog returns 500
+not ok 839 - S1 G7 409 race refetches pins and preserves specific message
+not ok 840 - S1 catalog freshness ignores older success after a newer save refresh
+not ok 841 - S1 catalog freshness ignores older failure after a newer save refresh
+# tests 1770
+# pass 1766
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 206976.96325

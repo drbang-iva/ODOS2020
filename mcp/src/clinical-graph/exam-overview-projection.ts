@@ -133,13 +133,20 @@ export type ClinicalSectionApplicabilityRegistry = Record<
 // This registry measures clinical section completeness only. It is not billing-documentation
 // adequacy and must not be consumed by, derived from, or joined to billing-code selection.
 export const CLINICAL_SECTION_REQUIREMENTS: ClinicalSectionApplicabilityRegistry = {
-  exams: {
+  comprehensive: {
     required: [
       findingRequirement("history", "History", ["hpi"]),
       findingRequirement("entrance", "Entrance", ["entrance:"]),
       findingRequirement("refraction", "Refraction", ["refraction"]),
       findingRequirement("pretest", "Pretest", ["wearing", "auto-refraction", "va", "tonometry"]),
       findingRequirement("ocular-health", "Ocular Health", ["ocular-health:", "optic-nerve", "gonioscopy"]),
+      { sectionKey: "assessment", label: "Assessment", evidence: { kind: "assessment" } },
+    ],
+    notIndicated: [],
+  },
+  "office-visit": {
+    required: [
+      findingRequirement("history", "History", ["hpi"]),
       { sectionKey: "assessment", label: "Assessment", evidence: { kind: "assessment" } },
     ],
     notIndicated: [],
@@ -168,7 +175,7 @@ export interface ClinicalExamCompleteness {
 export interface ExamOverviewProjection {
   encounterReference: string;
   patientReference: string;
-  visitTypeCategoryId?: string;
+  examScope?: string;
   historySummary?: string;
   findings: ExamOverviewFindingProjection[];
   sections: ExamOverviewSectionProjection[];
@@ -178,7 +185,7 @@ export interface ExamOverviewProjection {
 export interface BuildExamOverviewProjectionInput {
   encounterReference: string;
   patientReference: string;
-  visitTypeCategoryId?: string;
+  examScope?: string;
   definitions: readonly ClinicalFindingDefinition[];
   currentObservations: readonly Observation[];
   conditions?: readonly Condition[];
@@ -328,15 +335,15 @@ export function buildExamOverviewProjection(
     })
     .sort((left, right) => findingOrder(left, right, input.definitions));
   const registry = input.applicabilityRegistry ?? CLINICAL_SECTION_REQUIREMENTS;
-  const policy = input.visitTypeCategoryId !== undefined &&
-      Object.hasOwn(registry, input.visitTypeCategoryId)
-    ? registry[input.visitTypeCategoryId]
+  const examScope = input.examScope ?? "comprehensive";
+  const policy = Object.hasOwn(registry, examScope)
+    ? registry[examScope]
     : undefined;
   if (!policy) {
     return {
       encounterReference: input.encounterReference,
       patientReference: input.patientReference,
-      ...(input.visitTypeCategoryId ? { visitTypeCategoryId: input.visitTypeCategoryId } : {}),
+      examScope,
       findings,
       sections: [],
       completeness: unconfiguredCompleteness(),
@@ -372,7 +379,7 @@ export function buildExamOverviewProjection(
   return {
     encounterReference: input.encounterReference,
     patientReference: input.patientReference,
-    ...(input.visitTypeCategoryId ? { visitTypeCategoryId: input.visitTypeCategoryId } : {}),
+    examScope,
     findings,
     sections: [...requiredSections, ...notIndicatedSections],
     completeness: {

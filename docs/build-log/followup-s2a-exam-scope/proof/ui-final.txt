@@ -1,0 +1,8 @@
+Command: npm --prefix ui test
+Exit: 0
+# tests 1770
+# pass 1770
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

@@ -1,0 +1,9 @@
+Command: node --import tsx --test mcp/tests/examOverviewEndpoint.test.ts mcp/tests/examOverviewProjection.test.ts mcp/tests/examScopeStore.test.ts
+Exit: 1
+not ok 17 - S2a G2 G4 G5 persisted scope changes only the scope record and retains every finding
+# tests 47
+# pass 46
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0

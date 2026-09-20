@@ -30,6 +30,17 @@ const overviewExpectations: Record<number, unknown> = {
   "20": {"encounterReference":"Encounter/e1","patientReference":"Patient/p1","findings":[{"observationReference":"Observation/cvf-od","findingKey":"entrance:cvf","sectionKey":"entrance:cvf","display":"entrance:cvf","laterality":"OD","examination":{"state":"examined","sourceEncoding":"observation"},"interpretation":"unknown","provenance":{"state":"current"},"current":{"recordedAt":"2026-08-16T12:00:00.000Z","components":[{"code":"EXAM_STATE","value":{"kind":"string","value":"normal"}}]}},{"observationReference":"Observation/pupils-od","findingKey":"entrance:pupils","sectionKey":"entrance:pupils","display":"entrance:pupils","laterality":"OD","examination":{"state":"examined","sourceEncoding":"observation"},"interpretation":"unknown","provenance":{"state":"current"},"current":{"recordedAt":"2026-08-16T12:00:00.000Z","components":[{"code":"EXAM_STATE","value":{"kind":"string","value":"normal"}}]}}],"sections":[],"completeness":{"status":"unconfigured","requiredSectionCount":0,"resolvedSectionCount":0,"trace":[],"documentationIssues":[]}},
   "21": {"encounterReference":"Encounter/e1","patientReference":"Patient/p1","findings":[{"observationReference":"Observation/pupils-od","findingKey":"entrance:pupils","sectionKey":"entrance:pupils","display":"entrance:pupils","laterality":"OD","examination":{"state":"examined","sourceEncoding":"observation"},"interpretation":"unknown","provenance":{"state":"current"},"current":{"recordedAt":"2026-08-16T12:00:00.000Z","components":[{"code":"EXAM_STATE","value":{"kind":"string","value":"normal"}}]}}],"sections":[],"completeness":{"status":"unconfigured","requiredSectionCount":0,"resolvedSectionCount":0,"trace":[],"documentationIssues":[]}},
 };
+// Replay the same policy in frozen R10 captures; S2a default-scope behavior has its own guards.
+function scopeInput(input: any) {
+  const { visitTypeCategoryId, ...rest } = input;
+  return { ...rest, examScope: visitTypeCategoryId === "exams" ? "comprehensive" : visitTypeCategoryId ?? "legacy-unconfigured" };
+}
+function legacyOverviewShape(output: any, category: string | undefined) {
+  assert.equal(output.examScope, category === "exams" ? "comprehensive" : category ?? "legacy-unconfigured");
+  assert.equal(Object.hasOwn(output, "visitTypeCategoryId"), false);
+  return Object.fromEntries(Object.entries(output).flatMap(([key, value]) =>
+    key === "examScope" ? (category === undefined ? [] : [["visitTypeCategoryId", category]]) : [[key, value]]));
+}
 const recorded: Record<string, unknown> = {};
 const divergencePath=new URL("./fixtures/r10/parity-divergences.json",import.meta.url);
 const expectedDivergences=process.env.R10_RECORD_DIVERGENCES ? {} : JSON.parse(readFileSync(divergencePath,"utf8"));
@@ -84,9 +95,9 @@ for(const [i,c] of captures.entries()){
     }else if(c.kind==="buildExamOverviewProjection"){
       const input=c.args[0];const expected=overviewExpectations[i+1];
       assert.ok(expected, `Missing recorded overview expectation for capture ${i+1}: ${c.suite} ${c.kind}`);
-      assert.deepEqual(clean(buildExamOverviewProjection(input)),expected);
+      assert.deepEqual(clean(legacyOverviewShape(buildExamOverviewProjection(scopeInput(input)), input.visitTypeCategoryId)),expected);
       const p=project(input.currentObservations,input.definitions);
-      const next=clean(buildExamOverviewProjection({...input,currentObservations:p.definitionViews}));
+      const next=clean(legacyOverviewShape(buildExamOverviewProjection({...scopeInput(input),currentObservations:p.definitionViews}), input.visitTypeCategoryId));
       const reasons=divergenceReasons(input.currentObservations,input.definitions,p);
       compare(i+1,c,next,expected,reasons,p);
     }else if(c.kind==="findingInstancesFromObservation"){
@@ -133,10 +144,15 @@ test("capture instrumentation preserves named exports and executes their wrapper
       import { baseline } from './tests/fixtures/r10/baseline.ts';
       import { buildExamOverviewProjection } from './src/clinical-graph/exam-overview-projection.ts';
       import { findingInstancesFromObservation } from './src/clinical-graph/diagnosis-candidates-endpoint.ts';
+      ${scopeInput.toString()}
+      ${legacyOverviewShape.toString()}
       for (const [name,fn] of Object.entries({buildExamOverviewProjection,findingInstancesFromObservation})) {
         assert.equal(typeof fn,'function');
         const capture=baseline.captures.find(c=>c.kind===name);
-        assert.deepEqual(JSON.parse(JSON.stringify(fn(...capture.args))),capture.result);
+        const result = name === 'buildExamOverviewProjection'
+          ? legacyOverviewShape(fn(scopeInput(capture.args[0])), capture.args[0].visitTypeCategoryId)
+          : fn(...capture.args);
+        assert.deepEqual(JSON.parse(JSON.stringify(result)),capture.result);
       }
     `],{env:{...process.env,R10_BASELINE_OUTPUT:destination},stdio:"pipe"});
     const captured=readFileSync(destination,"utf8").trim().split("\n").map(line=>JSON.parse(line));

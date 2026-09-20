@@ -1,0 +1,10 @@
+Command: node --import tsx --test ui/tests/examOverviewBoard.test.tsx
+Exit: 1
+not ok 54 - worksheet rows expose owners and keep Contact Lenses visibly optional
+not ok 94 - S2a G4 G6 office scope retains recorded findings across both switches and uses exact scope copy
+# tests 108
+# pass 106
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0

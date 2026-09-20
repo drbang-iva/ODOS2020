@@ -107,6 +107,7 @@ test("a pulled-in group renders its battery while an encounter without pull-in l
   })) as typeof fhir.read;
   globalThis.fetch = (async (input) => {
     const url = String(input);
+    if (url.endsWith("/exam-scope")) return jsonResponse({ examScope: "comprehensive", canWrite: true });
     if (url.includes("/clinical-graph/finding-definitions")) {
       return jsonResponse({ canWrite: false, definitions });
     }
@@ -216,6 +217,7 @@ test("EncounterCharting pulls a group into only the current encounter and render
   })) as typeof fhir.read;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/exam-scope")) return jsonResponse({ examScope: "comprehensive", canWrite: true });
     requests.push({ url, init });
     if (url.includes("/clinical-graph/finding-definitions")) {
       return jsonResponse({
@@ -352,6 +354,7 @@ test("EncounterCharting fails open when the section-group catalog returns 500", 
   })) as typeof fhir.read;
   globalThis.fetch = (async (input) => {
     const url = String(input);
+    if (url.endsWith("/exam-scope")) return jsonResponse({ examScope: "comprehensive", canWrite: true });
     if (url.includes("/clinical-graph/finding-definitions")) {
       return jsonResponse({
         canWrite: false,
@@ -413,6 +416,7 @@ test("S1b G6 settings creates edits and deactivates without category controls", 
   let groups: FindingSectionGroup[] = [];
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/exam-scope")) return jsonResponse({ examScope: "comprehensive", canWrite: true });
     requests.push({ url, init });
     if (init?.method === "POST") {
       groups = [{ ...GROUP, ...groups[0], ...JSON.parse(String(init.body)) }];
@@ -538,6 +542,7 @@ for (const race of [false,true]) test(`S1 G7 ${race ? "409 race refetches pins a
   fhir.read=(async()=>({resourceType:"Encounter",id:"encounter-1",status:"in-progress",class:{code:"AMB"}})) as typeof fhir.read;
   globalThis.fetch=(async(input,init)=>{
     const url=String(input);
+    if (url.endsWith("/exam-scope")) return jsonResponse({ examScope: "comprehensive", canWrite: true });
     if(url.includes('/finding-definitions'))return jsonResponse({canWrite:false,definitions:[
       {stableKey:"custom:zz-test-marker",sectionKey:"custom:zz-test-marker",display:"Pinned section",active:true},
       {stableKey:"custom:empty",sectionKey:"custom:empty",display:"Empty section",active:true},
@@ -583,6 +588,7 @@ for (const staleFailure of [false, true]) test(`S1 catalog freshness ignores old
   fhir.read = (async () => ({ resourceType: "Encounter", id: "encounter-1", status: "in-progress", class: { code: "AMB" } })) as typeof fhir.read;
   globalThis.fetch = (async (input) => {
     const url = String(input);
+    if (url.endsWith("/exam-scope")) return jsonResponse({ examScope: "comprehensive", canWrite: true });
     if (url.includes("/wearing/definition")) return jsonResponse({ definition: { fields: {} } });
     if (url.includes("/finding-definitions")) return jsonResponse({ canWrite: false, definitions: [
       { stableKey: "custom:zz-test-marker", sectionKey: "custom:zz-test-marker", display: "Pinned section", active: true },

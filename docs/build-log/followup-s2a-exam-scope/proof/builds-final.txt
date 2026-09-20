@@ -1,0 +1,4 @@
+Commands: npm --prefix mcp run build; npm --prefix ui run build
+Both exit 0. UI existing large-chunk advisory remains.
+Command: git diff --check
+Exit: 0

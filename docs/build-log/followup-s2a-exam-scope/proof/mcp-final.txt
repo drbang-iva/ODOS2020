@@ -1,0 +1,8 @@
+Command: ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
+Environment: isolated s2a_suite database where needed. 47 live-stack tests unconfigured; no broad live-authz claim.
+# tests 6097
+# pass 6042
+# fail 0
+# cancelled 0
+# skipped 55
+# todo 0

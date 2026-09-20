@@ -1,0 +1,8 @@
+Command: node --import tsx --test ui/tests/examOverviewBoard.test.tsx
+Exit: 0
+# tests 108
+# pass 108
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

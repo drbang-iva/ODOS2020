@@ -26,7 +26,7 @@ import {buildExamOverviewProjection} from '../src/clinical-graph/exam-overview-p
 for(const kind of ['fact','panel-value','panel-context','cleared','inactive'] as const)test(`W81 overview completeness ${kind}`,()=>{
   const observation=kind.startsWith('panel')?panel(kind==='panel-value'?{CUSTOM_GRADE_TBUT:4}:{},{remarks:'note'}):{...canonicalFact(),...(kind==='cleared'?{status:'entered-in-error' as const}:{})};
   const definition=kind.startsWith('panel')?tear:{...lens,active:kind!=='inactive'};
-  const r=buildExamOverviewProjection({encounterReference:'Encounter/e1',patientReference:'Patient/p1',visitTypeCategoryId:'synthetic',definitions:[definition],currentObservations:[observation],priorObservationCandidates:[],assessmentRows:[],applicabilityRegistry:{synthetic:{required:[{sectionKey:'eye',label:'Eye',evidence:{kind:'finding',sectionKeyPrefixes:['ocular-health:']}}],notIndicated:[]}}});
+  const r=buildExamOverviewProjection({encounterReference:'Encounter/e1',patientReference:'Patient/p1',examScope:'synthetic',definitions:[definition],currentObservations:[observation],priorObservationCandidates:[],assessmentRows:[],applicabilityRegistry:{synthetic:{required:[{sectionKey:'eye',label:'Eye',evidence:{kind:'finding',sectionKeyPrefixes:['ocular-health:']}}],notIndicated:[]}}});
   assert.equal(r.completeness.status,kind==='fact'||kind==='panel-value'?'complete':'incomplete');
 });
 test('W118 retired panel value does not credit or display',async()=>{const c=overviewFixture(tear);c.save({...panel({CUSTOM_GRADE_TBUT:4}),status:'entered-in-error'});assert.deepEqual(await missing(c),[tear.stableKey]);assert.deepEqual(((await c.overview()).body as any).findings,[]);});

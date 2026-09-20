@@ -97,7 +97,7 @@ export interface ClinicalExamCompleteness {
 export interface ExamOverviewProjection {
   encounterReference: string;
   patientReference: string;
-  visitTypeCategoryId?: string;
+  examScope?: string;
   historySummary?: string;
   findings: ExamOverviewFindingProjection[];
   sections: ExamOverviewSectionProjection[];
@@ -197,7 +197,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
       return trace ? [trace] : [];
     });
     const groups = groupsBySheetSection.get(definition.sectionKey) ?? [];
-    return definition.optional || traceRows.length > 0 || groups.length > 0
+    return (definition.optional && (projection.examScope ?? "comprehensive") === "comprehensive") || traceRows.length > 0 || groups.length > 0
       ? [{ definition, traceRows, groups }]
       : [];
   });
@@ -249,8 +249,8 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
               className={`odos-exam-section${definition.optional ? " is-optional" : ""}`}
               data-testid="exam-overview-section"
               data-section-key={definition.sectionKey}
-              data-required={definition.optional ? false : true}
-              data-resolved={definition.optional ? undefined :
+              data-required={traceRows.length > 0}
+              data-resolved={traceRows.length === 0 ? undefined :
                 traceRows.length === definition.traceSectionKeys.length && traceRows.every((row) => row.resolved)}
               aria-labelledby={`exam-section-${safeId(definition.sectionKey)}`}
             >
@@ -271,9 +271,9 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                         {sectionStateLabel(row.state)}
                       </span>
                     ))}
-                    {definition.optional && (
+                    {traceRows.length === 0 && (
                       <span className="odos-exam-section-state is-not-indicated">
-                        Not required for this visit type
+                        Not required for this exam's scope
                       </span>
                     )}
                   </div>
@@ -677,7 +677,7 @@ export function ExamCompletenessControl({ completeness }: { completeness?: Clini
         role="status"
       >
         <strong>Exam sections: Not configured</strong>
-        <span>Section requirements are not configured for this visit type.</span>
+        <span>Section requirements are not configured for this exam's scope.</span>
       </footer>
     );
   }
@@ -698,7 +698,7 @@ export function ExamCompletenessControl({ completeness }: { completeness?: Clini
       </button>
       {open && (
         <div id="exam-completeness-trace" className="odos-exam-completeness-trace">
-          <p>This count is relative to the visit type and is not a billing-code check.</p>
+          <p>This count is relative to this exam's scope and is not a billing-code check.</p>
           <ul>
             {completeness.trace.map((row) => (
               <li key={row.sectionKey}>
@@ -721,7 +721,7 @@ export function isExamOverviewProjection(value: unknown): value is ExamOverviewP
   if (!isRecord(value)) return false;
   return typeof value.encounterReference === "string" &&
     typeof value.patientReference === "string" &&
-    optionalString(value.visitTypeCategoryId) &&
+    optionalString(value.examScope) &&
     optionalString(value.historySummary) &&
     Array.isArray(value.findings) && value.findings.every(isFindingProjection) &&
     Array.isArray(value.sections) && value.sections.every(isSectionProjection) &&

@@ -1,0 +1,3 @@
+Command: node docs/build-log/followup-s2a-exam-scope/proof/browser.mjs retention
+Live refusal checks: stale version 409; invalid scope 400; absent credentials 401; stored scope unchanged.
+Proof 4–5: saved OD IOP 18 on Office visit; both scope switches retain identical findings and visit charge; all three code families available; changing billing code leaves scope unchanged.

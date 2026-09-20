@@ -1,0 +1,10 @@
+Command: node --import tsx --test ui/tests/examOverviewBoard.test.tsx
+Exit: 1
+not ok 63 - completeness moves to the chart bar, opens its trace, and disclaims billing-code meaning
+not ok 95 - S2a G2 G5 G6 picker saves scope, reloads board and leaves visit billing props unchanged
+# tests 108
+# pass 106
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
