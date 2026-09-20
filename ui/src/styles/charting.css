@@ -1132,7 +1132,7 @@
 }
 
 .odos-exam-shelf {
-  padding: 0 clamp(12px, 2.5vw, 32px) 24px;
+  padding: 0 clamp(12px, 2.5vw, 32px) 72px;
 }
 
 .odos-exam-shelf h2 {
