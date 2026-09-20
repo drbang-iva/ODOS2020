@@ -1,0 +1,256 @@
+{
+  "results": [
+    {
+      "guard": "G1",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "shelfDefinitions.filter(group => group.key !== \"contact-lenses\").map(({ key, label }) => {",
+      "command": "cd ui && node --import tsx --test tests/examShelf.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 1 - S2b1 G1 G2 shelf and drawn lines partition the whole inventory: office-visit",
+          "not ok 2 - S2b1 G1 G2 shelf and drawn lines partition the whole inventory: comprehensive",
+          "# tests 7",
+          "# pass 5",
+          "# fail 2",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 7",
+          "# pass 7",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G2",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "<details data-testid=\"chart-another-finding\"><summary>Chart another finding</summary></details><nav className=\"odos-exam-shelf\"",
+      "command": "cd ui && node --import tsx --test tests/examShelf.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 1 - S2b1 G1 G2 shelf and drawn lines partition the whole inventory: office-visit",
+          "not ok 2 - S2b1 G1 G2 shelf and drawn lines partition the whole inventory: comprehensive",
+          "# tests 7",
+          "# pass 5",
+          "# fail 2",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 7",
+          "# pass 7",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G3",
+      "file": "ui/src/scenes/EncounterCharting.tsx",
+      "mutation": "function openBoardEditor(sectionId: ChartSectionId) {\n    void fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encounterId}/exam-scope`, { method: \"PUT\", headers: { ...authHeaders(), \"Content-Type\": \"application/json\" }, body: JSON.stringify({ scope: \"comprehensive\" }) });",
+      "command": "cd ui && node --import tsx --test tests/examOverviewBoard.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 101 - S2b1 G3 shelf opens Macula at its exam position without changing scope visit type or diagnoses",
+          "# tests 110",
+          "# pass 109",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 110",
+          "# pass 110",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G4",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "availableSectionGroups.slice(0, 0).map(group => (",
+      "command": "cd ui && node --import tsx --test tests/examOverviewBoard.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 102 - S2b1 G4 inactive available group pulls in from the shelf and draws lines on the same board",
+          "# tests 110",
+          "# pass 109",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 110",
+          "# pass 110",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G5",
+      "file": "mcp/src/clinical-graph/finding-section-group-endpoint.ts",
+      "mutation": "if (false && sectionKeys.length) return { status: 409, body: { code: \"section-group-has-content\", sectionKeys } };",
+      "command": "cd mcp && node --import tsx --test tests/findingSectionGroup.test.ts",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 13 - S1 G1 removal freshly refuses saved custom-section content without writing",
+          "not ok 14 - S1 G2 atomic present pins its group",
+          "not ok 15 - S1 G2 atomic explicit absent pins its group",
+          "not ok 20 - S1 G8 meibography writer image and score each independently pin gland structure",
+          "not ok 21 - S1 G8 MCP questionnaire response independently pins symptoms",
+          "not ok 22 - S1 G8 MCP questionnaire score independently pins symptoms",
+          "not ok 27 - S1b G4 chart atomic writer live then clear unpins and permits removal",
+          "# tests 27",
+          "# pass 20",
+          "# fail 7",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 27",
+          "# pass 27",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G6",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "const editor = editorForFinding(group, editorEntries);\n    if (!editor) continue;",
+      "command": "cd ui && node --import tsx --test tests/examShelf.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 5 - S2b1 G6 unmatched findings keep value eye and date in their row, including an unknown section",
+          "# tests 7",
+          "# pass 6",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 7",
+          "# pass 7",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G7",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "finding.provenance.state === \"current\" && snapshotComponentCode(finding.current, \"REFRACTION_TYPE\") !== \"FINAL_RX\"",
+      "command": "cd ui && node --import tsx --test tests/examShelf.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 6 - S2b1 G7 both carried states are drawn and unreasserted retains its count",
+          "# tests 7",
+          "# pass 6",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 7",
+          "# pass 7",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G8",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "(projection as ExamOverviewProjection & { visitTypeCategoryId?: string }).visitTypeCategoryId === \"exams\" || (definition.optional",
+      "command": "cd ui && node --import tsx --test tests/examShelf.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 7 - S2b1 G8 scope determines drawn lines regardless of scheduling category",
+          "# tests 7",
+          "# pass 6",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 7",
+          "# pass 7",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    },
+    {
+      "guard": "G5-pin",
+      "file": "ui/src/components/charting/ExamOverviewBoard.tsx",
+      "mutation": "Pinned",
+      "command": "cd ui && node --import tsx --test tests/examShelf.test.tsx",
+      "red": {
+        "exit": 1,
+        "output": [
+          "not ok 4 - S2b1 G5 content-pinned groups retain the pin wording without a removal affordance",
+          "# tests 7",
+          "# pass 6",
+          "# fail 1",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      },
+      "green": {
+        "exit": 0,
+        "output": [
+          "# tests 7",
+          "# pass 7",
+          "# fail 0",
+          "# cancelled 0",
+          "# skipped 0"
+        ]
+      }
+    }
+  ],
+  "endpointDiffStat": ""
+}

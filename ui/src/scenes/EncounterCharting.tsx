@@ -155,6 +155,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const [examOverviewRefreshing, setExamOverviewRefreshing] = useState(false);
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
+  const [openedBoardEditorIds, setOpenedBoardEditorIds] = useState<ChartSectionId[]>([]);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
   const [chartClearVersion, setChartClearVersion] = useState(0);
   // The Undo ledger (§4b.4) is loaded with the encounter and replaced by every void / undo
@@ -284,6 +285,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
 
   function openBoardEditor(sectionId: ChartSectionId) {
     const transition = () => {
+      setOpenedBoardEditorIds(current => current.includes(sectionId) ? current : [...current, sectionId]);
       setVisitChargesOpen(false);
       setActiveSection(sectionId);
       if (isExamEntrySheetSectionId(sectionId)) {
@@ -324,6 +326,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   }
 
   useEffect(() => {
+    setOpenedBoardEditorIds([]);
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
     setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
@@ -763,6 +766,12 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const availableSectionGroups = sectionGroupCatalog.groups.filter(
     (group) => group.active && !effectiveGroupKeys.has(group.groupKey),
   );
+  const effectiveGroups = sectionGroupCatalog.groups.filter(group => effectiveGroupKeys.has(group.groupKey));
+  const groupEditorIds = boardEditorEntries.filter(entry => {
+    const sectionKey = visibleDefinitions.find(definition => definition.stableKey === entry.id)?.sectionKey ?? entry.id;
+    return effectiveGroups.some(group => group.sectionKeyPrefixes.some(prefix => sectionKey.startsWith(prefix)));
+  }).map(entry => entry.id);
+  const pinnedSectionGroups = sectionGroupCatalog.groups.filter(group => sectionGroupCatalog.contentPinnedGroupKeys?.includes(group.groupKey));
   const overrideGroupKeys = sectionGroupCatalog.overrideGroupKeys ?? [];
   const groupLabel = (groupKey: string) =>
     sectionGroupCatalog.groups.find((group) => group.groupKey === groupKey)?.label ?? groupKey;
@@ -892,6 +901,12 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
             projection={activeExamOverviewProjection}
             editorEntries={boardEditorEntries}
             activeEditorId={entrySheetSection}
+            openedEditorIds={[...openedBoardEditorIds, ...groupEditorIds]}
+            availableSectionGroups={availableSectionGroups}
+            pinnedSectionGroups={pinnedSectionGroups}
+            onAddSectionGroup={sectionGroupCatalog.canPullIn ? groupKey => void addSectionGroup(groupKey) : undefined}
+            updatingSectionGroups={addingSectionGroup}
+            sectionGroupError={sectionGroupError}
             refreshing={examOverviewRefreshing}
             onOpenEditor={openBoardEditor}
             onRefresh={refreshExamOverview}

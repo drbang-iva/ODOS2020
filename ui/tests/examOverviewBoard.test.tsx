@@ -374,18 +374,19 @@ test("by-exception board renders exactly one row per performed or deferred findi
   );
   try {
     const rows = renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
-    assert.equal(rows.length, 8);
+    assert.equal(rows.length, 9);
     assert.deepEqual(rows.map((row) => row.props["data-row-pattern"]), [
-      "eye-pair", "word", "eye-pair", "event", "diagram", "word", "rx", "word",
+      "eye-pair", "word", "eye-pair", "event", "diagram", "word", "eye-pair", "rx", "word",
     ]);
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "pachymetry_um").length, 1);
-    assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular_pressure").length, 0);
+    assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular_pressure").length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 1);
-    assert.equal(renderer.root.findAllByProps({ "data-section-key": "assessment" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-section-key": "assessment" }).length, 1);
     const rendered = JSON.stringify(renderer.toJSON());
     assert.match(rendered, /Not examined/);
     assert.doesNotMatch(rendered, /not charted|No finding observations recorded/i);
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "exam-shelf" }).length, 1);
   } finally {
     renderer.unmount();
   }
@@ -404,8 +405,10 @@ test("five row patterns use clinical display values without exposing machine sta
   try {
     const rendered = JSON.stringify(renderer.toJSON());
     const eom = renderer.root.findByProps({ "data-finding-key": "entrance:eom" });
-    assert.equal(textContent(eom), "EOMfull");
-    assert.doesNotMatch(textContent(eom), /OD|OS/);
+    assert.equal(textContent(eom.findByProps({ className: "odos-exam-finding-name" })), "EOM");
+    assert.equal(textContent(eom.findByProps({ className: "odos-exam-finding-value" })), "full");
+    assert.doesNotMatch(textContent(eom.findByProps({ className: "odos-exam-finding-value" })), /OD|OS/);
+    assert.match(textContent(eom), /OD.*2026-08-24.*OS.*2026-08-24/);
     assert.match(rendered, /Cover test.*NEAR 3 XP/);
     assert.match(rendered, /Pachymetry.*OD.*541.*OS.*538/);
     assert.match(
@@ -440,7 +443,9 @@ test("five row patterns use clinical display values without exposing machine sta
     try {
       const normalRow = normalCvf.root.findByProps({ "data-finding-key": "entrance:cvf" });
       assert.equal(normalRow.props["data-row-pattern"], "diagram");
-      assert.equal(textContent(normalRow), "Confrontation fieldsfull");
+      assert.equal(textContent(normalRow.findByProps({ className: "odos-exam-finding-name" })), "Confrontation fields");
+      assert.equal(textContent(normalRow.findByProps({ className: "odos-exam-finding-value" })), "full");
+      assert.match(textContent(normalRow), /OD.*2026-08-24.*OS.*2026-08-24/);
       assert.equal(normalRow.findAllByProps({ "data-testid": "visual-field-diagram" }).length, 0);
     } finally {
       normalCvf.unmount();
@@ -613,7 +618,7 @@ test("manual keratometry projects only its allowlisted measurements in OD-first 
     const rendered = textContent(renderer.root.findByProps({ "data-finding-key": "manual_keratometry" }));
     assert.equal(
       rendered,
-      "Manual keratometryOD 43.25 @180 / 44.00 @090OS 42.75 @175 / 43.50 @085",
+      "Manual keratometryOD 43.25 @180 / 44.00 @090OS 42.75 @175 / 43.50 @085OD · 2026-08-24OS · 2026-08-24",
     );
     assert.doesNotMatch(rendered, /CUSTOM_|Observation\/|recorded/);
   } finally {
@@ -2890,7 +2895,7 @@ test("a zero-finding Pretest section renders one labeled blank per chartable edi
   }
 });
 
-test("only the single-slot Refraction group keeps Chart another finding", () => {
+test("single-slot Refraction puts only its remaining editors on the shelf", () => {
   const renderer = create(
     <ExamOverviewBoard
       projection={zeroFindingComprehensiveProjection()}
@@ -2921,13 +2926,14 @@ test("only the single-slot Refraction group keeps Chart another finding", () => 
       .map((blank) => blank.props["data-editor-section-id"]);
     assert.equal(blankEditorIds.includes("refraction-history"), false);
 
-    const disclosures = renderer.root.findAllByProps({ "data-testid": "chart-another-finding" });
-    assert.equal(disclosures.length, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 0);
+    const shelf = renderer.root.findByProps({ "data-testid": "exam-shelf" });
     assert.deepEqual(
-      disclosures[0]!.findAllByProps({ "data-testid": "exam-editor-entry-row" })
+      shelf.findByProps({ "data-shelf-group": "refraction" }).findAllByProps({ "data-testid": "exam-editor-entry-row" })
         .map((row) => row.props["data-editor-section-id"]),
-      ["refraction", "refraction-history", "eye-growth"],
+      ["refraction-history", "eye-growth"],
     );
+    assert.equal(renderer.root.findAllByProps({ "data-editor-section-id": "refraction" }).length, 1);
   } finally {
     renderer.unmount();
   }
@@ -3072,11 +3078,12 @@ test("structure view keeps required blanks while collapsing performed findings i
       .filter((section) => section.props["data-section-state"] !== "editor-only");
     assert.deepEqual(
       sections.map((section) => section.props["data-section-key"]),
-      ["history", "pretest", "contact-lenses"],
+      ["history", "pretest", "contact-lenses", "assessment"],
     );
     assert.equal(harness.renderer.root.findAllByType(SpineNav).length, 0);
     const rows = harness.renderer.root.findAllByProps({ "data-testid": "exam-finding-row" });
-    assert.equal(rows.length, 2);
+    assert.equal(rows.length, 3);
+    assert.equal(rows.filter(row => row.props["data-finding-key"] === "confrontation-visual-fields").length, 1);
     assert.equal(rows.filter((row) => row.props["data-finding-key"] === "intraocular-pressure").length, 1);
     const rendered = JSON.stringify(harness.renderer.toJSON());
     assert.match(rendered, /deferred — reason not recorded/);
@@ -3117,7 +3124,8 @@ test("charted findings keep their FindingRow while sibling editors receive disti
     assert.match(textContent(refractionRow), /Expand/);
     assert.doesNotMatch(textContent(refractionRow), /Full page/);
 
-    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "chart-another-finding" }).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "exam-shelf" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "history" }).length, 1);
     assert.equal(renderer.root.findAllByProps({ "data-section-key": "refraction" }).length, 0);
     assert.equal(renderer.root.findAllByProps({ "data-editor-section-id": "soft-contact-lens" }).length, 1);
@@ -3552,8 +3560,8 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
   });
   try {
     const editorIds = harness.renderer.root
-      .findAll((node) => typeof node.props["data-editor-section-id"] === "string")
-      .map((node) => node.props["data-editor-section-id"] as string)
+      .findAll((node) => typeof node.type === "string" && (node.props["data-drawn-editor-id"] || node.props["data-testid"] === "exam-editor-entry-row"))
+      .map((node) => (node.props["data-drawn-editor-id"] ?? node.props["data-editor-section-id"]) as string)
       .sort();
     assert.deepEqual(editorIds, [
       "aesthetics-consent",
@@ -3564,12 +3572,14 @@ test("distributed board rows anchor mapped editors and retain full-page fallback
       "cup-disc",
       "custom:binocular-vision",
       "cvf",
+      "dilation",
       "dry-eye",
       "dry-eye:symptoms",
       "eom",
       "eye-growth",
       "gonioscopy",
       "hpi",
+      "imaging",
       "iop",
       "manual-keratometry",
       "myopia-management",
@@ -3981,6 +3991,8 @@ test("a diagnosis-led finding mutation refreshes permanent completeness", async 
 });
 
 interface RenderEncounterOptions {
+  sectionGroupCatalog?: import("../src/lib/finding-section-groups").FindingSectionGroupCatalog;
+  writeRequests?: Array<{ url: string; method: string; body: unknown }>;
   scopeRequests?: unknown[];
   canWriteScope?: boolean;
   scopeWriteStatus?: number;
@@ -4057,6 +4069,8 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   let undoLedgerState: EncounterUndoLedger | undefined = options.undoLedger;
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
+    if (init?.method && !["GET", "HEAD"].includes(init.method)) options.writeRequests?.push({ url, method: init.method, body: init.body ? JSON.parse(String(init.body)) : undefined });
+    if (url.endsWith("/clinical-graph/encounters/exam-1/section-groups")) return jsonResponse({ override: { groupKeys: ["dry-eye-workup"] } });
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-scope")) {
       if (init?.method === "PUT") {
         options.scopeRequests?.push(JSON.parse(String(init.body)));
@@ -4121,6 +4135,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       return jsonResponse({ definitions: options.procedureDefinitions ?? [] });
     }
     if (url.includes("/clinical-graph/finding-section-groups")) {
+      if (options.sectionGroupCatalog) return jsonResponse(options.sectionGroupCatalog);
       return jsonResponse({
         canWrite: false,
         canPullIn: false,
@@ -4254,6 +4269,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       addEventListener: () => undefined,
       removeEventListener: () => undefined,
       activeElement: { focus: () => { focusRestores += 1; } },
+      getElementById: () => null,
     } as unknown as Document,
   });
   Object.defineProperty(globalThis, "window", {
@@ -4363,12 +4379,9 @@ function zeroFindingComprehensiveProjection(): ExamOverviewProjection {
 function editorControl(root: ReactTestInstance, sectionId: string): ReactTestInstance {
   const launcher = root.findAllByProps({ "data-editor-section-id": sectionId })[0];
   if (launcher) return launcher;
-  if (sectionId === "dilation") {
-    const finding = root.findAll((node) =>
-      node.props["data-finding-key"] === "dilation" || node.props["data-finding-key"] === "entrance:dilation"
-    )[0];
-    if (finding) return finding;
-  }
+  const line = root.findAllByProps({ "data-drawn-editor-id": sectionId })[0];
+  const finding = line?.findAllByProps({ "data-testid": "exam-finding-row" })[0];
+  if (finding) return finding;
   throw new Error(`No editor control found for ${sectionId}`);
 }
 
@@ -4473,4 +4486,48 @@ test("S2a scope picker follows chart.write capability", async () => {
   const h = await renderEncounter(PROJECTION, { canWriteScope: false });
   try { assert.equal(h.renderer.root.findByProps({ "aria-label": "Exam scope" }).props.disabled, true); }
   finally { h.restore(); }
+});
+
+
+test("S2b1 G3 shelf opens Macula at its exam position without changing scope visit type or diagnoses", async () => {
+  const p = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1", examScope: "office-visit", definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+  const encounter = { resourceType: "Encounter", id: "exam-1", status: "in-progress", class: { code: "AMB" }, type: [{ text: "Synthetic office visit" }], diagnosis: [{ condition: { reference: "Condition/synthetic" }, rank: 1 }] } as Encounter;
+  const before = structuredClone(encounter);
+  const writeRequests: NonNullable<RenderEncounterOptions["writeRequests"]> = [];
+  const h = await renderEncounter(p, { writeRequests, encounterRead: async () => encounter,
+    findingDefinitions: [findingDefinition("ocular-health:posterior:macula", "Macula")] });
+  try {
+    const shelf = h.renderer.root.findByProps({ "data-testid": "exam-shelf" });
+    const macula = shelf.findByProps({ "data-editor-section-id": "ocular-health:posterior:macula" });
+    await act(async () => { macula.props.onClick(); await flushEffects(); });
+    const chart = h.renderer.root.findByType(EncounterCharting);
+    assert.match(textContent(chart), /Macula/);
+    await act(async () => { h.renderer.root.findByProps({ "data-testid": "return-to-exam-overview" }).props.onClick(); await flushEffects(); });
+    const rows = h.renderer.root.findAllByProps({ "data-testid": "exam-overview-section" });
+    assert.deepEqual(rows.map(row => row.props["data-section-key"]), ["history", "ocular-health", "assessment"]);
+    const ocular = rows.find(row => row.props["data-section-key"] === "ocular-health")!;
+    assert.deepEqual(ocular.findAll(node => typeof node.type === "string" && node.props["data-drawn-editor-id"]).map(node => node.props["data-drawn-editor-id"]), ["ocular-health:posterior:macula"]);
+    assert.equal(h.renderer.root.findByType(ExamOverviewBoard).props.projection.examScope, "office-visit");
+    assert.deepEqual(encounter, before);
+    assert.deepEqual(writeRequests.filter(request => !(request.url.endsWith("/void") && (request.body as { preview?: boolean }).preview === true)), []);
+  } finally { h.restore(); }
+});
+
+test("S2b1 G4 inactive available group pulls in from the shelf and draws lines on the same board", async () => {
+  const p = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1", examScope: "office-visit", definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+  const writeRequests: NonNullable<RenderEncounterOptions["writeRequests"]> = [];
+  const h = await renderEncounter(p, { writeRequests,
+    findingDefinitions: [{ stableKey: "dry-eye:symptoms", sectionKey: "dry-eye:symptoms", display: "Symptoms", active: true, perEye: false, customFields: [] }] as CustomFindingDefinition[],
+    sectionGroupCatalog: { canWrite: false, canPullIn: true, groups: [{ id: "group", groupKey: "dry-eye-workup", label: "Dry Eye Workup", sectionKeyPrefixes: ["dry-eye:"], active: true }], effectiveGroupKeys: [], overrideGroupKeys: [], contentPinnedGroupKeys: [] },
+  });
+  try {
+    const board = h.renderer.root.findByType(ExamOverviewBoard);
+    assert.equal(board.props.editorEntries.some((entry: { id: string }) => entry.id === "dry-eye:symptoms"), false);
+    await act(async () => { h.renderer.root.findByProps({ "data-testid": "exam-shelf-section-group" }).props.onClick(); await flushEffects(); });
+    assert.equal(h.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+    assert.equal(h.renderer.root.findAllByProps({ "data-testid": "return-to-exam-overview" }).length, 0);
+    assert.equal(h.renderer.root.findAllByProps({ "data-testid": "exam-shelf-section-group" }).length, 0);
+    assert.equal(h.renderer.root.findAllByProps({ "data-drawn-editor-id": "dry-eye:symptoms" }).length, 1);
+    assert.deepEqual(writeRequests.filter(request => !(request.url.endsWith("/void") && (request.body as { preview?: boolean }).preview === true)), [{ url: "/clinical-graph/encounters/exam-1/section-groups", method: "POST", body: { action: "add", groupKey: "dry-eye-workup" } }]);
+  } finally { h.restore(); }
 });

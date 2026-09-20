@@ -476,8 +476,7 @@ test("a pristine clinical sheet swaps from HPI to VA through a real overview cli
 
     const hpiDialog = page.getByRole("dialog", { name: "Chief Complaint & HPI" });
     await hpiDialog.waitFor();
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
+    await openFromShelf(page, "va");
 
     await hpiDialog.waitFor({ state: "detached" });
     const vaDialog = page.getByRole("dialog", { name: "Visual Acuity" });
@@ -528,8 +527,7 @@ for (const contract of [
       await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
       await page.getByRole("button", { name: contract.opener }).click();
       await contract.edit(page);
-      await openChartAnotherGroup(page, "va");
-      await page.locator('[data-editor-section-id="va"]').click();
+      await openFromShelf(page, "va");
       await settleDiscardDialog(page,
         `Discard unsaved changes in ${contract.currentTitle} and open Visual Acuity? Unsaved edits will be discarded. Saved entries remain in the chart.`,
         "Keep",
@@ -556,8 +554,7 @@ test("focusing a pristine field does not warn before a clinical sheet swap", { t
     const field = page.getByRole("combobox", { name: "OD IOP value" });
     await field.waitFor();
     await field.click();
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
+    await openFromShelf(page, "va");
 
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
     assert.equal(await page.getByRole("alertdialog").count(), 0);
@@ -573,8 +570,7 @@ test("presentational sheet controls do not warn before a clinical sheet swap", {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open Gonioscopy" }).click();
     await page.getByRole("button", { name: /Show quadrants/ }).first().click();
-    await openChartAnotherGroup(page, "va");
-    await page.locator('[data-editor-section-id="va"]').click();
+    await openFromShelf(page, "va");
 
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
     assert.equal(await page.getByRole("alertdialog").count(), 0);
@@ -655,17 +651,14 @@ test("clinical entry-sheet chrome is 44px-class, releases Tab, closes on pristin
   }
 });
 
-test("editor launch rows are 44px-class and disclosures reveal their interaction after expansion", { timeout: 30_000 }, async () => {
+test("editor launch rows are 44px-class and the shelf exposes their interaction without expansion", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html`, { waitUntil: "networkidle" });
-    const chartAnotherGroups = page.getByTestId("chart-another-finding");
-    const chartAnotherCount = await chartAnotherGroups.count();
-    assert.ok(chartAnotherCount > 0);
-    for (let index = 0; index < chartAnotherCount; index += 1) {
-      await chartAnotherGroups.nth(index).locator("summary").click();
-    }
+    assert.equal(await page.getByTestId("exam-shelf").isVisible(), true);
+    assert.equal(await page.getByTestId("chart-another-finding").count(), 0);
+    assert.equal(await page.getByTestId("exam-shelf").locator("details").count(), 0);
     const rows = page.locator('[data-testid="exam-editor-entry-row"], [data-testid="exam-section-blank"]');
     assert.ok(await rows.count() >= REAL_SECTION_AUDIT.length);
     const measurements = await rows.evaluateAll((nodes) => nodes.map((node) => {
@@ -901,7 +894,7 @@ test("worksheet row labels align with section titles in full-width and paired ca
   }
 });
 
-test("an open entry sheet does not reopen a hidden per-finding launcher behind the modal", { timeout: 30_000 }, async () => {
+test("an open entry sheet has one visible in-place launcher and no duplicate shelf entry", { timeout: 30_000 }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(5_000);
   try {
@@ -910,10 +903,10 @@ test("an open entry sheet does not reopen a hidden per-finding launcher behind t
       { waitUntil: "networkidle" },
     );
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
-    assert.equal(await page.locator('[data-editor-section-id="va"].is-active').isVisible(), false);
-    assert.equal(await page.getByTestId("chart-another-finding").filter({
-      has: page.locator('[data-editor-section-id="va"]'),
-    }).getAttribute("open"), null);
+    assert.equal(await page.locator('[data-editor-section-id="va"].is-active').isVisible(), true);
+    assert.equal(await page.locator('[data-editor-section-id="va"]').count(), 1);
+    assert.equal(await page.getByTestId("exam-shelf").locator('[data-editor-section-id="va"]').count(), 0);
+    assert.equal(await page.getByTestId("chart-another-finding").count(), 0);
   } finally {
     await page.close();
   }
@@ -922,8 +915,9 @@ test("an open entry sheet does not reopen a hidden per-finding launcher behind t
 test("the distributed editor row hover visibly engages and resolves to the document accent", { timeout: 30_000 }, async () => {
   const page = await openExamOverviewPage();
   try {
-    await openChartAnotherGroup(page, "iop");
-    await assertHoverBorderResolvesAccent(page, page.locator('[data-editor-section-id="iop"]'));
+    await assertHoverBorderResolvesAccent(page, page.getByTestId("exam-shelf").locator('[data-editor-section-id="iop"]'));
+    await openFromShelf(page, "iop");
+    await page.getByRole("dialog", { name: "Intraocular Pressure" }).waitFor();
   } finally {
     await page.close();
   }
@@ -1038,11 +1032,10 @@ for (const viewport of [
   });
 }
 
-async function openChartAnotherGroup(page: Page, sectionId: string): Promise<void> {
-  const group = page.getByTestId("chart-another-finding").filter({
-    has: page.locator(`[data-editor-section-id="${sectionId}"]`),
-  });
-  await group.locator("summary").click();
+async function openFromShelf(page: Page, sectionId: string): Promise<void> {
+  const entry = page.getByTestId("exam-shelf").locator(`[data-editor-section-id="${sectionId}"]`);
+  assert.equal(await entry.isVisible(), true);
+  await entry.click();
 }
 
 async function openExamOverviewPage(showReturnButton = false): Promise<Page> {

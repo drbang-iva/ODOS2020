@@ -962,7 +962,9 @@
 }
 
 .odos-exam-provenance.is-carried-unreasserted {
-  box-shadow: inset 0 0 0 2px #b28bff;
+  background: color-mix(in srgb, var(--odos-amber) 12%, transparent);
+  color: var(--odos-amber);
+  box-shadow: inset 0 0 0 1px var(--odos-amber);
 }
 
 .odos-exam-interpretation {
@@ -1129,35 +1131,55 @@
   color: var(--odos-faint);
 }
 
-.odos-exam-chart-another {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
-  gap: 8px;
-  padding: 0 clamp(12px, 2.5vw, 32px) 18px;
+.odos-exam-shelf {
+  padding: 0 clamp(12px, 2.5vw, 32px) 72px;
 }
 
-.odos-exam-chart-another .odos-exam-editor-entries {
+.odos-exam-shelf h2 {
+  margin: 12px 0;
+  color: var(--odos-text);
+  font-size: 15px;
+}
+
+.odos-exam-shelf-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 8px;
+}
+
+.odos-exam-shelf .odos-exam-editor-entries {
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--odos-line);
   border-radius: 8px;
 }
 
-.odos-exam-editor-entries summary {
+.odos-exam-shelf-empty,
+.odos-exam-group-pin {
+  color: var(--odos-muted);
+  font-size: 11px;
+}
+
+.odos-exam-editor-line {
+  display: contents;
+}
+
+.odos-exam-other-findings {
+  grid-column: 1 / -1;
+}
+
+.odos-exam-other-findings h3 {
   color: var(--odos-muted);
   font-size: 12px;
-  font-weight: 700;
 }
 
-.odos-exam-editor-entries summary span {
-  display: block;
-  margin-top: 2px;
-  color: var(--odos-faint);
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.odos-exam-editor-entries[open] .odos-exam-editor-entry-list {
-  margin-top: 8px;
+.odos-exam-other-metadata,
+.odos-exam-finding > .odos-exam-provenance {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
 }
 
 .odos-exam-chart-bar {
@@ -1547,12 +1569,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .odos-exam-section-body[data-row-layout="two-column"] > .odos-exam-finding {
+  .odos-exam-section-body[data-row-layout="two-column"] .odos-exam-finding {
     grid-template-columns: minmax(0, 1fr);
     align-items: baseline;
   }
 
-  .odos-exam-section-body[data-row-layout="two-column"] > .odos-exam-finding > .odos-exam-finding-expansion {
+  .odos-exam-section-body[data-row-layout="two-column"] .odos-exam-finding > .odos-exam-finding-expansion,
+  .odos-exam-section-body[data-row-layout="two-column"] .odos-exam-other-metadata,
+  .odos-exam-section-body[data-row-layout="two-column"] .odos-exam-finding > .odos-exam-provenance {
     grid-column: 1;
   }
 }

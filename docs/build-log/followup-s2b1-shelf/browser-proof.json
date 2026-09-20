@@ -1,0 +1,70 @@
+[
+  {
+    "width": 1440,
+    "proof": "recorded data",
+    "findingCount": 3,
+    "carriedStates": [
+      "carried-reasserted",
+      "carried-unreasserted",
+      "current"
+    ],
+    "colors": {
+      "color": "rgb(231, 169, 76)",
+      "amber": "rgb(231, 169, 76)"
+    }
+  },
+  {
+    "width": 1440,
+    "proof": "shelf interactions",
+    "rowsAfterMacula": [
+      "history",
+      "ocular-health",
+      "assessment"
+    ],
+    "unchangedTypeAndDiagnoses": true,
+    "scope": "office-visit",
+    "groupRemoval": {
+      "status": 409,
+      "body": {
+        "code": "section-group-has-content",
+        "sectionKeys": [
+          "dry-eye:symptoms"
+        ]
+      }
+    }
+  },
+  {
+    "width": 390,
+    "proof": "recorded data",
+    "findingCount": 3,
+    "carriedStates": [
+      "carried-reasserted",
+      "carried-unreasserted",
+      "current"
+    ],
+    "colors": {
+      "color": "rgb(231, 169, 76)",
+      "amber": "rgb(231, 169, 76)"
+    }
+  },
+  {
+    "width": 390,
+    "proof": "shelf interactions",
+    "rowsAfterMacula": [
+      "history",
+      "ocular-health",
+      "assessment"
+    ],
+    "unchangedTypeAndDiagnoses": true,
+    "scope": "office-visit",
+    "groupRemoval": {
+      "status": 409,
+      "body": {
+        "code": "section-group-has-content",
+        "sectionKeys": [
+          "dry-eye:symptoms"
+        ]
+      }
+    }
+  }
+]
