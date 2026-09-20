@@ -80,6 +80,7 @@ export function FindingSectionGroupsSettings() {
   }
 
   function edit(group: FindingSectionGroup) {
+    setError(null);
     setEditing({
       original: group,
       draft: {
@@ -92,6 +93,7 @@ export function FindingSectionGroupsSettings() {
   }
 
   function create() {
+    setError(null);
     setEditing({
       draft: {
         groupKey: "",

@@ -10,6 +10,8 @@ const catalogueHeader = '"If-None-Exist": `identifier=${encodeURIComponent(`${FI
 const settings = 'ui/src/components/settings/FindingSectionGroupsSettings.tsx';
 const uiTests = 'ui/tests/findingSectionGroups.test.tsx';
 const cases = [
+ ['UI-new-edit-error', settings, 'function edit(group: FindingSectionGroup) {\n    setError(null);', 'function edit(group: FindingSectionGroup) {', uiTests, 'G1 Settings deactivate'],
+ ['UI-new-create-error', settings, 'function create() {\n    setError(null);', 'function create() {', uiTests, 'G1 Settings edit'],
  ['UI-create-version', settings, '              expectedVersion: null,\n', '', uiTests, 'S1b G6 settings'],
  ['UI-edit-version', settings, 'expectedVersion: editing.original?.versionId ?? null', 'expectedVersion: null', uiTests, 'G1 Settings edit'],
  ['UI-active-version', settings, 'expectedVersion: group.versionId', 'expectedVersion: null', uiTests, 'G1 Settings deactivate'],

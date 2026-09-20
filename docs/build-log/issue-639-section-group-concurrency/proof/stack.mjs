@@ -50,7 +50,17 @@ function stopContainers() {
   console.log(`Stopped containers belonging to ${project}; retained containers and volumes.`);
 }
 
-if (command === 'prepare') {
+if (command === 'prepare' && baseServer) {
+  if (existsSync(manifestPath)) throw new Error('Base runtime is already prepared; do not overwrite identity.');
+  const shared = join(root, '.odos/639-proof');
+  const manifest = readJson(join(shared, 'manifest.json'));
+  if (manifest.project !== project) throw new Error('Base runtime must share this proof project.');
+  await Promise.all([ports.frontdoor, ports.mcp, ports.proxy, ports.control].map(freePort));
+  mkdirSync(runtime, { recursive: true, mode: 0o700 });
+  for (const name of ['credentials.json', 'fixture.json']) writeJson(join(runtime, name), readJson(join(shared, name)));
+  writeJson(manifestPath, { ...manifest, ports, runtime });
+  console.log('Prepared base app runtime sharing the existing synthetic stack and identities.');
+} else if (command === 'prepare') {
   if (existsSync(manifestPath)) throw new Error('Harness is already prepared. Reuse its isolated runtime; do not overwrite identity.');
   await Promise.all(Object.values(ports).map(freePort));
   mkdirSync(runtime, { recursive: true, mode: 0o700 });
@@ -77,6 +87,7 @@ if (command === 'prepare') {
   writeJson(manifestPath, { project, ports, runtime, subnet, root });
   console.log(`Prepared ${project}; isolated runtime ${runtime}`);
 } else if (command === 'up') {
+  if (baseServer) throw new Error('Start the shared stack without --base-server; the base runtime owns only app processes.');
   try {
     compose('up', '-d');
     await waitHealth(`http://127.0.0.1:${ports.medplum}/healthcheck`, 180);
@@ -143,5 +154,5 @@ if (command === 'prepare') {
   }
   stopContainers();
 } else {
-  throw new Error('Usage: node scripts/r10-served-route/stack.mjs prepare|up|build|serve|stop-app|stop [--app-root /absolute/checkout]');
+  throw new Error('Usage: node docs/build-log/issue-639-section-group-concurrency/proof/stack.mjs prepare|up|build|serve|stop-app|stop [--base-server] [--app-root CHECKOUT]');
 }

@@ -10,13 +10,15 @@
       "# tests 1813",
       "# pass 1813",
       "# fail 0",
+      "# cancelled 0",
       "# skipped 0"
     ],
     "baseTestNamesAllRetained": true,
     "addedTestNames": [
       "G1 Settings edit sends its loaded version and displays the shared conflict message",
       "G1 Settings deactivate sends its loaded version and displays the shared conflict message"
-    ]
+    ],
+    "finalCommand": "caffeinate -i npm --prefix ui test"
   },
   "mcp": {
     "base": [
@@ -46,11 +48,11 @@
     "mcp/src/clinical-graph/finding-section-group-store.ts": "c1222a1613edea28e763557ee5612b8e1c6d010a4b7fa89a9799d52035b19f81",
     "mcp/src/clinical-graph/finding-section-group-endpoint.ts": "4c49b24e75b1243b3f84a792a2fb01d9c26e5e1a2dcd1ea3ca85007e1937f6ac",
     "ui/src/lib/finding-section-groups.ts": "70417ee1af1b6ce9c6a9eb8f1d3bebb38e1629096e9444021498e444f8c9bec1",
-    "ui/src/components/settings/FindingSectionGroupsSettings.tsx": "7c476b4d91f5a7a3a9ecb1d925f8fe6638bbfea84d4f9da826a32602ba593b58"
+    "ui/src/components/settings/FindingSectionGroupsSettings.tsx": "428b48ae2b154fc625c27d79097ef0ce4d3c5b94864ff3ae196a97615b473ff5"
   },
   "beforeServedIdentity": {
     "head": "b92ed979848c055ffca1eafbb0bc023980f3539d",
-    "dirty": true,
+    "dirty": false,
     "mcpHash": "56475182edbc89df84b1cb4dce5e938689abf209d79679d086e82ea66d633f51",
     "servedAssets": {
       "/assets/index-XLG_Otpe.js": "e094a6e9cc5e6008f0b434109c48f69b8b4e2d0b5fba79dd00be9752b18ea1f5",
@@ -68,11 +70,11 @@
     "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]"
   },
   "afterServedIdentity": {
-    "head": "b92ed979848c055ffca1eafbb0bc023980f3539d",
+    "head": "bf68f2ef6422d8b6297b359054a2790e34c92492",
     "dirty": true,
     "mcpHash": "56475182edbc89df84b1cb4dce5e938689abf209d79679d086e82ea66d633f51",
     "servedAssets": {
-      "/assets/index-CxrdLHTR.js": "32e10dd0166b58af0c5d213f41297f54886163f5785c0696c56dc2a9c9bff8f7",
+      "/assets/index-Y2B6ZxKe.js": "22b1beb2eb64b7c5825ccf55332b65925f4aade121eaffc68247265d8e4931d8",
       "/assets/index-B-lAzhSj.css": "7c549e32d20be5f4d194b360da1c39006b31005e0fb6d2f5554e8c18aac0cf3a"
     },
     "ports": {

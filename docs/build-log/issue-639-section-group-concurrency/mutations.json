@@ -1,5 +1,55 @@
 [
   {
+    "guard": "UI-new-edit-error",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "UI-new-create-error",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
     "guard": "UI-create-version",
     "red": {
       "command": "node --import tsx --test --test-name-pattern=S1b G6 settings ui/tests/findingSectionGroups.test.tsx",

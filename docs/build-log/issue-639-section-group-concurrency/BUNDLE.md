@@ -43,7 +43,7 @@ No outside-allowlist files were changed or are needed. No new clinical codes, FH
 
 ## Guards
 
-[GUARDS.md](GUARDS.md) quotes every red and restored-green summary and the G8 verification output; [mutations.json](mutations.json) is the machine-readable record. All 11 mutations returned exit 1, followed by exit 0 after restoration: G1–G7 and four UI payload/message mutations. G8 is verification only.
+[GUARDS.md](GUARDS.md) quotes every red and restored-green summary and the G8 verification output; [mutations.json](mutations.json) is the machine-readable record. All 13 mutations returned exit 1, followed by exit 0 after restoration: G1–G7 and six UI payload/message/error-state mutations. G8 is verification only.
 
 G5 asserts one physical row, not the resolved returned value. A separate test races against an identifier-free legacy override row and verifies it remains the only row.
 
@@ -100,6 +100,12 @@ Focused MCP: 33 passed, zero failed. Focused UI plus clinicalGraphRouting: 21 pa
 `git diff --check`: exit 0.
 
 Initial harness attempts failed due to a missing copied fixture import and the old project-name assertion; both were corrected only in this build-log harness. An early MCP baseline overlapped the failed startup and reported 18 database-connection failures; it was discarded and rerun in the clean base worktree against the ready stack. No test was skipped or weakened to remedy infrastructure failures. The retained baseline above is the complete successful rerun.
+
+## Review fixes
+
+CodeRabbit's three findings were addressed within scope: new edit/create dialogs clear the previous operation's error; the proof usage message names the correct script; and `prepare --base-server` shares the existing synthetic stack and identities while checking only its separate app ports. The shared network and volumes are retained. The proof run order is in [proof/README.md](proof/README.md).
+
+Both stale-error assertions failed before the two-line UI fix and passed afterward. Two additional mutations independently remove those clears and turn the tests red. The final browser replay covers the updated UI and a fresh synthetic encounter. Two final full-UI attempts encountered timing failures in unchanged browser tests. The first reported 1812 passes and one cancellation; the next reported 1809 passes, one timeout failure and three cancellations. macOS power-management evidence showed clamshell and maintenance sleep intervals matching the inflated test durations, including roughly 508, 2989 and 766 seconds. The affected tests were the static-editor width/height gate, dense worksheet row pairing, the 901px Visit/charges composition and chart-bar responsiveness. The suite was rerun using `caffeinate -i npm --prefix ui test`; the temporary assertion ends with the command. No test, timeout, or excluded file was changed. The awake rerun completed: 1813 tests, 1813 passed, zero failures, cancellations or skips (231795 ms).
 
 ## Accepted limitation and follow-ups
 

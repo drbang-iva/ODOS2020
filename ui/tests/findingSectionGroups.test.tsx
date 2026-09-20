@@ -638,5 +638,10 @@ for (const action of ["edit", "deactivate"] as const) test(`G1 Settings ${action
     const alert = renderer.root.findByProps({ role: "alert" });
     assert.equal(alert.children.join(""), CONCURRENT_EDIT_MESSAGE);
     if (action === "edit") assert.equal(renderer.root.findByType("form").findByProps({ role: "alert" }), alert);
+    if (action === "edit") await act(async () => { renderer.root.findAllByType("button").find(b => b.children.join("") === "Cancel")!.props.onClick(); });
+    await act(async () => {
+      renderer.root.findAllByType("button").find(b => action === "edit" ? b.children.join("").includes("Create group") : b.children.join("") === "Edit")!.props.onClick();
+    });
+    assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0, "a newly opened editor does not inherit the previous operation's error");
   } finally { renderer?.unmount(); globalThis.fetch = originalFetch; }
 });

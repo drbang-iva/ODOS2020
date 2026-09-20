@@ -77,8 +77,12 @@ try {
   if (!before) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
     const page = await context.newPage(); page.setDefaultTimeout(30000); await login(page, 'provider');
-    const cleanup = await api(page, `/clinical-graph/encounters/${fixture.current.slice(10)}/section-groups`, { action: 'remove', groupKey: 'dry-eye-workup' });
-    assert.equal(cleanup.status, 200, 'Start with an empty group');
+    const template = await api(page, `/fhir/R4/${fixture.current}`);
+    assert.equal(template.status, 200);
+    const { id, meta, ...encounter } = template.body;
+    const fresh = await api(page, '/fhir/R4/Encounter', encounter);
+    assert.equal(fresh.status, 201);
+    fixture.current = `Encounter/${fresh.body.id}`;
     await page.goto(`${base}/clinic?patientId=${fixture.patientReference.slice(8)}&encounterId=${fixture.current.slice(10)}`);
     await page.getByRole('button', { name: 'By structure', exact: true }).click();
     await page.getByTestId('exam-overview-section').first().waitFor();

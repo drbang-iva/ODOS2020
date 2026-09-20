@@ -2,6 +2,50 @@
 
 All mutations were temporary and restored before final checks. Outputs below are test summaries, not full logs.
 
+## UI-new-edit-error
+
+Command: `node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx`
+
+Red (exit 1):
+```text
+not ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message
+# tests 1
+# pass 0
+# fail 1
+# skipped 0
+```
+
+Restored green (exit 0):
+```text
+ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+```
+
+## UI-new-create-error
+
+Command: `node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx`
+
+Red (exit 1):
+```text
+not ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message
+# tests 1
+# pass 0
+# fail 1
+# skipped 0
+```
+
+Restored green (exit 0):
+```text
+ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+```
+
 ## UI-create-version
 
 Command: `node --import tsx --test --test-name-pattern=S1b G6 settings ui/tests/findingSectionGroups.test.tsx`
