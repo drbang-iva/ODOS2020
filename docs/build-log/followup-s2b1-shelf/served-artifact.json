@@ -1,0 +1,189 @@
+{
+  "baseCommit": "f2ef2c325e36d756759a525339431d70c7bcfde1",
+  "implementationCommit": "218aa4da05862cac00f424a83c2e39d04d4effa3",
+  "unchangedMcpSource": true,
+  "afterServedAssets": {
+    "/assets/index-cSpHc1k1.js": "54bd41ad60fb279bbdc5d65698a7b934dc6e0f5782f9387fcb7f9f6e0bfe5294",
+    "/assets/index-BLGozjCz.css": "9723d2c239f4e597da5f3efb176622648d51f0c1bda726926946868fb4ba166e"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "before": 31092,
+    "after": 31091,
+    "medplum": 31104,
+    "mcp": 26344
+  },
+  "changedSourceBlobs": {
+    "ui/src/components/charting/ExamOverviewBoard.tsx": "ef2437f0eb3ba8091b4455be9d8b7e348d67ca35",
+    "ui/src/scenes/EncounterCharting.tsx": "087ad1e9b4994d2e25db636c03a89e510cd32647",
+    "ui/src/styles/charting.css": "ab607f6a9fba7edfa3cf647106979673b89afacf",
+    "ui/tests/entrySheets.test.tsx": "ddefd3b13cf693c967e7b09ef2de0f5e72d3b850",
+    "ui/tests/examOverviewBoard.test.tsx": "e96b718b699e96ef531b3ea5cab33044d295baf0",
+    "ui/tests/examShelf.test.tsx": "e9ebabdc08912812b50a59dcb12d358715a941fa",
+    "ui/tests/fixtures/exam-chart-bar-responsive.tsx": "4b045dafecd231e389015c137923f17d140458c3",
+    "ui/tests/visitTypeResolverBoard.test.tsx": "0e23a77c90271854ec2bd1514b5546a244907aa7"
+  },
+  "screenshots": [
+    {
+      "path": "screenshots/1440-after-carried-count.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "750b7343aaee3599af00228c14007b824da49df21f43dc5e92ebbbd323d00235"
+    },
+    {
+      "path": "screenshots/1440-after-complete-shelf.png",
+      "width": 677,
+      "height": 441,
+      "sha256": "c2abd35166d528227346aa6ea40a17d9f7dc11813a67b8d9ff6eb57468089336"
+    },
+    {
+      "path": "screenshots/1440-after-comprehensive.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "5ae3a93b57e470b51298b0b317e4c7d1321e58b1bd7a3b68122200715ee35525"
+    },
+    {
+      "path": "screenshots/1440-after-dry-eye-pinned.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "d81570d0747842ac8bb03fceb59366f9931d2865486af898a13d6520329ea81a"
+    },
+    {
+      "path": "screenshots/1440-after-dry-eye-pulled-in.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "4b96eef96f89d73424f140ff69b2dbc42c6f81b6882cdceeea6b45cb91f0e189"
+    },
+    {
+      "path": "screenshots/1440-after-macula-drawn.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "ac40ead61f81f100913e6b82e68c8ffa63476d9db982ab2e6c1514f78c32309a"
+    },
+    {
+      "path": "screenshots/1440-after-macula-editor.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "dc4f81358e0b982b19782084d2cc101054b28771ac4d173c30e4c1d0b3d7e327"
+    },
+    {
+      "path": "screenshots/1440-after-office-shelf.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "880f83b8a1a214dcc45e7e66fd353259a9f625718f9f597a981fbe84c1aa6321"
+    },
+    {
+      "path": "screenshots/1440-after-other-findings-detail.png",
+      "width": 611,
+      "height": 118,
+      "sha256": "13611d33e4b0b3646ce0978f82f0935879070292f906f51c3013a3c58b725386"
+    },
+    {
+      "path": "screenshots/1440-after-other-findings.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "4f2970b635f936ac30ed1e993eeb389075fe284c1600c2462c7289313a758a00"
+    },
+    {
+      "path": "screenshots/1440-after-recorded-data.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "a4ae72442512c401a8689ed8dfddced2c716b946e8f760746472402fc614ba3f"
+    },
+    {
+      "path": "screenshots/1440-before-comprehensive.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "57dab350129f11e69f508da2deb7ebb6cc1a8e521e8ce90b224e1cdda7600e3e"
+    },
+    {
+      "path": "screenshots/1440-before-recorded-data.png",
+      "width": 1440,
+      "height": 1100,
+      "sha256": "3cc1552409bcbd4654160e5a724ce09516f3bc0a94a8c86e3f30b4db8945f5ab"
+    },
+    {
+      "path": "screenshots/390-after-carried-count.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "3a54217c20d3e526a92c8387444b40ec07bec9dc6ebc5f50c28e69fc3871a3ea"
+    },
+    {
+      "path": "screenshots/390-after-complete-shelf.png",
+      "width": 390,
+      "height": 649,
+      "sha256": "d6d4921b060d2967a0538236adae7c4309c37bec14c7d057da6ef367fb6ba321"
+    },
+    {
+      "path": "screenshots/390-after-comprehensive.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "c5eea50374e0b6513fab5edde34c9eccd211c4c5ea989708adaa978f7c9cbf42"
+    },
+    {
+      "path": "screenshots/390-after-dry-eye-pinned.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "7c52a97be07875e49d396a7d097995e82d40061eb5c64e8365393c0314ab5451"
+    },
+    {
+      "path": "screenshots/390-after-dry-eye-pulled-in.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "0694accb5cba19eaa98753663aa8766e8aeb32253d5a75ed7c18db182bab29f6"
+    },
+    {
+      "path": "screenshots/390-after-macula-drawn.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "03724d9191adaf1c7952fb0b05b7893a245ce2b87306136dfd0f16a817fd5a57"
+    },
+    {
+      "path": "screenshots/390-after-macula-editor.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "5e21cebfbca3e62057a62c6cd6b76edd4e66d9b7d7c39b9ee0e71f3a849ec158"
+    },
+    {
+      "path": "screenshots/390-after-office-shelf.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "69a0ce3ae989343b3b036c4090164f97ab52961fa13d7890cdde7824e8c6a235"
+    },
+    {
+      "path": "screenshots/390-after-other-findings-detail.png",
+      "width": 364,
+      "height": 109,
+      "sha256": "66bae14c156203c86e85625e6b2be2fe47a225d8fe228f0bb0683b5f8979a517"
+    },
+    {
+      "path": "screenshots/390-after-other-findings.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "851cfd0b2211ac397fe467b8c0f66c1610181cbe8857277aa8d26d18ffb0c183"
+    },
+    {
+      "path": "screenshots/390-after-recorded-data.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "db31bc72501431ce38373a3cb3849316deb6688546f929e8e5a6e2605bca0f43"
+    },
+    {
+      "path": "screenshots/390-before-comprehensive.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "59eea43a7c2a963a17f613075b419f98970e230e03213e7f25987c1faf382b86"
+    },
+    {
+      "path": "screenshots/390-before-recorded-data.png",
+      "width": 390,
+      "height": 1300,
+      "sha256": "0e3542a4c8361fc78b352f354d490460bbc70c4df8805b7df325d50317539233"
+    }
+  ],
+  "notes": [
+    "After build had untracked evidence files only; no tracked source diff.",
+    "Both UI versions use the same synthetic database and unchanged MCP source.",
+    "No credentials or raw runtime logs are included."
+  ]
+}
