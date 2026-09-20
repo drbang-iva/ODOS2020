@@ -37,14 +37,16 @@ const groupFields = {
 const createGroupSchema = z.object({
   groupKey: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   ...groupFields,
+  expectedVersion: z.string().min(1).nullable(),
 }).strict();
 
 const updateGroupSchema = z.object({
+  expectedVersion: z.string().min(1).nullable(),
   label: groupFields.label.optional(),
   sectionKeyPrefixes: groupFields.sectionKeyPrefixes.optional(),
   active: groupFields.active.optional(),
 }).strict().refine(
-  (value) => Object.keys(value).length > 0,
+  (value) => Object.keys(value).some(key => key !== "expectedVersion"),
   "At least one finding section group field is required.",
 );
 
@@ -129,9 +131,13 @@ export async function handleFindingSectionGroupCreationRequest(
     const group = await new FhirFindingSectionGroupStore(deps.serviceFhir ?? staff.fhir).create({
       id: deps.newId?.() ?? randomUUID(),
       ...parsed.data,
-    });
+    }, parsed.data.expectedVersion);
     return { status: 201, body: { group } };
   } catch (error) {
+    if (isConcurrentEdit(error)) return {
+      status: 409,
+      body: { error: "This section group changed concurrently — reload and retry.", code: "concurrent-edit" },
+    };
     const duplicate = error instanceof FindingSectionGroupAlreadyExistsError;
     return { status: duplicate ? 409 : 400, body: { error: errorMessage(error) } };
   }
@@ -166,7 +172,7 @@ export async function handleFindingSectionGroupMutationRequest(
     return { status: 404, body: { error: `Finding section group ${groupKey} does not exist.` } };
   }
   try {
-    const group = await store.save({ ...existing, ...parsed.data });
+    const group = await store.save({ ...existing, ...parsed.data }, parsed.data.expectedVersion);
     return { status: 200, body: { group } };
   } catch (error) {
     if (isConcurrentEdit(error)) {

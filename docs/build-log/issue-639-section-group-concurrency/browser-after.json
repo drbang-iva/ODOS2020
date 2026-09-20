@@ -1,0 +1,16 @@
+{
+  "sameLoadedVersion": true,
+  "statuses": [
+    200,
+    409
+  ],
+  "persistedLabel": "First editor label",
+  "secondDraftPreserved": true,
+  "pullIn": true,
+  "savedFindingStatus": 200,
+  "populatedRemoval": {
+    "status": 409,
+    "code": "section-group-has-content"
+  },
+  "contentPinnedAfterReload": true
+}

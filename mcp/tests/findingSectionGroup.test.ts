@@ -331,13 +331,13 @@ test("finding section group resource and store support create, edit, deactivate,
   assert.deepEqual(parseFindingSectionGroupResource(resource), original);
 
   const store = new FhirFindingSectionGroupStore(fhir);
-  await store.create(original);
+  await store.create(original, null);
   await assert.rejects(
-    () => store.create({ ...original, id: "duplicate" }),
+    () => store.create({ ...original, id: "duplicate" }, null),
     FindingSectionGroupAlreadyExistsError,
   );
-  const edited = await store.save({ ...original, label: "Dry eye battery" });
-  const deactivated = await store.save({ ...edited, active: false });
+  const edited = await store.save({ ...original, label: "Dry eye battery" }, "1");
+  const deactivated = await store.save({ ...edited, active: false }, edited.versionId);
 
   assert.equal(fhir.resources.filter((row) => row.resourceType === "Basic").length, 1);
   assert.deepEqual(fhir.writes, ["create", "update", "update"]);
@@ -353,11 +353,11 @@ test("stale group and encounter-override writes fail instead of overwriting conc
   const fhir = new MemoryFhir();
   const groupStore = new FhirFindingSectionGroupStore(fhir);
   const original = group("specialty-lens-workup", ["specialty-lens:"]);
-  await groupStore.create(original);
+  await groupStore.create(original, null);
   fhir.concurrentVersionBumpOnNextUpdate = true;
   await assert.rejects(
-    () => groupStore.save({ ...original, label: "Stale group label" }),
-    (error: unknown) => (error as { status?: number }).status === 412,
+    () => groupStore.save({ ...original, label: "Stale group label" }, "1"),
+    (error: unknown) => (error as { status?: number }).status === 409,
   );
   assert.equal(
     (await groupStore.list()).find((row) => row.groupKey === original.groupKey)?.label,
@@ -381,7 +381,7 @@ test("stale group and encounter-override writes fail instead of overwriting conc
 test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
   const fhir = new MemoryFhir();
   const sectionGroup = group("dry-eye-workup", ["dry-eye:"]);
-  await new FhirFindingSectionGroupStore(fhir).save(sectionGroup);
+  await new FhirFindingSectionGroupStore(fhir).save(sectionGroup, null);
   fhir.resources.push({
     resourceType: "Encounter",
     id: "encounter-1",
@@ -396,7 +396,7 @@ test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
     {
       authHeader: AUTH,
       params: { groupKey: sectionGroup.groupKey },
-      body: { label: "Stale group label" },
+      body: { label: "Stale group label", expectedVersion: "1" },
     },
   );
 
@@ -424,6 +424,7 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   const invalid = await handleFindingSectionGroupCreationRequest(deps, {
     authHeader: AUTH,
     body: {
+      expectedVersion: null,
       groupKey: "Dry Eye",
       label: "Dry eye",
       sectionKeyPrefixes: ["dry-eye:"],
@@ -433,6 +434,7 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   const valid = await handleFindingSectionGroupCreationRequest(deps, {
     authHeader: AUTH,
     body: {
+      expectedVersion: null,
       groupKey: "specialty-lens-workup",
       label: "Specialty lens",
       sectionKeyPrefixes: ["specialty-lens:"],
@@ -442,6 +444,7 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   const duplicate = await handleFindingSectionGroupCreationRequest(deps, {
     authHeader: AUTH,
     body: {
+      expectedVersion: null,
       groupKey: "specialty-lens-workup",
       label: "Duplicate",
       sectionKeyPrefixes: ["custom:duplicate-"],
@@ -451,7 +454,7 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   const edited = await handleFindingSectionGroupMutationRequest(deps, {
     authHeader: AUTH,
     params: { groupKey: "specialty-lens-workup" },
-    body: { label: "Specialty lens battery", active: false },
+    body: { label: "Specialty lens battery", active: false, expectedVersion: "1" },
   });
 
   assert.equal(invalid.status, 400);
@@ -463,6 +466,7 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
     {
       ...group("specialty-lens-workup", ["specialty-lens:"]),
       id: "group-1",
+      versionId: "2",
       label: "Specialty lens battery",
       active: false,
     },
@@ -501,7 +505,7 @@ test("a deactivated pull-in can be removed and does not resurrect after reactiva
   const fhir = new MemoryFhir();
   const groupStore = new FhirFindingSectionGroupStore(fhir);
   const sectionGroup = group("dry-eye-workup", ["dry-eye:"]);
-  await groupStore.save(sectionGroup);
+  await groupStore.save(sectionGroup, null);
   fhir.resources.push({
     resourceType: "Encounter",
     id: "encounter-1",
@@ -515,13 +519,13 @@ test("a deactivated pull-in can be removed and does not resurrect after reactiva
     params: { encounterId: "encounter-1" },
     body: { action: "add", groupKey: "dry-eye-workup" },
   });
-  await groupStore.save({ ...sectionGroup, active: false });
+  await groupStore.save({ ...sectionGroup, active: false }, "1");
   const remove = await handleEncounterSectionOverrideMutationRequest(deps, {
     authHeader: AUTH,
     params: { encounterId: "encounter-1" },
     body: { action: "remove", groupKey: "dry-eye-workup" },
   });
-  await groupStore.save({ ...sectionGroup, active: true });
+  await groupStore.save({ ...sectionGroup, active: true }, "2");
   const catalog = await handleFindingSectionGroupCatalogRequest(deps, {
     authHeader: AUTH,
     query: { encounterId: "encounter-1" },
@@ -639,7 +643,7 @@ test("S1 G1 removal freshly refuses saved custom-section content without writing
 });
 for (const presence of [true,false]) test(`S1 G2 atomic ${presence ? "present" : "explicit absent"} pins its group`,async()=>{
   const {fhir,remove}=pinFixture();
-  await new FhirFindingSectionGroupStore(fhir).save(group("lens-workup",["ocular-health:anterior:lens"],[]));
+  await new FhirFindingSectionGroupStore(fhir).save(group("lens-workup",["ocular-health:anterior:lens"]), null);
   fhir.resources.push({...canonicalFact(),valueBoolean:presence});
   assert.deepEqual(await remove("lens-workup"),{status:409,body:{code:"section-group-has-content",sectionKeys:["ocular-health:anterior:lens"]}});
 });
@@ -651,7 +655,7 @@ test("S1 G3 removed-before-fix content repairs effective and pinned keys on load
 });
 test("S1 G4 inactive group with content remains effective",async()=>{
   const {fhir,catalog}=pinFixture();fhir.resources.push(savedSymptoms());
-  await new FhirFindingSectionGroupStore(fhir).save({...DRY_EYE_WORKUP_SECTION_GROUP,active:false});
+  await new FhirFindingSectionGroupStore(fhir).save({...DRY_EYE_WORKUP_SECTION_GROUP,active:false}, null);
   const body=await catalog();
   assert.deepEqual(body.contentPinnedGroupKeys,["dry-eye-workup"]);
   assert.deepEqual(body.effectiveGroupKeys,["dry-eye-workup"]);
@@ -724,7 +728,7 @@ test("S1b G2 legacy category key is ignored on load and omitted on save", async 
     const loaded = await store.list();
     assert.equal(loaded.length, 1);
     assert.equal("defaultForVisitTypeCategories" in loaded[0], false);
-    await store.save({ ...loaded[0], label: "Edited legacy group" });
+    await store.save({ ...loaded[0], label: "Edited legacy group" }, loaded[0].versionId);
     const saved = await fhir.read<Basic>("Basic", row.id!);
     const json = JSON.parse(saved.extension!.find(e => e.url === FINDING_SECTION_GROUP_EXTENSION_URL)!.valueString!);
     assert.equal("defaultForVisitTypeCategories" in json, false);
@@ -736,8 +740,8 @@ for (const action of ["create", "update"] as const) test(`S1b G3 ${action} rejec
   const fhir = new MemoryFhir();
   const deps = endpointDeps("admin", fhir);
   const body = action === "create"
-    ? { groupKey: "synthetic", label: "Synthetic", sectionKeyPrefixes: ["synthetic:"], active: true, defaultForVisitTypeCategories: ["dry-eye"] }
-    : { defaultForVisitTypeCategories: ["dry-eye"] };
+    ? { expectedVersion: null, groupKey: "synthetic", label: "Synthetic", sectionKeyPrefixes: ["synthetic:"], active: true, defaultForVisitTypeCategories: ["dry-eye"] }
+    : { expectedVersion: null, defaultForVisitTypeCategories: ["dry-eye"] };
   const result = action === "create"
     ? await handleFindingSectionGroupCreationRequest(deps, { authHeader: AUTH, body })
     : await handleFindingSectionGroupMutationRequest(deps, { authHeader: AUTH, params: { groupKey: "dry-eye-workup" }, body });
@@ -748,7 +752,7 @@ for (const action of ["create", "update"] as const) test(`S1b G3 ${action} rejec
 
 test("S1b G4 chart atomic writer live then clear unpins and permits removal", async () => {
   const { fhir, catalog, remove } = pinFixture();
-  await new FhirFindingSectionGroupStore(fhir).save(group("lens-workup", ["ocular-health:anterior:lens"]));
+  await new FhirFindingSectionGroupStore(fhir).save(group("lens-workup", ["ocular-health:anterior:lens"]), null);
   await new FhirEncounterSectionOverrideStore(fhir).setGroupKeys("e1", ["lens-workup"]);
   const memory = memoryFhir();
   // Both clients share writer-owned clinical resources; the group store keeps its Basic search semantics.

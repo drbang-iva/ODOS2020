@@ -6,10 +6,12 @@ export interface FindingSectionGroup {
   active: boolean;
 }
 
+export type FindingSectionGroupRecord = FindingSectionGroup & { versionId: string | null };
+
 export interface FindingSectionGroupCatalog {
   canWrite: boolean;
   canPullIn?: boolean;
-  groups: FindingSectionGroup[];
+  groups: FindingSectionGroupRecord[];
   overrideGroupKeys?: string[];
   pulledInGroupKeys?: string[];
   effectiveGroupKeys?: string[];

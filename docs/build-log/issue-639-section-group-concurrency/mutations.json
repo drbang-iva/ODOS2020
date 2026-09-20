@@ -1,0 +1,327 @@
+[
+  {
+    "guard": "UI-new-edit-error",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "UI-new-create-error",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "UI-create-version",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S1b G6 settings ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S1b G6 settings creates edits and deactivates without category controls",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S1b G6 settings ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - S1b G6 settings creates edits and deactivates without category controls",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "UI-edit-version",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "UI-active-version",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings deactivate ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings deactivate sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "UI-conflict-message",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 Settings edit ui/tests/findingSectionGroups.test.tsx",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 Settings edit sends its loaded version and displays the shared conflict message",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G1",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G1 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 stale Settings caller receives concurrent-edit and cannot overwrite a newer label",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G1 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G1 stale Settings caller receives concurrent-edit and cannot overwrite a newer label",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G2",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G2 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G2 G4 concurrent catalogue creates have one accepted winner",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G2 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G2 G4 concurrent catalogue creates have one accepted winner",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G3",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G3 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G3 concurrent first seed overlays have one accepted winner",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G3 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G3 concurrent first seed overlays have one accepted winner",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G4",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G2 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G2 G4 concurrent catalogue creates have one accepted winner",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G2 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G2 G4 concurrent catalogue creates have one accepted winner",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G5",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=G5 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G5 concurrent first override writes leave exactly one physical row",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=G5 mcp/tests/findingSectionGroupConcurrency.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - G5 concurrent first override writes leave exactly one physical row",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G6",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=stale group and encounter-override writes mcp/tests/findingSectionGroup.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - stale group and encounter-override writes fail instead of overwriting concurrent versions",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=stale group and encounter-override writes mcp/tests/findingSectionGroup.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - stale group and encounter-override writes fail instead of overwriting concurrent versions",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "guard": "G7",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S1 G1 removal mcp/tests/findingSectionGroup.test.ts",
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S1 G1 removal freshly refuses saved custom-section content without writing",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S1 G1 removal mcp/tests/findingSectionGroup.test.ts",
+      "exit": 0,
+      "summary": [
+        "ok 1 - S1 G1 removal freshly refuses saved custom-section content without writing",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  }
+]
