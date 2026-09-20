@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
@@ -25,6 +26,7 @@ import {
 } from "../src/clinical-graph/diagnosis-carry-provenance.js";
 import {
   handleExamOverviewRequest,
+  handleExamScopeRequest,
   type ExamOverviewFhirClient,
 } from "../src/clinical-graph/exam-overview-endpoint.js";
 import type {
@@ -824,3 +826,66 @@ class HistoryWorkflowFhir extends OverviewMemoryFhir {
     return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
   }
 }
+
+async function scopeRequest(fhir: OverviewMemoryFhir, method: "GET" | "PUT", body?: unknown, role: PracticeRoleId | null = "provider") {
+  return handleExamScopeRequest(deps(fhir, role), { ...request(), method, body });
+}
+
+test("S2a G1 G3 scheduling categories cannot change default comprehensive content", async () => {
+  const bodies = [];
+  for (const category of ["exams", "medical"]) {
+    const e = encounter();
+    e.type = [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: category }] }];
+    const fhir = new HistoryWorkflowFhir([e]);
+    const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+    assert.equal(result.status, 200);
+    const p = result.body as ExamOverviewProjection;
+    assert.equal(p.completeness.requiredSectionCount, 6);
+    assert.equal(p.examScope, "comprehensive");
+    assert.equal("visitTypeCategoryId" in p, false);
+    assert.equal(fhir.writeCount, 0);
+    bodies.push(p);
+  }
+  assert.deepEqual(bodies[0], bodies[1]);
+});
+
+test("S2a G2 G4 G5 persisted scope changes only the scope record and retains every finding", async () => {
+  const fhir = new HistoryWorkflowFhir([encounter(), ...visitTypeContext(), quantityFinding("retained", "e1", "2026-08-16T12:00:00Z", 18),
+    { resourceType: "ChargeItem", id: "charge", status: "billable", code: { text: "Synthetic picked visit" }, subject: { reference: "Patient/p1" }, context: { reference: "Encounter/e1" } }]);
+  const original = structuredClone(fhir.resources);
+  let expectedVersion: string | null = null;
+  for (const examScope of ["office-visit", "comprehensive", "office-visit"] as const) {
+    const result = await scopeRequest(fhir, "PUT", { examScope, expectedVersion });
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    const scope = result.body as { examScope: string; versionId: string; setBy: { reference: string }; setAt: string };
+    expectedVersion = scope.versionId;
+    assert.equal(scope.examScope, examScope);
+    assert.match(scope.setBy.reference, /^Practitioner\//);
+    assert.ok(Number.isFinite(Date.parse(scope.setAt)));
+    const reload = await scopeRequest(fhir, "GET");
+    assert.deepEqual(reload.body, result.body);
+    const projection = (await handleExamOverviewRequest(deps(fhir, "provider"), request())).body as ExamOverviewProjection;
+    assert.equal(projection.completeness.requiredSectionCount, examScope === "comprehensive" ? 6 : 2);
+    assert.equal(projection.findings[0]?.observationReference, "Observation/retained");
+    assert.deepEqual(fhir.resources.filter(row => row.resourceType !== "Basic"), original);
+    assert.equal(fhir.resources.filter(row => row.resourceType === "Basic").length, 1);
+  }
+  assert.equal((await scopeRequest(fhir, "PUT", { examScope: "comprehensive", expectedVersion: null })).status, 409);
+});
+
+test("S2a scope rejects invalid input and unauthorized writes before writes", async () => {
+  const fhir = new HistoryWorkflowFhir([encounter()]);
+  assert.equal((await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null }, null)).status, 401);
+  assert.equal((await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null }, "forbidden" as PracticeRoleId)).status, 403);
+  for (const body of [{}, { examScope: "unknown", expectedVersion: null }, { examScope: "office-visit" }]) {
+    assert.equal((await scopeRequest(fhir, "PUT", body)).status, 400);
+  }
+  assert.equal(fhir.writeCount, 0);
+});
+
+test("S2a G7 projection path cannot import or use the scheduling category", () => {
+  for (const file of ["exam-overview-endpoint.ts", "exam-overview-projection.ts"]) {
+    const source = readFileSync(new URL(`../src/clinical-graph/${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /resolveVisitTypeCategory|visitTypeCategoryId|clinic-summary/);
+  }
+});

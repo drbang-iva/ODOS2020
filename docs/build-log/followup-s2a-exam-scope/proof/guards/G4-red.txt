@@ -1,0 +1,15 @@
+Command: node --import tsx --test ui/tests/examOverviewBoard.test.tsx
+Exit: 1
+not ok 1 - by-exception board renders exactly one row per performed or deferred finding
+not ok 4 - refraction chooses the latest manifest, preserves stored signs, and keeps non-primary blocks collapsed
+not ok 5 - refraction uses a manifest when present and otherwise labels the recorded non-final block by type
+not ok 6 - refraction distance acuity never renders a code-only machine value
+not ok 13 - a newer OD-only Wearing save retains the latest stored OS in the worksheet row
+not ok 14 - a newer OD-only Wearing save retains both eyes in the refraction comparison
+not ok 94 - S2a G4 G6 office scope retains recorded findings across both switches and uses exact scope copy
+# tests 108
+# pass 101
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0

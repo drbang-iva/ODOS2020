@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import type { Appointment, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
@@ -48,6 +48,7 @@ interface Props {
   canWriteDiagnosis?: boolean;
   onUndo?: (voidActionId: string) => void | Promise<void>;
   completeness?: ClinicalExamCompleteness;
+  onExamScopeChanged?: () => void;
   unassignedCount?: number;
   visitCharge?: VisitChargeResponse;
   brokenDiagnosisDisplay?: string;
@@ -61,6 +62,7 @@ export function EncounterHeader({
   patient,
   encounterId,
   completeness,
+  onExamScopeChanged,
   unassignedCount,
   visitCharge,
   brokenDiagnosisDisplay,
@@ -274,6 +276,7 @@ export function EncounterHeader({
           migrated ? "Migrated" : encounter?.status ?? "loading",
         ].filter(Boolean).join(" · ")}
         completeness={completeness}
+        examScopeControl={<ExamScopePicker key={encounterId} encounterId={encounterId} onChanged={onExamScopeChanged} />}
         unassignedCount={unassignedCount}
         visitCharge={visitCharge}
         brokenDiagnosisDisplay={brokenDiagnosisDisplay}
@@ -368,6 +371,7 @@ interface ExamChartBarProps {
   patientName: string;
   patientDetail: string;
   completeness?: ClinicalExamCompleteness;
+  examScopeControl?: ReactNode;
   unassignedCount?: number;
   visitCharge?: VisitChargeResponse;
   brokenDiagnosisDisplay?: string;
@@ -391,6 +395,7 @@ export function ExamChartBar({
   patientName: name,
   patientDetail,
   completeness,
+  examScopeControl,
   unassignedCount,
   visitCharge,
   brokenDiagnosisDisplay,
@@ -421,7 +426,9 @@ export function ExamChartBar({
         data-chart-bar-slot="cc-hpi-reserved"
         aria-hidden={true}
       />
-      <div className="odos-chart-bar-sections" data-chart-bar-slot="exam-sections">
+      <div className="odos-chart-bar-sections" data-chart-bar-slot="exam-sections"
+        style={examScopeControl ? { display: "flex", alignItems: "center", gap: 8, height: "auto", minWidth: 310 } : undefined}>
+        {examScopeControl}
         <ExamCompletenessControl completeness={completeness} />
       </div>
       {undoSlot && (
@@ -771,4 +778,74 @@ export function DiagnosisCompletenessDialogActions({
       </button>
     </>
   );
+}
+
+interface ExamScopeSelection {
+  examScope: string;
+  versionId?: string;
+  setBy?: { reference?: string; display?: string };
+  setAt?: string;
+  canWrite: boolean;
+}
+
+function ExamScopePicker({ encounterId, onChanged }: { encounterId: string; onChanged?: () => void }) {
+  const [scope, setScope] = useState<ExamScopeSelection>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const mounted = useRef(true);
+  const endpoint = `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/exam-scope`;
+  async function readScope(signal?: AbortSignal) {
+    const response = await fetch(endpoint, { headers: authHeaders(), signal });
+    const body = await response.json();
+    if (!response.ok || typeof body.examScope !== "string" || typeof body.canWrite !== "boolean") {
+      throw new Error(body.error ?? "Exam scope could not be loaded.");
+    }
+    if (mounted.current) setScope(body);
+  }
+  useEffect(() => {
+    mounted.current = true;
+    const controller = new AbortController();
+    void readScope(controller.signal).catch(err => {
+      if (mounted.current && !controller.signal.aborted) setError(err instanceof Error ? err.message : String(err));
+    });
+    return () => { mounted.current = false; controller.abort(); };
+  }, [encounterId]);
+  async function change(examScope: string) {
+    if (!scope?.canWrite || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const response = await fetch(endpoint, {
+        method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ examScope, expectedVersion: scope.versionId ?? null }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        if (response.status === 409) { await readScope(); if (mounted.current) onChanged?.(); }
+        throw new Error(body.error ?? "Exam scope could not be saved.");
+      }
+      if (mounted.current) { setScope(body); onChanged?.(); }
+    } catch (err) {
+      if (mounted.current) setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
+  }
+  return <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+      Exam scope
+      <select aria-label="Exam scope" value={scope?.examScope ?? ""} disabled={!scope?.canWrite || busy}
+        onChange={event => change(event.target.value)}
+        style={{ background: "var(--bg-deep, #101820)", color: "inherit", border: "1px solid #536272", borderRadius: 4, padding: "2px 4px" }}>
+        {!scope && <option value="">Loading</option>}
+        {scope && !["comprehensive", "office-visit"].includes(scope.examScope) && <option value={scope.examScope}>Unknown scope</option>}
+        <option value="comprehensive">Comprehensive</option>
+        <option value="office-visit">Office visit</option>
+      </select>
+    </label>
+    {scope && <small style={{ maxWidth: 190, overflowWrap: "anywhere", fontSize: 10 }}>{scope.setBy ? `Set by ${scope.setBy.display ?? scope.setBy.reference}${scope.setAt ? ` · ${new Date(scope.setAt).toLocaleString()}` : ""}` : "Default · Comprehensive"}</small>}
+    {error && <span role="alert" style={{ fontSize: 12 }}>{error} <button type="button" onClick={() => {
+      setError(undefined); void readScope().catch(err => { if (mounted.current) setError(err.message); });
+    }}>Reload scope</button></span>}
+  </div>;
 }

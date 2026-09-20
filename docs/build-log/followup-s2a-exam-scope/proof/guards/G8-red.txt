@@ -1,0 +1,10 @@
+Command: node --import tsx --test ui/tests/examOverviewBoard.test.tsx
+Exit: 1
+not ok 87 - malformed nested finding, section, and completeness rows use the editor fallback
+not ok 96 - S2a G8 unavailable projection retains the full SpineNav inventory and an available scope picker
+# tests 108
+# pass 103
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0

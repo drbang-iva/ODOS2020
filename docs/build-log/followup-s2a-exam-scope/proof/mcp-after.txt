@@ -1,0 +1,45 @@
+Command: ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
+Environment: ODOS_POSTGRES_URL points to the isolated s2a_suite database. 47 live-stack tests remained unconfigured; no live-authz suite claim.
+not ok 85 - live FHIR read grant check covers all four chart resources through compiled role policies
+not ok 86 - FHIR read grant CLI passes only with full coverage and always prints its limits
+not ok 87 - an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type
+not ok 88 - an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type
+not ok 89 - serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name
+not ok 90 - an ungranted FHIR read in ui/src makes the CLI fail with its name
+not ok 3696 - legacy fixture 1: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3697 - legacy fixture 2: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3698 - legacy fixture 3: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3699 - legacy fixture 4: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3700 - legacy fixture 5: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3701 - legacy fixture 6: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3702 - legacy fixture 7: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3703 - legacy fixture 8: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3704 - legacy fixture 9: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3705 - legacy fixture 10: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3706 - legacy fixture 11: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3707 - legacy fixture 12: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3708 - legacy fixture 13: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3709 - legacy fixture 14: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3710 - legacy fixture 15: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3711 - legacy fixture 16: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3712 - legacy fixture 17: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3713 - legacy fixture 18: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3714 - legacy fixture 19: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3715 - legacy fixture 20: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3716 - legacy fixture 21: examOverviewProjection.test.ts buildExamOverviewProjection
+not ok 3753 - legacy fixture 66: customSectionEndpoint.test.ts buildExamOverviewProjection
+not ok 3865 - capture instrumentation preserves named exports and executes their wrappers
+not ok 4112 - W81 overview completeness fact
+not ok 4113 - W81 overview completeness panel-value
+not ok 4114 - W81 overview completeness panel-context
+not ok 4115 - W81 overview completeness cleared
+not ok 4116 - W81 overview completeness inactive
+not ok 5340 - VISITTYPE-1 unknown visit remains gated and unconfigured
+not ok 5342 - VISITTYPE-1 unrelated, empty and non-category codings cannot open the gate
+# tests 6097
+# pass 6006
+# fail 36
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 147036.124417

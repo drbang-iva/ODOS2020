@@ -1,0 +1,9 @@
+Command: node --import tsx --test mcp/tests/examOverviewEndpoint.test.ts mcp/tests/examOverviewProjection.test.ts mcp/tests/examScopeStore.test.ts
+Exit: 1
+not ok 46 - S2a concurrent first selections keep one record and refuse the loser
+# tests 47
+# pass 46
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0

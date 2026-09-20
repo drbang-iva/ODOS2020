@@ -159,7 +159,7 @@ test("one resolved applicable row cannot make a multi-row section examined", () 
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "limited",
+    examScope: "limited",
     definitions,
     currentObservations: [observation("lids", definitions[0]!.stableKey)],
     priorObservationCandidates: [],
@@ -529,7 +529,7 @@ test("Exams clinical completeness is traceable and missing deferred documentatio
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "exams",
+    examScope: "comprehensive",
     definitions,
     currentObservations: current,
     priorObservationCandidates: [],
@@ -553,7 +553,7 @@ test("carried-unreasserted does not resolve today's section while carried-reasse
   const common = {
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "exams",
+    examScope: "comprehensive",
     definitions,
     currentObservations: current,
     priorObservationCandidates: [],
@@ -592,7 +592,7 @@ test("section abnormal counts exclude independently classified borderline findin
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "limited",
+    examScope: "limited",
     definitions: [definition("intraocular_pressure", "tonometry")],
     currentObservations: [
       observation("iop-abnormal", "intraocular_pressure", {
@@ -633,11 +633,11 @@ test("standard Equivocal interpretation projects as borderline", () => {
   assert.equal(projection.findings[0]?.interpretation, "borderline");
 });
 
-test("an unpopulated visit category degrades safely without false completeness", () => {
+test("an unknown exam scope degrades safely without false completeness", () => {
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "diagnostic-only",
+    examScope: "diagnostic-only",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
@@ -646,7 +646,7 @@ test("an unpopulated visit category degrades safely without false completeness",
   const prototypeNamedProjection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "constructor",
+    examScope: "constructor",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
@@ -665,7 +665,7 @@ test("an unpopulated visit category degrades safely without false completeness",
   assert.equal(prototypeNamedProjection.completeness.requiredSectionCount, 0);
 });
 
-test("the applicability registry supports visit-specific not-indicated sections without an office-visit entry", () => {
+test("the applicability registry supports visit-specific not-indicated sections independently of the default scope registry", () => {
   const registry: ClinicalSectionApplicabilityRegistry = {
     limited: {
       required: [{ sectionKey: "history", label: "History", evidence: { kind: "finding", sectionKeyPrefixes: ["hpi"] } }],
@@ -675,7 +675,7 @@ test("the applicability registry supports visit-specific not-indicated sections 
   const projection = buildExamOverviewProjection({
     encounterReference: "Encounter/e1",
     patientReference: "Patient/p1",
-    visitTypeCategoryId: "limited",
+    examScope: "limited",
     definitions: [],
     currentObservations: [],
     priorObservationCandidates: [],
@@ -685,7 +685,7 @@ test("the applicability registry supports visit-specific not-indicated sections 
 
   assert.equal(projection.sections.find((row) => row.sectionKey === "history")?.state, "not-examined");
   assert.equal(projection.sections.find((row) => row.sectionKey === "refraction")?.state, "not-indicated");
-  assert.equal(Object.hasOwn(CLINICAL_SECTION_REQUIREMENTS, "office-visit"), false);
+  assert.equal(Object.hasOwn(CLINICAL_SECTION_REQUIREMENTS, "office-visit"), true);
 });
 
 function definition(stableKey: string, sectionKey: string): ClinicalFindingDefinition {
@@ -785,3 +785,15 @@ test("guard 2: a voided (entered-in-error) CVF row leaves the Overview; when eve
   assert.deepEqual(cvfSection?.findingObservationReferences ?? [], []);
   assert.deepEqual(allVoided.findings.map((finding) => finding.observationReference), ["Observation/pupils-od"]);
 });
+
+for (const [scope, count] of [[undefined, 6], ["comprehensive", 6], ["office-visit", 2]] as const) {
+  test(`S2a G2 G3 G6 scope ${scope ?? "absent"} counts only its required sections`, () => {
+    const projection = buildExamOverviewProjection({ encounterReference: "Encounter/e1", patientReference: "Patient/p1",
+      examScope: scope, definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+    assert.equal(projection.examScope, scope ?? "comprehensive");
+    assert.equal(projection.completeness.requiredSectionCount, count);
+    assert.equal(projection.completeness.resolvedSectionCount, 0);
+    assert.deepEqual(projection.completeness.trace.map(row => row.sectionKey), count === 2
+      ? ["history", "assessment"] : ["history", "entrance", "refraction", "pretest", "ocular-health", "assessment"]);
+  });
+}

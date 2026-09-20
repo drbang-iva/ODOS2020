@@ -1,0 +1,6 @@
+Command: node --import tsx scripts/fhir-read-grant-check.ts
+Exit: 0
+FHIR read grant check: PASS (48 literal/marked resourceTypes under mcp/src + ui/src)
+FHIR operation grant coverage: PASS (932 read/write operations)
+Service-identity FHIR write call sites excluded: 39 (unchanged)
+Only index.ts coordinate moved from 7926 to 7943. No new ledger entry or exemption.

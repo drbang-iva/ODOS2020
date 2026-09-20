@@ -1,0 +1,8 @@
+Command: npm --prefix mcp test -- tests/r10-parity.test.ts tests/r10A3Overview.test.ts tests/visitTypeResolver.test.ts ../tests/preflight/fhir-read-grant-check.test.ts
+Environment: isolated s2a_suite database where needed. 47 live-stack tests unconfigured; no broad live-authz claim.
+# tests 221
+# pass 221
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

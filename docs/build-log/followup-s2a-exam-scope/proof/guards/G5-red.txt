@@ -1,0 +1,9 @@
+Command: node --import tsx --test ui/tests/examOverviewBoard.test.tsx
+Exit: 1
+not ok 95 - S2a G2 G5 G6 picker saves scope, reloads board and leaves visit billing props unchanged
+# tests 108
+# pass 107
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0

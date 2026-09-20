@@ -299,7 +299,7 @@ import {
   handleDiagnosisQuickListRequest,
 } from "./clinical-graph/diagnosis-quick-list-endpoint.js";
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
-import { handleExamOverviewRequest } from "./clinical-graph/exam-overview-endpoint.js";
+import { handleExamOverviewRequest, handleExamScopeRequest } from "./clinical-graph/exam-overview-endpoint.js";
 import { handleDiagnosisOrderRequest, handleDiagnosisProblemStatusRequest } from "./clinical-graph/diagnosis-order-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
@@ -6475,6 +6475,23 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           if (!res.headersSent) res.status(500).json({ error: "diagnosis completeness route failed" });
         }
       });
+
+      for (const method of ["get", "put"] as const) {
+        app[method]("/clinical-graph/encounters/:encounterId/exam-scope", async (req, res) => {
+          try {
+            await authenticateWithMedplum();
+            const result = await handleExamScopeRequest(
+              { authenticate: authenticateStaffRouteForAction(method === "put" ? "chart.write" : "chart.read"),
+                serviceFhir: fhir, findingDefinitions: () => findingDefinitionStore.list() },
+              { authHeader: req.header("authorization"), params: req.params, method: method === "put" ? "PUT" : "GET", body: req.body },
+            );
+            res.status(result.status).json(result.body);
+          } catch (error) {
+            console.error("odos-mcp: exam scope route failed:", error);
+            if (!res.headersSent) res.status(500).json({ error: "Exam scope request failed." });
+          }
+        });
+      }
 
       app.get("/clinical-graph/encounters/:encounterId/exam-overview", async (req, res) => {
         try {

@@ -847,6 +847,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         patient={patient}
         encounterId={encounterId}
         completeness={activeExamOverviewProjection?.completeness}
+        onExamScopeChanged={refreshExamOverview}
         unassignedCount={unassignedCount}
         visitCharge={visitCharge}
         brokenDiagnosisDisplay={brokenVisitDiagnosisDisplay}

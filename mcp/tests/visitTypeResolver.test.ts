@@ -13,10 +13,10 @@ const noFhir = {
   async read<T extends Resource>(): Promise<T> { throw new Error("Unexpected FHIR read"); },
   async search(): Promise<never> { throw new Error("Unexpected FHIR search"); },
 };
-function project(visitTypeCategoryId: string | undefined) {
+function project() {
   return buildExamOverviewProjection({
     encounterReference: "Encounter/visit", patientReference: "Patient/synthetic",
-    visitTypeCategoryId, definitions: [], currentObservations: [],
+    definitions: [], currentObservations: [],
     priorObservationCandidates: [], assessmentRows: [],
   });
 }
@@ -26,7 +26,7 @@ test("VISITTYPE-1 walk-in resolves six required sections without an Appointment"
     ...encounter, type: [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: "exams" }] }],
   }, undefined, noFhir);
   assert.equal(category, "exams");
-  const projection = project(category);
+  const projection = project();
   assert.equal(projection.completeness.requiredSectionCount, 6);
   assert.deepEqual(projection.sections.map((section) => section.sectionKey),
     ["history", "entrance", "refraction", "pretest", "ocular-health", "assessment"]);
@@ -54,17 +54,18 @@ test("VISITTYPE-1 scheduled visit without Encounter.type resolves through Appoin
       ...encounter, type, appointment: [{ reference: "Appointment/scheduled" }],
     }, undefined, fhir);
     assert.equal(category, "exams");
-    assert.equal(project(category).completeness.requiredSectionCount, 6);
+    assert.equal(project().completeness.requiredSectionCount, 6);
   }
 });
 
-test("VISITTYPE-1 unknown visit remains gated and unconfigured", async () => {
+test("VISITTYPE-1 unknown category stays unresolved while exam scope defaults comprehensive", async () => {
   const category = await resolveVisitTypeCategoryForEncounter(encounter, undefined, noFhir);
   assert.equal(category, undefined);
-  const projection = project(category);
-  assert.equal(projection.completeness.status, "unconfigured");
-  assert.equal(projection.completeness.requiredSectionCount, 0);
-  assert.deepEqual(projection.sections, []);
+  const projection = project();
+  assert.equal(projection.completeness.status, "incomplete");
+  assert.equal(projection.completeness.requiredSectionCount, 6);
+  assert.deepEqual(projection.sections.map(section => section.sectionKey),
+    ["history", "entrance", "refraction", "pretest", "ocular-health", "assessment"]);
 });
 
 
@@ -88,7 +89,8 @@ test("VISITTYPE-1 unrelated, empty and non-category codings cannot open the gate
       ...encounter, type: [{ text: "Exams", coding: [coding] }],
     }, undefined, noFhir);
     assert.equal(category, undefined);
-    assert.equal(project(category).completeness.status, "unconfigured");
+    assert.equal(project().completeness.status, "incomplete");
+    assert.equal(project().completeness.requiredSectionCount, 6);
   }
 });
 

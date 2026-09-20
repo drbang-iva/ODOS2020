@@ -1,0 +1,11 @@
+Command: node --import tsx --test mcp/tests/examOverviewEndpoint.test.ts mcp/tests/examOverviewProjection.test.ts mcp/tests/examScopeStore.test.ts
+Exit: 1
+not ok 2 - derived completeness and prior change survive a fresh reload with zero clinical writes
+not ok 16 - S2a G1 G3 scheduling categories cannot change default comprehensive content
+not ok 45 - S2a scope store guards first creation and versioned edits
+# tests 47
+# pass 44
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0

@@ -19,7 +19,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestation-policy-urls.js";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
-import { resolveVisitTypeCategoryForEncounter } from "../clinic/clinic-summary.js";
+import { FhirEncounterExamScopeStore } from "./exam-scope-store.js";
 import { searchAll } from "../fhir-search.js";
 import { encounterDiagnosisProblemStatus } from "../fhir/condition.js";
 import {
@@ -84,13 +84,13 @@ export async function handleExamOverviewRequest(
     }
     const encounterReference = `Encounter/${encounterId}`;
     const serviceFhir = deps.serviceFhir ?? staff.fhir;
-    const [definitions, currentObservations, patientObservations, conditions, visitTypeCategoryId, complaintDefinitions, complaints] =
+    const [definitions, currentObservations, patientObservations, conditions, scope, complaintDefinitions, complaints] =
       await Promise.all([
         deps.findingDefinitions(),
         searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }),
         searchAll<Observation>(staff.fhir, "Observation", { subject: patientReference }),
         searchAll<Condition>(staff.fhir, "Condition", { encounter: encounterReference }),
-        resolveVisitTypeCategoryForEncounter(encounter, undefined, serviceFhir),
+        new FhirEncounterExamScopeStore(serviceFhir).get(encounterId),
         new FhirComplaintDefinitionStore(staff.fhir).list(),
         new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId),
       ]);
@@ -119,7 +119,7 @@ export async function handleExamOverviewRequest(
     const projection = buildExamOverviewProjection({
       encounterReference,
       patientReference,
-      ...(visitTypeCategoryId ? { visitTypeCategoryId } : {}),
+      examScope: scope.examScope,
       definitions,
       currentObservations: current,
       sharedProjection: sharedEvidence.projection,
@@ -510,4 +510,46 @@ export async function loadOverviewFindingEvidence(
     }
   }
   return {projection,observations:state.observations,carriedWithoutCurrentEvidence};
+}
+
+export async function handleExamScopeRequest(
+  deps: ExamOverviewEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; method: "GET" | "PUT"; body?: unknown },
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read exam scope." } };
+  const canWrite = staffHasBusinessAction(staff, "chart.write");
+  if (!staffHasBusinessAction(staff, "chart.read") || (input.method === "PUT" && !canWrite)) {
+    return { status: 403, body: { error: input.method === "PUT" ? "chart.write role required" : "chart.read role required" } };
+  }
+  const encounterId = readEncounterId(input.params);
+  if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
+  const body = input.body as { examScope?: unknown; expectedVersion?: unknown } | undefined;
+  if (input.method === "PUT" && (!body || typeof body.examScope !== "string" || !["comprehensive", "office-visit"].includes(body.examScope) ||
+    !(body.expectedVersion === null || (typeof body.expectedVersion === "string" && /^[A-Za-z0-9.-]+$/.test(body.expectedVersion))))) {
+    return { status: 400, body: { error: "A valid exam scope and expected version are required." } };
+  }
+  try {
+    const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+    if (!encounter.subject?.reference?.match(/^Patient\/[^/]+$/)) {
+      return { status: 400, body: { error: "Exam scope requires an encounter patient." } };
+    }
+    const store = new FhirEncounterExamScopeStore(deps.serviceFhir ?? staff.fhir);
+    let scope;
+    if (input.method === "PUT") {
+      const names = await practitionerNamesByReference(staff.fhir, [{ reference: staff.staffReference }]);
+      const display = names.get(staff.staffReference);
+      scope = await store.set(encounterId, body!.examScope as "comprehensive" | "office-visit",
+        { reference: staff.staffReference, ...(display ? { display } : {}) }, body!.expectedVersion as string | null);
+    } else {
+      scope = await store.get(encounterId);
+    }
+    return { status: 200, body: { ...scope, canWrite } };
+  } catch (error) {
+    const status = errorStatus(error);
+    if (status === 409 || status === 412) return { status: 409, body: { error: "Exam scope changed concurrently — reload and retry." } };
+    if (status === 401 || status === 403) return { status: 403, body: { error: "Exam scope is outside the caller's patient compartment." } };
+    if (status === 404 || status === 410) return { status: 404, body: { error: "Encounter was not found." } };
+    return { status: 502, body: { error: "Exam scope could not be loaded or saved." } };
+  }
 }
