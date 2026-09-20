@@ -741,7 +741,7 @@ test("the comprehensive worksheet renders all 17 Ocular Health rows in anatomica
     await page.goto(`${origin}/tests/fixtures/entry-sheets.html?comprehensive=true&worksheet=true`, { waitUntil: "networkidle" });
     const ocular = page.locator('[data-section-key="ocular-health"]');
     const rowIds = await ocular.locator('[data-testid="exam-section-body"] > *').evaluateAll((nodes) =>
-      nodes.map((node) => node.getAttribute("data-editor-section-id")),
+      nodes.map((node) => node.getAttribute("data-drawn-editor-id") ?? node.getAttribute("data-editor-section-id")),
     );
     assert.deepEqual(rowIds, [
       "ocular-health:anterior:periocular-adnexa",

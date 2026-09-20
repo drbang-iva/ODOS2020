@@ -96,6 +96,8 @@ import {
 import { useRole } from "../lib/role-context";
 import { ODOS_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../lib/scheduling";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
+import { holdsData } from "../lib/exam-editor-map";
+import { loadExamViewState, saveExamViewState, changeExamViewState } from "../lib/exam-view-state";
 
 interface Props {
   patient: Patient;
@@ -132,6 +134,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const isCurrentEncounter = () => currentEncounterScope.current === encounterScope;
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
   const [statuses, setStatuses] = useState<SectionStatusMap>({});
+  const savedEditorIds = Object.keys(statuses);
   const [catalog, setCatalog] = useState<CatalogResponse>({ canWrite: false, definitions: [] });
   const [sectionGroupCatalog, setSectionGroupCatalog] = useState<FindingSectionGroupCatalog>({
     canWrite: false,
@@ -156,6 +159,8 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
   const [openedBoardEditorIds, setOpenedBoardEditorIds] = useState<ChartSectionId[]>([]);
+  const [examView, setExamView] = useState(() => ({ encounterId, state: loadExamViewState(encounterId) }));
+  const activeExamView = examView.encounterId === encounterId ? examView.state : loadExamViewState(encounterId);
   const [entrySheetSection, setEntrySheetSection] = useState<ExamEntrySheetSectionId>();
   const [chartClearVersion, setChartClearVersion] = useState(0);
   // The Undo ledger (§4b.4) is loaded with the encounter and replaced by every void / undo
@@ -285,6 +290,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
 
   function openBoardEditor(sectionId: ChartSectionId) {
     const transition = () => {
+      changeBoardView("open", sectionId);
       setOpenedBoardEditorIds(current => current.includes(sectionId) ? current : [...current, sectionId]);
       setVisitChargesOpen(false);
       setActiveSection(sectionId);
@@ -304,6 +310,19 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       return;
     }
     transition();
+  }
+
+  function changeBoardView(action: "collapse" | "expand" | "shelve" | "open", sectionId: ChartSectionId) {
+    if (action === "shelve") {
+      const editor = boardEditorEntries.find(entry => entry.id === sectionId);
+      if (savedEditorIds.includes(sectionId) || sectionId === entrySheetSection || !editor || !activeExamOverviewProjection ||
+        holdsData(editor, activeExamOverviewProjection, boardEditorEntries) !== false) return;
+    }
+    setExamView(previous => {
+      const state = changeExamViewState(previous.encounterId === encounterId ? previous.state : loadExamViewState(encounterId), action, sectionId);
+      saveExamViewState(encounterId, state);
+      return { encounterId, state };
+    });
   }
 
   function returnToExamOverview() {
@@ -327,6 +346,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
 
   useEffect(() => {
     setOpenedBoardEditorIds([]);
+    setExamView({ encounterId, state: loadExamViewState(encounterId) });
     setBoardEditorOpen(false);
     setEntrySheetSection(undefined);
     setRightPanelState(INITIAL_EXAM_RIGHT_PANEL_STATE);
@@ -902,6 +922,11 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
             editorEntries={boardEditorEntries}
             activeEditorId={entrySheetSection}
             openedEditorIds={[...openedBoardEditorIds, ...groupEditorIds]}
+            savedEditorIds={savedEditorIds}
+            viewState={activeExamView}
+            onCollapse={id => changeBoardView("collapse", id)}
+            onExpand={id => changeBoardView("expand", id)}
+            onShelve={id => changeBoardView("shelve", id)}
             availableSectionGroups={availableSectionGroups}
             pinnedSectionGroups={pinnedSectionGroups}
             onAddSectionGroup={sectionGroupCatalog.canPullIn ? groupKey => void addSectionGroup(groupKey) : undefined}

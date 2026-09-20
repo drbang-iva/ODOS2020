@@ -1,0 +1,45 @@
+{
+  "cliBefore": {
+    "mutation": "real IOP writer receives invalid negative pressure",
+    "exit": 0,
+    "failedEditors": [
+      "iop"
+    ],
+    "successCount": 10
+  },
+  "cliAfter": {
+    "mutation": "real IOP writer receives invalid negative pressure",
+    "exit": 1,
+    "failedEditors": [
+      "iop"
+    ],
+    "successCount": 10
+  },
+  "cliRestored": {
+    "exit": 0,
+    "successCount": 11
+  },
+  "browserStartupFailure": {
+    "exit": 1,
+    "beforeCaddyListeners": 0
+  },
+  "proxyStartupFailure": {
+    "exit": 1,
+    "spawnedMcpChildAlive": false,
+    "taskContainersRunning": 0
+  },
+  "aria": {
+    "before": {
+      "tests": 7,
+      "pass": 6,
+      "fail": 1,
+      "skipped": 0
+    },
+    "after": {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "skipped": 0
+    }
+  }
+}

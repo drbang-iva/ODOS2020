@@ -1,0 +1,26 @@
+{
+  "head": "32066b22b2a19ab50a765347ff71b4afd4d73fb2",
+  "dirty": true,
+  "mcpHash": "876f540dab5077c8692211cb0f28a9138e848efa82d97f487481fb7f459ec9a7",
+  "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+  "servedAssets": {
+    "/assets/index-BvGRIUu9.js": "f5623aecd80286f1844075753a21a571c5b0960479569d53e95f1457cdef49ac",
+    "/assets/index-CzcEbW1c.css": "0444daa20d870ac01809f52fc156fdff3b376fa9fc2c1b67a0ddbbb8f1f8b237"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 31491,
+    "medplum": 31504,
+    "postgres": 28635,
+    "redis": 29581,
+    "mcp": 26544,
+    "proxy": 26545,
+    "control": 26546
+  },
+  "project": "odos-s2b2a-fb1-proof",
+  "sourceHashes": {
+    "ui/src/components/charting/ExamOverviewBoard.tsx": "9841cdaf49146fd67e2379f63e0bac1c4af91a2fe4ac0296426f6752b4921645",
+    "ui/src/scenes/EncounterCharting.tsx": "f24765f9f42d06046c79c2cd7d83d7ab9747bc9d9aa7947d0fa021783469f415"
+  },
+  "buildNote": "Built from the parent commit plus the recorded source hashes before the fixback commit; no application source edits after this build."
+}

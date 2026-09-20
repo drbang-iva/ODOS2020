@@ -1,0 +1,29 @@
+{
+  "head": "b0717a66068cb024819dcbf05a2f168528c5c741",
+  "dirty": true,
+  "mcpHash": "876f540dab5077c8692211cb0f28a9138e848efa82d97f487481fb7f459ec9a7",
+  "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+  "servedAssets": {
+    "/assets/index-pkrBwWiv.js": "d16627e536ab3afd14c639af821dc04584f0fa56f71b7756e8fb058bb1264fc9",
+    "/assets/index-CzcEbW1c.css": "0444daa20d870ac01809f52fc156fdff3b376fa9fc2c1b67a0ddbbb8f1f8b237"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 31291,
+    "medplum": 31304,
+    "postgres": 28535,
+    "redis": 29481,
+    "mcp": 26444,
+    "proxy": 26445,
+    "control": 26446
+  },
+  "project": "odos-s2b2a-proof",
+  "sourceFilesSha256": {
+    "ui/src/components/charting/ExamOverviewBoard.tsx": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "ui/src/lib/exam-editor-map.ts": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "ui/src/lib/exam-view-state.ts": "229e5fc8bde9c9d99d1d88230f83c524a2c365a5fac8cc0fa1d7f2a0308b0480",
+    "ui/src/scenes/EncounterCharting.tsx": "7bc2f7eb5ac3ce2f8b4be0e794e7380f41604c127716cace7302cc2f246f2900",
+    "ui/src/styles/charting.css": "e5cbbe638b8a72aa2fb6ca6888ad832bc49bfc09e1764385e544b3d709292085"
+  },
+  "binding": "Built from the dirty task worktree after the bot fixback; source hashes identify the final implementation with no source changes between this build and browser proof."
+}

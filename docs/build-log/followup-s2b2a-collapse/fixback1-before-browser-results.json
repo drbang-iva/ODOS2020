@@ -1,0 +1,28 @@
+[
+  {
+    "width": 1440,
+    "parentComparison": true,
+    "chartedThroughRealIopUi": true,
+    "findingRowsImmediatelyAfterSave": 0,
+    "dataEvidence": "false",
+    "iopDrawn": true,
+    "iopControl": "shelve",
+    "manualRefreshClicks": 0,
+    "corneaShelfRoundtrip": false,
+    "viewRequests": 0,
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "parentComparison": true,
+    "chartedThroughRealIopUi": true,
+    "findingRowsImmediatelyAfterSave": 0,
+    "dataEvidence": "false",
+    "iopDrawn": true,
+    "iopControl": "shelve",
+    "manualRefreshClicks": 0,
+    "corneaShelfRoundtrip": false,
+    "viewRequests": 0,
+    "pageErrors": []
+  }
+]

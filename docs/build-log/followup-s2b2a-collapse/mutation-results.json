@@ -1,0 +1,838 @@
+[
+  {
+    "guard": "G1",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 2",
+        "# fail 12",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 2 - S2b2a G1 G8 real save/read/clear and writer pin: iop",
+        "not ok 3 - S2b2a G1 G8 real save/read/clear and writer pin: cup-disc",
+        "not ok 4 - S2b2a G1 G8 real save/read/clear and writer pin: auto-refraction",
+        "not ok 5 - S2b2a G1 G8 real save/read/clear and writer pin: cover-test",
+        "not ok 6 - S2b2a G1 G8 real save/read/clear and writer pin: manual-keratometry",
+        "not ok 7 - S2b2a G1 G8 real save/read/clear and writer pin: color-vision",
+        "not ok 8 - S2b2a G1 G8 real save/read/clear and writer pin: stereopsis",
+        "not ok 9 - S2b2a G1 G8 real save/read/clear and writer pin: hpi",
+        "not ok 10 - S2b2a G1 G8 real save/read/clear and writer pin: ocular-health:anterior:cornea",
+        "not ok 11 - S2b2a G1 G8 real save/read/clear and writer pin: dry-eye:tear-volume",
+        "not ok 12 - S2b2a G1 G8 real save/read/clear and writer pin: custom:synthetic",
+        "not ok 13 - S2b2a G4 unregistered, registered unknown, and Other findings fail closed"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G2",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 6",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 3 - S2b2a G2 G7 view controls never fetch or call chart mutation props; shelf opening restores the line"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G2-active",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 6",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 7 - S2b2a G2 active empty sheets cannot be shelved; collapsed preferences do not draw an absent line"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G3",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 2",
+        "# fail 5",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 2 - S2b2a G3 collapsed data stays in order, summarizes values, survives remount and expands",
+        "not ok 3 - S2b2a G2 G7 view controls never fetch or call chart mutation props; shelf opening restores the line",
+        "not ok 4 - S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope",
+        "not ok 5 - S2b2a G10 absent and throwing storage keeps the board open and collapse works in-session",
+        "not ok 6 - S2b2a G3 collapsed empty rows stay drawn, unmapped values use the fallback, and the editor still opens"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G4-default",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 13 - S2b2a G4 unregistered, registered unknown, and Other findings fail closed"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G4-other",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 13 - S2b2a G4 unregistered, registered unknown, and Other findings fail closed"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G5-iop",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 12",
+        "# fail 2",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G5 every inventory entry has an explicit evidence decision, including unknown procedures",
+        "not ok 2 - S2b2a G1 G8 real save/read/clear and writer pin: iop"
+      ],
+      "assertion": [
+        "error: 'Missing registry decision: iop'"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G5-procedure",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G5 every inventory entry has an explicit evidence decision, including unknown procedures"
+      ],
+      "assertion": [
+        "error: 'Missing registry decision: procedure:synthetic'"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G5-new-entry",
+    "path": "ui/src/components/charting/SpineNav.tsx",
+    "restoredSha256": "735f425c4fbf1177077912fce213c45a1640cba9e2f945cfc294ec33ad4b4ad0",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G5 every inventory entry has an explicit evidence decision, including unknown procedures"
+      ],
+      "assertion": [
+        "error: 'Missing registry decision: synthetic-unregistered'"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G6",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 6",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 4 - S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G7",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 6",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 3 - S2b2a G2 G7 view controls never fetch or call chart mutation props; shelf opening restores the line"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-cover-test",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 5 - S2b2a G1 G8 real save/read/clear and writer pin: cover-test"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-color-vision",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 7 - S2b2a G1 G8 real save/read/clear and writer pin: color-vision"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-stereopsis",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 8 - S2b2a G1 G8 real save/read/clear and writer pin: stereopsis"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-iop",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 2 - S2b2a G1 G8 real save/read/clear and writer pin: iop"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-cup-disc",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 3 - S2b2a G1 G8 real save/read/clear and writer pin: cup-disc"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-manual-keratometry",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 6 - S2b2a G1 G8 real save/read/clear and writer pin: manual-keratometry"
+      ],
+      "assertion": [
+        "Missing writer pin: manual_keratometry -> manual-keratometry"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-auto-refraction",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 4 - S2b2a G1 G8 real save/read/clear and writer pin: auto-refraction"
+      ],
+      "assertion": [
+        "Missing writer pin: auto_refraction -> auto-refraction"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G8-hpi",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 9 - S2b2a G1 G8 real save/read/clear and writer pin: hpi"
+      ],
+      "assertion": [
+        "Missing writer pin: hpi_ros -> hpi"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G9",
+    "path": "ui/src/components/charting/SpineNav.tsx",
+    "restoredSha256": "735f425c4fbf1177077912fce213c45a1640cba9e2f945cfc294ec33ad4b4ad0",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 14",
+        "# pass 13",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 14 - S2b2a G9 SpineNav renders every entry of the board inventory, including on-demand entries"
+      ],
+      "assertion": [
+        "error: 'SpineNav missing iop'"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 14",
+        "# pass 14",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G10",
+    "path": "ui/src/lib/exam-view-state.ts",
+    "restoredSha256": "229e5fc8bde9c9d99d1d88230f83c524a2c365a5fac8cc0fa1d7f2a0308b0480",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 5",
+        "# fail 2",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G10 storage is scoped by encounter and malformed or inaccessible storage opens everything",
+        "not ok 5 - S2b2a G10 absent and throwing storage keeps the board open and collapse works in-session"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "G11",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examShelf.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 7",
+        "# pass 6",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 7 - S2b1 G8 scope determines drawn lines regardless of scheduling category"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examShelf.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  },
+  {
+    "guard": "assertion-migration",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/entrySheets.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 50",
+        "# pass 49",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 34 - the comprehensive worksheet renders all 17 Ocular Health rows in anatomical order"
+      ],
+      "assertion": []
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/entrySheets.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 50",
+        "# pass 50",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [],
+      "assertion": []
+    }
+  }
+]
