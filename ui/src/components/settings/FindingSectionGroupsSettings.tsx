@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
-  type FindingSectionGroup,
+  type FindingSectionGroupRecord as FindingSectionGroup,
   type FindingSectionGroupCatalog,
 } from "../../lib/finding-section-groups";
-import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { authHeaders, clinicalGraphApiBase, clinicalGraphResponseError } from "../../lib/clinical-graph-client";
 
 type Draft = {
   groupKey: string;
@@ -122,19 +122,21 @@ export function FindingSectionGroupsSettings() {
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(editing.original
           ? {
+              expectedVersion: editing.original?.versionId ?? null,
               label: body.label,
               sectionKeyPrefixes: body.sectionKeyPrefixes,
               active: body.active,
             }
           : {
               groupKey: body.groupKey,
+              expectedVersion: null,
               label: body.label,
               sectionKeyPrefixes: body.sectionKeyPrefixes,
               active: body.active,
             }),
       });
-      const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error ?? `Section-group save failed: ${response.status}`);
+      const result = await response.json() as { error?: string; code?: string };
+      if (!response.ok) throw clinicalGraphResponseError(response, result, `Section-group save failed: ${response.status}`);
       setEditing(null);
       load();
     } catch (caught) {
@@ -153,11 +155,11 @@ export function FindingSectionGroupsSettings() {
         {
           method: "POST",
           headers: { ...authHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ active }),
+          body: JSON.stringify({ active, expectedVersion: group.versionId }),
         },
       );
-      const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error ?? `Section-group update failed: ${response.status}`);
+      const result = await response.json() as { error?: string; code?: string };
+      if (!response.ok) throw clinicalGraphResponseError(response, result, `Section-group update failed: ${response.status}`);
       load();
     } catch (caught) {
       setError(errorMessage(caught));
@@ -184,7 +186,7 @@ export function FindingSectionGroupsSettings() {
             </button>
           )}
         </div>
-        {error && (
+        {error && !editing && (
           <div role="alert" className="mt-4 rounded border border-red-400/25 bg-red-400/10 p-3 text-sm text-red-200">
             {error}
           </div>
@@ -268,6 +270,7 @@ export function FindingSectionGroupsSettings() {
             <h2 id="section-group-editor-title" className="mt-2 text-xl font-semibold">
               {editing.original ? `Edit ${editing.original.label}` : "Create section group"}
             </h2>
+            {error && <div role="alert" className="mt-4 rounded border border-red-400/25 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
             <label className="mt-5 block text-sm text-[color:var(--odos-muted)]">
               Group key
               <input

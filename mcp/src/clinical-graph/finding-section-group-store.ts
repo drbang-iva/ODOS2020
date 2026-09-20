@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 
 export const FINDING_SECTION_GROUP_CODE_SYSTEM =
@@ -18,6 +19,14 @@ export const FINDING_SECTION_GROUP_WRITE_HEADERS = {
 export class FindingSectionGroupAlreadyExistsError extends Error {
   override readonly name = "FindingSectionGroupAlreadyExistsError";
 }
+
+export class FindingSectionGroupConcurrentEditError extends Error {
+  readonly status = 409;
+  readonly code = "concurrent-edit";
+  constructor() { super("This section group changed concurrently — reload and retry."); }
+}
+
+export type FindingSectionGroupRecord = FindingSectionGroup & { versionId: string | null };
 
 export interface FindingSectionGroup {
   id: string;
@@ -63,45 +72,54 @@ export class FhirFindingSectionGroupStore {
     ],
   ) {}
 
-  async list(): Promise<FindingSectionGroup[]> {
-    const stored = (await this.readStoredRows()).map((row) => row.group);
+  async list(): Promise<FindingSectionGroupRecord[]> {
+    const stored = (await this.readStoredRows()).map((row) => ({ ...row.group, versionId: row.resource.meta?.versionId ?? null }));
     const storedByKey = new Map(stored.map((group) => [group.groupKey, group]));
     const seedKeys = new Set(this.seeds.map((group) => group.groupKey));
     return [
-      ...this.seeds.map((seed) => storedByKey.get(seed.groupKey) ?? seed),
+      ...this.seeds.map((seed) => storedByKey.get(seed.groupKey) ?? { ...seed, versionId: null }),
       ...stored.filter((group) => !seedKeys.has(group.groupKey)),
     ]
       .sort((left, right) => left.label.localeCompare(right.label));
   }
 
-  async create(group: FindingSectionGroup): Promise<FindingSectionGroup> {
-    const validated = assertFindingSectionGroup(group);
-    if ((await this.list()).some((group) => group.groupKey === validated.groupKey)) {
-      throw new FindingSectionGroupAlreadyExistsError(
-        `Finding section group ${validated.groupKey} already exists.`,
-      );
-    }
-    const persisted = await this.fhir.create(
-      buildFindingSectionGroupResource(validated),
-      FINDING_SECTION_GROUP_WRITE_HEADERS,
-    );
-    return parseFindingSectionGroupResource(persisted);
+  create(group: FindingSectionGroup, expectedVersion: string | null): Promise<FindingSectionGroupRecord> {
+    return this.write(group, expectedVersion, "create");
   }
 
-  async save(group: FindingSectionGroup): Promise<FindingSectionGroup> {
+  save(group: FindingSectionGroup, expectedVersion: string | null): Promise<FindingSectionGroupRecord> {
+    return this.write(group, expectedVersion, "save");
+  }
+
+  private async write(group: FindingSectionGroup, expectedVersion: string | null, mode: "create" | "save"): Promise<FindingSectionGroupRecord> {
     const validated = assertFindingSectionGroup(group);
     const rows = await this.readStoredRows();
     const existing = rows.find((row) => row.group.groupKey === validated.groupKey)?.resource;
-    const resource = buildFindingSectionGroupResource(validated, existing);
-    const persisted = existing?.id
-      ? await this.fhir.update(
-          "Basic",
-          existing.id,
-          resource,
-          guardedWriteHeaders(existing),
-        )
-      : await this.fhir.create(resource, FINDING_SECTION_GROUP_WRITE_HEADERS);
-    return parseFindingSectionGroupResource(persisted);
+    if (mode === "create" && (existing || this.seeds.some(seed => seed.groupKey === validated.groupKey))) {
+      throw new FindingSectionGroupAlreadyExistsError(`Finding section group ${validated.groupKey} already exists.`);
+    }
+    const writeVersion = expectedVersion;
+    if ((existing?.meta?.versionId ?? null) !== writeVersion) throw new FindingSectionGroupConcurrentEditError();
+    if (existing && !existing.meta?.versionId) throw new Error("Stored section group has no FHIR version.");
+    const writeToken = randomUUID();
+    const resource = buildFindingSectionGroupResource(validated, existing, writeToken);
+    try {
+      const persisted = existing?.id
+        ? await this.fhir.update("Basic", existing.id, resource, {
+            ...FINDING_SECTION_GROUP_WRITE_HEADERS, "If-Match": `W/"${writeVersion}"`,
+          })
+        : await this.fhir.create(resource, {
+            ...FINDING_SECTION_GROUP_WRITE_HEADERS,
+            "If-None-Exist": `identifier=${encodeURIComponent(`${FINDING_SECTION_GROUP_IDENTIFIER_SYSTEM}|${validated.groupKey}`)}`,
+          });
+      const json = persisted.extension?.find(extension => extension.url === FINDING_SECTION_GROUP_EXTENSION_URL)?.valueString;
+      if (!json || (JSON.parse(json) as { writeToken?: string }).writeToken !== writeToken) throw new FindingSectionGroupConcurrentEditError();
+      if (!persisted.meta?.versionId) throw new Error("Persisted section group has no FHIR version.");
+      return { ...parseFindingSectionGroupResource(persisted), versionId: persisted.meta.versionId };
+    } catch (error) {
+      if ((error as { status?: number }).status === 412) throw new FindingSectionGroupConcurrentEditError();
+      throw error;
+    }
   }
 
   private async readStoredRows(): Promise<Array<{
@@ -157,7 +175,13 @@ export class FhirEncounterSectionOverrideStore {
           resource,
           guardedWriteHeaders(existing),
         )
-      : await this.fhir.create(resource, FINDING_SECTION_GROUP_WRITE_HEADERS);
+      : await this.fhir.create(resource, {
+          ...FINDING_SECTION_GROUP_WRITE_HEADERS,
+          "If-None-Exist": new URLSearchParams({
+            code: `${FINDING_SECTION_GROUP_CODE_SYSTEM}|${ENCOUNTER_SECTION_OVERRIDE_CODE}`,
+            subject: `Encounter/${encounterId}`,
+          }).toString(),
+        });
     return parseEncounterSectionOverrideResource(persisted);
   }
 
@@ -191,6 +215,7 @@ export class FhirEncounterSectionOverrideStore {
 export function buildFindingSectionGroupResource(
   group: FindingSectionGroup,
   existing?: Basic,
+  writeToken?: string,
 ): Basic {
   const validated = assertFindingSectionGroup(group);
   return {
@@ -211,7 +236,7 @@ export function buildFindingSectionGroupResource(
     },
     extension: [{
       url: FINDING_SECTION_GROUP_EXTENSION_URL,
-      valueString: JSON.stringify(validated),
+      valueString: JSON.stringify({ ...validated, ...(writeToken ? { writeToken } : {}) }),
     }],
   };
 }

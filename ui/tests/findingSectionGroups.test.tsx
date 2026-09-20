@@ -10,7 +10,7 @@ import {
   filterDefinitionsForSectionGroups,
   type FindingSectionGroup,
 } from "../src/lib/finding-section-groups";
-import { fhir } from "../src/lib/fhir";
+import { CONCURRENT_EDIT_MESSAGE, fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
 import { EncounterCharting } from "../src/scenes/EncounterCharting";
 
@@ -467,6 +467,7 @@ test("S1b G6 settings creates edits and deactivates without category controls", 
     assert.ok(mutation);
     assert.deepEqual(JSON.parse(String(mutation.init?.body)), {
       groupKey: "dry-eye-workup",
+      expectedVersion: null,
       label: "Dry eye workup",
       sectionKeyPrefixes: ["custom:zz-test-"],
       active: true,
@@ -613,4 +614,29 @@ for (const staleFailure of [false, true]) test(`S1 catalog freshness ignores old
     assert.ok(renderer.root.findByType(SpineNav).props.customSections.some((s: { id: string }) => s.id === "custom:zz-test-marker"));
     assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
   } finally { renderer?.unmount(); globalThis.fetch = originalFetch; fhir.read = originalRead; Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument }); }
+});
+
+for (const action of ["edit", "deactivate"] as const) test(`G1 Settings ${action} sends its loaded version and displays the shared conflict message`, async () => {
+  const originalFetch = globalThis.fetch;
+  let sent: Record<string, unknown> | undefined;
+  globalThis.fetch = (async (_input, init) => {
+    if (init?.method === "POST") {
+      sent = JSON.parse(String(init.body));
+      return jsonResponse({ code: "concurrent-edit", error: "Server conflict" }, 409);
+    }
+    return jsonResponse({ canWrite: true, groups: [{ ...GROUP, versionId: "7" }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(<FindingSectionGroupsSettings />); await flushEffects(); });
+    await act(async () => {
+      renderer.root.findAllByType("button").find(b => b.children.join("") === (action === "edit" ? "Edit" : "Deactivate"))!.props.onClick();
+      await flushEffects();
+    });
+    if (action === "edit") await act(async () => { renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }); await flushEffects(); });
+    assert.equal(sent?.expectedVersion, "7");
+    const alert = renderer.root.findByProps({ role: "alert" });
+    assert.equal(alert.children.join(""), CONCURRENT_EDIT_MESSAGE);
+    if (action === "edit") assert.equal(renderer.root.findByType("form").findByProps({ role: "alert" }), alert);
+  } finally { renderer?.unmount(); globalThis.fetch = originalFetch; }
 });

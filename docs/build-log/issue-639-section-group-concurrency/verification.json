@@ -1,0 +1,90 @@
+{
+  "ui": {
+    "base": [
+      "# tests 1811",
+      "# pass 1811",
+      "# fail 0",
+      "# skipped 0"
+    ],
+    "after": [
+      "# tests 1813",
+      "# pass 1813",
+      "# fail 0",
+      "# skipped 0"
+    ],
+    "baseTestNamesAllRetained": true,
+    "addedTestNames": [
+      "G1 Settings edit sends its loaded version and displays the shared conflict message",
+      "G1 Settings deactivate sends its loaded version and displays the shared conflict message"
+    ]
+  },
+  "mcp": {
+    "base": [
+      "# tests 6160",
+      "# pass 6105",
+      "# fail 0",
+      "# skipped 55"
+    ],
+    "after": [
+      "# tests 6166",
+      "# pass 6111",
+      "# fail 0",
+      "# skipped 55"
+    ],
+    "baseTestNamesAllRetained": true,
+    "addedTestNames": [
+      "G1 stale Settings caller receives concurrent-edit and cannot overwrite a newer label",
+      "G2 G4 concurrent catalogue creates have one accepted winner",
+      "G3 concurrent first seed overlays have one accepted winner",
+      "G5 concurrent first override writes leave exactly one physical row",
+      "conditional override creation matches an existing identifier-free legacy row",
+      "catalogue versions expose null seeds and round-trip stored versions"
+    ]
+  },
+  "base": "b92ed979848c055ffca1eafbb0bc023980f3539d",
+  "applicationSha256": {
+    "mcp/src/clinical-graph/finding-section-group-store.ts": "c1222a1613edea28e763557ee5612b8e1c6d010a4b7fa89a9799d52035b19f81",
+    "mcp/src/clinical-graph/finding-section-group-endpoint.ts": "4c49b24e75b1243b3f84a792a2fb01d9c26e5e1a2dcd1ea3ca85007e1937f6ac",
+    "ui/src/lib/finding-section-groups.ts": "70417ee1af1b6ce9c6a9eb8f1d3bebb38e1629096e9444021498e444f8c9bec1",
+    "ui/src/components/settings/FindingSectionGroupsSettings.tsx": "7c476b4d91f5a7a3a9ecb1d925f8fe6638bbfea84d4f9da826a32602ba593b58"
+  },
+  "beforeServedIdentity": {
+    "head": "b92ed979848c055ffca1eafbb0bc023980f3539d",
+    "dirty": true,
+    "mcpHash": "56475182edbc89df84b1cb4dce5e938689abf209d79679d086e82ea66d633f51",
+    "servedAssets": {
+      "/assets/index-XLG_Otpe.js": "e094a6e9cc5e6008f0b434109c48f69b8b4e2d0b5fba79dd00be9752b18ea1f5",
+      "/assets/index-B-lAzhSj.css": "7c549e32d20be5f4d194b360da1c39006b31005e0fb6d2f5554e8c18aac0cf3a"
+    },
+    "ports": {
+      "frontdoor": 32692,
+      "medplum": 32704,
+      "postgres": 29735,
+      "redis": 30681,
+      "mcp": 27654,
+      "proxy": 27655,
+      "control": 27656
+    },
+    "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]"
+  },
+  "afterServedIdentity": {
+    "head": "b92ed979848c055ffca1eafbb0bc023980f3539d",
+    "dirty": true,
+    "mcpHash": "56475182edbc89df84b1cb4dce5e938689abf209d79679d086e82ea66d633f51",
+    "servedAssets": {
+      "/assets/index-CxrdLHTR.js": "32e10dd0166b58af0c5d213f41297f54886163f5785c0696c56dc2a9c9bff8f7",
+      "/assets/index-B-lAzhSj.css": "7c549e32d20be5f4d194b360da1c39006b31005e0fb6d2f5554e8c18aac0cf3a"
+    },
+    "ports": {
+      "frontdoor": 32691,
+      "medplum": 32704,
+      "postgres": 29735,
+      "redis": 30681,
+      "mcp": 27644,
+      "proxy": 27645,
+      "control": 27646
+    },
+    "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]"
+  },
+  "stoppedDockerPs": ""
+}
