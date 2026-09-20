@@ -1,0 +1,326 @@
+[
+  {
+    "width": 1440,
+    "board": [
+      {
+        "id": "hpi",
+        "text": "Chief Complaint & HPITap to chartcollapse"
+      },
+      {
+        "id": "wearing",
+        "text": "Wearing (WRx)Tap to chartcollapse"
+      },
+      {
+        "id": "auto-refraction",
+        "text": "Auto-Refraction / Auto-KTap to chartto shelf"
+      },
+      {
+        "id": "pretest-vitals",
+        "text": "Vitals / BioPhotonicTap to chartcollapse"
+      },
+      {
+        "id": "manual-keratometry",
+        "text": "Manual KeratometryTap to chartto shelf"
+      },
+      {
+        "id": "pachymetry",
+        "text": "PachymetryTap to chartcollapse"
+      },
+      {
+        "id": "va",
+        "text": "Visual AcuityTap to chartcollapse"
+      },
+      {
+        "id": "pupils",
+        "text": "PupilsTap to chartcollapse"
+      },
+      {
+        "id": "stereopsis",
+        "text": "StereopsisTap to chartto shelf"
+      },
+      {
+        "id": "color-vision",
+        "text": "Color VisionTap to chartto shelf"
+      },
+      {
+        "id": "eom",
+        "text": "EOM / DiplopiaTap to chartcollapse"
+      },
+      {
+        "id": "cvf",
+        "text": "Confrontation visual fieldsTap to chartcollapse"
+      },
+      {
+        "id": "cover-test",
+        "text": "Cover TestTap to chartto shelf"
+      },
+      {
+        "id": "iop",
+        "text": "IOPTap to chartto shelf"
+      },
+      {
+        "id": "dilation",
+        "text": "DilationTap to chartcollapse"
+      },
+      {
+        "id": "refraction",
+        "text": "RefractionTap to chartcollapse"
+      },
+      {
+        "id": "soft-contact-lens",
+        "text": "Soft Contact LensesAvailable when neededcollapse"
+      },
+      {
+        "id": "specialty-contact-lens",
+        "text": "Specialty Contact LensAvailable when neededcollapse"
+      },
+      {
+        "id": "ortho-k",
+        "text": "Ortho-KAvailable when neededcollapse"
+      },
+      {
+        "id": "myopia-management",
+        "text": "Myopia ManagementAvailable when neededcollapse"
+      },
+      {
+        "id": "ocular-health:anterior:periocular-adnexa",
+        "text": "Periocular AdnexaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:lids-lashes",
+        "text": "Lids & LashesTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:palpebral-conjunctiva",
+        "text": "Palpebral ConjunctivaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:conjunctiva",
+        "text": "ConjunctivaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:tear-film",
+        "text": "Tear FilmTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:cornea",
+        "text": "CorneaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:anterior-chamber",
+        "text": "Anterior ChamberTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:iris",
+        "text": "IrisTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:lens",
+        "text": "LensTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:vitreous",
+        "text": "VitreousTap to chartto shelf"
+      },
+      {
+        "id": "cup-disc",
+        "text": "Cup/DiscTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:fundus",
+        "text": "FundusTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:macula",
+        "text": "MaculaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:vessels",
+        "text": "VesselsTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:periphery",
+        "text": "PeripheryTap to chartto shelf"
+      },
+      {
+        "id": "gonioscopy",
+        "text": "GonioscopyTap to chartcollapse"
+      },
+      {
+        "id": "dry-eye",
+        "text": "Dry EyeTap to chartcollapse"
+      },
+      {
+        "id": "assessment",
+        "text": "AssessmentTap to chartcollapse"
+      },
+      {
+        "id": "prescription",
+        "text": "Plan · PrescriptionsAvailable when neededcollapse"
+      }
+    ],
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "board": [
+      {
+        "id": "hpi",
+        "text": "Chief Complaint & HPITap to chartcollapse"
+      },
+      {
+        "id": "wearing",
+        "text": "Wearing (WRx)Tap to chartcollapse"
+      },
+      {
+        "id": "auto-refraction",
+        "text": "Auto-Refraction / Auto-KTap to chartto shelf"
+      },
+      {
+        "id": "pretest-vitals",
+        "text": "Vitals / BioPhotonicTap to chartcollapse"
+      },
+      {
+        "id": "manual-keratometry",
+        "text": "Manual KeratometryTap to chartto shelf"
+      },
+      {
+        "id": "pachymetry",
+        "text": "PachymetryTap to chartcollapse"
+      },
+      {
+        "id": "va",
+        "text": "Visual AcuityTap to chartcollapse"
+      },
+      {
+        "id": "pupils",
+        "text": "PupilsTap to chartcollapse"
+      },
+      {
+        "id": "stereopsis",
+        "text": "StereopsisTap to chartto shelf"
+      },
+      {
+        "id": "color-vision",
+        "text": "Color VisionTap to chartto shelf"
+      },
+      {
+        "id": "eom",
+        "text": "EOM / DiplopiaTap to chartcollapse"
+      },
+      {
+        "id": "cvf",
+        "text": "Confrontation visual fieldsTap to chartcollapse"
+      },
+      {
+        "id": "cover-test",
+        "text": "Cover TestTap to chartto shelf"
+      },
+      {
+        "id": "iop",
+        "text": "IOPTap to chartto shelf"
+      },
+      {
+        "id": "dilation",
+        "text": "DilationTap to chartcollapse"
+      },
+      {
+        "id": "refraction",
+        "text": "RefractionTap to chartcollapse"
+      },
+      {
+        "id": "soft-contact-lens",
+        "text": "Soft Contact LensesAvailable when neededcollapse"
+      },
+      {
+        "id": "specialty-contact-lens",
+        "text": "Specialty Contact LensAvailable when neededcollapse"
+      },
+      {
+        "id": "ortho-k",
+        "text": "Ortho-KAvailable when neededcollapse"
+      },
+      {
+        "id": "myopia-management",
+        "text": "Myopia ManagementAvailable when neededcollapse"
+      },
+      {
+        "id": "ocular-health:anterior:periocular-adnexa",
+        "text": "Periocular AdnexaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:lids-lashes",
+        "text": "Lids & LashesTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:palpebral-conjunctiva",
+        "text": "Palpebral ConjunctivaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:conjunctiva",
+        "text": "ConjunctivaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:tear-film",
+        "text": "Tear FilmTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:cornea",
+        "text": "CorneaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:anterior-chamber",
+        "text": "Anterior ChamberTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:iris",
+        "text": "IrisTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:anterior:lens",
+        "text": "LensTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:vitreous",
+        "text": "VitreousTap to chartto shelf"
+      },
+      {
+        "id": "cup-disc",
+        "text": "Cup/DiscTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:fundus",
+        "text": "FundusTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:macula",
+        "text": "MaculaTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:vessels",
+        "text": "VesselsTap to chartto shelf"
+      },
+      {
+        "id": "ocular-health:posterior:periphery",
+        "text": "PeripheryTap to chartto shelf"
+      },
+      {
+        "id": "gonioscopy",
+        "text": "GonioscopyTap to chartcollapse"
+      },
+      {
+        "id": "dry-eye",
+        "text": "Dry EyeTap to chartcollapse"
+      },
+      {
+        "id": "assessment",
+        "text": "AssessmentTap to chartcollapse"
+      },
+      {
+        "id": "prescription",
+        "text": "Plan · PrescriptionsAvailable when neededcollapse"
+      }
+    ],
+    "pageErrors": []
+  }
+]

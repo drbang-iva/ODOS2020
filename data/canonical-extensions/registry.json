@@ -3,6 +3,12 @@
   "generatedAt": "2026-09-07",
   "extensions": [
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-follow-up-profile-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "followup-s3a-profiles"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-age-of-majority-practice-config",
       "namespace": "clinic",
       "status": "active",

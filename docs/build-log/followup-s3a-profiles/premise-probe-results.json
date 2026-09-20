@@ -1,0 +1,20 @@
+{
+  "base": "b217714c2f8963a3c87d537fd00910133257c2a8",
+  "source": "mcp/src/clinical-graph/finding-section-group-store.ts",
+  "sourceSha256": "7620b123ba3c41184d031d43d8f1b5d41197f6ac15f8b7660c27d11e8fcb9fe4",
+  "scope": "In-memory probe of the exact origin/main module; no server or practice data.",
+  "concurrentNewKey": {
+    "acceptedCreates": 2,
+    "conditionalHeaders": false
+  },
+  "concurrentFirstSeedOverlay": {
+    "acceptedCreates": 2,
+    "conditionalHeaders": false
+  },
+  "staleClientEdit": {
+    "accepted": true,
+    "versionExposedToClient": false,
+    "updateIfMatch": "W/\"2\""
+  },
+  "conclusion": "P1 guards an existing-resource update after the store read; it does not guard creates or a stale Settings client version."
+}

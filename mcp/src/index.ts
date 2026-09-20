@@ -559,7 +559,7 @@ import type {
   VisualAcuityChartType,
   VisualAcuityCorrection,
 } from "./fhir/ophthalmology/types.js";
-
+import { handleFollowUpProfileCatalogRequest, handleFollowUpProfileWriteRequest } from "./clinical-graph/follow-up-profile-endpoint.js";
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103/";
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
 const INSTALLATION_PROJECT = resolveInstallationProject();
@@ -8625,6 +8625,45 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: encounter findings audit repair failed:", error);
           if (!res.headersSent) res.status(500).json({ result: "unavailable", kind: "upstream", error: "Encounter findings audit repair failed." });
+        }
+      });
+
+      const followUpProfileLimit = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { error: "Too many profile requests. Try again shortly." },
+      });
+
+      app.get("/follow-up-profiles", followUpProfileLimit, async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFollowUpProfileCatalogRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization") });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: follow-up profile catalogue failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Follow-up profile catalogue unavailable." });
+        }
+      });
+      app.post("/follow-up-profiles", followUpProfileLimit, async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFollowUpProfileWriteRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization"), body: req.body });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: follow-up profile creation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Follow-up profile creation failed." });
+        }
+      });
+      app.post("/follow-up-profiles/:profileKey", followUpProfileLimit, async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFollowUpProfileWriteRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization"), profileKey: req.params.profileKey as string, body: req.body });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: follow-up profile update failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Follow-up profile update failed." });
         }
       });
 

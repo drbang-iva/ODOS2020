@@ -1,0 +1,48 @@
+{
+  "initial": [
+    {
+      "method": "GET",
+      "path": "/follow-up-profiles",
+      "status": 401,
+      "rateLimit": "\"120-in-1min\"; r=119; t=60",
+      "retryAfter": null
+    },
+    {
+      "method": "POST",
+      "path": "/follow-up-profiles",
+      "status": 401,
+      "rateLimit": "\"120-in-1min\"; r=118; t=60",
+      "retryAfter": null
+    },
+    {
+      "method": "POST",
+      "path": "/follow-up-profiles/glaucoma",
+      "status": 401,
+      "rateLimit": "\"120-in-1min\"; r=117; t=60",
+      "retryAfter": null
+    }
+  ],
+  "limited": [
+    {
+      "method": "GET",
+      "path": "/follow-up-profiles",
+      "status": 429,
+      "rateLimit": "\"120-in-1min\"; r=0; t=60",
+      "retryAfter": "60"
+    },
+    {
+      "method": "POST",
+      "path": "/follow-up-profiles",
+      "status": 429,
+      "rateLimit": "\"120-in-1min\"; r=0; t=60",
+      "retryAfter": "60"
+    },
+    {
+      "method": "POST",
+      "path": "/follow-up-profiles/glaucoma",
+      "status": 429,
+      "rateLimit": "\"120-in-1min\"; r=0; t=60",
+      "retryAfter": "60"
+    }
+  ]
+}
