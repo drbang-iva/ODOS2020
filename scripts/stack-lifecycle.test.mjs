@@ -36,6 +36,17 @@ function composeProject(project, { running = false } = {}) {
   return { directory, compose };
 }
 
+function twoContainerProject(project) {
+  const directory = mkdtempSync(join(tmpdir(), `${project}-`));
+  const compose = join(directory, 'compose.yml');
+  writeFileSync(compose, 'services:\n  alpha:\n    image: alpine:3.21\n    command: ["sleep", "600"]\n    volumes:\n      - data:/data\n  beta:\n    image: alpine:3.21\n    command: ["sleep", "600"]\n    volumes:\n      - data:/data\nvolumes:\n  data:\n');
+  const started = run('docker-compose', ['-p', project, '-f', compose, 'up', '-d']);
+  assert.equal(started.status, 0, started.stderr);
+  const stopped = run('docker-compose', ['-p', project, '-f', compose, 'stop']);
+  assert.equal(stopped.status, 0, stopped.stderr);
+  return { directory, compose };
+}
+
 function cleanup(projects, directories = []) {
   for (const project of projects) {
     const containers = listed(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]);
@@ -158,6 +169,64 @@ test('reap refuses a compose-labelled project with no usable resource age', () =
   const project = { name: 'age-unavailable', containers: [{ labels: {}, createdAt: Number.NaN, startedAt: Number.NaN, finishedAt: Number.NaN, running: false, volumeNames: [] }], volumes: [], networks: [] };
   const options = { command: 'reap', force: false, minAge: '1h', minAgeMs: 3_600_000, protect: [] };
   assert.deepEqual(lifecycle.refusalReasons(project, options, { containers: project.containers }), ['resource age unavailable']);
+});
+
+test('pre-removal check isolates running and relabelled resources before any deletion', () => {
+  const project = { name: 'pre-removal', containers: [], networks: [], volumes: [] };
+  const stopped = {
+    containers: [{ id: 'container', name: 'container', labels: { 'com.docker.compose.project': 'pre-removal' }, running: false }],
+    networks: [{ id: 'network', name: 'network', labels: { 'com.docker.compose.project': 'pre-removal' } }],
+    volumes: [{ name: 'volume', labels: { 'com.docker.compose.project': 'pre-removal' } }],
+  };
+  assert.deepEqual(lifecycle.preRemovalReasons(project, stopped), []);
+  assert.deepEqual(lifecycle.preRemovalReasons(project, { ...stopped, containers: [{ ...stopped.containers[0], running: true }] }), ['running container']);
+  assert.deepEqual(lifecycle.preRemovalReasons(project, { ...stopped, networks: [{ ...stopped.networks[0], labels: {} }] }), ['network network compose-project label changed']);
+});
+
+test('removal bookkeeping exposes no deleted resources before the first failure and completed resources after a later failure', () => {
+  assert.throws(() => lifecycle.runRemovalOperations([{ description: 'container first', remove: () => { throw new Error('first failure'); } }]), (error) => {
+    assert.deepEqual(error.deleted, []);
+    return true;
+  });
+  assert.throws(() => lifecycle.runRemovalOperations([
+    { description: 'container first', remove: () => {} },
+    { description: 'container second', remove: () => { throw new Error('second failure'); } },
+  ]), (error) => {
+    assert.deepEqual(error.deleted, ['container first']);
+    return true;
+  });
+});
+
+test('reap fails and names a destroyed container when a second stopped container starts during removal', async () => {
+  const project = `${prefix}-partial-removal`;
+  const fixture = twoContainerProject(project);
+  const shimDirectory = mkdtempSync(join(tmpdir(), `${project}-shim-`));
+  const ready = join(shimDirectory, 'ready');
+  const resume = join(shimDirectory, 'resume');
+  const countFile = join(shimDirectory, 'count');
+  const shim = join(shimDirectory, 'docker');
+  try {
+    const containers = listed(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]);
+    assert.equal(containers.length, 2);
+    const [first, second] = containers;
+    const firstName = docker(['container', 'inspect', first, '--format', '{{.Name}}']).slice(1);
+    writeFileSync(shim, `#!/bin/sh\nif [ "$1" = rm ]; then\n  count=0\n  if [ -e ${JSON.stringify(countFile)} ]; then count=$(cat ${JSON.stringify(countFile)}); fi\n  count=$((count + 1))\n  printf '%s' "$count" > ${JSON.stringify(countFile)}\n  if [ "$count" -eq 2 ]; then\n    : > ${JSON.stringify(ready)}\n    while [ ! -e ${JSON.stringify(resume)} ]; do sleep 0.02; done\n  fi\nfi\nexec ${JSON.stringify(dockerBinary)} "$@"\n`);
+    chmodSync(shim, 0o755);
+    const reaping = runAsync(process.execPath, [script, 'reap', '--yes', '--only', prefix, '--min-age', '0m'], { env: { ...process.env, PATH: `${shimDirectory}:${process.env.PATH}` } });
+    await waitFor(ready);
+    const restarted = run('docker', ['start', second]);
+    assert.equal(restarted.status, 0, restarted.stderr);
+    writeFileSync(resume, 'go\n');
+    const result = await reaping;
+    assert.equal(result.status, 1, result.stdout);
+    assert.match(result.stderr, new RegExp(`FAILED ${project}: destroyed container ${firstName} before failure:`));
+    assert.match(result.stdout, /REMOVED 0 project\(s\); SKIPPED 0; FAILED 1/);
+    assert.equal(count(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]), 1);
+    assert.equal(count(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]), 1);
+    assert.equal(count(['volume', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]), 1);
+  } finally {
+    cleanup([project], [fixture.directory, shimDirectory]);
+  }
 });
 
 test('reap refuses a project created before the threshold when it stopped within the threshold', async () => {
@@ -366,6 +435,33 @@ test('reap refuses a project whose volume is mounted by a foreign project contai
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, new RegExp(`SKIP ${project}: .*foreign container ${foreign}`));
     assert.ok(docker(['volume', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]));
+    assert.deepEqual({
+      containers: count(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]),
+      networks: count(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]),
+      volumes: count(['volume', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]),
+    }, before);
+  } finally {
+    cleanup([project, foreignProject], [fixture.directory]);
+  }
+});
+
+test('reap refuses a project whose network is used by a foreign container without deleting project resources', () => {
+  const project = `${prefix}-foreign-network-source`;
+  const foreignProject = `${prefix}-foreign-network-user`;
+  const fixture = composeProject(project);
+  const foreign = `${prefix}-network-squatter`;
+  try {
+    const network = docker(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]);
+    const before = {
+      containers: count(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]),
+      networks: count(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]),
+      volumes: count(['volume', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]),
+    };
+    const created = run('docker', ['run', '-d', '--name', foreign, '--label', `com.docker.compose.project=${foreignProject}`, '--network', network, 'alpine:3.21', 'sleep', '600']);
+    assert.equal(created.status, 0, created.stderr);
+    const result = reap(['--yes', '--only', prefix, '--min-age', '0m']);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, new RegExp(`SKIP ${project}: .*network used by foreign container ${foreign}`));
     assert.deepEqual({
       containers: count(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]),
       networks: count(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]),

@@ -45,6 +45,10 @@ ODOS and VisionForge projects, and requires an `--only <prefix>` of at least 12 
 a minimum age below one hour is requested. If your Docker installation provides only `docker compose`, use that
 equivalent command in place of `docker-compose`.
 
+Before a confirmed reap removes each project, it inventories Docker again. On large hosts this can take
+minutes because each project scans the full container, volume, and network inventory; wait for the final
+`REMOVED`/`SKIPPED`/`FAILED` summary rather than treating a quiet run as hung.
+
 ## Start the Local Stack
 
 Create `.env` from `.env.example` and fill in the required values before starting

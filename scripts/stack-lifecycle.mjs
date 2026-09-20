@@ -90,6 +90,7 @@ function inventory() {
     startedAt: dockerTimestamp(item.State.StartedAt),
     finishedAt: dockerTimestamp(item.State.FinishedAt),
     volumeNames: item.Mounts.filter((mount) => mount.Type === 'volume').map((mount) => mount.Name),
+    networkIds: Object.values(item.NetworkSettings?.Networks ?? {}).map((network) => network.NetworkID).filter(Boolean),
   }));
   const volumes = inspect('volume', ids(['volume', 'ls', '-q'])).map((item) => ({
     name: item.Name,
@@ -147,8 +148,11 @@ export function refusalReasons(project, options, current) {
     else if (Date.now() - recency < options.minAgeMs) reasons.push(`most recent activity is younger than ${options.minAge}`);
   }
   const projectVolumes = new Set(project.volumes.map((volume) => volume.name));
-  const foreignContainer = current.containers.find((container) => container.labels[composeProjectLabel] !== project.name && container.volumeNames.some((name) => projectVolumes.has(name)));
-  if (foreignContainer) reasons.push(`volume mounted by foreign container ${foreignContainer.name}`);
+  const projectNetworks = new Set(project.networks.map((network) => network.id));
+  const foreignVolumeContainer = current.containers.find((container) => container.labels[composeProjectLabel] !== project.name && container.volumeNames.some((name) => projectVolumes.has(name)));
+  const foreignNetworkContainer = current.containers.find((container) => container.labels[composeProjectLabel] !== project.name && container.networkIds?.some((id) => projectNetworks.has(id)));
+  if (foreignVolumeContainer) reasons.push(`volume mounted by foreign container ${foreignVolumeContainer.name}`);
+  if (foreignNetworkContainer) reasons.push(`network used by foreign container ${foreignNetworkContainer.name}`);
   return reasons;
 }
 
@@ -171,14 +175,60 @@ function printPlan(project) {
   for (const volume of project.volumes) console.log(`  volume ${volume.name} (${formatBytes(volume.size)})`);
 }
 
-function remove(project, { forceContainers = false } = {}) {
-  for (const container of project.containers) docker(['rm', ...(forceContainers ? ['-f'] : []), container.id]);
-  for (const network of project.networks) docker(['network', 'rm', network.id]);
-  for (const volume of project.volumes) {
-    const current = inspect('volume', [volume.name])[0];
-    if (current.Labels?.[composeProjectLabel] !== project.name) throw new Error(`Refusing volume ${volume.name}: its compose-project label changed.`);
-    docker(['volume', 'rm', volume.name]);
+export function preRemovalReasons(project, current, { requireStopped = true } = {}) {
+  const reasons = [];
+  for (const [kind, resources] of Object.entries(current)) {
+    for (const resource of resources) {
+      if (resource.labels?.[composeProjectLabel] !== project.name) reasons.push(`${kind.slice(0, -1)} ${resource.name ?? resource.id} compose-project label changed`);
+    }
   }
+  if (requireStopped && current.containers.some((container) => container.running)) reasons.push('running container');
+  return reasons;
+}
+
+function preRemovalState(project) {
+  return {
+    containers: inspect('container', project.containers.map((container) => container.id)).map((item) => ({ id: item.Id, name: item.Name.slice(1), labels: item.Config.Labels ?? {}, running: item.State.Running })),
+    networks: inspect('network', project.networks.map((network) => network.id)).map((item) => ({ id: item.Id, name: item.Name, labels: item.Labels ?? {} })),
+    volumes: inspect('volume', project.volumes.map((volume) => volume.name)).map((item) => ({ name: item.Name, labels: item.Labels ?? {} })),
+  };
+}
+
+function checkBeforeRemoval(project, { forceContainers = false } = {}) {
+  try {
+    const reasons = preRemovalReasons(project, preRemovalState(project), { requireStopped: !forceContainers });
+    if (reasons.length) throw new Error(`pre-removal check: ${reasons.join(', ')}`);
+  } catch (error) {
+    error.deleted = [];
+    throw error;
+  }
+}
+
+export function runRemovalOperations(operations) {
+  const deleted = [];
+  try {
+    for (const operation of operations) {
+      operation.remove();
+      deleted.push(operation.description);
+    }
+    return deleted;
+  } catch (error) {
+    error.deleted = deleted;
+    throw error;
+  }
+}
+
+function remove(project, { forceContainers = false } = {}) {
+  checkBeforeRemoval(project, { forceContainers });
+  return runRemovalOperations([
+    ...project.containers.map((container) => ({ description: `container ${container.name}`, remove: () => docker(['rm', ...(forceContainers ? ['-f'] : []), container.id]) })),
+    ...project.networks.map((network) => ({ description: `network ${network.name}`, remove: () => docker(['network', 'rm', network.id]) })),
+    ...project.volumes.map((volume) => ({ description: `volume ${volume.name}`, remove: () => {
+      const current = inspect('volume', [volume.name])[0];
+      if (current.Labels?.[composeProjectLabel] !== project.name) throw new Error(`Refusing volume ${volume.name}: its compose-project label changed.`);
+      docker(['volume', 'rm', volume.name]);
+    } })),
+  ]);
 }
 
 function projectSummary(project) {
@@ -223,6 +273,12 @@ function reap(options) {
       remove(project);
       removed.push(project);
     } catch (error) {
+      const deleted = error.deleted ?? [];
+      if (deleted.length) {
+        failures.push(`${project.name}: destroyed ${deleted.join(', ')} before failure: ${error.message}`);
+        console.error(`FAILED ${project.name}: destroyed ${deleted.join(', ')} before failure: ${error.message}`);
+        continue;
+      }
       const afterFailure = inventory();
       const changedProject = projectsFrom(afterFailure).find((candidate) => candidate.name === planned.name);
       const changedReasons = changedProject ? refusalReasons(changedProject, options, afterFailure) : [];
@@ -230,8 +286,8 @@ function reap(options) {
         skipped.push(`${planned.name}: ${changedReasons.join(', ')}`);
         console.log(`SKIP ${planned.name}: ${changedReasons.join(', ')}.`);
       } else {
-        failures.push(`${planned.name}: ${error.message}`);
-        console.error(`FAILED ${planned.name}: ${error.message}`);
+        skipped.push(`${planned.name}: ${error.message}`);
+        console.log(`SKIP ${planned.name}: ${error.message}.`);
       }
     }
   }
