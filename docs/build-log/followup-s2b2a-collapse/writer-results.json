@@ -1,0 +1,134 @@
+[
+  {
+    "editor": "iop",
+    "key": "intraocular_pressure",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "cup-disc",
+    "key": "cup_disc_ratio",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "auto-refraction",
+    "key": "auto_refraction",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "cover-test",
+    "key": "entrance:cover",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "manual-keratometry",
+    "key": "manual_keratometry",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "color-vision",
+    "key": "entrance:color",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "stereopsis",
+    "key": "entrance:stereo",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "hpi",
+    "key": "hpi_ros",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "ocular-health:anterior:cornea",
+    "key": "ocular-health:anterior:cornea",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "dry-eye:tear-volume",
+    "key": "dry-eye:tear-volume",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  },
+  {
+    "editor": "custom:synthetic",
+    "key": "custom:synthetic-measurement-s2b2a000",
+    "saved": 1,
+    "afterClear": 0,
+    "savedResourceKinds": [
+      "Basic",
+      "Encounter",
+      "Observation",
+      "Provenance"
+    ]
+  }
+]

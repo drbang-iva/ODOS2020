@@ -1,3 +1,5 @@
+import { EXAM_SHEET_ROWS, editorForFinding, editorSheetSection, shelfGroupKey, sheetSectionKeyForClinicalSection, groupFindings, lateralityOrder, holdsData, type FindingGroup, type ExamSheetRowDefinition } from "../../lib/exam-editor-map";
+import type { ExamViewState } from "../../lib/exam-view-state";
 import { useState } from "react";
 import { isExamEntrySheetSectionId } from "./ExamEntrySheet";
 import type { ChartEditorEntry } from "./SpineNav";
@@ -125,40 +127,16 @@ interface Props {
   refreshing: boolean;
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
   onRefresh: () => void;
+  viewState?: ExamViewState;
+  onCollapse?: (editorId: ChartEditorEntry["id"]) => void;
+  onExpand?: (editorId: ChartEditorEntry["id"]) => void;
+  onShelve?: (editorId: ChartEditorEntry["id"]) => void;
 }
-
-interface ExamSheetRowDefinition {
-  sectionKey: string;
-  label: string;
-  editorGroupKey: string;
-  traceSectionKeys: readonly string[];
-  owner: "Tech" | "Doctor";
-  rowLayout: "single" | "two-column";
-  optional?: boolean;
-  optionalEditorIds?: readonly ChartEditorEntry["id"][];
-  singleBlank?: boolean;
-}
-
-const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
-  { sectionKey: "history", label: "History", editorGroupKey: "history", traceSectionKeys: ["history"], owner: "Doctor", rowLayout: "single" },
-  { sectionKey: "pretest", label: "Pretest", editorGroupKey: "pretest", traceSectionKeys: ["entrance", "pretest"], owner: "Tech", rowLayout: "two-column" },
-  { sectionKey: "refraction", label: "Refraction", editorGroupKey: "refraction", traceSectionKeys: ["refraction"], owner: "Doctor", rowLayout: "single", singleBlank: true },
-  { sectionKey: "contact-lenses", label: "Contact Lenses", editorGroupKey: "contact-lenses", traceSectionKeys: [], owner: "Doctor", rowLayout: "single", optional: true },
-  { sectionKey: "ocular-health", label: "Ocular Health", editorGroupKey: "ocular-health", traceSectionKeys: ["ocular-health"], owner: "Doctor", rowLayout: "two-column" },
-  {
-    sectionKey: "assessment",
-    label: "Assessment & Plan",
-    editorGroupKey: "assessment",
-    traceSectionKeys: ["assessment"],
-    owner: "Doctor",
-    rowLayout: "single",
-    optionalEditorIds: ["prescription"],
-  },
-];
 
 export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, openedEditorIds = [],
   availableSectionGroups = [], pinnedSectionGroups = [], onAddSectionGroup, updatingSectionGroups = false,
-  sectionGroupError, refreshing, onOpenEditor, onRefresh }: Props) {
+  sectionGroupError, refreshing, onOpenEditor, onRefresh, viewState = { collapsed: [], shelved: [] },
+  onCollapse, onExpand, onShelve }: Props) {
   const wearingFindings = projection.findings.filter((finding) => finding.findingKey === "wearing_rx");
   const groupsBySheetSection = new Map<string, FindingGroup[]>();
   const clinicalSectionByReference = new Map(projection.sections.flatMap(section =>
@@ -175,6 +153,9 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, o
   }
   const traceBySectionKey = new Map(projection.completeness.trace.map(row => [row.sectionKey, row]));
   const opened = new Set([...openedEditorIds, ...(activeEditorId ? [activeEditorId] : [])]);
+  const collapsed = new Set(viewState.collapsed);
+  const shelved = new Set(viewState.shelved);
+  const evidence = new Map(editorEntries.map(editor => [editor.id, holdsData(editor, projection, editorEntries)]));
   const definitions: readonly ExamSheetRowDefinition[] = [...EXAM_SHEET_ROWS,
     { sectionKey: "section-groups", label: "Section groups", editorGroupKey: "section-groups", traceSectionKeys: [], owner: "Doctor", rowLayout: "single" },
   ];
@@ -187,10 +168,12 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, o
     const entries = editorEntries.filter(entry => editorSheetSection(entry) === definition.sectionKey);
     const scopeDrawsRow = definition.sectionKey === "history" || definition.sectionKey === "assessment" ||
       traceRows.length > 0 || (definition.optional && (projection.examScope ?? "comprehensive") === "comprehensive");
-    const drawnEditors = entries.filter((editor, index) => opened.has(editor.id) ||
-      groups.some(group => editorForFinding(group, editorEntries)?.id === editor.id) ||
-      (scopeDrawsRow && !editor.readOnly && (!definition.singleBlank || index === 0))
-    );
+    const drawnEditors = entries.filter((editor, index) => {
+      const data = evidence.get(editor.id);
+      if (shelved.has(editor.id)) return data !== false || editor.id === activeEditorId;
+      return opened.has(editor.id) || groups.some(group => editorForFinding(group, editorEntries)?.id === editor.id) ||
+        (scopeDrawsRow && !editor.readOnly && (!definition.singleBlank || index === 0));
+    });
     return drawnEditors.length > 0 || groups.length > 0 || ["history", "assessment"].includes(definition.sectionKey)
       ? [{ definition, traceRows, groups, drawnEditors }]
       : [];
@@ -274,16 +257,36 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, o
               >
                 {drawnEditors.map(editor => {
                   const matches = groups.filter(group => editorForFinding(group, editorEntries)?.id === editor.id);
-                  return matches.length > 0 ? (
-                    <div key={editor.id} className="odos-exam-editor-line" data-drawn-editor-id={editor.id}>
-                      {matches.map((group, index) => (
+                  const data = evidence.get(editor.id)!;
+                  const isCollapsed = collapsed.has(editor.id) && !(shelved.has(editor.id) && data !== false);
+                  const action = isCollapsed ? "expand" : data === false ? "shelve" : "collapse";
+                  const handler = action === "expand" ? onExpand : action === "shelve" ? onShelve : onCollapse;
+                  const summary = matches.flatMap(group => group.rows.map(row =>
+                    `${row.laterality === "UNKNOWN" ? "" : `${row.laterality} `}${findingValue(row) || UNFORMATTED_FINDING_VALUE}`
+                  )).join(" · ") || (definition.sectionKey === "history" ? projection.historySummary : undefined);
+                  return (
+                    <div key={editor.id} className={`odos-exam-editor-line${isCollapsed ? " is-collapsed" : ""}`}
+                      data-drawn-editor-id={editor.id} data-holds-data={String(data)}>
+                      {isCollapsed ? (
+                        <button type="button" className="odos-exam-collapsed-summary" data-testid="exam-collapsed-line"
+                          onClick={() => onOpenEditor(editor.id)} aria-label={`Open ${editor.label} editor`}>
+                          <span className="odos-exam-data-marker" aria-label={data === true ? "Has findings this visit" : "Data coverage unknown"} />
+                          <strong>{editor.label}</strong><small>collapsed</small>
+                          <span>{summary ?? (data === true ? UNFORMATTED_FINDING_VALUE : "Open editor to review")}</span>
+                        </button>
+                      ) : matches.length > 0 ? matches.map((group, index) => (
                         <FindingRow key={index} group={group} wearingFindings={wearingFindings} editor={editor} onOpenEditor={onOpenEditor} />
-                      ))}
+                      )) : (
+                        <EmptyEditorRow definition={definition} editor={editor}
+                          summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
+                          activeEditorId={activeEditorId} onOpenEditor={onOpenEditor} />
+                      )}
+                      <button type="button" className="odos-exam-view-control" data-exam-view-action={action} data-editor-id={editor.id}
+                        disabled={!handler || (action === "shelve" && activeEditorId === editor.id)}
+                        onClick={() => handler?.(editor.id)} aria-label={`${action === "shelve" ? "To shelf" : action === "expand" ? "Expand" : "Collapse"} ${editor.label}`}>
+                        {action === "shelve" ? "to shelf" : action}
+                      </button>
                     </div>
-                  ) : (
-                    <EmptyEditorRow key={editor.id} definition={definition} editor={editor}
-                      summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
-                      activeEditorId={activeEditorId} onOpenEditor={onOpenEditor} />
                   );
                 })}
                 {groups.some(group => !editorForFinding(group, editorEntries)) && (
@@ -354,7 +357,6 @@ function EmptyEditorRow({
       type="button"
       className={`odos-exam-section-blank${active ? " is-active" : ""}`}
       data-testid="exam-section-blank"
-      data-drawn-editor-id={editor.id}
       data-blank-section-key={definition.sectionKey}
       data-editor-section-id={editor.id}
       data-required={!optional}
@@ -389,43 +391,7 @@ function ShelfEntry({ entry, activeEditorId, onOpenEditor }: {
   );
 }
 
-function editorSheetSection(editor: ChartEditorEntry): string {
-  const key = editorGroupKey(editor.group);
-  if (key === "entrance") return "pretest";
-  if (EXAM_SHEET_ROWS.some(row => row.sectionKey === key)) return key;
-  if (editor.id.startsWith("dry-eye:")) return "ocular-health";
-  return "section-groups";
-}
-
-function shelfGroupKey(editor: ChartEditorEntry): string {
-  if (editor.id === "imaging" || editor.group === "IMAGING") return "tests";
-  const key = editorSheetSection(editor);
-  return ["history", "assessment"].includes(key) ? "section-groups" : key;
-}
-
-function editorGroupKey(group?: string): string {
-  if (group === "ASSESSMENT & PLAN") return "assessment";
-  if (!group) return "other";
-  return group.toLocaleLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-|-$/g, "");
-}
-
-function sheetSectionKeyForClinicalSection(sectionKey: string): string {
-  if (/^(entrance|pretest|tonometry|va|wearing|auto-refraction)(:|$)/.test(sectionKey)) return "pretest";
-  if (/^(ocular-health|dry-eye|cup-disc|gonioscopy)(:|$)/.test(sectionKey)) return "ocular-health";
-  if (/^refraction(:|$)/.test(sectionKey)) return "refraction";
-  if (/^(history|hpi|complaints)(:|$)/.test(sectionKey)) return "history";
-  if (/^(assessment|plan|prescription)(:|$)/.test(sectionKey)) return "assessment";
-  if (/^contact-lenses?(:|$)/.test(sectionKey)) return "contact-lenses";
-  return "section-groups";
-}
-
 type RowPattern = "word" | "eye-pair" | "event" | "diagram" | "rx";
-
-interface FindingGroup {
-  findingKey: string;
-  display: string;
-  rows: ExamOverviewFindingProjection[];
-}
 
 function FindingRow({
   group,
@@ -820,50 +786,6 @@ function stringArray(value: unknown): value is string[] {
 
 function oneOf<const T extends string>(value: unknown, options: readonly T[]): value is T {
   return typeof value === "string" && options.includes(value as T);
-}
-
-function groupFindings(findings: readonly ExamOverviewFindingProjection[]): FindingGroup[] {
-  const groups = new Map<string, ExamOverviewFindingProjection[]>();
-  for (const finding of findings) {
-    const key = `${finding.findingKey}\u0000${finding.display}`;
-    groups.set(key, [...(groups.get(key) ?? []), finding]);
-  }
-  return [...groups.values()].map((rows) => ({
-    findingKey: rows[0]!.findingKey,
-    display: rows[0]!.display,
-    rows: rows.sort((left, right) => lateralityOrder(left.laterality) - lateralityOrder(right.laterality)),
-  }));
-}
-
-function lateralityOrder(laterality: ExamOverviewFindingProjection["laterality"]): number {
-  return { OD: 0, OS: 1, OU: 2, UNKNOWN: 3 }[laterality];
-}
-
-function editorForFinding(
-  group: FindingGroup,
-  editorEntries: readonly ChartEditorEntry[],
-): ChartEditorEntry | undefined {
-  const knownEditor = {
-    "entrance:cover": "cover-test",
-    "entrance:color": "color-vision",
-    "entrance:stereo": "stereopsis",
-    intraocular_pressure: "iop",
-    cup_disc_ratio: "cup-disc",
-    manual_keratometry: "manual-keratometry",
-    auto_refraction: "auto-refraction",
-    hpi_ros: "hpi",
-  }[group.findingKey];
-  const candidates = [
-    knownEditor,
-    group.findingKey,
-    group.findingKey.split(":").at(-1),
-    group.rows[0]?.sectionKey,
-    group.rows[0]?.sectionKey.split(":").at(-1),
-    group.findingKey === "pachymetry_um" ? "pachymetry" : undefined,
-    group.findingKey === "entrance:cvf" ? "cvf" : undefined,
-    group.findingKey === "entrance:eom" ? "eom" : undefined,
-  ].filter(Boolean);
-  return editorEntries.find((entry) => candidates.includes(entry.id));
 }
 
 function findingPattern(group: FindingGroup): RowPattern {

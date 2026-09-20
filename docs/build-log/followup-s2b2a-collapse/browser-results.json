@@ -1,0 +1,46 @@
+[
+  {
+    "width": 1440,
+    "proof": "1-3",
+    "chartedThroughIopUi": true,
+    "neededOverviewRefresh": true,
+    "actualProjectionKeys": [
+      "intraocular_pressure",
+      "entrance:cover"
+    ],
+    "collapseReloadExpanded": true,
+    "corneaShelfRoundtrip": true,
+    "unknownCollapseOnly": true,
+    "persistedShelfDataWins": true,
+    "viewRequests": 0,
+    "pageErrors": []
+  },
+  {
+    "width": 1440,
+    "proof": 4,
+    "freshPrivateContextExpanded": true,
+    "examStateStorageReadAndWriteDeniedSessionUsable": true
+  },
+  {
+    "width": 390,
+    "proof": "1-3",
+    "chartedThroughIopUi": true,
+    "neededOverviewRefresh": true,
+    "actualProjectionKeys": [
+      "intraocular_pressure",
+      "entrance:cover"
+    ],
+    "collapseReloadExpanded": true,
+    "corneaShelfRoundtrip": true,
+    "unknownCollapseOnly": true,
+    "persistedShelfDataWins": true,
+    "viewRequests": 0,
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "proof": 4,
+    "freshPrivateContextExpanded": true,
+    "examStateStorageReadAndWriteDeniedSessionUsable": true
+  }
+]
