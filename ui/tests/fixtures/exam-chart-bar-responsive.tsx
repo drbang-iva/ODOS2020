@@ -7,6 +7,7 @@ import {
   type ExamOverviewProjection,
 } from "../../src/components/charting/ExamOverviewBoard";
 import type { VisitChargeResponse } from "../../src/lib/clinical-graph-client";
+import { chartEditorInventory } from "../../src/components/charting/SpineNav";
 import "../../src/styles/globals.css";
 import "../../src/styles/charting.css";
 
@@ -44,7 +45,7 @@ function Fixture() {
       <div className="min-h-screen p-8">
         <ExamOverviewBoard
           projection={boardProjection}
-          editorEntries={[]}
+          editorEntries={chartEditorInventory()}
           refreshing={false}
           onOpenEditor={() => undefined}
           onRefresh={() => undefined}

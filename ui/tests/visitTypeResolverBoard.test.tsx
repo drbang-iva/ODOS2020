@@ -6,6 +6,7 @@ import { resolveVisitTypeCategoryForEncounter } from "../../mcp/src/clinic/clini
 import { buildExamOverviewProjection } from "../../mcp/src/clinical-graph/exam-overview-projection";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/lib/scheduling";
 import { ExamOverviewBoard } from "../src/components/charting/ExamOverviewBoard";
+import { chartEditorInventory } from "../src/components/charting/SpineNav";
 
 test("VISITTYPE-1 fresh walk-in board renders configured sections including Ocular Health", async () => {
   const visitTypeCategoryId = await resolveVisitTypeCategoryForEncounter({
@@ -21,7 +22,7 @@ test("VISITTYPE-1 fresh walk-in board renders configured sections including Ocul
     visitTypeCategoryId, definitions: [], currentObservations: [],
     priorObservationCandidates: [], assessmentRows: [],
   });
-  const renderer = create(<ExamOverviewBoard projection={projection} editorEntries={[]}
+  const renderer = create(<ExamOverviewBoard projection={projection} editorEntries={chartEditorInventory()}
     refreshing={false} onOpenEditor={() => undefined} onRefresh={() => undefined} />);
   try {
     for (const section of ["history", "pretest", "refraction", "ocular-health", "assessment"]) {

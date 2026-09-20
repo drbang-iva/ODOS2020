@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { isExamEntrySheetSectionId } from "./ExamEntrySheet";
 import type { ChartEditorEntry } from "./SpineNav";
+import type { FindingSectionGroup } from "../../lib/finding-section-groups";
 
 type ExamObservationState =
   | "examined"
@@ -115,6 +116,12 @@ interface Props {
   projection: ExamOverviewProjection;
   editorEntries: readonly ChartEditorEntry[];
   activeEditorId?: ChartEditorEntry["id"];
+  openedEditorIds?: readonly ChartEditorEntry["id"][];
+  availableSectionGroups?: readonly FindingSectionGroup[];
+  pinnedSectionGroups?: readonly FindingSectionGroup[];
+  onAddSectionGroup?: (groupKey: string) => void;
+  updatingSectionGroups?: boolean;
+  sectionGroupError?: string | null;
   refreshing: boolean;
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
   onRefresh: () => void;
@@ -149,72 +156,51 @@ const EXAM_SHEET_ROWS: readonly ExamSheetRowDefinition[] = [
   },
 ];
 
-export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, refreshing, onOpenEditor, onRefresh }: Props) {
-  const findingByReference = new Map(
-    projection.findings.map((finding) => [finding.observationReference, finding]),
-  );
-  const editorGroups = groupEditorEntries(editorEntries);
+export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, openedEditorIds = [],
+  availableSectionGroups = [], pinnedSectionGroups = [], onAddSectionGroup, updatingSectionGroups = false,
+  sectionGroupError, refreshing, onOpenEditor, onRefresh }: Props) {
   const wearingFindings = projection.findings.filter((finding) => finding.findingKey === "wearing_rx");
   const groupsBySheetSection = new Map<string, FindingGroup[]>();
-  for (const section of projection.sections) {
-    const findings = (section.findingObservationReferences ?? []).flatMap((reference) => {
-      const finding = findingByReference.get(reference);
-      return finding && finding.provenance.state === "current" &&
-        snapshotComponentCode(finding.current, "REFRACTION_TYPE") !== "FINAL_RX"
-        ? [finding]
-        : [];
-    });
-    const groups = groupFindings(findings);
-    if (groups.length === 0) continue;
-    const sheetSectionKey = sheetSectionKeyForClinicalSection(section.sectionKey);
-    groupsBySheetSection.set(sheetSectionKey, [
-      ...(groupsBySheetSection.get(sheetSectionKey) ?? []),
-      ...groups,
-    ]);
-  }
-  const referencedFindings = new Set(projection.sections.flatMap((section) =>
-    section.findingObservationReferences ?? []
+  const clinicalSectionByReference = new Map(projection.sections.flatMap(section =>
+    (section.findingObservationReferences ?? []).map(reference => [reference, section.sectionKey] as const)
   ));
-  for (const group of groupFindings(projection.findings.filter((finding) =>
-    !referencedFindings.has(finding.observationReference) &&
-    finding.provenance.state === "current" &&
+  for (const group of groupFindings(projection.findings.filter(finding =>
     snapshotComponentCode(finding.current, "REFRACTION_TYPE") !== "FINAL_RX"
   ))) {
     const editor = editorForFinding(group, editorEntries);
-    if (!editor) continue;
-    const sheetSectionKey = editorGroupKey(editor.group);
-    groupsBySheetSection.set(sheetSectionKey, [
-      ...(groupsBySheetSection.get(sheetSectionKey) ?? []),
-      group,
-    ]);
+    const sectionKey = editor ? editorSheetSection(editor) : sheetSectionKeyForClinicalSection(
+      clinicalSectionByReference.get(group.rows[0]!.observationReference) ?? group.rows[0]!.sectionKey
+    );
+    groupsBySheetSection.set(sectionKey, [...(groupsBySheetSection.get(sectionKey) ?? []), group]);
   }
-  const traceBySectionKey = new Map(
-    projection.completeness.trace.map((row) => [row.sectionKey, row]),
-  );
-  const sheetSections = EXAM_SHEET_ROWS.flatMap((definition) => {
-    const traceRows = definition.traceSectionKeys.flatMap((sectionKey) => {
-      const trace = traceBySectionKey.get(sectionKey);
+  const traceBySectionKey = new Map(projection.completeness.trace.map(row => [row.sectionKey, row]));
+  const opened = new Set([...openedEditorIds, ...(activeEditorId ? [activeEditorId] : [])]);
+  const definitions: readonly ExamSheetRowDefinition[] = [...EXAM_SHEET_ROWS,
+    { sectionKey: "section-groups", label: "Section groups", editorGroupKey: "section-groups", traceSectionKeys: [], owner: "Doctor", rowLayout: "single" },
+  ];
+  const sheetSections = definitions.flatMap(definition => {
+    const traceRows = definition.traceSectionKeys.flatMap(key => {
+      const trace = traceBySectionKey.get(key);
       return trace ? [trace] : [];
     });
     const groups = groupsBySheetSection.get(definition.sectionKey) ?? [];
-    return (definition.optional && (projection.examScope ?? "comprehensive") === "comprehensive") || traceRows.length > 0 || groups.length > 0
-      ? [{ definition, traceRows, groups }]
+    const entries = editorEntries.filter(entry => editorSheetSection(entry) === definition.sectionKey);
+    const scopeDrawsRow = definition.sectionKey === "history" || definition.sectionKey === "assessment" ||
+      traceRows.length > 0 || (definition.optional && (projection.examScope ?? "comprehensive") === "comprehensive");
+    const drawnEditors = entries.filter((editor, index) => opened.has(editor.id) ||
+      groups.some(group => editorForFinding(group, editorEntries)?.id === editor.id) ||
+      (scopeDrawsRow && !editor.readOnly && (!definition.singleBlank || index === 0))
+    );
+    return drawnEditors.length > 0 || groups.length > 0 || ["history", "assessment"].includes(definition.sectionKey)
+      ? [{ definition, traceRows, groups, drawnEditors }]
       : [];
   });
-  const performedEditorIds = new Set(sheetSections.flatMap((section) =>
-    section.groups.flatMap((group) => {
-      const editor = editorForFinding(group, editorEntries);
-      return editor ? [editor.id] : [];
-    })
-  ));
-  const fullySlottedEditorGroupKeys = new Set(sheetSections.flatMap(({ definition }) =>
-    definition.singleBlank ? [] : [definition.editorGroupKey]
-  ));
-  const chartAnotherGroups = Array.from(editorGroups.entries()).flatMap(([sectionKey, entries]) => {
-    if (fullySlottedEditorGroupKeys.has(sectionKey)) return [];
-    const remaining = entries.filter((entry) => entry.id !== "imaging" && !performedEditorIds.has(entry.id));
-    return remaining.length ? [[sectionKey, remaining] as const] : [];
-  });
+  const drawnEditorIds = new Set(sheetSections.flatMap(section => section.drawnEditors.map(editor => editor.id)));
+  const shelfDefinitions = [
+    { key: "tests", label: "Tests & imaging" },
+    ...EXAM_SHEET_ROWS.filter(row => !["history", "assessment"].includes(row.sectionKey)).map(row => ({ key: row.sectionKey, label: row.label })),
+    { key: "section-groups", label: "Section groups" },
+  ];
 
   return (
     <main className="odos-exam-overview" aria-labelledby="exam-overview-title">
@@ -237,12 +223,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
       </header>
 
       <div className="odos-exam-overview-board">
-        {sheetSections.map(({ definition, traceRows, groups }) => {
-          const chartableEditors = (editorGroups.get(definition.editorGroupKey) ?? [])
-            .filter((entry) => !entry.readOnly);
-          const slottedGroups = new Set(groups.flatMap((group) =>
-            editorForFinding(group, chartableEditors) ? [group] : []
-          ));
+        {sheetSections.map(({ definition, traceRows, groups, drawnEditors }) => {
           return (
             <section
               key={definition.sectionKey}
@@ -291,79 +272,63 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, r
                 data-testid="exam-section-body"
                 data-row-layout={definition.rowLayout}
               >
-                {definition.singleBlank
-                  ? groups.length > 0
-                    ? groups.map((group) => (
-                        <FindingRow
-                          key={`${group.findingKey}\u0000${group.display}`}
-                          group={group}
-                          wearingFindings={wearingFindings}
-                          editor={editorForFinding(group, editorEntries)}
-                          onOpenEditor={onOpenEditor}
-                        />
-                      ))
-                    : chartableEditors[0] && (
-                        <EmptyEditorRow
-                          definition={definition}
-                          editor={chartableEditors[0]}
-                          summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
-                          activeEditorId={activeEditorId}
-                          onOpenEditor={onOpenEditor}
-                        />
-                      )
-                  : <>
-                      {chartableEditors.flatMap((editor) => {
-                        const matches = groups.filter((group) => editorForFinding(group, chartableEditors)?.id === editor.id);
-                        return matches.length > 0
-                          ? matches.map((group) => (
-                              <FindingRow
-                                key={`${group.findingKey}\u0000${group.display}`}
-                                group={group}
-                                wearingFindings={wearingFindings}
-                                editor={editor}
-                                onOpenEditor={onOpenEditor}
-                              />
-                            ))
-                          : [
-                              <EmptyEditorRow
-                                key={editor.id}
-                                definition={definition}
-                                editor={editor}
-                                summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
-                                activeEditorId={activeEditorId}
-                                onOpenEditor={onOpenEditor}
-                              />,
-                            ];
-                      })}
-                      {groups.filter((group) => !slottedGroups.has(group)).map((group) => (
-                        <FindingRow
-                          key={`${group.findingKey}\u0000${group.display}`}
-                          group={group}
-                          wearingFindings={wearingFindings}
-                          editor={editorForFinding(group, editorEntries)}
-                          onOpenEditor={onOpenEditor}
-                        />
+                {drawnEditors.map(editor => {
+                  const matches = groups.filter(group => editorForFinding(group, editorEntries)?.id === editor.id);
+                  return matches.length > 0 ? (
+                    <div key={editor.id} className="odos-exam-editor-line" data-drawn-editor-id={editor.id}>
+                      {matches.map((group, index) => (
+                        <FindingRow key={index} group={group} wearingFindings={wearingFindings} editor={editor} onOpenEditor={onOpenEditor} />
                       ))}
-                    </>}
+                    </div>
+                  ) : (
+                    <EmptyEditorRow key={editor.id} definition={definition} editor={editor}
+                      summary={definition.sectionKey === "history" ? projection.historySummary : undefined}
+                      activeEditorId={activeEditorId} onOpenEditor={onOpenEditor} />
+                  );
+                })}
+                {groups.some(group => !editorForFinding(group, editorEntries)) && (
+                  <div className="odos-exam-other-findings" data-testid="exam-other-findings">
+                    <h3>Other findings</h3>
+                    {groups.filter(group => !editorForFinding(group, editorEntries)).map((group, index) => (
+                      <FindingRow key={index} group={group} wearingFindings={wearingFindings} onOpenEditor={onOpenEditor} other />
+                    ))}
+                  </div>
+                )}
               </div>
             </section>
           );
         })}
       </div>
 
-      {chartAnotherGroups.length > 0 && (
-        <nav className="odos-exam-chart-another" aria-label="Chart another finding">
-          {chartAnotherGroups.map(([sectionKey, entries]) => (
-            <ChartAnotherFinding
-              key={sectionKey}
-              label={editorGroupLabel(entries[0]?.group, sectionKey)}
-              entries={entries}
-              activeEditorId={activeEditorId}
-              onOpenEditor={onOpenEditor}
-            />
-          ))}
-        </nav>
-      )}
+      <nav className="odos-exam-shelf" data-testid="exam-shelf" aria-label="Exam shelf">
+        <h2>Available to chart</h2>
+        {sectionGroupError && <p role="alert">{sectionGroupError}</p>}
+        <div className="odos-exam-shelf-groups">
+          {shelfDefinitions.map(({ key, label }) => {
+            const entries = editorEntries.filter(entry => !drawnEditorIds.has(entry.id) && shelfGroupKey(entry) === key);
+            return (
+              <section key={key} className="odos-exam-editor-entries" data-shelf-group={key}>
+                <h3>{label}</h3>
+                <div className="odos-exam-editor-entry-list">
+                  {entries.map(entry => <ShelfEntry key={entry.id} entry={entry} activeEditorId={activeEditorId} onOpenEditor={onOpenEditor} />)}
+                  {key === "section-groups" && availableSectionGroups.map(group => (
+                    <button key={group.groupKey} type="button" className="odos-exam-editor-entry"
+                      data-testid="exam-shelf-section-group" data-section-group-key={group.groupKey}
+                      disabled={!onAddSectionGroup || updatingSectionGroups} onClick={() => onAddSectionGroup?.(group.groupKey)}>
+                      <span>{group.label}</span><span>Open</span>
+                    </button>
+                  ))}
+                  {key === "section-groups" && pinnedSectionGroups.map(group => (
+                    <p key={group.groupKey} className="odos-exam-group-pin">{group.label} · Has findings this visit</p>
+                  ))}
+                </div>
+                {entries.length === 0 && (key !== "section-groups" || (availableSectionGroups.length === 0 && pinnedSectionGroups.length === 0)) &&
+                  <p className="odos-exam-shelf-empty">No additional lines</p>}
+              </section>
+            );
+          })}
+        </div>
+      </nav>
 
     </main>
   );
@@ -389,6 +354,7 @@ function EmptyEditorRow({
       type="button"
       className={`odos-exam-section-blank${active ? " is-active" : ""}`}
       data-testid="exam-section-blank"
+      data-drawn-editor-id={editor.id}
       data-blank-section-key={definition.sectionKey}
       data-editor-section-id={editor.id}
       data-required={!optional}
@@ -404,53 +370,37 @@ function EmptyEditorRow({
   );
 }
 
-function ChartAnotherFinding({
-  label,
-  entries,
-  activeEditorId,
-  onOpenEditor,
-}: {
-  label: string;
-  entries: readonly ChartEditorEntry[];
+function ShelfEntry({ entry, activeEditorId, onOpenEditor }: {
+  entry: ChartEditorEntry;
   activeEditorId?: ChartEditorEntry["id"];
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   return (
-    <details className="odos-exam-editor-entries" data-testid="chart-another-finding">
-      <summary>Chart another finding <span>{label}</span></summary>
-      <div className="odos-exam-editor-entry-list">
-        {entries.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            data-testid="exam-editor-entry-row"
-            data-editor-section-id={entry.id}
-            data-editor-presentation={isExamEntrySheetSectionId(entry.id) ? "sheet" : "full-page"}
-            aria-pressed={activeEditorId === entry.id}
-            onClick={() => onOpenEditor(entry.id)}
-            className={`odos-exam-editor-entry${activeEditorId === entry.id ? " is-active" : ""}`}
-          >
-            <span className="odos-exam-editor-entry-label">{entry.label}</span>
-            <span className="odos-exam-editor-entry-presentation">
-              <span aria-hidden>{isExamEntrySheetSectionId(entry.id) ? "▣" : "↗"}</span>
-              {isExamEntrySheetSectionId(entry.id) ? "Entry sheet" : "Expand"}
-            </span>
-          </button>
-        ))}
-      </div>
-    </details>
+    <button type="button" data-testid="exam-editor-entry-row" data-editor-section-id={entry.id}
+      data-editor-presentation={isExamEntrySheetSectionId(entry.id) ? "sheet" : "full-page"}
+      aria-pressed={activeEditorId === entry.id} onClick={() => onOpenEditor(entry.id)}
+      className={`odos-exam-editor-entry${activeEditorId === entry.id ? " is-active" : ""}`}>
+      <span className="odos-exam-editor-entry-label">{entry.label}</span>
+      <span className="odos-exam-editor-entry-presentation">
+        <span aria-hidden>{isExamEntrySheetSectionId(entry.id) ? "▣" : "↗"}</span>
+        {isExamEntrySheetSectionId(entry.id) ? "Entry sheet" : "Expand"}
+      </span>
+    </button>
   );
 }
 
-function groupEditorEntries(entries: readonly ChartEditorEntry[]): Map<string, ChartEditorEntry[]> {
-  const groups = new Map<string, ChartEditorEntry[]>();
-  for (const entry of entries) {
-    const sectionKey = editorGroupKey(entry.group);
-    const group = groups.get(sectionKey);
-    if (group) group.push(entry);
-    else groups.set(sectionKey, [entry]);
-  }
-  return groups;
+function editorSheetSection(editor: ChartEditorEntry): string {
+  const key = editorGroupKey(editor.group);
+  if (key === "entrance") return "pretest";
+  if (EXAM_SHEET_ROWS.some(row => row.sectionKey === key)) return key;
+  if (editor.id.startsWith("dry-eye:")) return "ocular-health";
+  return "section-groups";
+}
+
+function shelfGroupKey(editor: ChartEditorEntry): string {
+  if (editor.id === "imaging" || editor.group === "IMAGING") return "tests";
+  const key = editorSheetSection(editor);
+  return ["history", "assessment"].includes(key) ? "section-groups" : key;
 }
 
 function editorGroupKey(group?: string): string {
@@ -460,12 +410,13 @@ function editorGroupKey(group?: string): string {
 }
 
 function sheetSectionKeyForClinicalSection(sectionKey: string): string {
-  return sectionKey === "entrance" ? "pretest" : sectionKey;
-}
-
-function editorGroupLabel(group: string | undefined, sectionKey: string): string {
-  if (group) return group.toLocaleLowerCase().replaceAll(/\b\w/g, (letter) => letter.toLocaleUpperCase());
-  return sectionKey.replaceAll("-", " ").replaceAll(/\b\w/g, (letter) => letter.toLocaleUpperCase());
+  if (/^(entrance|pretest|tonometry|va|wearing|auto-refraction)(:|$)/.test(sectionKey)) return "pretest";
+  if (/^(ocular-health|dry-eye|cup-disc|gonioscopy)(:|$)/.test(sectionKey)) return "ocular-health";
+  if (/^refraction(:|$)/.test(sectionKey)) return "refraction";
+  if (/^(history|hpi|complaints)(:|$)/.test(sectionKey)) return "history";
+  if (/^(assessment|plan|prescription)(:|$)/.test(sectionKey)) return "assessment";
+  if (/^contact-lenses?(:|$)/.test(sectionKey)) return "contact-lenses";
+  return "section-groups";
 }
 
 type RowPattern = "word" | "eye-pair" | "event" | "diagram" | "rx";
@@ -481,10 +432,12 @@ function FindingRow({
   wearingFindings,
   editor,
   onOpenEditor,
+  other = false,
 }: {
   group: FindingGroup;
   wearingFindings: ExamOverviewFindingProjection[];
   editor?: ChartEditorEntry;
+  other?: boolean;
   onOpenEditor: (sectionId: ChartEditorEntry["id"]) => void;
 }) {
   const pattern = findingPattern(group);
@@ -515,6 +468,17 @@ function FindingRow({
           <RxResult block={primaryRefraction} blockCount={blocks.length} wearingFindings={wearingFindings} />
         )}
       </div>
+      {other && <div className="odos-exam-other-metadata">{group.rows.map(row => (
+        <span key={row.observationReference}>{row.laterality} · {row.current.recordedAt?.slice(0, 10) ?? "Date not recorded"}</span>
+      ))}</div>}
+      {group.rows.filter(row => row.provenance.state !== "current").map(row => (
+        <span key={row.observationReference} data-provenance-state={row.provenance.state}
+          className={`odos-exam-provenance is-${row.provenance.state}`}>
+          {row.laterality} · {row.provenance.state === "carried-reasserted"
+            ? `same as ${row.provenance.sourceDate?.slice(0, 10) ?? "date not recorded"} · confirmed today`
+            : `carried from ${row.provenance.sourceDate?.slice(0, 10) ?? "date not recorded"} · carried, not reasserted`}
+        </span>
+      ))}
       {openEditor && (
         <button
           type="button"
@@ -549,7 +513,7 @@ function EyePairResult({ group }: { group: FindingGroup }) {
   return (
     <span className="odos-exam-eye-pair">
       {values.map(({ row, value }) => (
-        <span key={row.laterality} className="odos-exam-eye-value">
+        <span key={row.observationReference} className="odos-exam-eye-value">
           <small>{row.laterality}</small> {value}
         </span>
       ))}
