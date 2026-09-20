@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -6,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import * as lifecycle from './stack-lifecycle.mjs';
 
-const prefix = `odos-stack-lifecycle-${process.pid}`;
+const prefix = `odos-stack-lifecycle-${randomUUID()}`;
 const root = resolve('.');
 const script = resolve('scripts/stack-lifecycle.mjs');
 const dockerBinary = execFileSync('which', ['docker'], { encoding: 'utf8' }).trim();
@@ -197,7 +198,109 @@ test('removal bookkeeping exposes no deleted resources before the first failure 
   });
 });
 
-test('reap fails and names a destroyed container when a second stopped container starts during removal', async () => {
+test('E4 refusal classification uses the error type without a daemon', () => {
+  assert.equal(typeof lifecycle.RemovalRefusal, 'function');
+  assert.equal(lifecycle.isRemovalRefusal(new lifecycle.RemovalRefusal('guard stopped removal')), true);
+  assert.equal(lifecycle.isRemovalRefusal(new Error('pre-removal check: running container')), false);
+});
+
+for (const refreshFails of [false, true]) {
+  test(`E1 Docker error before any deletion preserves the error${refreshFails ? ' when inventory refresh also fails' : ''}`, (t) => {
+    const project = `${prefix}-first-error`;
+    const fixture = twoContainerProject(project);
+    const shimDirectory = mkdtempSync(join(tmpdir(), `${project}-shim-`));
+    try {
+      const shim = join(shimDirectory, 'docker');
+      const failed = join(shimDirectory, 'failed');
+      writeFileSync(shim, `#!/bin/sh
+if [ "$1" = system ] && [ -e ${JSON.stringify(failed)} ] && [ "${refreshFails}" = true ]; then
+  echo 'simulated inventory outage' >&2
+  exit 1
+fi
+if [ "$1" = rm ]; then
+  : > ${JSON.stringify(failed)}
+  echo 'Error response from daemon: simulated storage-driver failure.' >&2
+  exit 1
+fi
+exec ${JSON.stringify(dockerBinary)} "$@"
+`);
+      chmodSync(shim, 0o755);
+      const result = run(process.execPath, [script, 'reap', '--yes', '--only', prefix, '--min-age', '0m'], { env: { ...process.env, PATH: `${shimDirectory}:${process.env.PATH}` } });
+      t.diagnostic(`exit=${result.status}\n${result.stdout}${result.stderr}`);
+      assert.equal(count(['ps', '-aq', '--filter', `label=com.docker.compose.project=${project}`]), 2);
+      assert.equal(count(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]), 1);
+      assert.equal(count(['volume', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]), 1);
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, new RegExp(`FAILED ${project}: .*simulated storage-driver failure`));
+      if (refreshFails) assert.match(result.stderr, /inventory refresh failed: simulated inventory outage/);
+      assert.match(result.stdout, /REMOVED 0 project\(s\); SKIPPED 0; FAILED 1/);
+    } finally {
+      cleanup([project], [fixture.directory, shimDirectory]);
+    }
+  });
+}
+
+for (const [scenario, stamp, remove] of [
+  ['unchanged', undefined, true],
+  ['changed', '2020-01-01T00:00:00Z', false],
+  ['absent', null, false],
+  ['invalid', 'not-a-timestamp', false],
+  ['zero', '0001-01-01T00:00:00Z', false],
+  ['future', '9999-01-01T00:00:00Z', false],
+  ['non-string', 123, false],
+  ['non-string-inventory', 123, false],
+  ['legacy-unchanged', '2020-01-01T00:00:00Z', true],
+]) {
+  test(`E5 volume CreatedAt ${scenario} ${remove ? 'removes the volume' : 'refuses cleanly'}`, (t) => {
+    const project = `${prefix}-stamp-${scenario}`;
+    const volume = `${project}-data`;
+    const shimDirectory = mkdtempSync(join(tmpdir(), `${project}-shim-`));
+    try {
+      docker(['volume', 'create', '--label', `com.docker.compose.project=${project}`, volume]);
+      const shim = join(shimDirectory, 'docker');
+      const counter = join(shimDirectory, 'count');
+      writeFileSync(shim, `#!${process.execPath}
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+const result = spawnSync(${JSON.stringify(dockerBinary)}, args, { encoding: 'utf8' });
+let output = result.stdout;
+if (result.status === 0 && args[0] === 'volume' && args[1] === 'inspect') {
+  const rows = JSON.parse(output);
+  const single = args.length === 3 && args[2] === ${JSON.stringify(volume)};
+  const count = Number(fs.existsSync(${JSON.stringify(counter)}) ? fs.readFileSync(${JSON.stringify(counter)}, 'utf8') : 0) + Number(single);
+  if (single) fs.writeFileSync(${JSON.stringify(counter)}, String(count));
+  if (['legacy-unchanged', 'non-string-inventory'].includes(${JSON.stringify(scenario)}) || (single && count === 2 && ${JSON.stringify(scenario)} !== 'unchanged')) {
+    for (const row of rows) if (row.Name === ${JSON.stringify(volume)}) {
+      if (${JSON.stringify(stamp ?? null)} === null) delete row.CreatedAt;
+      else row.CreatedAt = ${JSON.stringify(stamp ?? null)};
+    }
+    output = JSON.stringify(rows);
+  }
+}
+fs.writeSync(1, output);
+fs.writeSync(2, result.stderr);
+process.exitCode = result.status ?? 1;
+`);
+      chmodSync(shim, 0o755);
+      const result = run(process.execPath, [script, 'reap', '--yes', '--only', prefix, '--min-age', '0m'], { env: { ...process.env, PATH: `${shimDirectory}:${process.env.PATH}` } });
+      t.diagnostic(`exit=${result.status}\n${result.stdout}${result.stderr}`);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.equal(count(['volume', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`]), remove ? 0 : 1, result.stdout + result.stderr);
+      if (scenario === 'non-string-inventory') {
+        assert.match(result.stdout, /SKIP .*resource age unavailable/);
+      } else {
+        assert.match(result.stdout, remove ? /REMOVED 1 project\(s\); SKIPPED 0; FAILED 0/ : /REMOVED 0 project\(s\); SKIPPED 1; FAILED 0/);
+        if (!remove) assert.match(result.stdout, /SKIP .*CreatedAt/);
+      }
+      assert.doesNotMatch(result.stderr, /TypeError/);
+    } finally {
+      cleanup([project], [shimDirectory]);
+    }
+  });
+}
+
+test('reap fails and names a destroyed container when a second stopped container starts during removal', async (t) => {
   const project = `${prefix}-partial-removal`;
   const fixture = twoContainerProject(project);
   const shimDirectory = mkdtempSync(join(tmpdir(), `${project}-shim-`));
@@ -218,6 +321,7 @@ test('reap fails and names a destroyed container when a second stopped container
     assert.equal(restarted.status, 0, restarted.stderr);
     writeFileSync(resume, 'go\n');
     const result = await reaping;
+    t.diagnostic(`exit=${result.status}\n${result.stdout}${result.stderr}`);
     assert.equal(result.status, 1, result.stdout);
     assert.match(result.stderr, new RegExp(`FAILED ${project}: destroyed container ${firstName} before failure:`));
     assert.match(result.stdout, /REMOVED 0 project\(s\); SKIPPED 0; FAILED 1/);
@@ -245,7 +349,7 @@ test('reap refuses a project created before the threshold when it stopped within
   }
 });
 
-test('reap refreshes inventory and spares a project restarted between its plan and removal', async () => {
+test('reap refreshes inventory and spares a project restarted between its plan and removal', async (t) => {
   const project = `${prefix}-restart-race`;
   const fixture = composeProject(project, { running: true });
   const shimDirectory = mkdtempSync(join(tmpdir(), `${project}-shim-`));
@@ -263,6 +367,7 @@ test('reap refreshes inventory and spares a project restarted between its plan a
     assert.equal(restarted.status, 0, restarted.stderr);
     writeFileSync(resume, 'go\n');
     const result = await reaping;
+    t.diagnostic(`exit=${result.status}\n${result.stdout}${result.stderr}`);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, new RegExp(`SKIP ${project}: .*running container`));
     assert.match(result.stdout, /REMOVED 0 project\(s\); SKIPPED 1; FAILED 0/);
@@ -318,8 +423,8 @@ test('built-in protected names preserve Compose hyphens and underscores and down
 
 test('Compose default project names retain hyphens and underscores and protect the current directory stack', () => {
   const parent = mkdtempSync(join(tmpdir(), 'stack-lifecycle-project-name-'));
-  const directory = join(parent, 'zzeval636-prot_dir');
-  const project = 'zzeval636-prot_dir';
+  const project = `${prefix}-prot_dir`;
+  const directory = join(parent, project);
   mkdirSync(directory);
   const compose = join(directory, 'compose.yml');
   writeFileSync(compose, 'services:\n  fixture:\n    image: alpine:3.21\n    command: ["true"]\n    volumes:\n      - data:/data\nvolumes:\n  data:\n');

@@ -6,6 +6,12 @@ import { pathToFileURL } from 'node:url';
 const composeProjectLabel = 'com.docker.compose.project';
 const anonymousVolumeLabel = 'com.docker.volume.anonymous';
 
+export class RemovalRefusal extends Error {}
+
+export function isRemovalRefusal(error) {
+  return error instanceof RemovalRefusal;
+}
+
 function docker(args, allowFailure = false) {
   try {
     return execFileSync('docker', args, { encoding: 'utf8' }).trim();
@@ -95,7 +101,8 @@ function inventory() {
   const volumes = inspect('volume', ids(['volume', 'ls', '-q'])).map((item) => ({
     name: item.Name,
     labels: item.Labels ?? {},
-    createdAt: dockerTimestamp(item.CreatedAt),
+    createdAt: typeof item.CreatedAt === 'string' ? dockerTimestamp(item.CreatedAt) : undefined,
+    createdAtValue: item.CreatedAt,
     size: volumeSizes.get(item.Name) ?? 0,
   }));
   const networks = inspect('network', ids(['network', 'ls', '-q'])).map((item) => ({
@@ -197,7 +204,7 @@ function preRemovalState(project) {
 function checkBeforeRemoval(project, { forceContainers = false } = {}) {
   try {
     const reasons = preRemovalReasons(project, preRemovalState(project), { requireStopped: !forceContainers });
-    if (reasons.length) throw new Error(`pre-removal check: ${reasons.join(', ')}`);
+    if (reasons.length) throw new RemovalRefusal(`pre-removal check: ${reasons.join(', ')}`);
   } catch (error) {
     error.deleted = [];
     throw error;
@@ -218,14 +225,20 @@ export function runRemovalOperations(operations) {
   }
 }
 
-function remove(project, { forceContainers = false } = {}) {
+function remove(project, { forceContainers = false, verifyVolumeCreatedAt = false } = {}) {
   checkBeforeRemoval(project, { forceContainers });
   return runRemovalOperations([
     ...project.containers.map((container) => ({ description: `container ${container.name}`, remove: () => docker(['rm', ...(forceContainers ? ['-f'] : []), container.id]) })),
     ...project.networks.map((network) => ({ description: `network ${network.name}`, remove: () => docker(['network', 'rm', network.id]) })),
     ...project.volumes.map((volume) => ({ description: `volume ${volume.name}`, remove: () => {
       const current = inspect('volume', [volume.name])[0];
-      if (current.Labels?.[composeProjectLabel] !== project.name) throw new Error(`Refusing volume ${volume.name}: its compose-project label changed.`);
+      if (current.Labels?.[composeProjectLabel] !== project.name) throw new RemovalRefusal(`Refusing volume ${volume.name}: its compose-project label changed.`);
+      if (verifyVolumeCreatedAt) {
+        const timestamp = typeof current.CreatedAt === 'string' ? dockerTimestamp(current.CreatedAt) : undefined;
+        if (!Number.isFinite(timestamp) || timestamp <= 0 || timestamp > Date.now() || current.CreatedAt !== volume.createdAtValue) {
+          throw new RemovalRefusal(`Refusing volume ${volume.name}: its CreatedAt is unavailable, implausible, or changed.`);
+        }
+      }
       docker(['volume', 'rm', volume.name]);
     } })),
   ]);
@@ -270,7 +283,7 @@ function reap(options) {
       continue;
     }
     try {
-      remove(project);
+      remove(project, { verifyVolumeCreatedAt: true });
       removed.push(project);
     } catch (error) {
       const deleted = error.deleted ?? [];
@@ -279,15 +292,22 @@ function reap(options) {
         console.error(`FAILED ${project.name}: destroyed ${deleted.join(', ')} before failure: ${error.message}`);
         continue;
       }
-      const afterFailure = inventory();
-      const changedProject = projectsFrom(afterFailure).find((candidate) => candidate.name === planned.name);
-      const changedReasons = changedProject ? refusalReasons(changedProject, options, afterFailure) : [];
-      if (changedReasons.length) {
-        skipped.push(`${planned.name}: ${changedReasons.join(', ')}`);
-        console.log(`SKIP ${planned.name}: ${changedReasons.join(', ')}.`);
-      } else {
+      if (!isRemovalRefusal(error)) {
+        try {
+          const afterFailure = inventory();
+          const changedProject = projectsFrom(afterFailure).find((candidate) => candidate.name === planned.name);
+          const changedReasons = changedProject ? refusalReasons(changedProject, options, afterFailure) : [];
+          if (changedReasons.length) error = new RemovalRefusal(changedReasons.join(', '));
+        } catch (refreshError) {
+          error = new Error(`${error.message}; inventory refresh failed: ${refreshError.message}`);
+        }
+      }
+      if (isRemovalRefusal(error)) {
         skipped.push(`${planned.name}: ${error.message}`);
         console.log(`SKIP ${planned.name}: ${error.message}.`);
+      } else {
+        failures.push(`${planned.name}: ${error.message}`);
+        console.error(`FAILED ${planned.name}: ${error.message}`);
       }
     }
   }

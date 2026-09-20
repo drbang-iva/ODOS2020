@@ -47,7 +47,7 @@ equivalent command in place of `docker-compose`.
 
 Before a confirmed reap removes each project, it inventories Docker again. On large hosts this can take
 minutes because each project scans the full container, volume, and network inventory; wait for the final
-`REMOVED`/`SKIPPED`/`FAILED` summary rather than treating a quiet run as hung.
+`REMOVED`/`SKIPPED`/`FAILED` summary rather than treating a quiet run as hung. Guard refusals before deletion are `SKIP`; real errors and partial removals are `FAILED` with a non-zero exit, and partial removals name the destroyed resources.
 
 ## Start the Local Stack
 
