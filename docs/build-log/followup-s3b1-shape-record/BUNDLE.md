@@ -367,12 +367,14 @@ node docs/build-log/followup-s3b1-shape-record/proof/stack.mjs up
 node --import tsx docs/build-log/followup-s3b1-shape-record/proof/seed-shape.ts
 node docs/build-log/followup-s3b1-shape-record/proof/stack.mjs build
 node docs/build-log/followup-s3b1-shape-record/proof/stack.mjs serve
+cp .odos/s3b1-proof/credentials.json .odos/s3b1-before-proof/credentials.json
+cp .odos/s3b1-proof/shape-visits.json .odos/s3b1-before-proof/shape-visits.json
 node docs/build-log/followup-s3b1-shape-record/proof/browser.mjs --before
 node docs/build-log/followup-s3b1-shape-record/proof/browser.mjs
 node --import tsx docs/build-log/followup-s3b1-shape-record/proof/read-records.ts
 ```
 
-The before mode needs the pristine base worktree built/served with `--base-server --app-root "$BASE_WORKTREE"`; its isolated runtime shares the synthetic identity/visit files and uses the distinct base ports. prepare is for a fresh runtime; repeated runs reuse the existing task-owned manifest rather than overwriting credentials. All runtime credentials remain gitignored under `.odos/`.
+The before mode needs the pristine base worktree built/served with `--base-server --app-root "$BASE_WORKTREE"`; its isolated runtime uses the distinct base ports. After preparing that runtime, the two explicit copy commands above stage the shared synthetic identity/visit fixtures without replacing its base manifest. prepare is for a fresh runtime; repeated runs reuse the existing task-owned manifest rather than overwriting credentials. All runtime credentials remain gitignored under `.odos/`.
 
 Results: `browser-before.json`, `browser-after.json`, `stored-records.json`.
 
@@ -428,6 +430,14 @@ New frozen shape (actual synthetic original visit; scope subsequently changed to
 ```
 
 Legacy parsing returns examScope, Basic meta.versionId, author as setBy, and setAt; profilesApplied, sectionsOpen and shapedAt remain absent. The internal writeToken is not exposed in the scope projection. `stored-records.json` contains all six sampled rows. The untouched-seed test additionally asserts `{ "profileKey": "glaucoma", "version": 1, "versionId": null }`; null is retained as a real field.
+
+## Automatic review adjudication
+
+CodeRabbit reviewed 5973ce21 and identified a missing fixture-staging instruction. The commands now explicitly copy credentials.json and shape-visits.json into the base runtime, preserving its distinct manifest; both copies and the retained manifest were checked locally. This is a reproduction-documentation correction only; application source and recorded browser proof are unchanged.
+
+The suggested active-only diagnosis catalogue filter is not adopted. This slice resolves existing encounter diagnoses, not new catalogue selections. Deactivating a selectable catalogue entry does not invalidate an already-recorded Condition; excluding it here would silently drop its family from first-open matching. Inactive follow-up profiles are already excluded. Claude Opus 5 should verify this distinction in independent evaluation.
+
+PR-Agent's missing-identifier concern is not applicable: parseDiagnosisIdentifier returns an empty object for undefined input; the catalogue lookup then produces no match, without throwing.
 
 ## Cleanup, boundaries and follow-ups
 
