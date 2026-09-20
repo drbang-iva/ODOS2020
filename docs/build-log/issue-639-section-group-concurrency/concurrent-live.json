@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "create",
+    "accepted": 1,
+    "rows": 1,
+    "rejectionStatuses": [
+      409
+    ]
+  },
+  {
+    "mode": "seed",
+    "accepted": 1,
+    "rows": 1,
+    "rejectionStatuses": [
+      409
+    ]
+  },
+  {
+    "mode": "override",
+    "rows": 1
+  }
+]

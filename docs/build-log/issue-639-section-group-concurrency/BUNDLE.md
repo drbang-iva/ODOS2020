@@ -57,6 +57,16 @@ G6 still injects the version bump between the store read and update, asserts ref
 
 The browser proof uses the untouched base in a separate worktree and separate verified ports (base 32692, proposed 32691), with the same synthetic stack and data. Captures were inspected. No mocks intercept application requests in this proof.
 
+PR-Agent asked for real-server concurrency confirmation. `node --import tsx docs/build-log/issue-639-section-group-concurrency/proof/concurrent-live.ts` runs both store calls concurrently against disposable Medplum 5.1.30, then independently searches stored rows:
+
+```text
+catalogue create: accepted 1, rows 1, losing caller 409
+first seed overlay: accepted 1, rows 1, losing caller 409
+override first writes: rows 1
+```
+
+The initial post-restart attempt reached Medplum before it was ready; the harness now waits for health. This evidence is local synthetic Medplum behavior, not a claim about an operator's deployed production environment. The stack was stopped again afterward.
+
 ## Commands and exact summary counts
 
 UI: `npm --prefix ui test`
