@@ -11,7 +11,7 @@ import { resolveStarterDiagnosisPins } from '../../../../mcp/src/clinical-graph/
 
 export async function seedUiRuntime(runtime: string) {
   const manifest = JSON.parse(readFileSync(join(runtime, 'manifest.json'), 'utf8'));
-  assert.equal(manifest.project, 'odos-s2b2a-proof');
+  assert.ok(['odos-s2b2a-proof', 'odos-s2b2a-fb1-proof'].includes(manifest.project));
   const baseUrl = `http://127.0.0.1:${manifest.ports.medplum}`;
   const credentials = JSON.parse(readFileSync(join(runtime, 'credentials.json'), 'utf8'));
   const seeder = await loadVerifiedOperatorFhirClient({ baseUrl, projectId: credentials.projectId,

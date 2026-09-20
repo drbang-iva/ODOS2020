@@ -6,7 +6,7 @@ import { createAuthenticatedFhirClient } from '../../../../scripts/r10-served-ro
 const runtime = resolve(process.argv[2]);
 const read = (name: string) => JSON.parse(readFileSync(join(runtime, name), 'utf8'));
 const { ports, project } = read('manifest.json');
-assert.equal(project, 'odos-s2b2a-proof');
+assert.ok(['odos-s2b2a-proof', 'odos-s2b2a-fb1-proof'].includes(project));
 const credentials = read('credentials.json');
 const fixture = read('fixture.json');
 const { accessToken, fhir } = await createAuthenticatedFhirClient({ baseUrl: `http://127.0.0.1:${ports.medplum}`, ...credentials.provider });

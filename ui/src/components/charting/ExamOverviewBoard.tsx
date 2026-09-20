@@ -119,6 +119,7 @@ interface Props {
   editorEntries: readonly ChartEditorEntry[];
   activeEditorId?: ChartEditorEntry["id"];
   openedEditorIds?: readonly ChartEditorEntry["id"][];
+  savedEditorIds?: readonly string[];
   availableSectionGroups?: readonly FindingSectionGroup[];
   pinnedSectionGroups?: readonly FindingSectionGroup[];
   onAddSectionGroup?: (groupKey: string) => void;
@@ -133,7 +134,7 @@ interface Props {
   onShelve?: (editorId: ChartEditorEntry["id"]) => void;
 }
 
-export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, openedEditorIds = [],
+export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, openedEditorIds = [], savedEditorIds = [],
   availableSectionGroups = [], pinnedSectionGroups = [], onAddSectionGroup, updatingSectionGroups = false,
   sectionGroupError, refreshing, onOpenEditor, onRefresh, viewState = { collapsed: [], shelved: [] },
   onCollapse, onExpand, onShelve }: Props) {
@@ -155,7 +156,11 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, o
   const opened = new Set([...openedEditorIds, ...(activeEditorId ? [activeEditorId] : [])]);
   const collapsed = new Set(viewState.collapsed);
   const shelved = new Set(viewState.shelved);
-  const evidence = new Map(editorEntries.map(editor => [editor.id, holdsData(editor, projection, editorEntries)]));
+  const saved = new Set(savedEditorIds);
+  const evidence = new Map(editorEntries.map(editor => {
+    const data = holdsData(editor, projection, editorEntries);
+    return [editor.id, data === false && saved.has(editor.id) ? "unknown" : data] as const;
+  }));
   const definitions: readonly ExamSheetRowDefinition[] = [...EXAM_SHEET_ROWS,
     { sectionKey: "section-groups", label: "Section groups", editorGroupKey: "section-groups", traceSectionKeys: [], owner: "Doctor", rowLayout: "single" },
   ];

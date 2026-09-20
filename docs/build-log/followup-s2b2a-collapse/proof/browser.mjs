@@ -5,20 +5,22 @@ import { spawn, execFileSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { generateCaddyfile, assertCaddyParity } from '../../../../scripts/r10-served-route/caddy.mjs';
 
-const root = resolve('.'), runtime = join(root, '.odos/s2b2a-proof');
+const fixback1 = process.argv.includes('--fixback1');
+const fixbackBefore = process.argv.includes('--fixback1-before');
+const root = resolve('.'), runtime = join(root, fixback1 ? '.odos/s2b2a-fb1-proof' : '.odos/s2b2a-proof');
 const read = name => JSON.parse(readFileSync(join(runtime, name), 'utf8'));
 const { ports } = read('manifest.json'), credentials = read('credentials.json'), fixture = read('fixture.json');
 const beforeRoot = resolve(process.argv[2]);
-assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: beforeRoot, encoding: 'utf8' }).trim(), 'da799f4eb9c290cf6e6e270b0031562e2b432d8a');
+assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: beforeRoot, encoding: 'utf8' }).trim(), fixback1 ? '32066b22b2a19ab50a765347ff71b4afd4d73fb2' : 'da799f4eb9c290cf6e6e270b0031562e2b432d8a');
 assert.equal(execFileSync('git', ['diff', '--stat'], { cwd: beforeRoot, encoding: 'utf8' }).trim(), '');
-const beforePorts = { ...ports, frontdoor: 31292 };
+const beforePorts = { ...ports, frontdoor: fixback1 ? 31492 : 31292 };
 const source = readFileSync(join(beforeRoot, 'deploy/frontdoor/Caddyfile'), 'utf8');
 const config = generateCaddyfile(source, beforePorts); assertCaddyParity(source, config, beforePorts);
 const configPath = join(runtime, 'before.Caddyfile'); writeFileSync(configPath, config);
 const log = openSync(join(runtime, 'before-caddy.log'), 'a', 0o600);
 let caddy, browser;
 const { chromium } = createRequire(join(root, 'ui/package.json'))('playwright-core');
-const evidence = join(root, 'docs/build-log/followup-s2b2a-collapse/screenshots'); mkdirSync(evidence, { recursive: true });
+const evidence = join(root, 'docs/build-log/followup-s2b2a-collapse', fixback1 ? 'fixback1-screenshots' : 'screenshots'); mkdirSync(evidence, { recursive: true });
 const results = [];
 let providerSession;
 const baselineOnly = process.argv.includes('--baseline-refresh');
@@ -69,6 +71,21 @@ async function api(page, path, method = 'GET', body) {
     return { status: response.status, body: await response.json() };
   }, { path, method, body });
 }
+async function proveCorneaShelf(page, width, encounter, requests) {
+  const cornea = 'ocular-health:anterior:cornea';
+  const start = requests.length;
+  await action(page, 'shelve', cornea).click(); await wait(150); assert.deepEqual(requests.slice(start), []);
+  assert.equal(await line(page, cornea).count(), 0);
+  const shelfCornea = page.getByTestId('exam-shelf').locator(`[data-editor-section-id="${cornea}"]`);
+  assert.equal(await shelfCornea.count(), 1);
+  await capture(page, width, 'after-shelved', shelfCornea);
+  await shelfCornea.click();
+  await page.getByTestId('return-to-exam-overview').waitFor();
+  await page.getByTestId('return-to-exam-overview').click();
+  assert.equal(await line(page, cornea).count(), 1);
+  const stored = await page.evaluate(id => JSON.parse(localStorage.getItem(`odos:exam-view:v1:${id}`)), encounter.slice(10));
+  assert.ok(!stored.shelved.includes(cornea));
+}
 async function captureBefore(width, encounter) {
   const context = await browser.newContext({ viewport: { width, height: width === 1440 ? 1100 : 1300 } });
   try {
@@ -90,7 +107,7 @@ try {
     assert.ok(ready, `Front door ${port} must be ready`);
   }
   for (const width of (baselineOnly ? [1440] : [1440, 390])) {
-    const base = `http://127.0.0.1:${baselineOnly ? beforePorts.frontdoor : ports.frontdoor}`, encounter = fixture[baselineOnly ? 'baselineRefresh' : `collapse${width}`];
+    const base = `http://127.0.0.1:${(baselineOnly || fixbackBefore) ? beforePorts.frontdoor : ports.frontdoor}`, encounter = fixture[baselineOnly ? 'baselineRefresh' : fixbackBefore ? `fb1Before${width}` : `collapse${width}`];
     const context = await browser.newContext({ viewport: { width, height: width === 1440 ? 1100 : 1300 } });
     const page = await context.newPage(); page.setDefaultTimeout(20000);
     const requests = [], errors = [];
@@ -98,6 +115,12 @@ try {
     page.on('pageerror', error => errors.push(error.message));
     let signedIn = false;
     try {
+      if (fixback1) await page.addInitScript(() => {
+        window.__fb1ManualRefreshClicks = 0;
+        document.addEventListener('click', event => {
+          if (event.target instanceof Element && event.target.closest('[data-testid="refresh-exam-overview"]')) window.__fb1ManualRefreshClicks++;
+        }, true);
+      });
       await login(page, base); signedIn = true;
       await open(page, base, encounter);
       assert.equal(await page.getByRole('combobox', { name: 'Exam scope', exact: true }).inputValue(), 'comprehensive');
@@ -129,6 +152,33 @@ try {
         results.push({ base: 'da799f4e', automaticReadRows, manualRefreshRows, diagnosis: 'Same real IOP save and immediate overview behavior at pinned base; no server edits.' });
         continue;
       }
+      if (fixback1) {
+        const findingRows = await line(page, 'iop').getByTestId('exam-finding-row').count();
+        const control = fixbackBefore ? 'shelve' : 'collapse';
+        assert.equal(await line(page, 'iop').count(), 1);
+        assert.equal(await action(page, control, 'iop').count(), 1);
+        assert.equal(await action(page, fixbackBefore ? 'collapse' : 'shelve', 'iop').count(), 0);
+        if (fixbackBefore) assert.equal(findingRows, 0, 'reproduce the unmodified parent save/read lag');
+        const dataEvidence = await line(page, 'iop').getAttribute('data-holds-data');
+        await capture(page, width, fixbackBefore ? 'before-save-lag' : 'after-save-lag', line(page, 'iop'));
+        if (!fixbackBefore) {
+          const start = requests.length;
+          await action(page, 'collapse', 'iop').click(); await wait(150);
+          assert.equal(await line(page, 'iop').count(), 1);
+          assert.equal(await line(page, 'iop').getByTestId('exam-collapsed-line').count(), 1);
+          await capture(page, width, 'after-collapse', line(page, 'iop'));
+          await action(page, 'expand', 'iop').click(); await wait(150);
+          assert.deepEqual(requests.slice(start), []);
+          await proveCorneaShelf(page, width, encounter, requests);
+        }
+        const manualRefreshClicks = await page.evaluate(() => window.__fb1ManualRefreshClicks);
+        assert.equal(manualRefreshClicks, 0);
+        assert.deepEqual(errors, []);
+        results.push({ width, parentComparison: fixbackBefore, chartedThroughRealIopUi: true,
+          findingRowsImmediatelyAfterSave: findingRows, dataEvidence, iopDrawn: true, iopControl: control,
+          manualRefreshClicks, corneaShelfRoundtrip: !fixbackBefore, viewRequests: 0, pageErrors: errors });
+        continue;
+      }
       const neededOverviewRefresh = await action(page, 'collapse', 'iop').count() === 0;
       if (neededOverviewRefresh) {
         await page.getByTestId('refresh-exam-overview').click();
@@ -155,19 +205,7 @@ try {
       start = requests.length;
       await action(page, 'expand', 'iop').click(); await wait(150); assert.deepEqual(requests.slice(start), []);
       assert.equal(await line(page, 'iop').getByTestId('exam-finding-row').count(), 1);
-      const cornea = 'ocular-health:anterior:cornea';
-      start = requests.length;
-      await action(page, 'shelve', cornea).click(); await wait(150); assert.deepEqual(requests.slice(start), []);
-      assert.equal(await line(page, cornea).count(), 0);
-      const shelfCornea = page.getByTestId('exam-shelf').locator(`[data-editor-section-id="${cornea}"]`);
-      assert.equal(await shelfCornea.count(), 1);
-      await capture(page, width, 'after-shelved', shelfCornea);
-      await shelfCornea.click();
-      await page.getByTestId('return-to-exam-overview').waitFor();
-      await page.getByTestId('return-to-exam-overview').click();
-      assert.equal(await line(page, cornea).count(), 1);
-      const stored = await page.evaluate(id => JSON.parse(localStorage.getItem(`odos:exam-view:v1:${id}`)), encounter.slice(10));
-      assert.ok(!stored.shelved.includes(cornea));
+      await proveCorneaShelf(page, width, encounter, requests);
       assert.equal(await action(page, 'collapse', 'wearing').count(), 1);
       assert.equal(await action(page, 'shelve', 'wearing').count(), 0);
       await capture(page, width, 'after-unknown', line(page, 'wearing'));
@@ -207,7 +245,7 @@ try {
       throw error;
     } finally { await context.close(); }
   }
-  writeFileSync(join(evidence, baselineOnly ? '../baseline-refresh-probe.json' : pairsOnly ? '../screenshot-pairs.json' : '../browser-results.json'), JSON.stringify(results, null, 2) + '\n');
+  writeFileSync(join(evidence, fixback1 ? (fixbackBefore ? '../fixback1-before-browser-results.json' : '../fixback1-browser-results.json') : baselineOnly ? '../baseline-refresh-probe.json' : pairsOnly ? '../screenshot-pairs.json' : '../browser-results.json'), JSON.stringify(results, null, 2) + '\n');
   console.log(JSON.stringify(results, null, 2));
 } finally {
   try { await browser?.close(); } finally { caddy?.kill('SIGTERM'); }

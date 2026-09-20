@@ -1,0 +1,247 @@
+[
+  {
+    "guard": "G-FB1",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "mutation": {
+      "from": "data === false && saved.has(editor.id) ? \"unknown\" : data",
+      "to": "data",
+      "landedSha256": "ebfce0339a79dc4ca1bd022183fe1af2e6cbbca23d056833d595d8707459ec55"
+    },
+    "restoredSha256": "9841cdaf49146fd67e2379f63e0bac1c4af91a2fe4ac0296426f6752b4921645",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB1 tests/examStaleShelve.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G-FB1 a session-saved IOP stays drawn and collapse-only on a racing projection, then data wins after refresh"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB1 tests/examStaleShelve.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": []
+    }
+  },
+  {
+    "guard": "G-FB2 fault injection",
+    "path": "ui/src/scenes/EncounterCharting.tsx",
+    "mutation": {
+      "from": "savedEditorIds.includes(sectionId) || ",
+      "to": "",
+      "landedSha256": "4d2d2a6428f44e2666ca9f8be5ed5fd2019b11390d9b687d728ff485c0df2cc7"
+    },
+    "restoredSha256": "f24765f9f42d06046c79c2cd7d83d7ab9747bc9d9aa7947d0fa021783469f415",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB2 tests/examOverviewBoard.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G-FB2 fault injection: direct shelve handler for a session-saved editor is unreachable through the UI and writes nothing"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB2 tests/examOverviewBoard.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": []
+    }
+  },
+  {
+    "guard": "G-FB3",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "mutation": {
+      "from": "const saved = new Set(savedEditorIds);",
+      "to": "const saved = new Set(editorEntries.map(editor => editor.id));",
+      "landedSha256": "c29d4fa342d897cbaf483c38bfa94d49ff137de04b683ffe61b5a8d4a6fa2dc9"
+    },
+    "restoredSha256": "9841cdaf49146fd67e2379f63e0bac1c4af91a2fe4ac0296426f6752b4921645",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB3 tests/examStaleShelve.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G-FB3 a never-saved proven-empty line still shelves and returns"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB3 tests/examStaleShelve.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": []
+    }
+  },
+  {
+    "guard": "G-FB4",
+    "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "mutation": {
+      "from": "if (shelved.has(editor.id)) return data !== false || editor.id === activeEditorId;",
+      "to": "if (shelved.has(editor.id)) return false;",
+      "landedSha256": "35fa2d139c5eb161539dad042f4eb9916079963b68d339a82fa69a4d2aabaf19"
+    },
+    "restoredSha256": "9841cdaf49146fd67e2379f63e0bac1c4af91a2fe4ac0296426f6752b4921645",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB4 tests/examStaleShelve.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G-FB4 persisted shelf marks still lose to projected data and registry unknown"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB4 tests/examStaleShelve.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": []
+    }
+  },
+  {
+    "guard": "G-FB5",
+    "path": "ui/src/lib/exam-editor-map.ts",
+    "mutation": {
+      "from": "if (editorSheetSection(editor) === \"history\" && projection.historySummary) return true;",
+      "to": "return false;\n  if (editorSheetSection(editor) === \"history\" && projection.historySummary) return true;",
+      "landedSha256": "7d1263d5498b3b44e3c105fc84cedf355efd0437e3423d18ff721fd5e9c72c7c"
+    },
+    "restoredSha256": "20d6418257a2f43084d198ead7c46c577c6583b49bb6aea82143fbaeee364024",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx tests/examViewState.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 21",
+        "# pass 4",
+        "# fail 17",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 2 - S2b2a G1 G8 real save/read/clear and writer pin: iop",
+        "not ok 3 - S2b2a G1 G8 real save/read/clear and writer pin: cup-disc",
+        "not ok 4 - S2b2a G1 G8 real save/read/clear and writer pin: auto-refraction",
+        "not ok 5 - S2b2a G1 G8 real save/read/clear and writer pin: cover-test",
+        "not ok 6 - S2b2a G1 G8 real save/read/clear and writer pin: manual-keratometry",
+        "not ok 7 - S2b2a G1 G8 real save/read/clear and writer pin: color-vision",
+        "not ok 8 - S2b2a G1 G8 real save/read/clear and writer pin: stereopsis",
+        "not ok 9 - S2b2a G1 G8 real save/read/clear and writer pin: hpi",
+        "not ok 10 - S2b2a G1 G8 real save/read/clear and writer pin: ocular-health:anterior:cornea",
+        "not ok 11 - S2b2a G1 G8 real save/read/clear and writer pin: dry-eye:tear-volume",
+        "not ok 12 - S2b2a G1 G8 real save/read/clear and writer pin: custom:synthetic",
+        "not ok 13 - S2b2a G4 unregistered, registered unknown, and Other findings fail closed",
+        "not ok 16 - S2b2a G3 collapsed data stays in order, summarizes values, survives remount and expands",
+        "not ok 17 - S2b2a G2 G7 view controls never fetch or call chart mutation props; shelf opening restores the line",
+        "not ok 18 - S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope",
+        "not ok 19 - S2b2a G10 absent and throwing storage keeps the board open and collapse works in-session",
+        "not ok 20 - S2b2a G3 collapsed empty rows stay drawn, unmapped values use the fallback, and the editor still opens"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examEditorMap.test.tsx tests/examViewState.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 21",
+        "# pass 21",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": []
+    }
+  },
+  {
+    "guard": "G-FB6",
+    "path": "ui/src/scenes/EncounterCharting.tsx",
+    "mutation": {
+      "from": "const savedEditorIds = Object.keys(statuses);",
+      "to": "const retainedSavedEditorIds = useRef(new Set<string>());\n  Object.keys(statuses).forEach(id => retainedSavedEditorIds.current.add(id));\n  const savedEditorIds = [...retainedSavedEditorIds.current];",
+      "landedSha256": "a3416acdab07dac9560acdcb51e8ced38168080b7bfabaee1bf980dc3d238ca2"
+    },
+    "restoredSha256": "f24765f9f42d06046c79c2cd7d83d7ab9747bc9d9aa7947d0fa021783469f415",
+    "red": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB6 tests/examOverviewBoard.test.tsx)",
+      "exit": 1,
+      "summary": [
+        "# tests 3",
+        "# pass 1",
+        "# fail 2",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": [
+        "not ok 1 - S2b2a G-FB6 successful section clear removes saved-ID protection through the scene handler",
+        "not ok 2 - S2b2a G-FB6 successful encounter clear removes saved-ID protection through the scene handler"
+      ]
+    },
+    "green": {
+      "command": "(cd ui && node --import tsx --test --test-concurrency=1 --test-name-pattern=G-FB6 tests/examOverviewBoard.test.tsx)",
+      "exit": 0,
+      "summary": [
+        "# tests 3",
+        "# pass 3",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ],
+      "failing": []
+    }
+  }
+]

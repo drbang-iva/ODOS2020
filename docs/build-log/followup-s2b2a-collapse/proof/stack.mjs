@@ -9,9 +9,13 @@ import { startResponseProxy } from '../../../../scripts/r10-served-route/respons
 import { runReadinessChild } from '../../../../scripts/r10-served-route/readiness-child.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
-const runtime = join(root, '.odos/s2b2a-proof');
-const ports = { frontdoor: 31291, medplum: 31304, postgres: 28535, redis: 29481, mcp: 26444, proxy: 26445, control: 26446 };
-const project = 'odos-s2b2a-proof';
+const fixback1 = process.argv.includes('--fixback1');
+const project = fixback1 ? 'odos-s2b2a-fb1-proof' : 'odos-s2b2a-proof';
+const runtime = join(root, fixback1 ? '.odos/s2b2a-fb1-proof' : '.odos/s2b2a-proof');
+const ports = fixback1
+  ? { frontdoor: 31491, medplum: 31504, postgres: 28635, redis: 29581, mcp: 26544, proxy: 26545, control: 26546 }
+  : { frontdoor: 31291, medplum: 31304, postgres: 28535, redis: 29481, mcp: 26444, proxy: 26445, control: 26446 };
+const subnet = fixback1 ? '10.249.165.0/24' : '10.249.164.0/24';
 const composePath = join(runtime, 'compose.json');
 const manifestPath = join(runtime, 'manifest.json');
 const command = process.argv[2];
@@ -53,7 +57,7 @@ if (command === 'prepare') {
   await Promise.all(Object.values(ports).map(freePort));
   mkdirSync(runtime, { recursive: true, mode: 0o700 });
   const networks = JSON.parse(run('docker', ['network', 'inspect', ...run('docker', ['network', 'ls', '-q']).trim().split(/\s+/)]));
-  if (networks.some(network => network.IPAM?.Config?.some(config => config.Subnet === '10.249.164.0/24'))) throw new Error('Harness subnet is already allocated.');
+  if (networks.some(network => network.IPAM?.Config?.some(config => config.Subnet === subnet))) throw new Error('Harness subnet is already allocated.');
   const password = randomBytes(24).toString('base64url');
   const service = { email: 'r10-a3-2-service@example.test', password: `R10-${password}!` };
   const passphrase = randomUUID();
@@ -70,9 +74,9 @@ if (command === 'prepare') {
     redis: { image: 'redis:7-alpine', command: ['redis-server', '--requirepass', 'medplum'], volumes: ['redis:/data'], ports: [`127.0.0.1:${ports.redis}:6379`], healthcheck: { test: ['CMD', 'redis-cli', '--pass', 'medplum', 'ping'], interval: '2s', timeout: '3s', retries: 30 } },
     'binary-init': { image: 'alpine:3.21', user: '0:0', command: ['chown', '-R', '1000:1000', '/data/binary'], volumes: ['binary:/data/binary'] },
     'medplum-server': { image: 'medplum/medplum-server:5.1.30', depends_on: { postgres: { condition: 'service_healthy' }, redis: { condition: 'service_healthy' }, 'binary-init': { condition: 'service_completed_successfully' } }, volumes: [`${runtime}/medplum.config.json:/config/medplum.config.json:ro`, 'binary:/data/binary'], ports: [`127.0.0.1:${ports.medplum}:8103`], command: ['file:/config/medplum.config.json'] },
-  }, volumes: { postgres: {}, redis: {}, binary: {} }, networks: { default: { ipam: { config: [{ subnet: '10.249.164.0/24' }] } } } };
+  }, volumes: { postgres: {}, redis: {}, binary: {} }, networks: { default: { ipam: { config: [{ subnet }] } } } };
   writeJson(composePath, composeConfig);
-  writeJson(manifestPath, { project, ports, runtime, subnet: '10.249.164.0/24', root });
+  writeJson(manifestPath, { project, ports, runtime, subnet, root });
   console.log(`Prepared ${project}; isolated runtime ${runtime}`);
 } else if (command === 'up') {
   try {

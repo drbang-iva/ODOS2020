@@ -29,6 +29,7 @@ import { DiagnosisWorkspace } from "../src/components/charting/DiagnosisWorkspac
 import { AssessmentSection } from "../src/components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../src/components/charting/AutoRefractionSection";
 import { CoverTestSection } from "../src/components/charting/CoverTestSection";
+import { ClearSectionButton } from "../src/components/charting/ClearControls";
 import { CupDiscSection } from "../src/components/charting/CupDiscSection";
 import { CvfSection } from "../src/components/charting/CvfSection";
 import { DilationSection } from "../src/components/charting/DilationSection";
@@ -4529,5 +4530,91 @@ test("S2b1 G4 inactive available group pulls in from the shelf and draws lines o
     assert.equal(h.renderer.root.findAllByProps({ "data-testid": "exam-shelf-section-group" }).length, 0);
     assert.equal(h.renderer.root.findAllByProps({ "data-drawn-editor-id": "dry-eye:symptoms" }).length, 1);
     assert.deepEqual(writeRequests.filter(request => !(request.url.endsWith("/void") && (request.body as { preview?: boolean }).preview === true)), [{ url: "/clinical-graph/encounters/exam-1/section-groups", method: "POST", body: { action: "add", groupKey: "dry-eye-workup" } }]);
+  } finally { h.restore(); }
+});
+
+test("S2b2a G-FB2 fault injection: direct shelve handler for a session-saved editor is unreachable through the UI and writes nothing", async () => {
+  const projection = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1",
+    examScope: "comprehensive", definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+  const h = await renderEncounter(projection);
+  try {
+    await act(async () => editorControl(h.renderer.root, "iop").props.onClick());
+    await act(async () => {
+      h.renderer.root.findByType(IopSection).props.onSaved({ completed: true });
+      await flushEffects();
+      await flushEffects();
+    });
+    const board = h.renderer.root.findByType(ExamOverviewBoard);
+    assert.deepEqual(board.props.projection.findings, [], "the refresh must remain a stale, empty projection");
+    const before = structuredClone(board.props.viewState);
+    const fetchBefore = globalThis.fetch;
+    let requests = 0;
+    let storageWrites = 0;
+    globalThis.fetch = async () => { requests++; throw new Error("fault-injected shelve made a request"); };
+    window.localStorage.setItem = () => { storageWrites++; };
+    try {
+      await act(async () => board.props.onShelve("iop"));
+      assert.deepEqual(h.renderer.root.findByType(ExamOverviewBoard).props.viewState, before);
+      assert.equal(storageWrites, 0);
+      assert.equal(requests, 0);
+    } finally { globalThis.fetch = fetchBefore; }
+  } finally { h.restore(); }
+});
+
+for (const scope of ["section", "encounter"] as const) {
+  test(`S2b2a G-FB6 successful ${scope} clear removes saved-ID protection through the scene handler`, async () => {
+    const projection = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1",
+      examScope: "comprehensive", definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+    const h = await renderEncounter(projection);
+    const board = () => h.renderer.root.findByType(ExamOverviewBoard);
+    const action = (verb: string) => h.renderer.root.findAllByProps({ "data-exam-view-action": verb, "data-editor-id": "iop" });
+    try {
+      assert.deepEqual(board().props.savedEditorIds, []);
+      for (const [id, component] of [["va", VaSection], ["iop", IopSection]] as const) {
+        await act(async () => board().props.onOpenEditor(id));
+        await act(async () => { h.renderer.root.findByType(component).props.onSaved({ completed: true }); await flushEffects(); await flushEffects(); });
+      }
+      assert.deepEqual([...board().props.savedEditorIds].sort(), ["iop", "va"]);
+      assert.equal(action("collapse").length, 1);
+      assert.equal(action("shelve").length, 0);
+      await act(async () => board().props.onOpenEditor("iop"));
+      const cleared = { voided: ["Observation/synthetic-iop"], count: 1, sections: [{ sectionKey: "tonometry", label: "IOP", count: 1 }], entries: [], preview: false };
+      await act(async () => {
+        if (scope === "section") h.renderer.root.findByType(IopSection).findByType(ClearSectionButton).props.onCleared(cleared);
+        else visibleSheet(h).props.onEncounterCleared(cleared);
+        await flushEffects();
+        await flushEffects();
+      });
+      assert.deepEqual(board().props.savedEditorIds, scope === "section" ? ["va"] : [], "protection must track status removals key-for-key");
+      await act(async () => visibleSheet(h).props.onCancel());
+      assert.equal(action("collapse").length, 0);
+      assert.equal(action("shelve").length, 1, "a successfully cleared section is intentionally shelvable again");
+      assert.equal(action("shelve")[0]!.props.disabled, false);
+      await act(async () => action("shelve")[0]!.props.onClick());
+      assert.ok(board().props.viewState.shelved.includes("iop"));
+      assert.equal(h.renderer.root.findAllByProps({ "data-drawn-editor-id": "iop" }).length, 0);
+    } finally { h.restore(); }
+  });
+}
+
+test("S2b2a G-FB6 a failed clear keeps status-derived protection through the actual clear-failure handler", async () => {
+  const projection = buildExamOverviewProjection({ encounterReference: "Encounter/exam-1", patientReference: "Patient/patient-1",
+    examScope: "comprehensive", definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+  const h = await renderEncounter(projection);
+  const board = () => h.renderer.root.findByType(ExamOverviewBoard);
+  try {
+    await act(async () => board().props.onOpenEditor("iop"));
+    await act(async () => { h.renderer.root.findByType(IopSection).props.onSaved({ completed: true }); await flushEffects(); await flushEffects(); });
+    await act(async () => board().props.onOpenEditor("iop"));
+    h.voidFailure.status = 502;
+    const clear = visibleSheet(h).findAll(node => node.type === "button" && textContent(node) === "Clear chart")[0];
+    assert.ok(clear);
+    const readsBefore = h.overviewFetchCount();
+    await confirmClearInDialog(h, clear);
+    assert.equal(h.overviewFetchCount(), readsBefore + 1, "the existing failed-clear handler ran");
+    assert.ok(h.voidRequests.some(request => (request as { scope: string; preview?: boolean }).scope === "encounter" && !(request as { preview?: boolean }).preview));
+    assert.deepEqual(board().props.savedEditorIds, ["iop"]);
+    assert.equal(h.renderer.root.findAllByProps({ "data-exam-view-action": "shelve", "data-editor-id": "iop" }).length, 0);
+    assert.equal(h.renderer.root.findAllByProps({ "data-exam-view-action": "collapse", "data-editor-id": "iop" }).length, 1);
   } finally { h.restore(); }
 });

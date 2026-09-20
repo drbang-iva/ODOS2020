@@ -1,5 +1,7 @@
 # S2b-2a REV 2 — implementation evidence
 
+This is the initial implementation record. The latest fixback and corrected save/clear protection are in [FIXBACK-1-BUNDLE.md](FIXBACK-1-BUNDLE.md).
+
 NOT EVALUATED. Independent evaluator: Claude Opus 5, at the final PR head identified in the handoff.
 
 ## Summary

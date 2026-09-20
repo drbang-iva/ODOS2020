@@ -134,6 +134,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const isCurrentEncounter = () => currentEncounterScope.current === encounterScope;
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
   const [statuses, setStatuses] = useState<SectionStatusMap>({});
+  const savedEditorIds = Object.keys(statuses);
   const [catalog, setCatalog] = useState<CatalogResponse>({ canWrite: false, definitions: [] });
   const [sectionGroupCatalog, setSectionGroupCatalog] = useState<FindingSectionGroupCatalog>({
     canWrite: false,
@@ -314,7 +315,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   function changeBoardView(action: "collapse" | "expand" | "shelve" | "open", sectionId: ChartSectionId) {
     if (action === "shelve") {
       const editor = boardEditorEntries.find(entry => entry.id === sectionId);
-      if (sectionId === entrySheetSection || !editor || !activeExamOverviewProjection ||
+      if (savedEditorIds.includes(sectionId) || sectionId === entrySheetSection || !editor || !activeExamOverviewProjection ||
         holdsData(editor, activeExamOverviewProjection, boardEditorEntries) !== false) return;
     }
     setExamView(previous => {
@@ -921,6 +922,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
             editorEntries={boardEditorEntries}
             activeEditorId={entrySheetSection}
             openedEditorIds={[...openedBoardEditorIds, ...groupEditorIds]}
+            savedEditorIds={savedEditorIds}
             viewState={activeExamView}
             onCollapse={id => changeBoardView("collapse", id)}
             onExpand={id => changeBoardView("expand", id)}

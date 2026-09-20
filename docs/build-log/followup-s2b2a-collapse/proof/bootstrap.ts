@@ -25,7 +25,7 @@ const runtime = resolve(process.argv[2]);
 const read = (name: string): any => JSON.parse(readFileSync(join(runtime, name), 'utf8'));
 const save = (name: string, value: unknown) => writeFileSync(join(runtime, name), JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 const manifest = read('manifest.json');
-assert.equal(manifest.project, 'odos-s2b2a-proof');
+assert.ok(['odos-s2b2a-proof', 'odos-s2b2a-fb1-proof'].includes(manifest.project));
 const baseUrl = `http://127.0.0.1:${manifest.ports.medplum}`;
 const service = read('service.json');
 const credentials: any = existsSync(join(runtime, 'credentials.json')) ? read('credentials.json') : {
