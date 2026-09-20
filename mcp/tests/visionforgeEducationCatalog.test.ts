@@ -229,10 +229,41 @@ catalogTest("G15 configured status contains neither credential nor base URL", as
   }
 });
 
-test("G18 pinned ODOS schema bytes stay compatible with VisionForge", () => {
-  const text = readFileSync(new URL("../src/comms/education-catalog.ts", import.meta.url), "utf8");
-  const block = text.split("\n").slice(5, 22).join("\n") + "\n";
-  assert.equal(createHash("sha256").update(block).digest("hex"), "669e003c9a6597621dcae74d99ed681fd81b9748b979aeee3a4888ab0bc987d6");
+test("G18 captured transactional catalog remains compatible and E1a requires marketing offerClass", async () => {
+  const { educationItemSchema } = await import("../src/comms/education-catalog.js");
+  for (const entry of envelope().entries) {
+    const parsed = educationItemSchema.parse(entry.item);
+    assert.equal(parsed.offerClass, "eyecare");
+    const { offerClass, ...unchanged } = parsed;
+    assert.deepEqual(unchanged, entry.item);
+    assert.equal(educationItemSchema.safeParse({ ...entry.item, consentClass: "marketing" }).success, false);
+    for (const classification of ["eyecare", "cosmetic"]) {
+      assert.equal(educationItemSchema.parse({ ...entry.item, consentClass: "marketing", offerClass: classification }).offerClass, classification);
+    }
+  }
+});
+
+catalogTest("E1a published marketing without classification is refused without replacing last good content", async t => {
+  const f = await setup(t);
+  assert.equal((await f.reader.refresh()).outcome, "accepted");
+  const before = await f.store.load(practiceId);
+  const changed = envelope(); changed.entries[1].item.consentClass = "marketing";
+  f.set(changed);
+  assert.deepEqual(await f.reader.refresh(), { outcome: "refused", refusalCode: "entry-invalid" });
+  const after = await f.store.load(practiceId);
+  assert.deepEqual(after?.localCopy, before?.localCopy);
+  assert.deepEqual(after?.envelope, before?.envelope);
+  assert.equal(after?.etag, before?.etag);
+  assert.equal(after?.acceptedAt, before?.acceptedAt);
+  assert.equal(after?.lastRefusalCode, "entry-invalid");
+});
+for (const offerClass of ["eyecare", "cosmetic"]) catalogTest(`E1a published ${offerClass} classification survives persistence and restart`, async t => {
+  const f = await setup(t);
+  const changed = envelope(); changed.entries[1].item.consentClass = "marketing"; changed.entries[1].item.offerClass = offerClass;
+  f.set(changed); assert.equal((await f.reader.refresh()).outcome, "accepted");
+  assert.equal(f.reader.getForNewWork("history", 2)?.offerClass, offerClass);
+  const restarted = createVisionForgeEducationCatalogReader(f.config, f.store); await restarted.ready();
+  assert.equal(restarted.getForNewWork("history", 2)?.offerClass, offerClass);
 });
 
 test("G19 plan-set and protocol defaults remain the seed placeholder reader", async () => {

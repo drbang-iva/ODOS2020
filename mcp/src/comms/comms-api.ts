@@ -1,4 +1,5 @@
 import { rateLimit } from "express-rate-limit";
+import { patientEmailSubject, PatientEmailConfigurationError } from "./patient-email-envelope.js";
 import { seedEducationCatalogStatus, type EducationCatalogRuntime } from "./visionforge-education-catalog.js";
 import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION } from "./suppression-gate.js";
 import type { PatientWriteVersion } from "./patient-version.js";
@@ -90,6 +91,8 @@ export interface CommsApiRouteDeps {
   trackedLinkStore: TrackedLinkStore;
   publicBaseUrl: string;
   practiceName: string;
+  emailUnsubscribeEndpoint?: string;
+  emailSubject?: string;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
   audit: FhirAuditRecorder;
   now?: () => string;
@@ -101,7 +104,7 @@ class CommsApiCapabilityError extends Error {}
 class PendingEducationReconciliationError extends CommsApiCapabilityError {}
 class CommsApiNotFoundError extends Error {}
 class CommsApiRefusalError extends Error {
-  constructor(readonly reason: string) {
+  constructor(readonly reason: string, readonly holdReason?: "content-unavailable" | "no-recipient-channel") {
     super(reason);
   }
 }
@@ -1059,10 +1062,11 @@ export interface PreparedEducationSequenceDispatch {
   recipient: { reference: string; value: string; resource: Patient | RelatedPerson };
   laneSelection: "default" | "overridden";
   campaignId: string;
+  subject: string;
 }
 export type EducationSequencePreparation =
   | { kind: "ready"; prepared: PreparedEducationSequenceDispatch }
-  | { kind: "held"; reason: "content-unavailable" | "no-recipient-channel" | "patient-opt-out" | "preference-withheld" | "needs-acknowledgement" }
+  | { kind: "held"; reason: "content-unavailable" | "no-recipient-channel" | "patient-opt-out" | "preference-withheld" | "needs-acknowledgement"; detail?: string }
   | { kind: "deferred"; notBefore: string };
 
 async function prepareEducationDispatch(
@@ -1074,6 +1078,7 @@ async function prepareEducationDispatch(
   if (!item || item.audience !== "patient") {
     throw new CommsApiNotFoundError("Education content not found.");
   }
+  assertEducationOfferEnabled(deps, item, body.channel);
   if (!item.channels.includes(body.channel)) {
     throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);
   }
@@ -1092,7 +1097,17 @@ async function prepareEducationDispatch(
   const laneSelection = body.lane === defaultLane ? "default" : "overridden";
   const campaignId = `${item.id}@${item.version}`;
 
-  return { item, recipient, laneSelection, campaignId };
+  const subject = body.channel === "email" ? patientEmailSubject({ practiceName: deps.practiceName, subject: deps.emailSubject }) : "";
+  return { item, recipient, laneSelection, campaignId, subject };
+}
+
+function assertEducationOfferEnabled(deps: CommsApiRouteDeps, item: EducationContentItem, channel: EducationDispatchBody["channel"]): void {
+  if (item.offerClass === "cosmetic") {
+    throw new CommsApiRefusalError("Cosmetic-only content is not enabled for this practice.", "content-unavailable");
+  }
+  if (item.consentClass === "marketing" && channel === "email" && !deps.emailUnsubscribeEndpoint?.trim()) {
+    throw new CommsApiRefusalError("Promotional email requires a working unsubscribe link, which is not configured yet.", "no-recipient-channel");
+  }
 }
 
 export async function prepareEducationSequenceDispatch(
@@ -1104,6 +1119,8 @@ export async function prepareEducationSequenceDispatch(
     prepared = await prepareEducationDispatch(deps, fhir, patient, body, "existing-enrollment");
   } catch (error) {
     if (error instanceof CommsApiNotFoundError) return { kind: "held", reason: "content-unavailable" };
+    if (error instanceof CommsApiRefusalError && error.holdReason) return { kind: "held", reason: error.holdReason, detail: error.reason };
+    if (error instanceof PatientEmailConfigurationError) return { kind: "held", reason: "no-recipient-channel", detail: error.message };
     if (error instanceof CommsApiRefusalError) return { kind: "held", reason: error.reason === "marketing-consent-absent" ? "preference-withheld" : "patient-opt-out" };
     if (error instanceof CommsApiCapabilityError || error instanceof CommsApiValidationError) {
       return { kind: "held", reason: /published/.test(error.message) ? "content-unavailable" : "no-recipient-channel" };
@@ -1116,12 +1133,19 @@ export async function prepareEducationSequenceDispatch(
   if ((body.channel === "email" && !provider.sendEmail) || (body.channel === "sms" && !provider.sendSms)) {
     return { kind: "held", reason: "no-recipient-channel" };
   }
+  if (body.channel === "email") {
+    try { provider.validateEmailConfiguration?.(); }
+    catch (error) {
+      if (error instanceof PatientEmailConfigurationError) return { kind: "held", reason: "no-recipient-channel", detail: error.message };
+      throw error;
+    }
+  }
   const url = body.channel === "email" ? prepared.item.urls.email : prepared.item.urls.web;
   if (!url) return { kind: "held", reason: "content-unavailable" };
   if (body.channel === "sms") assertEducationPublicBaseUrl(deps.publicBaseUrl);
   if (!provider.preflightSuppression) throw new CommsApiCapabilityError("Education sequence provider lacks a suppression preflight probe.");
   const result = await provider.preflightSuppression({
-    patientReference: body.patientReference, body: url, subject: prepared.item.title,
+    patientReference: body.patientReference, body: url, subject: prepared.subject,
     campaignType: "clinical-education", campaignId: prepared.campaignId, messageId: body.idempotencyKey,
     suppression: { consentClass: prepared.item.consentClass, ...(prepared.item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) },
   }, body.channel);
@@ -1240,7 +1264,8 @@ async function dispatchEducationInternal(
       throw new CommsApiNotFoundError("Education content not found.");
     }
   }
-  const { item, recipient, laneSelection, campaignId } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body, mode);
+  const { item, recipient, laneSelection, campaignId, subject } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body, mode);
+  if (options.prepared) assertEducationOfferEnabled(deps, item, body.channel);
   const requiredConsent = { consentClass: item.consentClass,
     ...(actor.kind === "system" && item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) };
   const frozenContext = (providerMessageIdentifierSystem: string): string => JSON.stringify({
@@ -1275,6 +1300,7 @@ async function dispatchEducationInternal(
     if (!provider.sendEmail) {
       throw new CommsApiCapabilityError("Email is not enabled for the configured education provider.");
     }
+    provider.validateEmailConfiguration?.();
     const providerMessageIdentifierSystem =
       provider.messageIdentifierSystem ?? ODOS_COMMS_PROVIDER_MESSAGE_IDENTIFIER_SYSTEM;
     const existingSend = await findStaffSend(staff.fhir, body.idempotencyKey);
@@ -1345,7 +1371,7 @@ async function dispatchEducationInternal(
     const result = await provider.sendEmail({
       patientReference: body.patientReference,
       toAddress: recipient.value,
-      subject: item.title,
+      subject,
       body: url,
       campaignType: "clinical-education",
       campaignId,
@@ -1595,7 +1621,7 @@ async function withStaff(
     }
   } catch (error) {
     if (res.headersSent) return;
-    if (error instanceof EducationSequenceAdmissionError) {
+    if (error instanceof EducationSequenceAdmissionError || error instanceof PatientEmailConfigurationError) {
       res.status(409).json({ outcome: "refused", reason: error.message });
       return;
     }

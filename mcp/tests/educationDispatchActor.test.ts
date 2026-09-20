@@ -33,7 +33,7 @@ function fixture() {
     },
   };
   const provider:any={name:"synthetic",capabilities:{email:true},preflightSuppression:async()=>undefined,sendEmail:async(request:any)=>{requests.push(request);return {outcome:"sent",providerMessageId:"receipt-1"};}};
-  const deps:any={educationCatalog:{get:()=>item},dispatch:{providerFor:()=>"synthetic",senderNumberFor:()=>"+15555550100",getAdapterForRole:()=>provider},now:()=>"2026-09-10T15:00:00Z"};
+  const deps:any={practiceName:"Synthetic Practice",emailUnsubscribeEndpoint:"https://synthetic.invalid/unsubscribe",educationCatalog:{get:()=>item},dispatch:{providerFor:()=>"synthetic",senderNumberFor:()=>"+15555550100",getAdapterForRole:()=>provider},now:()=>"2026-09-10T15:00:00Z"};
   const actor:any={kind:"system",reference:"Device/education-sequence-worker",onBehalfOf:"Practitioner/enroller",fhir};
   const body:any={patientReference:"Patient/synthetic",educationId:"education",version:1,channel:"email",lane:"clinical",alsoUpdateChart:false,idempotencyKey:"sequence-attempt-1"};
   return {resources,requests,patient,item,fhir,provider,deps,actor,body};
@@ -263,4 +263,50 @@ test("staff marketing email follows default ON but email opt-out still suppresse
   f.requests.length = 0;
   assert.deepEqual(await api.dispatchEducationAs(actor, f.deps, f.patient, { ...f.body, idempotencyKey: "staff-email-opt-out" }), { outcome: "suppressed", reason: "patient-opt-out" });
   assert.equal(f.requests.length, 0);
+});
+
+for (const subject of [undefined, "Your practice has shared information"]) test(`E1a sequence preflight and prepared send share a neutral subject: ${subject ?? "default"}`, async () => {
+  const f = fixture();
+  f.deps.practiceName = "Synthetic Eye Care";
+  f.deps.emailSubject = subject;
+  f.item.title = "Synthetic condition revealed by title";
+  const probes: any[] = [];
+  f.provider.preflightSuppression = async (request: any) => { probes.push(request); };
+  const preparation = await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body);
+  assert.equal(preparation.kind, "ready");
+  assert.equal(probes.length, 1);
+  const expected = subject ?? "Information from Synthetic Eye Care";
+  assert.equal(probes[0].subject, expected);
+  assert.ok(!probes[0].subject.includes(f.item.title));
+  if (preparation.kind !== "ready") throw Error("expected ready");
+  const result = await api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body, { prepared: preparation.prepared });
+  assert.equal(result.outcome, "sent");
+  assert.equal(f.requests[0].subject, expected);
+});
+
+for (const blocked of ["cosmetic", "unsubscribe", "envelope"] as const) test(`E1a sequence ${blocked} hold names the capability before provider access`, async () => {
+  const f = fixture();
+  let probes = 0;
+  f.provider.preflightSuppression = async () => { probes++; };
+  if (blocked === "cosmetic") f.item.offerClass = "cosmetic";
+  if (blocked === "unsubscribe") { f.item.consentClass = "marketing"; delete f.deps.emailUnsubscribeEndpoint; }
+  if (blocked === "envelope") {
+    const { PatientEmailConfigurationError } = await import("../src/comms/patient-email-envelope.js");
+    f.provider.validateEmailConfiguration = () => { throw new PatientEmailConfigurationError("Patient email is missing practice phone in practice settings."); };
+  }
+  const preparation = await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body);
+  assert.equal(preparation.kind, "held");
+  if (preparation.kind !== "held") throw Error("expected hold");
+  assert.equal(preparation.reason, blocked === "cosmetic" ? "content-unavailable" : "no-recipient-channel");
+  assert.match(preparation.detail!, blocked === "cosmetic" ? /Cosmetic-only/ : blocked === "unsubscribe" ? /unsubscribe/ : /practice phone/);
+  assert.equal(probes, 0); assert.equal(f.resources.length, 0); assert.equal(f.requests.length, 0);
+});
+test("E1a prepared email rechecks unsubscribe capability before reservation", async () => {
+  const f = fixture(); f.item.consentClass = "marketing";
+  const preparation = await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body);
+  assert.equal(preparation.kind, "ready");
+  if (preparation.kind !== "ready") throw Error("expected ready");
+  delete f.deps.emailUnsubscribeEndpoint;
+  await assert.rejects(api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body, { prepared: preparation.prepared }), /unsubscribe/);
+  assert.equal(f.resources.length, 0); assert.equal(f.requests.length, 0);
 });

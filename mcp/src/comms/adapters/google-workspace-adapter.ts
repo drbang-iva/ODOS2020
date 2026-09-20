@@ -1,4 +1,5 @@
 import { createSign } from "node:crypto";
+import { patientEmailEnvelope, type PatientEmailSettings } from "../patient-email-envelope.js";
 import type {
   CommsProvider,
   SendEmailRequest,
@@ -40,7 +41,9 @@ export interface GoogleWorkspaceAdapterConfig {
   workspacePlanConfirmed?: boolean;
   tokenUrl?: string;
   gmailBaseUrl?: string;
+  patientEmail?: PatientEmailSettings;
 }
+
 
 export interface GoogleWorkspaceAdapterDeps {
   fetchImpl?: typeof fetch;
@@ -70,6 +73,7 @@ export function createGoogleWorkspaceAdapter(
   const warn = deps.warn ?? ((message: string) => console.warn(message));
   const normalized = validateConfig(config);
   let cachedToken: { value: string; expiresAt: number } | undefined;
+
 
   if (
     normalized.workspaceDomain === "gmail.com"
@@ -114,6 +118,7 @@ export function createGoogleWorkspaceAdapter(
 
   return {
     name: "google-workspace",
+    validateEmailConfiguration: () => { patientEmailEnvelope(config.patientEmail); },
     capabilities: {
       sms: false,
       calls: false,
@@ -127,16 +132,17 @@ export function createGoogleWorkspaceAdapter(
       const toAddress = requiredEmail(request.toAddress, "Patient email address");
       assertNoHeaderInjection(request.subject, "Email subject");
       assertNoHeaderInjection(toAddress, "Patient email address");
+      const { subject, footer } = patientEmailEnvelope(config.patientEmail);
       const raw = Buffer.from(
         [
           `From: ${normalized.fromAddress}`,
           `To: ${toAddress}`,
-          `Subject: ${request.subject}`,
+          `Subject: ${subject}`,
           "MIME-Version: 1.0",
           'Content-Type: text/plain; charset="UTF-8"',
           "Content-Transfer-Encoding: 8bit",
           "",
-          request.body,
+          `${request.body}\n\n${footer}`,
         ].join("\r\n"),
         "utf8",
       ).toString("base64url");

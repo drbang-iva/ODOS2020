@@ -748,6 +748,7 @@ test("communications dispatch reuses one Google adapter token cache across resol
       workspaceDomain: "synthetic-practice.example",
       fromAddress: "info@synthetic-practice.example",
       workspacePlanConfirmed: true,
+      patientEmail: { practiceName: "Synthetic Practice", postalAddress: "100 Example Street, Test City, NY 10001", phone: "+12025550101" },
     },
   }], {
     practiceTimeZone: "America/New_York",

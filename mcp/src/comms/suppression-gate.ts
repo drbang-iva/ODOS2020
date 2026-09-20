@@ -491,6 +491,7 @@ export function createSuppressedCommsProvider(
 ): CommsProvider {
   return {
     name: provider.name,
+    ...(provider.validateEmailConfiguration ? { validateEmailConfiguration: provider.validateEmailConfiguration } : {}),
     preflightSuppression: (request, channel) => checkMessageSuppression(deps, request, channel).then((checked) => checked.result),
     ...(provider.messageIdentifierSystem
       ? { messageIdentifierSystem: provider.messageIdentifierSystem }

@@ -37,6 +37,7 @@ export interface EducationSequenceWorkerDeps {
     } | {
         kind: "held";
         reason: EducationSchedulingHoldReason;
+        detail?: string;
     } | {
         kind: "deferred";
         notBefore: string;
@@ -266,7 +267,7 @@ export async function runOnce(deps: EducationSequenceWorkerDeps): Promise<void> 
                                     future.holdReason = prepared.reason;
                                     future.events.push({ kind: "held", actor: future.senderReference, at, reason: prepared.reason });
                                 }
-                        await hold(deps, snapshot, row, prepared.reason, prepared.reason, at);
+                        await hold(deps, snapshot, row, prepared.reason, prepared.detail ?? prepared.reason, at);
                         continue;
                     }
                     if (prepared.kind === "deferred") {

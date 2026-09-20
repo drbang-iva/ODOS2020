@@ -532,6 +532,12 @@ export function commsAdapterRegistrationsFromEnv(
             delegatedUserEmail: env.GOOGLE_WORKSPACE_DELEGATED_USER!.trim(),
             workspaceDomain: env.GOOGLE_WORKSPACE_DOMAIN!.trim(),
             fromAddress: env.GOOGLE_WORKSPACE_FROM_ADDRESS!.trim(),
+            patientEmail: {
+              practiceName: env.ODOS_PRACTICE_NAME,
+              postalAddress: env.ODOS_PRACTICE_POSTAL_ADDRESS,
+              phone: env.ODOS_PRACTICE_PHONE,
+              subject: env.ODOS_COMMS_EMAIL_SUBJECT,
+            },
             ...(confirmed ? { workspacePlanConfirmed: confirmed === "true" } : {}),
           },
         };

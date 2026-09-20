@@ -15,6 +15,7 @@ const CONFIG = {
   workspaceDomain: "synthetic-practice.example",
   fromAddress: "info@synthetic-practice.example",
   workspacePlanConfirmed: true,
+  patientEmail: { practiceName: "Synthetic Practice", postalAddress: "100 Example Street, Test City, NY 10001", phone: "+12025550101" },
 };
 
 test("Google Workspace adapter exchanges a delegated service-account JWT and sends base64url MIME through users.messages.send", async () => {
@@ -77,7 +78,8 @@ test("Google Workspace adapter exchanges a delegated service-account JWT and sen
   const mime = Buffer.from(gmailBody.raw, "base64url").toString();
   assert.match(mime, /^From: info@synthetic-practice\.example\r$/m);
   assert.match(mime, /^To: patient@example\.test\r$/m);
-  assert.match(mime, /^Subject: Appointment reminder\r$/m);
+  assert.match(mime, /^Subject: Information from Synthetic Practice\r$/m);
+  assert.ok(mime.endsWith("Synthetic Practice\n100 Example Street, Test City, NY 10001\n+12025550101\nEmail is not a secure method of communication. Please do not send sensitive medical information by email. Call +12025550101 for anything private or urgent."));
   assert.match(mime, /Your appointment is July 31 at 10:00 AM/);
 });
 
@@ -129,4 +131,42 @@ test("Google Workspace adapter rejects missing destinations and header injection
     suppression: {},
   }), /header/i);
   assert.equal(calls, 0);
+});
+
+for (const [field, value] of [
+  ["practiceName", ""], ["postalAddress", ""], ["phone", ""],
+  ["postalAddress", "{{practice.address}}"], ["phone", "${practice.phone}"],
+  ["practiceName", "<practice name>"], ["subject", "Information about {{diagnosis}}"],
+] as const) {
+  test(`E1a envelope refuses missing or unresolved ${field}=${value} before provider calls`, async () => {
+    let calls = 0;
+    const adapter = createGoogleWorkspaceAdapter({ ...CONFIG, patientEmail: { ...CONFIG.patientEmail, [field]: value } }, {
+      fetchImpl: async () => { calls += 1; return Response.json({ access_token: "synthetic", id: "should-not-send" }); },
+    });
+    await assert.rejects(() => adapter.sendEmail!({
+      patientReference: "Patient/synthetic-1", toAddress: "patient@example.test", subject: "Condition title",
+      body: "https://education.invalid/guide", campaignType: "clinical-education", suppression: {},
+    }), /Patient email.*(missing|unresolved)/i);
+    assert.equal(calls, 0);
+  });
+}
+test("E1a configured neutral subject and mandatory footer replace author envelope for reminders and education", async () => {
+  const messages: string[] = [];
+  const adapter = createGoogleWorkspaceAdapter({ ...CONFIG, patientEmail: { ...CONFIG.patientEmail, subject: "A message from your practice" } }, {
+    fetchImpl: async (input, init) => {
+      if (String(input).includes("/token")) return Response.json({ access_token: "synthetic", expires_in: 3600 });
+      messages.push(Buffer.from(JSON.parse(String(init?.body)).raw, "base64url").toString());
+      return Response.json({ id: "synthetic-receipt" });
+    },
+  });
+  for (const campaignType of ["appointment-reminder", "clinical-education"]) {
+    await adapter.sendEmail!({ patientReference: "Patient/synthetic-1", toAddress: "patient@example.test", subject: "Dry eye condition", body: "Author body", campaignType, suppression: {} });
+  }
+  assert.equal(messages.length, 2);
+  for (const mime of messages) {
+    assert.match(mime, /^Subject: A message from your practice\r$/m);
+    assert.doesNotMatch(mime, /Dry eye condition/);
+    assert.match(mime, /Author body\n\nSynthetic Practice/);
+    assert.match(mime, /Call \+12025550101 for anything private or urgent\.$/);
+  }
 });

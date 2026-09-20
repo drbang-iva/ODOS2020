@@ -161,3 +161,17 @@ test("checked-in catalog is placeholder-only, includes a real internal leak sent
   assert.equal(items.every(({ urls }) =>
     Object.values(urls).every((url) => new URL(url).hostname === "education.invalid")), true);
 });
+
+
+test("E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification", () => {
+  const manifest = validManifest();
+  let reader = createManifestEducationCatalogReader(manifest, validLedger());
+  assert.equal(reader.get("dry-eye-basics", 1)?.offerClass, "eyecare");
+  manifest.items[0].consentClass = "marketing";
+  assert.throws(() => createManifestEducationCatalogReader(manifest, validLedger()), /offerClass/);
+  for (const offerClass of ["eyecare", "cosmetic"] as const) {
+    manifest.items[0].offerClass = offerClass;
+    reader = createManifestEducationCatalogReader(manifest, validLedger());
+    assert.equal(reader.get("dry-eye-basics", 1)?.offerClass, offerClass);
+  }
+});

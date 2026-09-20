@@ -5822,6 +5822,8 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         trackedLinkStore: createFhirTrackedLinkStore(fhir),
         publicBaseUrl: commsPublicBaseUrlFromEnv(process.env),
         practiceName: process.env.ODOS_PRACTICE_NAME ?? "ODOS Practice",
+        emailUnsubscribeEndpoint: process.env.ODOS_COMMS_EMAIL_UNSUBSCRIBE_ENDPOINT,
+        emailSubject: process.env.ODOS_COMMS_EMAIL_SUBJECT,
         chartDispatchLane: process.env.ODOS_CHART_DISPATCH_LANE === "locked_clinical"
           ? "locked_clinical"
           : "staff_switchable",
