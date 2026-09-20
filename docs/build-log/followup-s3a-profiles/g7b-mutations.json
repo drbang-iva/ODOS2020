@@ -1,0 +1,59 @@
+[
+  {
+    "id": "G7b-loop",
+    "file": "ui/src/lib/follow-up-profiles.ts",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='clinical-graph requests share' tests/clinicalGraphRouting.test.tsx",
+    "originalHash": "40e98b335a6322ed2667b9cbb1cf5d4e0f3e3ae6ca0e1b13febeeef14168c3e8",
+    "mutantHash": "61163412a2ecfda80e14b4d65b995785dedb88b18095717e0b96159c0d8bf9b6",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers",
+        "  operator: 'doesNotMatch'",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  },
+  {
+    "id": "G7b-count",
+    "file": "ui/src/lib/follow-up-profiles.ts",
+    "command": "cd ui && node --import tsx --test --test-name-pattern='clinical-graph requests share' tests/clinicalGraphRouting.test.tsx",
+    "originalHash": "40e98b335a6322ed2667b9cbb1cf5d4e0f3e3ae6ca0e1b13febeeef14168c3e8",
+    "mutantHash": "48295776712abdd00082412298debec9ed9d879d2eadd7e2027d64b4f7e1785d",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers",
+        "    56 !== 57",
+        "  operator: 'strictEqual'",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    }
+  }
+]

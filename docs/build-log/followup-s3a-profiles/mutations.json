@@ -1,0 +1,433 @@
+[
+  {
+    "id": "G1",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G1' 'mcp/src/__tests__/follow-up-profile-keys.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "b5554e5a0bf6214985e6451934c8c25ce45db8d3ec0cac850f0e220782d6eccf",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G1 every seed section resolves in the real catalogues or names its unavailable reason",
+        "  error: 'glaucoma: fictional-section'",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G2",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G2' 'mcp/src/__tests__/follow-up-profile-keys.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "68a10f0e760b213f3f31a433e5d48146b6e2de0d1b8faa26a5bf2ec42de40f83",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G2 every seed test is orderable, pending, or explicitly unavailable",
+        "  error: 'glaucoma: fictional-orderable'",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G3-seed",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G3' 'mcp/src/__tests__/follow-up-profile-keys.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "07c41064f0705000c7d783a5eb0b14aece5a88b46c261f47d929c9538e581c68",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G3 no MDM field anywhere in any seed",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G3-request",
+    "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G3' 'mcp/tests/followUpProfileEndpoint.test.ts'",
+    "originalHash": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
+    "mutantHash": "58b85f0421fe100db68f1127715d6b6f7968052447744bcf34a406a21675c4aa",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G3 strict request rejects root and nested MDM and every unknown field",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G4",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G4' 'mcp/tests/followUpProfileStore.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "f58204d4d68fed88d9b3992de6b149f285cca6e5ee052e8f7b868d5b050f7851",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - mcp/tests/followUpProfileStore.test.ts",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G5a",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G5a' 'mcp/tests/followUpProfileStore.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "1e6638fb3b8ac6a74c08f0c6ed25d949632555dbdbb621709635280c5995dee4",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G5a stale caller version is refused before a write",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G5b",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G5b' 'mcp/tests/followUpProfileStore.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "972ea820b57672443ae44779ac8aab5cd929d58d23ed10d8a184d701360dea44",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G5b concurrent creates of one profile key have exactly one winner",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G5c",
+    "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G5c' 'mcp/tests/followUpProfileStore.test.ts'",
+    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
+    "mutantHash": "04555042359100097eaf9fb061d80f9f6ffe7ff8ce4fd1c27f11e729bc8ac37b",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G5c concurrent first seed overlays have exactly one winner",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G6",
+    "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G6' 'mcp/tests/followUpProfileEndpoint.test.ts'",
+    "originalHash": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
+    "mutantHash": "da23c9ba2e7c457f1570d60bfb2d9726c2f2b1db06c0313cde4e6f1f8c7edd1b",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G6 chart-read staff can read but cannot create or update",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G7",
+    "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G7' 'mcp/tests/followUpProfileEndpoint.test.ts'",
+    "originalHash": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
+    "mutantHash": "1d17070f3652b149348936d4683a22d2cc1f108a45bd2250863429a48a3edbfc",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - G7 practice cannot publish a missing section or orderable without a reason",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "G8-registry",
+    "file": "data/canonical-extensions/registry.json",
+    "command": "'npm' 'run' 'preflight'",
+    "originalHash": "fddcfbe8136a14cb074d0d2d17227fb8baa69484c347180e0f1be6c295c4d09a",
+    "mutantHash": "2839dec77c907332ad889291da0dfed23462c198ec9a8baa62d99a78dcb53fc2",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "ODOS preflight complete: 0 warning(s), 3 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md"
+      ]
+    }
+  },
+  {
+    "id": "G8-frontdoor",
+    "file": "deploy/frontdoor/Caddyfile",
+    "command": "'node' '.claude/skills/tier0-census/scripts/check-frontdoor-coverage.mjs'",
+    "originalHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
+    "mutantHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "! missing-backend /follow-up-profiles: backend family has no front-door block",
+        "Front-door route parity: 1 finding(s); FAIL (blocking)."
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "Front-door route parity: 0 finding(s); PASS (blocking)."
+      ]
+    }
+  },
+  {
+    "id": "UI-save",
+    "file": "ui/src/components/settings/FollowUpProfilesSettings.tsx",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^Settings reset' 'ui/tests/followUpProfilesSettings.test.tsx'",
+    "originalHash": "6afc2f2dfb82c282179e2ea2d24e1d7eb67d1f899033ffa4f00e99a6742b7e11",
+    "mutantHash": "19bf0350833254208257af0b659d17bda776ac287cbc81f4ae06d46a012e92f4",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - Settings reset carries the current version and conflict leaves the edit intact",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "UI-picker",
+    "file": "ui/src/components/settings/FollowUpProfilesSettings.tsx",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^Settings picker' 'ui/tests/followUpProfilesSettings.test.tsx'",
+    "originalHash": "6afc2f2dfb82c282179e2ea2d24e1d7eb67d1f899033ffa4f00e99a6742b7e11",
+    "mutantHash": "d0e0f96a0bd97b97a82b325e6d0e2585cefa5b0b9c8e6d9c29f8c5475e9572ea",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - Settings picker adds a real section and saves the caller version without changing shipped data",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "UI-read-only",
+    "file": "ui/src/components/settings/FollowUpProfilesSettings.tsx",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^Settings read-only' 'ui/tests/followUpProfilesSettings.test.tsx'",
+    "originalHash": "6afc2f2dfb82c282179e2ea2d24e1d7eb67d1f899033ffa4f00e99a6742b7e11",
+    "mutantHash": "ddc59e850226d42d023761d80b5f41c27d9550aba6f16a16753037b3eecccefa",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - Settings read-only catalogue permits inspection but no save controls or writes",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  }
+]

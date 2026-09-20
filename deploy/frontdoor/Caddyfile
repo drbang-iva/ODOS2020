@@ -123,6 +123,9 @@
 	handle /mcp* {
 		reverse_proxy 127.0.0.1:3333
 	}
+	handle /follow-up-profiles* {
+		reverse_proxy 127.0.0.1:3333
+	}
 	handle /clinical-graph* {
 		reverse_proxy 127.0.0.1:3333
 	}
