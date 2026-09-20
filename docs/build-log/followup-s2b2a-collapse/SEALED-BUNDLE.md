@@ -18,7 +18,7 @@ Saved Procedures remain undrawn, and the existing immediate post-save overview r
 - Branch: `drbang-iva/followup-s2b2a-collapse`.
 - Pinned base: `da799f4eb9c290cf6e6e270b0031562e2b432d8a`.
 - At resume, refreshed `origin/main` was `dbb41241826c5ab5bcce67cc2b1b165e5638c487` (email PR #634). The premise-bearing files had not changed; the requested pinned base was retained. Open PR #626 did not overlap.
-- The PR URL and final head SHA accompany this bundle in the delivery. No merge or deployment is authorized or claimed.
+- PR: [#635](https://github.com/drbang-iva/ODOS2020/pull/635). The final head SHA accompanies this bundle in the handoff and PR description. No merge or deployment is authorized or claimed.
 - Author model: `gpt-6-astra`. Session configuration reports `xhigh`; the kickoff's requested `Coded-by: Codex — gpt-6-astra, high effort` marker is retained in the PR.
 - Canonical design was read from the verified performance-od checkout, commit `9e1913b4`, `documents/drafts/2026-09-19-follow-up-exam-final/{design,acceptance-cases}.md`.
 
@@ -142,7 +142,7 @@ node docs/build-log/followup-s2b2a-collapse/proof/browser.mjs "$BEFORE_ROOT" --b
 node docs/build-log/followup-s2b2a-collapse/proof/stack.mjs stop
 ```
 
-`BEFORE_ROOT` is the separately built, clean pinned-base worktree. Do not run the before build from the author worktree. The build stamp displays the base because these captures preceded the commit; [served-identity.json](served-identity.json) records dirty-build status, the actual JS/CSS hashes, source hashes, ports and server-image digest. No application source changed after that build.
+`BEFORE_ROOT` is the separately built, clean pinned-base worktree. Do not run the before build from the author worktree. The build stamp displays the preceding commit because these captures preceded the final commit; [served-identity.json](served-identity.json) records dirty-build status, the actual JS/CSS hashes, source hashes, ports and server-image digest. No application source changed after the final build. The accessibility-only bot fixback and proof-runner corrections are recorded in [REVIEW-FIXBACK.md](REVIEW-FIXBACK.md).
 
 | Proof | Actual result at both 1440 and 390 | Screenshots under `screenshots/` |
 | --- | --- | --- |
@@ -167,7 +167,7 @@ The immediate post-save board remained on its earlier empty snapshot until one e
 
 | Command | Before | After |
 | --- | --- | --- |
-| `npm --prefix ui test` | Exit 0: 1,779 pass; 0 fail/cancelled/skipped/todo; 213657 ms | Exit 0: 1,800 pass; 0 fail/cancelled/skipped/todo; 212479 ms |
+| `npm --prefix ui test` | Exit 0: 1,779 pass; 0 fail/cancelled/skipped/todo; 213657 ms | Exit 0: 1,800 pass; 0 fail/cancelled/skipped/todo; 216523 ms |
 | `cd ui && npx tsc --noEmit` | Exit 0, no diagnostics | Exit 0, no diagnostics |
 | `npm run preflight` | Exit 0: 0 warnings, 0 hard blocks | Exit 0: 0 warnings, 0 hard blocks |
 | `npm --prefix ui run build` | Pinned-base comparison build exit 0 | Author build exit 0 |
@@ -216,7 +216,7 @@ No required check was skipped. No excluded file was needed. The UI build reports
 - Promoting any unknown editor without the required real save/read/clear proof.
 - The deferred printed-record half of F9.
 
-Cross-repo follow-up: kickoff author updates design status after merge. Separate server/lifecycle follow-ups remain for Procedure visibility and the reproduced post-save overview freshness issue. Independent author-separated evaluation remains required before merge.
+Cross-repo follow-up: kickoff author updates design status after merge. Separate follow-ups remain for Procedure visibility, the reproduced post-save overview freshness issue, and the pre-existing locale-sensitive identifier normalization preserved by the mapping-equivalence contract. Independent author-separated evaluation remains required before merge.
 
 ## Cleanup
 
@@ -231,18 +231,8 @@ NAMES     STATUS
 `docker ps --format 'table {{.Names}}\t{{.Status}}'`:
 
 ```text
-NAMES                                STATUS
-vf-prac1b-walk-db                    Up 32 hours
-odos-matrix-proof-medplum-server-1   Up 4 days
-odos-matrix-proof-postgres-1         Up 4 days (healthy)
-odos-matrix-proof-redis-1            Up 4 days (healthy)
-odos-matrix-1-medplum-server-1       Up 4 days
-odos-matrix-1-postgres-1             Up 4 days (healthy)
-odos-matrix-1-redis-1                Up 4 days (healthy)
-odos-consent-safety-redis-1          Up 4 days (healthy)
-odos-consent-safety-postgres-1       Up 4 days (healthy)
-odos-history-1d5-postgres-1          Up 4 days (healthy)
-odos-history-1d5-redis-1             Up 4 days (healthy)
+NAMES               STATUS
+vf-prac1b-walk-db   Up 32 hours
 ```
 
 needs-review

@@ -16,9 +16,8 @@ const source = readFileSync(join(beforeRoot, 'deploy/frontdoor/Caddyfile'), 'utf
 const config = generateCaddyfile(source, beforePorts); assertCaddyParity(source, config, beforePorts);
 const configPath = join(runtime, 'before.Caddyfile'); writeFileSync(configPath, config);
 const log = openSync(join(runtime, 'before-caddy.log'), 'a', 0o600);
-const caddy = spawn('caddy', ['run', '--config', configPath, '--adapter', 'caddyfile'], { env: { ...process.env, ODOS_UI_DIST: join(beforeRoot, 'ui/dist') }, stdio: ['ignore', log, log] });
+let caddy, browser;
 const { chromium } = createRequire(join(root, 'ui/package.json'))('playwright-core');
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const evidence = join(root, 'docs/build-log/followup-s2b2a-collapse/screenshots'); mkdirSync(evidence, { recursive: true });
 const results = [];
 let providerSession;
@@ -80,6 +79,8 @@ async function captureBefore(width, encounter) {
   } finally { await context.close(); }
 }
 try {
+  caddy = spawn('caddy', ['run', '--config', configPath, '--adapter', 'caddyfile'], { env: { ...process.env, ODOS_UI_DIST: join(beforeRoot, 'ui/dist') }, stdio: ['ignore', log, log] });
+  browser = await chromium.launch({ channel: 'chrome', headless: true });
   for (const port of [ports.frontdoor, beforePorts.frontdoor]) {
     let ready = false;
     for (let i = 0; i < 120; i++) {
@@ -145,6 +146,7 @@ try {
       assert.deepEqual(requests.slice(start), []);
       assert.deepEqual(await order(), originalOrder);
       assert.match(await line(page, 'iop').innerText(), /collapsed[\s\S]*17/);
+      assert.match(await line(page, 'iop').getByTestId('exam-collapsed-line').getAttribute('aria-label'), /collapsed.*Has findings this visit.*17/);
       assert.equal(await line(page, 'iop').getAttribute('data-holds-data'), 'true');
       await capture(page, width, 'after-collapsed', line(page, 'iop'));
       await page.reload(); await page.getByTestId('exam-collapsed-line').waitFor(); await page.waitForLoadState('networkidle');
@@ -207,4 +209,6 @@ try {
   }
   writeFileSync(join(evidence, baselineOnly ? '../baseline-refresh-probe.json' : pairsOnly ? '../screenshot-pairs.json' : '../browser-results.json'), JSON.stringify(results, null, 2) + '\n');
   console.log(JSON.stringify(results, null, 2));
-} finally { await browser.close(); caddy.kill('SIGTERM'); }
+} finally {
+  try { await browser?.close(); } finally { caddy?.kill('SIGTERM'); }
+}

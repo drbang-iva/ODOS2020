@@ -80,6 +80,7 @@ test("S2b2a G3 collapsed data stays in order, summarizes values, survives remoun
     act(() => control(h.renderer.root, "collapse", "iop").props.onClick());
     assert.deepEqual(ids(), before);
     assert.match(text(line(h.renderer.root, "iop")), /collapsed.*17|17.*collapsed/);
+    assert.match(line(h.renderer.root, "iop").findByProps({ "data-testid": "exam-collapsed-line" }).props["aria-label"], /collapsed.*Has findings this visit.*17/);
     assert.equal(line(h.renderer.root, "iop").props["data-holds-data"], "true");
     assert.equal(line(h.renderer.root, "iop").findAllByProps({ "data-testid": "exam-finding-row" }).length, 0);
     h.renderer.unmount();

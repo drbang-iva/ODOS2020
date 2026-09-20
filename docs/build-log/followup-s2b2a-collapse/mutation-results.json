@@ -48,7 +48,7 @@
   {
     "guard": "G2",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
       "exit": 1,
@@ -83,7 +83,7 @@
   {
     "guard": "G2-active",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
       "exit": 1,
@@ -118,7 +118,7 @@
   {
     "guard": "G3",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
       "exit": 1,
@@ -339,7 +339,7 @@
   {
     "guard": "G6",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
       "exit": 1,
@@ -374,7 +374,7 @@
   {
     "guard": "G7",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examViewState.test.tsx)",
       "exit": 1,
@@ -768,7 +768,7 @@
   {
     "guard": "G11",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/examShelf.test.tsx)",
       "exit": 1,
@@ -803,7 +803,7 @@
   {
     "guard": "assertion-migration",
     "path": "ui/src/components/charting/ExamOverviewBoard.tsx",
-    "restoredSha256": "d5704ef483362a9632a766a4f50b2f29e31ec941e6247192ea4bc28e5161d60e",
+    "restoredSha256": "2f821ae6928afc7eae279bdda46677860beb72123d89a8b203088d5e7b4acf20",
     "red": {
       "command": "(cd ui && node --import tsx --test --test-concurrency=1 tests/entrySheets.test.tsx)",
       "exit": 1,

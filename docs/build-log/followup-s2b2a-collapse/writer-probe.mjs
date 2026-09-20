@@ -108,6 +108,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     try {
       const proof = await proveEditor(editor);
       console.log(JSON.stringify({ editor, key: proof.key, saved: proof.saved.findings.length, afterClear: proof.after.findings.length, savedResourceKinds: proof.savedResourceKinds }));
-    } catch (error) { console.log(JSON.stringify({ editor, failure: error.message })); }
+    } catch (error) {
+      process.exitCode = 1;
+      console.error(JSON.stringify({ editor, failure: error.message }));
+    }
   }
 }

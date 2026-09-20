@@ -106,18 +106,20 @@ if (command === 'prepare') {
   assertCaddyParity(source, generated, ports);
   writeFileSync(join(runtime, 'Caddyfile'), generated);
   const mcpLog = openSync(join(runtime, 'mcp.log'), 'a', 0o600);
-  const mcp = spawn(process.execPath, [join(appRoot, 'mcp/dist/mcp/src/index.js')], { cwd: appRoot, env: { ...cleanEnv, MEDPLUM_BASE_URL: `http://127.0.0.1:${ports.medplum}/`, MEDPLUM_PROJECT_ID: credentials.projectId, MEDPLUM_CLIENT_ID: credentials.runtimeService.clientId, MEDPLUM_CLIENT_SECRET: credentials.runtimeService.clientSecret, ODOS_POSTGRES_URL: `postgresql://medplum:medplum@127.0.0.1:${ports.postgres}/medplum`, ODOS_MCP_TRANSPORT: 'sse', ODOS_MCP_HTTP_PORT: String(ports.mcp), ODOS_MCP_HTTP_HOST: '127.0.0.1', ODOS_SMART_SIGNING_KEY_PATH: smartKeyPath }, stdio: ['ignore', mcpLog, mcpLog] });
-  const proxy = await startResponseProxy({ upstream: `http://127.0.0.1:${ports.mcp}`, port: ports.proxy, controlPort: ports.control, logPath: join(runtime, 'proxy.jsonl') });
-  const caddyLog = openSync(join(runtime, 'caddy.log'), 'a', 0o600);
-  const caddy = spawn('caddy', ['run', '--config', join(runtime, 'Caddyfile'), '--adapter', 'caddyfile'], { cwd: root, env: { ...cleanEnv, ODOS_UI_DIST: join(appRoot, 'ui/dist') }, stdio: ['ignore', caddyLog, caddyLog] });
-  writeJson(join(runtime, 'processes.json'), { supervisor: process.pid, mcp: mcp.pid, caddy: caddy.pid });
+  let mcp, proxy, caddy;
   let closing = false;
-  const close = async (exitCode = 0, stopDatabase = true) => { if (closing) return; closing = true; mcp.kill('SIGTERM'); caddy.kill('SIGTERM'); await proxy.close(); if (stopDatabase) stopContainers(); process.exit(exitCode); };
+  const close = async (exitCode = 0, stopDatabase = true) => { if (closing) return; closing = true; mcp?.kill('SIGTERM'); caddy?.kill('SIGTERM'); await proxy?.close(); if (stopDatabase) stopContainers(); process.exit(exitCode); };
   process.once('SIGINT', () => void close()); process.once('SIGTERM', () => void close());
   process.once('SIGUSR2', () => void close(0, false));
-  mcp.once('exit', code => { if (!closing) { console.error(`MCP exited ${code}`); void close(1); } });
-  caddy.once('exit', code => { if (!closing) { console.error(`Caddy exited ${code}`); void close(1); } });
   try {
+    mcp = spawn(process.execPath, [join(appRoot, 'mcp/dist/mcp/src/index.js')], { cwd: appRoot, env: { ...cleanEnv, MEDPLUM_BASE_URL: `http://127.0.0.1:${ports.medplum}/`, MEDPLUM_PROJECT_ID: credentials.projectId, MEDPLUM_CLIENT_ID: credentials.runtimeService.clientId, MEDPLUM_CLIENT_SECRET: credentials.runtimeService.clientSecret, ODOS_POSTGRES_URL: `postgresql://medplum:medplum@127.0.0.1:${ports.postgres}/medplum`, ODOS_MCP_TRANSPORT: 'sse', ODOS_MCP_HTTP_PORT: String(ports.mcp), ODOS_MCP_HTTP_HOST: '127.0.0.1', ODOS_SMART_SIGNING_KEY_PATH: smartKeyPath }, stdio: ['ignore', mcpLog, mcpLog] });
+    proxy = await startResponseProxy({ upstream: `http://127.0.0.1:${ports.mcp}`, port: ports.proxy, controlPort: ports.control, logPath: join(runtime, 'proxy.jsonl') });
+    const caddyLog = openSync(join(runtime, 'caddy.log'), 'a', 0o600);
+    caddy = spawn('caddy', ['run', '--config', join(runtime, 'Caddyfile'), '--adapter', 'caddyfile'], { cwd: root, env: { ...cleanEnv, ODOS_UI_DIST: join(appRoot, 'ui/dist') }, stdio: ['ignore', caddyLog, caddyLog] });
+    writeJson(join(runtime, 'processes.json'), { supervisor: process.pid, mcp: mcp.pid, caddy: caddy.pid });
+    mcp.once('exit', code => { if (!closing) { console.error(`MCP exited ${code}`); void close(1); } });
+    caddy.once('exit', code => { if (!closing) { console.error(`Caddy exited ${code}`); void close(1); } });
+    for (const child of [mcp, caddy]) child.once('error', error => { console.error(error.message); void close(1); });
     await waitHealth(`http://127.0.0.1:${ports.mcp}/clinical-graph/encounters/harness-readiness/findings`, 120, [401]);
     await waitHealth(`http://127.0.0.1:${ports.frontdoor}/`);
     await runReadinessChild(process.execPath, ['--import', 'tsx', join(root, 'docs/build-log/followup-s2b2a-collapse/proof/verify-ready.ts'), runtime], { cwd: root, env: cleanEnv, stdio: ['ignore', mcpLog, mcpLog] });

@@ -264,15 +264,17 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, o
                   const summary = matches.flatMap(group => group.rows.map(row =>
                     `${row.laterality === "UNKNOWN" ? "" : `${row.laterality} `}${findingValue(row) || UNFORMATTED_FINDING_VALUE}`
                   )).join(" · ") || (definition.sectionKey === "history" ? projection.historySummary : undefined);
+                  const summaryText = summary ?? (data === true ? UNFORMATTED_FINDING_VALUE : "Open editor to review");
+                  const dataLabel = data === true ? "Has findings this visit" : "Data coverage unknown";
                   return (
                     <div key={editor.id} className={`odos-exam-editor-line${isCollapsed ? " is-collapsed" : ""}`}
                       data-drawn-editor-id={editor.id} data-holds-data={String(data)}>
                       {isCollapsed ? (
                         <button type="button" className="odos-exam-collapsed-summary" data-testid="exam-collapsed-line"
-                          onClick={() => onOpenEditor(editor.id)} aria-label={`Open ${editor.label} editor`}>
-                          <span className="odos-exam-data-marker" aria-label={data === true ? "Has findings this visit" : "Data coverage unknown"} />
+                          onClick={() => onOpenEditor(editor.id)} aria-label={`Open ${editor.label} editor; collapsed; ${dataLabel}; ${summaryText}`}>
+                          <span className="odos-exam-data-marker" aria-label={dataLabel} />
                           <strong>{editor.label}</strong><small>collapsed</small>
-                          <span>{summary ?? (data === true ? UNFORMATTED_FINDING_VALUE : "Open editor to review")}</span>
+                          <span>{summaryText}</span>
                         </button>
                       ) : matches.length > 0 ? matches.map((group, index) => (
                         <FindingRow key={index} group={group} wearingFindings={wearingFindings} editor={editor} onOpenEditor={onOpenEditor} />
