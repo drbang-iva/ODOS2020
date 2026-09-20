@@ -1,0 +1,1959 @@
+===== Full suite: npm run test:stack-lifecycle; exit 0 =====
+
+> odos2020@0.0.1 test:stack-lifecycle
+> node --test scripts/stack-lifecycle.test.mjs
+
+TAP version 13
+# Subtest: package scripts expose the reap, list, and explicit named teardown commands
+ok 1 - package scripts expose the reap, list, and explicit named teardown commands
+  ---
+  duration_ms: 0.95175
+  type: 'test'
+  ...
+# Subtest: ephemeral override resolves restart=no for every persistent base service and exposes a missed service
+ok 2 - ephemeral override resolves restart=no for every persistent base service and exposes a missed service
+  ---
+  duration_ms: 96.979417
+  type: 'test'
+  ...
+# Subtest: project recency uses creation, start, and finish timestamps while ignoring Docker zero timestamps
+ok 3 - project recency uses creation, start, and finish timestamps while ignoring Docker zero timestamps
+  ---
+  duration_ms: 0.216792
+  type: 'test'
+  ...
+# Subtest: reap refuses a compose-labelled project with no usable resource age
+ok 4 - reap refuses a compose-labelled project with no usable resource age
+  ---
+  duration_ms: 0.230875
+  type: 'test'
+  ...
+# Subtest: pre-removal check isolates running and relabelled resources before any deletion
+ok 5 - pre-removal check isolates running and relabelled resources before any deletion
+  ---
+  duration_ms: 0.168208
+  type: 'test'
+  ...
+# Subtest: removal bookkeeping exposes no deleted resources before the first failure and completed resources after a later failure
+ok 6 - removal bookkeeping exposes no deleted resources before the first failure and completed resources after a later failure
+  ---
+  duration_ms: 0.102292
+  type: 'test'
+  ...
+# Subtest: E4 refusal classification uses the error type without a daemon
+ok 7 - E4 refusal classification uses the error type without a daemon
+  ---
+  duration_ms: 0.092625
+  type: 'test'
+  ...
+# Subtest: E1 Docker error before any deletion preserves the error
+ok 8 - E1 Docker error before any deletion preserves the error
+  ---
+  duration_ms: 11358.725208
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error (last activity 2026-09-20T14:28:44.918Z (0m ago)):\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error-beta-1 (bf266b606ad5)\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error-alpha-1 (d0d8a4021464)\\n  network odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error_default (e444301ccb0c)\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nFAILED odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error: Error response from daemon: simulated storage-driver failure.\\n
+# Subtest: E1 Docker error before any deletion preserves the error when inventory refresh also fails
+ok 9 - E1 Docker error before any deletion preserves the error when inventory refresh also fails
+  ---
+  duration_ms: 11100.817708
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error (last activity 2026-09-20T14:28:56.286Z (0m ago)):\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error-alpha-1 (0ae252a7523a)\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error-beta-1 (298b522195e0)\\n  network odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error_default (8c58c3f1fd9a)\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nsimulated inventory outage\\nFAILED odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-first-error: Error response from daemon: simulated storage-driver failure.; inventory refresh failed: simulated inventory outage\\n
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+ok 10 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 1071.118833
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-unchanged (last activity 2026-09-20T14:28:57.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt changed refuses cleanly
+ok 11 - E5 volume CreatedAt changed refuses cleanly
+  ---
+  duration_ms: 1031.824291
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-changed (last activity 2026-09-20T14:28:58.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-changed-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-changed: Refusing volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-changed-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt absent refuses cleanly
+ok 12 - E5 volume CreatedAt absent refuses cleanly
+  ---
+  duration_ms: 1037.878458
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-absent (last activity 2026-09-20T14:28:59.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-absent-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-absent: Refusing volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-absent-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt invalid refuses cleanly
+ok 13 - E5 volume CreatedAt invalid refuses cleanly
+  ---
+  duration_ms: 1048.602875
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-invalid (last activity 2026-09-20T14:29:00.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-invalid-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-invalid: Refusing volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-invalid-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt zero refuses cleanly
+ok 14 - E5 volume CreatedAt zero refuses cleanly
+  ---
+  duration_ms: 1050.759458
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-zero (last activity 2026-09-20T14:29:01.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-zero-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-zero: Refusing volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-zero-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt future refuses cleanly
+ok 15 - E5 volume CreatedAt future refuses cleanly
+  ---
+  duration_ms: 1043.750833
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-future (last activity 2026-09-20T14:29:02.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-future-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-future: Refusing volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-future-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt non-string refuses cleanly
+ok 16 - E5 volume CreatedAt non-string refuses cleanly
+  ---
+  duration_ms: 1041.0915
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-non-string (last activity 2026-09-20T14:29:03.000Z (0m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-non-string-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-non-string: Refusing volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-non-string-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt non-string-inventory refuses cleanly
+ok 17 - E5 volume CreatedAt non-string-inventory refuses cleanly
+  ---
+  duration_ms: 559.5085
+  type: 'test'
+  ...
+# exit=0\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-non-string-inventory: resource age unavailable.\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+ok 18 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 1078.855416
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-legacy-unchanged (last activity 2020-01-01T00:00:00.000Z (3534629m ago)):\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-stamp-legacy-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: reap fails and names a destroyed container when a second stopped container starts during removal
+ok 19 - reap fails and names a destroyed container when a second stopped container starts during removal
+  ---
+  duration_ms: 11375.208583
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal (last activity 2026-09-20T14:29:16.363Z (0m ago)):\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal-beta-1 (815a3c228fa2)\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal-alpha-1 (aa07b7324cef)\\n  network odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal_default (105d8c6da657)\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: cannot remove container "aa07b7324cefb755602e678b9f5fbc40c4d95149df94b3eb47f4a4d1cfd35e45": container is running: stop the container before removing or force remove\\nFAILED odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal: destroyed container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-partial-removal-beta-1 before failure: Error response from daemon: cannot remove container "aa07b7324cefb755602e678b9f5fbc40c4d95149df94b3eb47f4a4d1cfd35e45": container is running: stop the container before removing or force remove\\n
+# Subtest: reap refuses a project created before the threshold when it stopped within the threshold
+ok 20 - reap refuses a project created before the threshold when it stopped within the threshold
+  ---
+  duration_ms: 65641.241041
+  type: 'test'
+  ...
+# Subtest: reap refreshes inventory and spares a project restarted between its plan and removal
+ok 21 - reap refreshes inventory and spares a project restarted between its plan and removal
+  ---
+  duration_ms: 11553.652416
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-restart-race (last activity 2026-09-20T14:30:33.338Z (0m ago)):\\n  container odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-restart-race-fixture-1 (1e85062840df)\\n  network odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-restart-race_default (a826b5de49ef)\\n  volume odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-restart-race_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-9cf260b1-0af4-4647-aa2d-3eaf122b1272-restart-race: running container.\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\nError response from daemon: cannot remove container "1e85062840dfe913f1b4c3794405e3197212283aff3bdbf80a6af23f0dfd6999": container is running: stop the container before removing or force remove\\n
+# Subtest: direct execution through a symlink and a path with spaces always runs main
+ok 22 - direct execution through a symlink and a path with spaces always runs main
+  ---
+  duration_ms: 1023.970875
+  type: 'test'
+  ...
+# Subtest: reap refuses a short --only prefix below one hour
+ok 23 - reap refuses a short --only prefix below one hour
+  ---
+  duration_ms: 25.807125
+  type: 'test'
+  ...
+# Subtest: built-in protected names preserve Compose hyphens and underscores and down respects protection
+ok 24 - built-in protected names preserve Compose hyphens and underscores and down respects protection
+  ---
+  duration_ms: 551.299625
+  type: 'test'
+  ...
+# Subtest: Compose default project names retain hyphens and underscores and protect the current directory stack
+ok 25 - Compose default project names retain hyphens and underscores and protect the current directory stack
+  ---
+  duration_ms: 538.764042
+  type: 'test'
+  ...
+# Subtest: dry-run removes nothing even when a stopped compose project is eligible
+ok 26 - dry-run removes nothing even when a stopped compose project is eligible
+  ---
+  duration_ms: 614.476125
+  type: 'test'
+  ...
+# Subtest: reap with --yes removes compose-labelled containers, networks, and volumes
+ok 27 - reap with --yes removes compose-labelled containers, networks, and volumes
+  ---
+  duration_ms: 825.725292
+  type: 'test'
+  ...
+# Subtest: reap refuses a compose project with a running container
+ok 28 - reap refuses a compose project with a running container
+  ---
+  duration_ms: 634.421167
+  type: 'test'
+  ...
+# Subtest: reap refuses a compose project younger than the age threshold
+ok 29 - reap refuses a compose project younger than the age threshold
+  ---
+  duration_ms: 533.656459
+  type: 'test'
+  ...
+# Subtest: reap refuses a project protected by --protect
+ok 30 - reap refuses a project protected by --protect
+  ---
+  duration_ms: 542.1415
+  type: 'test'
+  ...
+# Subtest: reap refuses a project whose volume is mounted by a foreign project container
+ok 31 - reap refuses a project whose volume is mounted by a foreign project container
+  ---
+  duration_ms: 955.206333
+  type: 'test'
+  ...
+# Subtest: reap refuses a project whose network is used by a foreign container without deleting project resources
+ok 32 - reap refuses a project whose network is used by a foreign container without deleting project resources
+  ---
+  duration_ms: 804.888959
+  type: 'test'
+  ...
+# Subtest: reap refuses an unsafe low age threshold without --only
+ok 33 - reap refuses an unsafe low age threshold without --only
+  ---
+  duration_ms: 25.870584
+  type: 'test'
+  ...
+# Subtest: list shows compose project state, last activity, volume size, and unmanaged counts
+ok 34 - list shows compose project state, last activity, volume size, and unmanaged counts
+  ---
+  duration_ms: 523.577375
+  type: 'test'
+  ...
+# Subtest: down removes a stopped named project and its compose-labelled volumes
+ok 35 - down removes a stopped named project and its compose-labelled volumes
+  ---
+  duration_ms: 574.925541
+  type: 'test'
+  ...
+# Subtest: down refuses a running project until its caller supplies --force
+ok 36 - down refuses a running project until its caller supplies --force
+  ---
+  duration_ms: 933.118417
+  type: 'test'
+  ...
+# Subtest: reap reports and preserves non-compose containers and both non-compose volume kinds
+ok 37 - reap reports and preserves non-compose containers and both non-compose volume kinds
+  ---
+  duration_ms: 1988.320166
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 131238.861459
+
+
+===== e1-error-as-skip red =====
+Mutation verified: if (isRemovalRefusal(error)) { -> if (true) {
+Command: node --test --test-name-pattern=E1 scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: E1 Docker error before any deletion preserves the error
+not ok 1 - E1 Docker error before any deletion preserves the error
+  ---
+  duration_ms: 11423.578084
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:208:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error (last activity 2026-09-20T14:27:11.887Z (0m ago)):
+      container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-beta-1 (48b0da7fc6db)
+      container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-alpha-1 (0ed6ed033a8e)
+      network odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_default (e8a565ed530b)
+      volume odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    SKIP odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error: Error response from daemon: simulated storage-driver failure..
+    REMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.
+    Error response from daemon: simulated storage-driver failure.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:233:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error (last activity 2026-09-20T14:27:11.887Z (0m ago)):\\n  container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-beta-1 (48b0da7fc6db)\\n  container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-alpha-1 (0ed6ed033a8e)\\n  network odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_default (e8a565ed530b)\\n  volume odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error: Error response from daemon: simulated storage-driver failure..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\n
+# Subtest: E1 Docker error before any deletion preserves the error when inventory refresh also fails
+not ok 2 - E1 Docker error before any deletion preserves the error when inventory refresh also fails
+  ---
+  duration_ms: 11097.951042
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:208:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error (last activity 2026-09-20T14:27:23.291Z (0m ago)):
+      container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-alpha-1 (b1ec417e275d)
+      container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-beta-1 (4bec4640e501)
+      network odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_default (a057b2bcd6ff)
+      volume odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    SKIP odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error: Error response from daemon: simulated storage-driver failure.; inventory refresh failed: simulated inventory outage.
+    REMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.
+    Error response from daemon: simulated storage-driver failure.
+    simulated inventory outage
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:233:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error (last activity 2026-09-20T14:27:23.291Z (0m ago)):\\n  container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-alpha-1 (b1ec417e275d)\\n  container odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error-beta-1 (4bec4640e501)\\n  network odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_default (a057b2bcd6ff)\\n  volume odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-25c8c467-95ce-4715-ac00-f44e12f88d0b-first-error: Error response from daemon: simulated storage-driver failure.; inventory refresh failed: simulated inventory outage.\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nsimulated inventory outage\\n
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 22566.57175
+
+
+===== e1-error-as-skip green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=E1 scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: E1 Docker error before any deletion preserves the error
+ok 1 - E1 Docker error before any deletion preserves the error
+  ---
+  duration_ms: 11437.276167
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error (last activity 2026-09-20T14:27:34.444Z (0m ago)):\\n  container odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error-beta-1 (52d9cdf31b36)\\n  container odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error-alpha-1 (9967ce3f5b72)\\n  network odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error_default (2816a23ce312)\\n  volume odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nFAILED odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error: Error response from daemon: simulated storage-driver failure.\\n
+# Subtest: E1 Docker error before any deletion preserves the error when inventory refresh also fails
+ok 2 - E1 Docker error before any deletion preserves the error when inventory refresh also fails
+  ---
+  duration_ms: 11078.185459
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error (last activity 2026-09-20T14:27:45.884Z (0m ago)):\\n  container odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error-beta-1 (dcf0535396de)\\n  container odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error-alpha-1 (eaa0ed7a1919)\\n  network odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error_default (36527fccc3c6)\\n  volume odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nsimulated inventory outage\\nFAILED odos-stack-lifecycle-24cf1225-3440-4dd8-85f4-b9b61db81538-first-error: Error response from daemon: simulated storage-driver failure.; inventory refresh failed: simulated inventory outage\\n
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 22558.668541
+
+
+===== e2-race-as-error red =====
+Mutation verified: if (changedReasons.length) error = new RemovalRefusal(changedReasons.join(', ')); -> if (false) error = new RemovalRefusal(changedReasons.join(', '));
+Command: node --test --test-name-pattern=reap refreshes inventory scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: reap refreshes inventory and spares a project restarted between its plan and removal
+not ok 1 - reap refreshes inventory and spares a project restarted between its plan and removal
+  ---
+  duration_ms: 11443.95
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:338:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Error response from daemon: cannot remove container "fbdc4fca4e9d5e791320b1d4a3f26bda619fe3a175a48eda8cf52d015b27f5bb": container is running: stop the container before removing or force remove
+    FAILED odos-stack-lifecycle-ba3ed7cb-11fe-4176-9039-f4e187bba09d-restart-race: Error response from daemon: cannot remove container "fbdc4fca4e9d5e791320b1d4a3f26bda619fe3a175a48eda8cf52d015b27f5bb": container is running: stop the container before removing or force remove
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:357:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-ba3ed7cb-11fe-4176-9039-f4e187bba09d-restart-race (last activity 2026-09-20T14:24:39.138Z (0m ago)):\\n  container odos-stack-lifecycle-ba3ed7cb-11fe-4176-9039-f4e187bba09d-restart-race-fixture-1 (fbdc4fca4e9d)\\n  network odos-stack-lifecycle-ba3ed7cb-11fe-4176-9039-f4e187bba09d-restart-race_default (186a898270ff)\\n  volume odos-stack-lifecycle-ba3ed7cb-11fe-4176-9039-f4e187bba09d-restart-race_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: cannot remove container "fbdc4fca4e9d5e791320b1d4a3f26bda619fe3a175a48eda8cf52d015b27f5bb": container is running: stop the container before removing or force remove\\nFAILED odos-stack-lifecycle-ba3ed7cb-11fe-4176-9039-f4e187bba09d-restart-race: Error response from daemon: cannot remove container "fbdc4fca4e9d5e791320b1d4a3f26bda619fe3a175a48eda8cf52d015b27f5bb": container is running: stop the container before removing or force remove\\n
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11486.293791
+
+
+===== e2-race-as-error green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=reap refreshes inventory scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: reap refreshes inventory and spares a project restarted between its plan and removal
+ok 1 - reap refreshes inventory and spares a project restarted between its plan and removal
+  ---
+  duration_ms: 11432.454125
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-d40f6a94-6ac8-4bc0-ac27-5427df0cf435-restart-race (last activity 2026-09-20T14:24:50.649Z (0m ago)):\\n  container odos-stack-lifecycle-d40f6a94-6ac8-4bc0-ac27-5427df0cf435-restart-race-fixture-1 (3711abf33b62)\\n  network odos-stack-lifecycle-d40f6a94-6ac8-4bc0-ac27-5427df0cf435-restart-race_default (93354a0921ac)\\n  volume odos-stack-lifecycle-d40f6a94-6ac8-4bc0-ac27-5427df0cf435-restart-race_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-d40f6a94-6ac8-4bc0-ac27-5427df0cf435-restart-race: running container.\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\nError response from daemon: cannot remove container "3711abf33b62b0e4368b6ede2f40ed164a50e9e557c8a9d1567b72845503fda3": container is running: stop the container before removing or force remove\\n
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11473.042333
+
+
+===== e3-lost-deletion-record red =====
+Mutation verified: error.deleted = deleted; -> error.deleted = [];
+Command: node --test --test-name-pattern=reap fails and names scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: reap fails and names a destroyed container when a second stopped container starts during removal
+not ok 1 - reap fails and names a destroyed container when a second stopped container starts during removal
+  ---
+  duration_ms: 11552.181542
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:289:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal (last activity 2026-09-20T14:25:02.194Z (0m ago)):
+      container odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal-alpha-1 (cb368957f2d3)
+      container odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal-beta-1 (f52a16b7abca)
+      network odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal_default (194c6c1c490a)
+      volume odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal_data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    SKIP odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal: running container.
+    REMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:311:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal (last activity 2026-09-20T14:25:02.194Z (0m ago)):\\n  container odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal-alpha-1 (cb368957f2d3)\\n  container odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal-beta-1 (f52a16b7abca)\\n  network odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal_default (194c6c1c490a)\\n  volume odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-c952cd4a-f9da-41c8-9643-76d1ab174a4a-partial-removal: running container.\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\nError response from daemon: cannot remove container "f52a16b7abca5c5dc10b30d738188c61cfa39eabe78c1f67bb9f7a9282e19907": container is running: stop the container before removing or force remove\\n
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11595.286
+
+
+===== e3-lost-deletion-record green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=reap fails and names scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: reap fails and names a destroyed container when a second stopped container starts during removal
+ok 1 - reap fails and names a destroyed container when a second stopped container starts during removal
+  ---
+  duration_ms: 11463.24425
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal (last activity 2026-09-20T14:25:13.789Z (0m ago)):\\n  container odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal-alpha-1 (d03e75875aba)\\n  container odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal-beta-1 (22cb47c7858d)\\n  network odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal_default (675ed834da68)\\n  volume odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: cannot remove container "22cb47c7858d5766f44f89bcd07f5cff7568a0258b19969d9a93cd7899201ec3": container is running: stop the container before removing or force remove\\nFAILED odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal: destroyed container odos-stack-lifecycle-ccb7bf3b-04f3-4f0b-aa9e-67ad2b2b485a-partial-removal-alpha-1 before failure: Error response from daemon: cannot remove container "22cb47c7858d5766f44f89bcd07f5cff7568a0258b19969d9a93cd7899201ec3": container is running: stop the container before removing or force remove\\n
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11505.854875
+
+
+===== e4-refusal-type red =====
+Mutation verified: return error instanceof RemovalRefusal; -> return false;
+Command: node --test --test-name-pattern=E4 scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: E4 refusal classification uses the error type without a daemon
+not ok 1 - E4 refusal classification uses the error type without a daemon
+  ---
+  duration_ms: 0.734625
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:201:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:203:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 45.027125
+
+
+===== e4-refusal-type green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=E4 scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: E4 refusal classification uses the error type without a daemon
+ok 1 - E4 refusal classification uses the error type without a daemon
+  ---
+  duration_ms: 0.503917
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 44.350125
+
+
+===== e5-missing-check red =====
+Mutation verified: if (verifyVolumeCreatedAt) { -> if (false) {
+Command: node --test --test-name-pattern=E5 scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+ok 1 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 1149.716583
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-unchanged (last activity 2026-09-20T14:25:15.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt changed refuses cleanly
+not ok 2 - E5 volume CreatedAt changed refuses cleanly
+  ---
+  duration_ms: 1059.288875
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-changed (last activity 2026-09-20T14:25:16.000Z (0m ago)):
+      volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-changed-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-changed (last activity 2026-09-20T14:25:16.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-changed-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt absent refuses cleanly
+not ok 3 - E5 volume CreatedAt absent refuses cleanly
+  ---
+  duration_ms: 1038.806042
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-absent (last activity 2026-09-20T14:25:17.000Z (0m ago)):
+      volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-absent-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-absent (last activity 2026-09-20T14:25:17.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-absent-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt invalid refuses cleanly
+not ok 4 - E5 volume CreatedAt invalid refuses cleanly
+  ---
+  duration_ms: 1036.841792
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-invalid (last activity 2026-09-20T14:25:18.000Z (0m ago)):
+      volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-invalid-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-invalid (last activity 2026-09-20T14:25:18.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-invalid-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt zero refuses cleanly
+not ok 5 - E5 volume CreatedAt zero refuses cleanly
+  ---
+  duration_ms: 1033.971166
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-zero (last activity 2026-09-20T14:25:19.000Z (0m ago)):
+      volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-zero-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-zero (last activity 2026-09-20T14:25:19.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-zero-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt future refuses cleanly
+not ok 6 - E5 volume CreatedAt future refuses cleanly
+  ---
+  duration_ms: 1033.632792
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-future (last activity 2026-09-20T14:25:20.000Z (0m ago)):
+      volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-future-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-future (last activity 2026-09-20T14:25:20.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-future-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt non-string refuses cleanly
+not ok 7 - E5 volume CreatedAt non-string refuses cleanly
+  ---
+  duration_ms: 1050.880417
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-non-string (last activity 2026-09-20T14:25:21.000Z (0m ago)):
+      volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-non-string-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-non-string (last activity 2026-09-20T14:25:21.000Z (0m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-non-string-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+ok 8 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 1083.314541
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-legacy-unchanged (last activity 2020-01-01T00:00:00.000Z (3534625m ago)):\\n  volume odos-stack-lifecycle-0bed87fe-a4bd-4fe2-b316-98416c8d1e9c-stamp-legacy-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+1..8
+# tests 8
+# suites 0
+# pass 2
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8535.589125
+
+
+===== e5-missing-check green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=E5 scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+ok 1 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 1073.907792
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-unchanged (last activity 2026-09-20T14:25:23.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt changed refuses cleanly
+ok 2 - E5 volume CreatedAt changed refuses cleanly
+  ---
+  duration_ms: 1045.046625
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-changed (last activity 2026-09-20T14:25:24.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-changed-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-changed: Refusing volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-changed-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt absent refuses cleanly
+ok 3 - E5 volume CreatedAt absent refuses cleanly
+  ---
+  duration_ms: 1061.737375
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-absent (last activity 2026-09-20T14:25:25.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-absent-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-absent: Refusing volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-absent-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt invalid refuses cleanly
+ok 4 - E5 volume CreatedAt invalid refuses cleanly
+  ---
+  duration_ms: 1042.3125
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-invalid (last activity 2026-09-20T14:25:27.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-invalid-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-invalid: Refusing volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-invalid-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt zero refuses cleanly
+ok 5 - E5 volume CreatedAt zero refuses cleanly
+  ---
+  duration_ms: 1097.678625
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-zero (last activity 2026-09-20T14:25:28.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-zero-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-zero: Refusing volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-zero-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt future refuses cleanly
+ok 6 - E5 volume CreatedAt future refuses cleanly
+  ---
+  duration_ms: 1033.132292
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-future (last activity 2026-09-20T14:25:29.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-future-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-future: Refusing volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-future-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt non-string refuses cleanly
+ok 7 - E5 volume CreatedAt non-string refuses cleanly
+  ---
+  duration_ms: 1049.497209
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-non-string (last activity 2026-09-20T14:25:30.000Z (0m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-non-string-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-non-string: Refusing volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-non-string-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+ok 8 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 1060.417375
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-legacy-unchanged (last activity 2020-01-01T00:00:00.000Z (3534625m ago)):\\n  volume odos-stack-lifecycle-00caf524-726b-48da-b329-a552dd7bbff2-stamp-legacy-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8509.204709
+
+
+===== e5-reject-unchanged red =====
+Mutation verified: if (!Number.isFinite(timestamp) || timestamp <= 0 || timestamp > Date.now() || current.CreatedAt !== volume.createdAtValue) -> if (true)
+Command: node --test --test-name-pattern=E5.*unchanged scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+not ok 1 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 1043.17875
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged (last activity 2026-09-20T14:25:32.000Z (0m ago)):
+      volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    SKIP odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged: Refusing volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged-data: its CreatedAt is unavailable, implausible, or changed..
+    REMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged (last activity 2026-09-20T14:25:32.000Z (0m ago)):\\n  volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged: Refusing volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-unchanged-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+not ok 2 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 1041.993041
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:244:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged (last activity 2020-01-01T00:00:00.000Z (3534625m ago)):
+      volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    SKIP odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged: Refusing volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged-data: its CreatedAt is unavailable, implausible, or changed..
+    REMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:279:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged (last activity 2020-01-01T00:00:00.000Z (3534625m ago)):\\n  volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nSKIP odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged: Refusing volume odos-stack-lifecycle-b7cb076c-da7d-4725-a6ad-8123b9d12764-stamp-legacy-unchanged-data: its CreatedAt is unavailable, implausible, or changed..\\nREMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.\\n
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2129.306625
+
+
+===== e5-reject-unchanged green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=E5.*unchanged scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+ok 1 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 1080.086333
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-f0e4efda-5aa8-4634-855c-4f78f280246d-stamp-unchanged (last activity 2026-09-20T14:25:34.000Z (0m ago)):\\n  volume odos-stack-lifecycle-f0e4efda-5aa8-4634-855c-4f78f280246d-stamp-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+ok 2 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 1126.4375
+  type: 'test'
+  ...
+# exit=0\\nREMOVE odos-stack-lifecycle-f0e4efda-5aa8-4634-855c-4f78f280246d-stamp-legacy-unchanged (last activity 2020-01-01T00:00:00.000Z (3534625m ago)):\\n  volume odos-stack-lifecycle-f0e4efda-5aa8-4634-855c-4f78f280246d-stamp-legacy-unchanged-data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2252.661917
+
+
+===== e1-refresh-loses-original red =====
+Mutation verified: error = new Error(`${error.message}; inventory refresh failed: ${refreshError.message}`); -> error = refreshError;
+Command: node --test --test-name-pattern=E1.*inventory refresh scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: E1 Docker error before any deletion preserves the error when inventory refresh also fails
+not ok 1 - E1 Docker error before any deletion preserves the error when inventory refresh also fails
+  ---
+  duration_ms: 11204.130084
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:208:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /FAILED odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error: .*simulated storage-driver failure/. Input:
+
+    'Error response from daemon: simulated storage-driver failure.\n' +
+      'simulated inventory outage\n' +
+      'FAILED odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error: simulated inventory outage\n'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    Error response from daemon: simulated storage-driver failure.
+    simulated inventory outage
+    FAILED odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error: simulated inventory outage
+
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:234:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error (last activity 2026-09-20T14:26:48.192Z (0m ago)):\\n  container odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error-beta-1 (f44db0410d59)\\n  container odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error-alpha-1 (cc5b5806a207)\\n  network odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error_default (5dad7047803e)\\n  volume odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nsimulated inventory outage\\nFAILED odos-stack-lifecycle-f14e7951-c11a-4b4b-ae07-03df0401b125-first-error: simulated inventory outage\\n
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11247.705625
+
+
+===== e1-refresh-loses-original green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=E1.*inventory refresh scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: E1 Docker error before any deletion preserves the error when inventory refresh also fails
+ok 1 - E1 Docker error before any deletion preserves the error when inventory refresh also fails
+  ---
+  duration_ms: 11133.263125
+  type: 'test'
+  ...
+# exit=1\\nREMOVE odos-stack-lifecycle-c397bff3-4cda-4476-a75d-c4d88e37166d-first-error (last activity 2026-09-20T14:26:59.433Z (0m ago)):\\n  container odos-stack-lifecycle-c397bff3-4cda-4476-a75d-c4d88e37166d-first-error-alpha-1 (eeb4d1754856)\\n  container odos-stack-lifecycle-c397bff3-4cda-4476-a75d-c4d88e37166d-first-error-beta-1 (81f71ff224ef)\\n  network odos-stack-lifecycle-c397bff3-4cda-4476-a75d-c4d88e37166d-first-error_default (0611c55a533f)\\n  volume odos-stack-lifecycle-c397bff3-4cda-4476-a75d-c4d88e37166d-first-error_data (0B)\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 1; reclaimed 0B from named volumes.\\nError response from daemon: simulated storage-driver failure.\\nsimulated inventory outage\\nFAILED odos-stack-lifecycle-c397bff3-4cda-4476-a75d-c4d88e37166d-first-error: Error response from daemon: simulated storage-driver failure.; inventory refresh failed: simulated inventory outage\\n
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11179.300125
+
+
+===== e5-inventory-type red =====
+Mutation verified: createdAt: typeof item.CreatedAt === 'string' ? dockerTimestamp(item.CreatedAt) : undefined, -> createdAt: dockerTimestamp(item.CreatedAt),
+Command: node --test --test-name-pattern=E5.*non-string-inventory scripts/stack-lifecycle.test.mjs
+exit=1
+TAP version 13
+# Subtest: E5 volume CreatedAt non-string-inventory refuses cleanly
+not ok 1 - E5 volume CreatedAt non-string-inventory refuses cleanly
+  ---
+  duration_ms: 500.171875
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:254:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    value.startsWith is not a function
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:288:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# exit=1\\nvalue.startsWith is not a function\\n
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 542.782417
+
+
+===== e5-inventory-type green =====
+Restored source SHA256=7239155a9ba1031c2a544001f77d7cb2ca29bc976ab850c46fd049a4c14fa866
+Command: node --test --test-name-pattern=E5.*non-string-inventory scripts/stack-lifecycle.test.mjs
+exit=0
+TAP version 13
+# Subtest: E5 volume CreatedAt non-string-inventory refuses cleanly
+ok 1 - E5 volume CreatedAt non-string-inventory refuses cleanly
+  ---
+  duration_ms: 585.069334
+  type: 'test'
+  ...
+# exit=0\\nSKIP odos-stack-lifecycle-4927ee8c-c463-4383-9ea1-3cb2a5960109-stamp-non-string-inventory: resource age unavailable.\\nUnmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).\\nREMOVED 0 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.\\n
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 631.054875
+
+
+===== e4-no-daemon.log =====
+Command: node --test --test-name-pattern=E4 scripts/stack-lifecycle.test.mjs (PATH starts with a Docker shim that logs and exits 77)
+exit=0
+TAP version 13
+# Subtest: E4 refusal classification uses the error type without a daemon
+ok 1 - E4 refusal classification uses the error type without a daemon
+  ---
+  duration_ms: 0.493625
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43.247125
+
+Docker invocations: 0
+
+
+===== preflight.log =====
+
+> odos2020@0.0.1 preflight
+> tsx scripts/shipped-cpt-guard.ts && tsx scripts/fhir-read-grant-check.ts && tsx scripts/preflight-lint.ts
+
+Shipped CPT literal guard: clean.
+FHIR read grant check: PASS (48 literal/marked resourceTypes under mcp/src + ui/src)
+FHIR operation grant coverage: PASS (932 read/write operations)
+Included source extensions: .ts, .tsx
+Excluded source directories: __tests__
+Excluded source extensions: all except .ts, .tsx
+Service-identity resourceTypes seen and excluded:
+- CodeSystem — claim reason catalog maintenance through the explicit service client after claims.manage authentication
+- Project — service identity resolves the practice owner for owner-only permission administration
+- ProjectMembership — service identity authorization context
+- User — service identity account resolution
+Service-identity FHIR write call sites excluded (39):
+- mcp/src/clinic/guarantor-search.ts:113 deps.serviceFhir.executeTransactionAsActor Person — Unused guarantor discard is version-conditional and staff-attributed through the service client.
+- mcp/src/clinic/guarantor-search.ts:57 deps.serviceFhir.executeTransactionAsActor Person — Guarantor creation uses the explicit service client with staff attribution.
+- mcp/src/clinic/guarantor-link-operation.ts:201 this.deps.serviceFhir.executeTransactionAsActor Task — Guarantor operation uses the explicit service client with staff attribution.
+- mcp/src/clinic/guarantor-link-operation.ts:201 this.deps.serviceFhir.executeTransactionAsActor Person — Guarantor operation uses the explicit service client with staff attribution.
+- mcp/src/clinic/guarantor-link-operation.ts:201 this.deps.serviceFhir.executeTransactionAsActor RelatedPerson — Guarantor operation uses the explicit service client with staff attribution.
+- mcp/src/authz/liveAudit.ts:468 client.create AuditEvent — Dedicated audit projection client.
+- mcp/src/clinical-graph/protocol-store.ts:209 this.fhir.delete Basic — ProtocolDefinitionStore is constructed with the process service client.
+- mcp/src/fax/inbound-fax.ts:328 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/fax/inbound-fax.ts:426 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/fax/inbound-fax.ts:446 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/fax/inbound-fax.ts:472 this.fhir.create AuditEvent — Inbound fax triage service receives the explicit serviceFhir client.
+- mcp/src/index.ts:3269 fhir.create VisionPrescription — MCP process service client.
+- mcp/src/index.ts:3651 fhir.create AllergyIntolerance — MCP process service client.
+- mcp/src/index.ts:3706 fhir.create CareTeam — MCP process service client.
+- mcp/src/index.ts:3855 fhir.create DeviceDefinition — MCP process service client.
+- mcp/src/index.ts:3883 fhir.create ConceptMap — MCP process service client.
+- mcp/src/index.ts:3906 fhir.create Substance — MCP process service client.
+- mcp/src/index.ts:4240 fhir.create AdverseEvent — MCP process service client.
+- mcp/src/index.ts:5345 fhir.create BodyStructure — MCP process service client.
+- mcp/src/index.ts:7944 fhir.patch AccessPolicy — Policy sync uses the MCP process service client.
+- mcp/src/legacy-import/appointment-encounter-import.ts:657 input.fhir.create Practitioner — Operator migration importer service identity.
+- mcp/src/legacy-import/appointment-encounter-import.ts:674 input.fhir.update Practitioner — Operator migration importer service identity.
+- mcp/src/legacy-import/ccda-import.ts:394 input.fhir.create ImportableResource — Operator legacy C-CDA importer service identity; generic resolves to the imported resource union.
+- mcp/src/payments/payment-credit-service.ts:312 fhir.update PaymentReconciliation — Payment lifecycle dependency is the MCP process service client.
+- mcp/src/referral/referral-endpoint.ts:329 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/referral/referral-endpoint.ts:358 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/referral/referral-endpoint.ts:566 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/referral/referral-endpoint.ts:574 deps.serviceFhir.create AuditEvent — Explicit referral service client.
+- mcp/src/scheduling/scheduling-resource-service.ts:125 fhir.update Schedule — Scheduling resource service receives the explicit serviceFhir client.
+- mcp/src/weno/weno-search-routes.ts:193 deps.serviceFhir.update MedicationRequest — WENO service client reserves the message id after authenticated Staff action; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:206 deps.serviceFhir.update MedicationRequest — WENO service client records an indeterminate external outcome; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:234 deps.serviceFhir.update MedicationRequest — WENO service client records the accepted electronic transmission; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:240 deps.serviceFhir.update MedicationRequest — WENO service client records a structured external error; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:306 deps.serviceFhir.update MedicationRequest — WENO service client reserves a CancelRx outcome before transport; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:319 deps.serviceFhir.update MedicationRequest — WENO service client records an indeterminate CancelRx outcome; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:347 deps.serviceFhir.update MedicationRequest — WENO service client records an accepted CancelRx response; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:358 deps.serviceFhir.update MedicationRequest — WENO service client records a structured CancelRx error; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:436 deps.serviceFhir.update MedicationRequest — WENO service client clears a verified indeterminate send reservation; audit retains the Staff actor.
+- mcp/src/weno/weno-search-routes.ts:507 deps.serviceFhir.update MedicationRequest — WENO service client clears a verified indeterminate CancelRx reservation; audit retains the Staff actor.
+SUSPECTED BROKEN FEATURE — known ungranted practice-role write call sites (0):
+Non-FHIR literal call sites excluded:
+- mcp/src/bulk-data/router.ts:141 router.delete("/bulk-export/status/:jobId") — Express route registration, not a FHIR delete.
+- mcp/src/clinical-graph/manual-procedure-charge-endpoint.ts:83 app.patch("/clinical-graph/protocols/encounters/:encounterId/procedure-charges/:proposalId") — Express route registration, not a FHIR patch.
+- mcp/src/desk/staff-permissions.ts:118 app.patch("/desk/staff/permissions/:membershipId") — Express route registration, not a FHIR patch.
+- mcp/src/index.ts:6966 app.patch("/clinical-graph/protocols/:id/draft") — Express route registration, not a FHIR patch.
+- mcp/src/referral/referral-routes.ts:128 app.patch("/referrals/patients/:patientId/:referralId") — Express route registration, not a FHIR patch.
+- mcp/src/smart/authorization-server.ts:573 router.delete("/grants/:grantId") — Express route registration, not a FHIR delete.
+- ui/src/scenes/ProtocolLibrary.tsx:917 url.searchParams.delete("protocol") — Browser URLSearchParams mutation, not a FHIR delete.
+Criteria-scoped resource types (30): Account, AdverseEvent, AllergyIntolerance, Basic, BodyStructure, CarePlan, CareTeam, ChargeItem, Communication, Condition, Consent, Coverage, Device, DeviceRequest, DiagnosticReport, DocumentReference, Encounter, EpisodeOfCare, Goal, Media, MedicationAdministration, MedicationRequest, MedicationStatement, Observation, Patient, Procedure, Provenance, QuestionnaireResponse, RelatedPerson, ServiceRequest
+Criteria-dependent operation scope coverage:
+- Account: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- AdverseEvent: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- AllergyIntolerance: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- Basic: 114 operations; 8 scope-verified; 106 NOT SCOPE-VERIFIED
+- BodyStructure: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- CarePlan: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- CareTeam: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- ChargeItem: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- Communication: 7 operations; 0 scope-verified; 7 NOT SCOPE-VERIFIED
+- Condition: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Consent: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- Coverage: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- Device: 6 operations; 0 scope-verified; 6 NOT SCOPE-VERIFIED
+- DeviceRequest: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- DiagnosticReport: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- DocumentReference: 14 operations; 0 scope-verified; 14 NOT SCOPE-VERIFIED
+- Encounter: 10 operations; 0 scope-verified; 10 NOT SCOPE-VERIFIED
+- EpisodeOfCare: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- Goal: 2 operations; 0 scope-verified; 2 NOT SCOPE-VERIFIED
+- Media: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- MedicationAdministration: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- MedicationRequest: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- MedicationStatement: 6 operations; 0 scope-verified; 6 NOT SCOPE-VERIFIED
+- Observation: 21 operations; 0 scope-verified; 21 NOT SCOPE-VERIFIED
+- Patient: 5 operations; 0 scope-verified; 5 NOT SCOPE-VERIFIED
+- Procedure: 11 operations; 0 scope-verified; 11 NOT SCOPE-VERIFIED
+- Provenance: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- QuestionnaireResponse: 1 operations; 0 scope-verified; 1 NOT SCOPE-VERIFIED
+- RelatedPerson: 0 operations; 0 scope-verified; 0 NOT SCOPE-VERIFIED
+- ServiceRequest: 8 operations; 0 scope-verified; 8 NOT SCOPE-VERIFIED
+Limitations:
+- Computed read resourceTypes escape this scan.
+- Computed create resources require a generic resource type, an object-literal resourceType, or an fhir-scope-contract marker; other computed creates escape this scan.
+- Computed update, delete, and patch resourceTypes escape this scan.
+- A computed search is marker-checked only when its argument is named resourceType, resource_type, or .resourceType; other names escape because receiver-independent matching would misclassify non-FHIR search APIs.
+- Marked helper propagation follows named parameters; destructured or object-property resourceType forwarding escapes this scan.
+- Marked helper propagation is function-name based across scanned roots; an imported helper alias escapes unless its local name matches, and same-named non-FHIR helpers require the explicit call-site allowlist.
+- Type-level comparison does not prove criteria scope; criteria-dependent operations without an exact fhir-scope-contract are counted as NOT SCOPE-VERIFIED.
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+
+
+===== host-measurement.log =====
+Host snapshot: 5 network-only Compose projects; 13 containers, 10 volumes, 12 networks total.
+Read-only host volume CreatedAt: 10/10 usable; 10/10 unchanged between inspections.
+Synthetic replicas of the 5 real network-only projects. Command: node scripts/stack-lifecycle.mjs reap --yes --only odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9 --min-age 0m
+exit=0
+REMOVE odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-0 (last activity 2026-09-20T14:32:11.080Z (0m ago)):
+  network odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-0_default (863e1b5429ef)
+REMOVE odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-1 (last activity 2026-09-20T14:32:11.113Z (0m ago)):
+  network odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-1_default (8f8b1448aec7)
+REMOVE odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-2 (last activity 2026-09-20T14:32:11.135Z (0m ago)):
+  network odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-2_default (2833bb597e79)
+REMOVE odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-3 (last activity 2026-09-20T14:32:11.156Z (0m ago)):
+  network odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-3_default (6d41feaaad36)
+REMOVE odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-4 (last activity 2026-09-20T14:32:11.177Z (0m ago)):
+  network odos-stack-lifecycle-41b81dcd-2eb6-4783-bee1-48106a9514a9-network-4_default (78c7ac7fa077)
+Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+REMOVED 5 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+
+===== census-final.log =====
+{"host_counts": {"container": 13, "volume": 10, "network": 12}, "fixture_counts": {"container": 0, "volume": 0, "network": 0}, "projects": 8}
+Host identities, names, project labels, running flags and volume timestamps: unchanged across census snapshots.
+
+
+===== host-list-final.txt =====
+odos-email-e1a-proof: 0 container(s), 0 running, last activity 2026-09-20T03:16:35.654Z (675m ago), volumes 0B; skip: most recent activity is younger than 24h
+odos-s1-proof: 0 container(s), 0 running, last activity 2026-09-19T15:55:43.788Z (1356m ago), volumes 0B; skip: most recent activity is younger than 24h
+odos-s1b-proof: 0 container(s), 0 running, last activity 2026-09-19T21:08:50.422Z (1043m ago), volumes 0B; skip: most recent activity is younger than 24h
+odos-s2a-proof: 0 container(s), 0 running, last activity 2026-09-20T01:00:52.346Z (811m ago), volumes 0B; skip: most recent activity is younger than 24h
+odos-s2b1-proof: 0 container(s), 0 running, last activity 2026-09-20T02:47:09.860Z (705m ago), volumes 0B; skip: most recent activity is younger than 24h
+odos-s2b2a-fb1-proof: 4 container(s), 0 running, last activity 2026-09-20T12:43:41.974Z (108m ago), volumes 353.0MB; skip: most recent activity is younger than 24h
+odos-s2b2a-proof: 4 container(s), 0 running, last activity 2026-09-20T11:33:57.395Z (178m ago), volumes 384.8MB; skip: most recent activity is younger than 24h
+odos-s3a-proof: 4 container(s), 0 running, last activity 2026-09-20T14:29:13.954Z (2m ago), volumes 287.7MB; skip: most recent activity is younger than 24h
+Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+
+
+===== final-static-checks.log =====
+Command: git diff --check
+exit=0
+
+Command: node --check scripts/stack-lifecycle.mjs
+exit=0
+
+Command: node --check scripts/stack-lifecycle.test.mjs
+exit=0
+
+
+===== Initial run (see bundle caveats): initial-red.log =====
+TAP version 13
+# Subtest: E4 refusal classification uses the error type without a daemon
+not ok 1 - E4 refusal classification uses the error type without a daemon
+  ---
+  duration_ms: 0.836375
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:200:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'undefined'
+    - 'function'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'function'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:201:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: E1 Docker error before any deletion fails and preserves the error text
+not ok 2 - E1 Docker error before any deletion fails and preserves the error text
+  ---
+  duration_ms: 11478.999458
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:206:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-17542-first-error (last activity 2026-09-20T14:20:37.973Z (0m ago)):
+      container odos-stack-lifecycle-17542-first-error-beta-1 (e41bcc1ba4f1)
+      container odos-stack-lifecycle-17542-first-error-alpha-1 (84dcba42828c)
+      network odos-stack-lifecycle-17542-first-error_default (fd97b46d30e1)
+      volume odos-stack-lifecycle-17542-first-error_data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    SKIP odos-stack-lifecycle-17542-first-error: Error response from daemon: simulated storage-driver failure..
+    REMOVED 0 project(s); SKIPPED 1; FAILED 0; reclaimed 0B from named volumes.
+    Error response from daemon: simulated storage-driver failure.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:224:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+not ok 3 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 389.543958
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected ',' or ']' after array element in JSON at position 65531 (line 1666 column 22)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt changed refuses cleanly
+not ok 4 - E5 volume CreatedAt changed refuses cleanly
+  ---
+  duration_ms: 384.656
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected ',' or ']' after array element in JSON at position 65531 (line 1666 column 22)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt absent refuses cleanly
+not ok 5 - E5 volume CreatedAt absent refuses cleanly
+  ---
+  duration_ms: 403.488625
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected ',' or ']' after array element in JSON at position 65531 (line 1666 column 22)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt invalid refuses cleanly
+not ok 6 - E5 volume CreatedAt invalid refuses cleanly
+  ---
+  duration_ms: 400.895459
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected ',' or ']' after array element in JSON at position 65531 (line 1666 column 22)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt zero refuses cleanly
+not ok 7 - E5 volume CreatedAt zero refuses cleanly
+  ---
+  duration_ms: 385.578
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected double-quoted property name in JSON at position 65530 (line 1663 column 70)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt future refuses cleanly
+not ok 8 - E5 volume CreatedAt future refuses cleanly
+  ---
+  duration_ms: 396.403834
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected double-quoted property name in JSON at position 65530 (line 1663 column 70)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt non-string refuses cleanly
+not ok 9 - E5 volume CreatedAt non-string refuses cleanly
+  ---
+  duration_ms: 402.841208
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected double-quoted property name in JSON at position 65530 (line 1663 column 70)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+not ok 10 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 387.193167
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected double-quoted property name in JSON at position 65530 (line 1663 column 70)
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:275:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 0
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14675.554209
+
+
+===== Initial run (see bundle caveats): baseline.log =====
+
+> odos2020@0.0.1 test:stack-lifecycle
+> node --test scripts/stack-lifecycle.test.mjs
+
+TAP version 13
+# Subtest: package scripts expose the reap, list, and explicit named teardown commands
+ok 1 - package scripts expose the reap, list, and explicit named teardown commands
+  ---
+  duration_ms: 0.581291
+  type: 'test'
+  ...
+# Subtest: ephemeral override resolves restart=no for every persistent base service and exposes a missed service
+ok 2 - ephemeral override resolves restart=no for every persistent base service and exposes a missed service
+  ---
+  duration_ms: 98.805375
+  type: 'test'
+  ...
+# Subtest: project recency uses creation, start, and finish timestamps while ignoring Docker zero timestamps
+ok 3 - project recency uses creation, start, and finish timestamps while ignoring Docker zero timestamps
+  ---
+  duration_ms: 0.153084
+  type: 'test'
+  ...
+# Subtest: reap refuses a compose-labelled project with no usable resource age
+ok 4 - reap refuses a compose-labelled project with no usable resource age
+  ---
+  duration_ms: 0.178959
+  type: 'test'
+  ...
+# Subtest: pre-removal check isolates running and relabelled resources before any deletion
+ok 5 - pre-removal check isolates running and relabelled resources before any deletion
+  ---
+  duration_ms: 0.151959
+  type: 'test'
+  ...
+# Subtest: removal bookkeeping exposes no deleted resources before the first failure and completed resources after a later failure
+ok 6 - removal bookkeeping exposes no deleted resources before the first failure and completed resources after a later failure
+  ---
+  duration_ms: 0.096042
+  type: 'test'
+  ...
+# Subtest: reap fails and names a destroyed container when a second stopped container starts during removal
+ok 7 - reap fails and names a destroyed container when a second stopped container starts during removal
+  ---
+  duration_ms: 11447.067667
+  type: 'test'
+  ...
+# Subtest: reap refuses a project created before the threshold when it stopped within the threshold
+ok 8 - reap refuses a project created before the threshold when it stopped within the threshold
+  ---
+  duration_ms: 65610.225583
+  type: 'test'
+  ...
+# Error response from daemon: get odos-stack-lifecycle-21298-stamp-non-string-data: no such volume
+# Subtest: reap refreshes inventory and spares a project restarted between its plan and removal
+ok 9 - reap refreshes inventory and spares a project restarted between its plan and removal
+  ---
+  duration_ms: 11519.28425
+  type: 'test'
+  ...
+# Subtest: direct execution through a symlink and a path with spaces always runs main
+ok 10 - direct execution through a symlink and a path with spaces always runs main
+  ---
+  duration_ms: 1038.553083
+  type: 'test'
+  ...
+# Subtest: reap refuses a short --only prefix below one hour
+ok 11 - reap refuses a short --only prefix below one hour
+  ---
+  duration_ms: 25.737542
+  type: 'test'
+  ...
+# Subtest: built-in protected names preserve Compose hyphens and underscores and down respects protection
+ok 12 - built-in protected names preserve Compose hyphens and underscores and down respects protection
+  ---
+  duration_ms: 545.268209
+  type: 'test'
+  ...
+# Subtest: Compose default project names retain hyphens and underscores and protect the current directory stack
+ok 13 - Compose default project names retain hyphens and underscores and protect the current directory stack
+  ---
+  duration_ms: 553.244375
+  type: 'test'
+  ...
+# Subtest: dry-run removes nothing even when a stopped compose project is eligible
+ok 14 - dry-run removes nothing even when a stopped compose project is eligible
+  ---
+  duration_ms: 616.492
+  type: 'test'
+  ...
+# Subtest: reap with --yes removes compose-labelled containers, networks, and volumes
+ok 15 - reap with --yes removes compose-labelled containers, networks, and volumes
+  ---
+  duration_ms: 834.582709
+  type: 'test'
+  ...
+# Subtest: reap refuses a compose project with a running container
+ok 16 - reap refuses a compose project with a running container
+  ---
+  duration_ms: 625.091959
+  type: 'test'
+  ...
+# Subtest: reap refuses a compose project younger than the age threshold
+ok 17 - reap refuses a compose project younger than the age threshold
+  ---
+  duration_ms: 561.116834
+  type: 'test'
+  ...
+# Subtest: reap refuses a project protected by --protect
+ok 18 - reap refuses a project protected by --protect
+  ---
+  duration_ms: 545.213417
+  type: 'test'
+  ...
+# Subtest: reap refuses a project whose volume is mounted by a foreign project container
+ok 19 - reap refuses a project whose volume is mounted by a foreign project container
+  ---
+  duration_ms: 1004.163167
+  type: 'test'
+  ...
+# Subtest: reap refuses a project whose network is used by a foreign container without deleting project resources
+ok 20 - reap refuses a project whose network is used by a foreign container without deleting project resources
+  ---
+  duration_ms: 890.372667
+  type: 'test'
+  ...
+# Subtest: reap refuses an unsafe low age threshold without --only
+ok 21 - reap refuses an unsafe low age threshold without --only
+  ---
+  duration_ms: 26.1885
+  type: 'test'
+  ...
+# Subtest: list shows compose project state, last activity, volume size, and unmanaged counts
+ok 22 - list shows compose project state, last activity, volume size, and unmanaged counts
+  ---
+  duration_ms: 610.179
+  type: 'test'
+  ...
+# Subtest: down removes a stopped named project and its compose-labelled volumes
+ok 23 - down removes a stopped named project and its compose-labelled volumes
+  ---
+  duration_ms: 602.353834
+  type: 'test'
+  ...
+# Subtest: down refuses a running project until its caller supplies --force
+ok 24 - down refuses a running project until its caller supplies --force
+  ---
+  duration_ms: 991.9375
+  type: 'test'
+  ...
+# Subtest: reap reports and preserves non-compose containers and both non-compose volume kinds
+not ok 25 - reap reports and preserves non-compose containers and both non-compose volume kinds
+  ---
+  duration_ms: 1175.600292
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:524:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Command failed: docker volume inspect odos-stack-lifecycle-21298-stamp-non-string-data --format {{json .Labels}}
+    Error response from daemon: get odos-stack-lifecycle-21298-stamp-non-string-data: no such volume
+
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    genericNodeError (node:internal/errors:983:15)
+    wrappedFn (node:internal/errors:537:14)
+    checkExecSyncError (node:child_process:916:11)
+    execFileSync (node:child_process:952:15)
+    docker (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:19:10)
+    unmanagedCounts (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:96:31)
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:536:22)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 24
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 99365.810583
+
+
+===== Initial run (see bundle caveats): serialized-baseline.log =====
+TAP version 13
+# Subtest: E5 volume CreatedAt unchanged removes the volume
+ok 1 - E5 volume CreatedAt unchanged removes the volume
+  ---
+  duration_ms: 1047.631958
+  type: 'test'
+  ...
+# Subtest: E5 volume CreatedAt changed refuses cleanly
+not ok 2 - E5 volume CreatedAt changed refuses cleanly
+  ---
+  duration_ms: 1033.2105
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-27368-stamp-changed (last activity 2026-09-20T14:21:24.000Z (0m ago)):
+      volume odos-stack-lifecycle-27368-stamp-changed-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:276:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: E5 volume CreatedAt absent refuses cleanly
+not ok 3 - E5 volume CreatedAt absent refuses cleanly
+  ---
+  duration_ms: 1021.283792
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-27368-stamp-absent (last activity 2026-09-20T14:21:25.000Z (0m ago)):
+      volume odos-stack-lifecycle-27368-stamp-absent-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:276:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt invalid refuses cleanly
+not ok 4 - E5 volume CreatedAt invalid refuses cleanly
+  ---
+  duration_ms: 1033.815334
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-27368-stamp-invalid (last activity 2026-09-20T14:21:26.000Z (0m ago)):
+      volume odos-stack-lifecycle-27368-stamp-invalid-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:276:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt zero refuses cleanly
+not ok 5 - E5 volume CreatedAt zero refuses cleanly
+  ---
+  duration_ms: 1021.635042
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-27368-stamp-zero (last activity 2026-09-20T14:21:27.000Z (0m ago)):
+      volume odos-stack-lifecycle-27368-stamp-zero-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:276:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt future refuses cleanly
+not ok 6 - E5 volume CreatedAt future refuses cleanly
+  ---
+  duration_ms: 1191.428125
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-27368-stamp-future (last activity 2026-09-20T14:21:28.000Z (0m ago)):
+      volume odos-stack-lifecycle-27368-stamp-future-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:276:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt non-string refuses cleanly
+not ok 7 - E5 volume CreatedAt non-string refuses cleanly
+  ---
+  duration_ms: 1032.406791
+  type: 'test'
+  location: '/Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:242:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    REMOVE odos-stack-lifecycle-27368-stamp-non-string (last activity 2026-09-20T14:21:29.000Z (0m ago)):
+      volume odos-stack-lifecycle-27368-stamp-non-string-data (0B)
+    Unmanaged resources: 1 unlabelled container(s); 1 anonymous volume(s); 0 other unlabelled named volume(s).
+    REMOVED 1 project(s); SKIPPED 0; FAILED 0; reclaimed 0B from named volumes.
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/ericr.bang/.codex/worktrees/reaper-error-vs-refusal/ODOS2020/scripts/stack-lifecycle.test.mjs:276:14)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: E5 volume CreatedAt legacy-unchanged removes the volume
+ok 8 - E5 volume CreatedAt legacy-unchanged removes the volume
+  ---
+  duration_ms: 1234.872291
+  type: 'test'
+  ...
+# Subtest: reap reports and preserves non-compose containers and both non-compose volume kinds
+ok 9 - reap reports and preserves non-compose containers and both non-compose volume kinds
+  ---
+  duration_ms: 2399.133875
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 3
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11060.021791
