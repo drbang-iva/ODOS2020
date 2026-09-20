@@ -30,7 +30,7 @@ const policy: any = await seeder.fhir.read('AccessPolicy', credentials.staff.pol
 assert.equal(membership.admin, false);
 assert.ok(JSON.stringify(membership.access).includes(credentials.staff.policyReference));
 assert.ok(policy.meta?.tag?.some((tag: any) => tag.code === 'staff'));
-writeFileSync(fileURLToPath(new URL('../staff-policy.json', import.meta.url)), JSON.stringify({
+writeFileSync(process.env.E1A_EVIDENCE ? join(process.env.E1A_EVIDENCE, 'staff-policy.json') : fileURLToPath(new URL('../staff-policy.json', import.meta.url)), JSON.stringify({
   projectId: credentials.projectId, membershipReference: credentials.staff.membershipReference,
   practitionerReference: credentials.staff.practitionerReference, admin: membership.admin,
   policyReference: credentials.staff.policyReference, policyVersion: policy.meta.versionId,

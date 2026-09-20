@@ -91,7 +91,6 @@ export interface CommsApiRouteDeps {
   trackedLinkStore: TrackedLinkStore;
   publicBaseUrl: string;
   practiceName: string;
-  emailUnsubscribeEndpoint?: string;
   emailSubject?: string;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
   audit: FhirAuditRecorder;
@@ -1078,10 +1077,10 @@ async function prepareEducationDispatch(
   if (!item || item.audience !== "patient") {
     throw new CommsApiNotFoundError("Education content not found.");
   }
-  assertEducationOfferEnabled(deps, item, body.channel);
   if (!item.channels.includes(body.channel)) {
     throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);
   }
+  assertEducationOfferEnabled(item, body.channel);
   if (
     deps.chartDispatchLane === "locked_clinical"
     && body.lane !== "clinical"
@@ -1101,11 +1100,11 @@ async function prepareEducationDispatch(
   return { item, recipient, laneSelection, campaignId, subject };
 }
 
-function assertEducationOfferEnabled(deps: CommsApiRouteDeps, item: EducationContentItem, channel: EducationDispatchBody["channel"]): void {
+function assertEducationOfferEnabled(item: EducationContentItem, channel: EducationDispatchBody["channel"]): void {
   if (item.offerClass === "cosmetic") {
     throw new CommsApiRefusalError("Cosmetic-only content is not enabled for this practice.", "content-unavailable");
   }
-  if (item.consentClass === "marketing" && channel === "email" && !deps.emailUnsubscribeEndpoint?.trim()) {
+  if (item.consentClass === "marketing" && channel === "email") {
     throw new CommsApiRefusalError("Promotional email requires a working unsubscribe link, which is not configured yet.", "no-recipient-channel");
   }
 }
@@ -1265,7 +1264,7 @@ async function dispatchEducationInternal(
     }
   }
   const { item, recipient, laneSelection, campaignId, subject } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body, mode);
-  if (options.prepared) assertEducationOfferEnabled(deps, item, body.channel);
+  if (options.prepared) assertEducationOfferEnabled(item, body.channel);
   const requiredConsent = { consentClass: item.consentClass,
     ...(actor.kind === "system" && item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) };
   const frozenContext = (providerMessageIdentifierSystem: string): string => JSON.stringify({

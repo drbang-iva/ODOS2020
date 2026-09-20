@@ -1222,9 +1222,9 @@ test("J9: imported sms still outranks unmarked mobile", () => {
 });
 
 
-test("E1a email wrapper retains envelope validation and marketing preference boundaries", async () => {
+// Marketing dispatch is disabled until E1c; this lower-boundary guard retains the unchanged preference contract.
+for (const allowed of [true, false]) test(`E1a e email wrapper retains envelope validation and marketing preference allowed=${allowed}`, async () => {
   const { replaceCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
-  for (const allowed of [true, false]) {
     const sent: SendEmailRequest[] = [];
     let validations = 0;
     const subject = allowed ? patient() : replaceCommsPreferenceCells(patient(), [{ purpose: "marketing-promo", channel: "email", allowed: false }], {
@@ -1239,5 +1239,4 @@ test("E1a email wrapper retains envelope validation and marketing preference bou
     assert.equal(result.outcome, allowed ? "sent" : "suppressed");
     if (result.outcome === "suppressed") assert.equal(result.reason, "preference-withheld");
     assert.equal(sent.length, allowed ? 1 : 0);
-  }
 });

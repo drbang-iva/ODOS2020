@@ -33,7 +33,7 @@ function fixture() {
     },
   };
   const provider:any={name:"synthetic",capabilities:{email:true},preflightSuppression:async()=>undefined,sendEmail:async(request:any)=>{requests.push(request);return {outcome:"sent",providerMessageId:"receipt-1"};}};
-  const deps:any={practiceName:"Synthetic Practice",emailUnsubscribeEndpoint:"https://synthetic.invalid/unsubscribe",educationCatalog:{get:()=>item},dispatch:{providerFor:()=>"synthetic",senderNumberFor:()=>"+15555550100",getAdapterForRole:()=>provider},now:()=>"2026-09-10T15:00:00Z"};
+  const deps:any={practiceName:"Synthetic Practice",educationCatalog:{get:()=>item},dispatch:{providerFor:()=>"synthetic",senderNumberFor:()=>"+15555550100",getAdapterForRole:()=>provider},now:()=>"2026-09-10T15:00:00Z"};
   const actor:any={kind:"system",reference:"Device/education-sequence-worker",onBehalfOf:"Practitioner/enroller",fhir};
   const body:any={patientReference:"Patient/synthetic",educationId:"education",version:1,channel:"email",lane:"clinical",alsoUpdateChart:false,idempotencyKey:"sequence-attempt-1"};
   return {resources,requests,patient,item,fhir,provider,deps,actor,body};
@@ -117,7 +117,7 @@ test("preflight holds missing recipient, unsupported channel, absent consent, an
   assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "content-unavailable" });
   f.item.channels = ["email"];
   f.item.consentClass = "marketing";
-  assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "no-recipient-channel" });
+  assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "no-recipient-channel", detail: "Promotional email requires a working unsubscribe link, which is not configured yet." });
   f.body.channel = "print";
   assert.deepEqual(await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body), { kind: "held", reason: "needs-acknowledgement" });
   f.body.channel = "sms";
@@ -169,27 +169,14 @@ test("staff actor reconciles frozen system receipt with original executor and ca
   assert.equal(f.requests.length, 1);
 });
 
-for (const channel of ["email", "sms"] as const) {
-test(`final gate rechecks prepared system marketing ${channel} after consent is revoked`, async () => {
+test("final gate rechecks prepared system marketing SMS after consent is revoked", async () => {
   const f = fixture();
   f.item.consentClass = "marketing";
-  f.patient.extension = [{
-    url: api.ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
-    extension: [
-      { url: "consent", valueBoolean: true },
-      { url: "recorded", valueDateTime: "2026-09-10T14:00:00Z" },
-    ],
-  }];
-  f.body.channel = channel;
-  if (channel === "sms") {
-    f.item.channels = ["sms"];
-    f.item.urls.web = "https://example.invalid/education";
-    f.patient.telecom = [{ system: "phone", value: "+15555550100" }];
-    f.provider.sendSms = f.provider.sendEmail;
-    f.deps.publicBaseUrl = "https://example.invalid";
-    f.deps.practiceName = "Synthetic";
-    f.deps.trackedLinkStore = { create: async () => undefined };
-  }
+  f.patient.extension = [{ url: api.ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
+    extension: [{ url: "consent", valueBoolean: true }, { url: "recorded", valueDateTime: "2026-09-10T14:00:00Z" }] }];
+  f.body.channel = "sms"; f.item.channels = ["sms"]; f.item.urls.web = "https://example.invalid/education";
+  f.patient.telecom = [{ system: "phone", value: "+15555550100" }]; f.provider.sendSms = f.provider.sendEmail;
+  f.deps.publicBaseUrl = "https://example.invalid"; f.deps.trackedLinkStore = { create: async () => undefined };
   const stalePatient = structuredClone(f.patient);
   const provider = createSuppressedCommsProvider(f.provider, {
     fhir: f.fhir, practiceTimeZone: "America/New_York", now: () => new Date("2026-09-10T15:00:00Z"),
@@ -200,25 +187,19 @@ test(`final gate rechecks prepared system marketing ${channel} after consent is 
   if (preparation.kind !== "ready") throw Error("expected ready");
   f.patient.extension = [];
   const result = await api.dispatchEducationAs(f.actor, f.deps, stalePatient, f.body, { prepared: preparation.prepared });
-  assert.deepEqual(result, channel === "email" ? { outcome: "sent", providerMessageId: "receipt-1" } : { outcome: "suppressed", reason: "preference-withheld" });
-  assert.equal(f.requests.length, channel === "email" ? 1 : 0);
+  assert.deepEqual(result, { outcome: "suppressed", reason: "preference-withheld" });
+  assert.equal(f.requests.length, 0);
   const evidence = await api.readEducationDispatchEvidence(f.fhir, f.body, f.actor.onBehalfOf);
   assert.deepEqual(evidence?.outcome, result);
-  if (channel === "email") {
-    f.patient.extension = [buildCommsOptOutExtension("email")];
-    f.requests.length = 0;
-    const blocked = await api.dispatchEducationAs(f.actor, f.deps, f.patient, { ...f.body, idempotencyKey: "sequence-email-opt-out" });
-    assert.deepEqual(blocked, { outcome: "suppressed", reason: "patient-opt-out" });
-    assert.equal(f.requests.length, 0);
-  }
   f.fhir.read = async () => { throw Error("frozen reconciliation must not recheck consent"); };
   assert.deepEqual(await api.dispatchEducationAs(f.actor, f.deps, undefined, f.body, { reconcileOnly: true }), result);
 });
 
-}
-
-test("recorded system marketing receipt reconciles after consent and catalog are withdrawn", async () => {
+test("recorded system marketing SMS receipt reconciles after consent and catalog are withdrawn", async () => {
   const f = fixture();
+  f.body.channel = "sms"; f.item.channels = ["sms"]; f.item.urls.web = "https://example.invalid/education";
+  f.patient.telecom = [{ system: "phone", value: "+15555550100" }]; f.provider.sendSms = f.provider.sendEmail;
+  f.deps.publicBaseUrl = "https://example.invalid"; f.deps.trackedLinkStore = { create: async () => undefined };
   f.item.consentClass = "marketing";
   f.patient.extension = [{
     url: api.ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
@@ -251,18 +232,14 @@ test("system actor cannot request a chart update or produce chart metadata", asy
   assert.equal("chartUpdate" in result, false);
 });
 
-test("staff marketing email follows default ON but email opt-out still suppresses", async () => {
-  const f = fixture();
-  f.item.consentClass = "marketing";
-  const provider = createSuppressedCommsProvider(f.provider, { fhir: f.fhir, practiceTimeZone: "UTC", now: () => new Date("2026-09-10T15:00:00Z") });
-  f.deps.dispatch.getAdapterForRole = () => provider;
+test("staff marketing email remains refused with default ON and with email opt-out", async () => {
+  const f = fixture(); f.item.consentClass = "marketing";
   const actor: any = { kind: "staff", staff: { staffReference: "Practitioner/staff", fhir: f.fhir } };
-  assert.deepEqual(await api.dispatchEducationAs(actor, f.deps, f.patient, f.body), { outcome: "sent", providerMessageId: "receipt-1" });
-  assert.equal(f.requests.length, 1);
-  f.patient.extension = [buildCommsOptOutExtension("email")];
-  f.requests.length = 0;
-  assert.deepEqual(await api.dispatchEducationAs(actor, f.deps, f.patient, { ...f.body, idempotencyKey: "staff-email-opt-out" }), { outcome: "suppressed", reason: "patient-opt-out" });
-  assert.equal(f.requests.length, 0);
+  for (const extension of [[], [buildCommsOptOutExtension("email")]]) {
+    f.patient.extension = extension;
+    await assert.rejects(api.dispatchEducationAs(actor, f.deps, f.patient, f.body), /Promotional email requires a working unsubscribe link/);
+    assert.equal(f.requests.length, 0); assert.equal(f.resources.length, 0);
+  }
 });
 
 for (const subject of [undefined, "Your practice has shared information"]) test(`E1a sequence preflight and prepared send share a neutral subject: ${subject ?? "default"}`, async () => {
@@ -289,7 +266,7 @@ for (const blocked of ["cosmetic", "unsubscribe", "envelope"] as const) test(`E1
   let probes = 0;
   f.provider.preflightSuppression = async () => { probes++; };
   if (blocked === "cosmetic") f.item.offerClass = "cosmetic";
-  if (blocked === "unsubscribe") { f.item.consentClass = "marketing"; delete f.deps.emailUnsubscribeEndpoint; }
+  if (blocked === "unsubscribe") f.item.consentClass = "marketing";
   if (blocked === "envelope") {
     const { PatientEmailConfigurationError } = await import("../src/comms/patient-email-envelope.js");
     f.provider.validateEmailConfiguration = () => { throw new PatientEmailConfigurationError("Patient email is missing practice phone in practice settings."); };
@@ -301,12 +278,28 @@ for (const blocked of ["cosmetic", "unsubscribe", "envelope"] as const) test(`E1
   assert.match(preparation.detail!, blocked === "cosmetic" ? /Cosmetic-only/ : blocked === "unsubscribe" ? /unsubscribe/ : /practice phone/);
   assert.equal(probes, 0); assert.equal(f.resources.length, 0); assert.equal(f.requests.length, 0);
 });
-test("E1a prepared email rechecks unsubscribe capability before reservation", async () => {
-  const f = fixture(); f.item.consentClass = "marketing";
+test("E1a prepared email rechecks marketing refusal before reservation", async () => {
+  const f = fixture();
   const preparation = await api.prepareEducationSequenceDispatch(f.deps, f.fhir, f.patient, f.body);
   assert.equal(preparation.kind, "ready");
   if (preparation.kind !== "ready") throw Error("expected ready");
-  delete f.deps.emailUnsubscribeEndpoint;
+  // Model an already-prepared legacy marketing dispatch arriving after upgrade.
+  preparation.prepared.item = { ...preparation.prepared.item, consentClass: "marketing", offerClass: "eyecare" };
   await assert.rejects(api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body, { prepared: preparation.prepared }), /unsubscribe/);
   assert.equal(f.resources.length, 0); assert.equal(f.requests.length, 0);
+});
+
+test("legacy frozen marketing email receipt still reconciles without a new send", async () => {
+  const f = fixture();
+  const result = await api.dispatchEducationAs(f.actor, f.deps, f.patient, f.body);
+  const reservation = f.resources.find(resource => resource.resourceType === "Communication");
+  const frozen = JSON.parse(reservation.payload[1].contentString);
+  // Synthetic historical receipt: marketing email was previously admitted by the removed flag.
+  frozen.item.consentClass = "marketing"; delete frozen.item.offerClass;
+  reservation.payload[1].contentString = JSON.stringify(frozen);
+  f.deps.educationCatalog.get = () => { throw Error("recovery must not require the catalog"); };
+  f.fhir.read = async () => { throw Error("recovery must not require mutable consent"); };
+  f.deps.dispatch.getAdapterForRole = () => { throw Error("recovery must not access a provider"); };
+  assert.deepEqual(await api.dispatchEducationAs(f.actor, f.deps, undefined, f.body, { reconcileOnly: true }), result);
+  assert.equal(f.requests.length, 1);
 });

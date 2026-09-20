@@ -14,7 +14,7 @@ assert.equal(manifest.project, 'odos-email-e1a-proof');
 const state = process.argv[2] ?? 'after';
 assert.ok(['before', 'after'].includes(state));
 const base = `http://127.0.0.1:${state === 'after' ? manifest.ports.frontdoor : 32191}`;
-const evidence = join(root, 'docs/build-log/email-e1a-envelope');
+const evidence = process.env.E1A_EVIDENCE ?? join(root, 'docs/build-log/email-e1a-envelope');
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1100 } });
 const page = await context.newPage();
@@ -51,6 +51,11 @@ try {
   assert.equal(await confirm.isEnabled(), true); assert.equal(dispatches.length, 0);
   await confirm.evaluate(element => element.scrollIntoView({ block: 'end', behavior: 'instant' }));
   const box = await confirm.boundingBox(); assert.ok(box && box.y >= 0 && box.y + box.height <= 1100);
+  if (state === 'after') {
+    assert.equal(await disclosure.isVisible(), true);
+    const disclosureBox = await disclosure.boundingBox();
+    assert.ok(disclosureBox && disclosureBox.y >= 0 && disclosureBox.y + disclosureBox.height <= box.y);
+  }
   assert.equal(await page.locator('input[type=password]').count(), 0);
   await page.screenshot({ path: join(evidence, `staff-${state}.png`), animations: 'disabled' });
   const html = await (await fetch(base)).text();

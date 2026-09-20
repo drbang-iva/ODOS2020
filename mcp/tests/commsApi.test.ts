@@ -2602,7 +2602,8 @@ async function startServer(options: {
     },
     publicBaseUrl: options.publicBaseUrl === undefined ? "https://practice.example" : options.publicBaseUrl,
     practiceName: "Synthetic Eye Care",
-    emailUnsubscribeEndpoint: options.emailUnsubscribeEndpoint,
+    // Unknown legacy input must not reintroduce a capability after its removal.
+    ...{ emailUnsubscribeEndpoint: options.emailUnsubscribeEndpoint },
     emailSubject: options.emailSettings?.ODOS_COMMS_EMAIL_SUBJECT,
     chartDispatchLane: options.chartDispatchLane,
     audit,
@@ -2893,17 +2894,25 @@ test("E1a d marketing email needs unsubscribe capability while SMS and print ret
     } finally { await f.close(); }
   }
 });
-for (const allowed of [true, false]) test(`E1a e email marketing needs no recorded consent and honors explicit preference allowed=${allowed}`, async () => {
-  const { replaceCommsPreferenceCells } = await import("../src/comms/suppression-gate.js");
-  const f = await startServer({ realEmail: true, emailUnsubscribeEndpoint: "https://synthetic.invalid/unsubscribe", catalogItems: [{ ...E1A_ITEM, consentClass: "marketing", offerClass: "eyecare" }] });
+for (const value of [undefined, "", "x", "https://synthetic.invalid/unsubscribe"]) test(`R3 marketing email refuses obsolete configuration value=${value ?? "unset"}`, async () => {
+  const f = await startServer({ realEmail: true, emailUnsubscribeEndpoint: value,
+    emailSettings: { ODOS_COMMS_EMAIL_UNSUBSCRIBE_ENDPOINT: value ?? "" },
+    catalogItems: [{ ...E1A_ITEM, consentClass: "marketing", offerClass: "eyecare" }] });
   try {
-    if (!allowed) f.patients[0] = replaceCommsPreferenceCells(f.patients[0], [{ purpose: "marketing-promo", channel: "email", allowed }], {
-      setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
-    });
-    const response = await sendE1a(f, "email"); const body = await response.json() as any;
-    assert.equal(response.status, 200); assert.equal(body.outcome, allowed ? "sent" : "suppressed");
-    if (!allowed) assert.equal(body.reason, "preference-withheld");
-    assert.equal(f.mime.length, allowed ? 1 : 0);
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 409);
+    assert.equal((await response.json() as any).reason, "Promotional email requires a working unsubscribe link, which is not configured yet.");
+    assert.equal(f.emailVendorCalls.length, 0); assert.equal(f.mime.length, 0);
+    assert.equal(f.persistedCommunications.length, 0);
+  } finally { await f.close(); }
+});
+test("R5 unpublished marketing email reports publication refusal first", async () => {
+  const f = await startServer({ realEmail: true, catalogItems: [{ ...E1A_ITEM, channels: ["sms", "print"], consentClass: "marketing", offerClass: "eyecare" }] });
+  try {
+    const response = await sendE1a(f, "email");
+    assert.equal(response.status, 409);
+    assert.equal((await response.json() as any).error, "Education content is not published for email.");
+    assert.equal(f.emailVendorCalls.length, 0); assert.equal(f.persistedCommunications.length, 0);
   } finally { await f.close(); }
 });
 test("E1a f real email suppression preserves staff override and preference write ON", async () => {

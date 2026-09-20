@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 checkout = Path(sys.argv[1]).resolve()
-evidence = Path(__file__).resolve().parent.parent / 'mutations'
+evidence = Path(os.environ.get('E1A_EVIDENCE', Path(__file__).resolve().parent.parent)) / 'mutations'
 evidence.mkdir(exist_ok=True)
 assert checkout != Path(__file__).resolve().parents[4]
 api = 'mcp/src/comms/comms-api.ts'
@@ -24,21 +24,28 @@ cases = [
  ('b-required', envelope, 'if (!text) throw new PatientEmailConfigurationError(`Patient email is missing ${field} in practice settings.`);', 'if (!text) return "";', 'E1a b', 'tests/commsApi.test.ts'),
  ('b-unresolved', envelope, 'if (/[{}]|<[^>]*>/.test(text))', 'if (false)', 'E1a envelope refuses missing or unresolved.*[{}]', 'tests/googleWorkspaceAdapter.test.ts'),
  ('c-cosmetic', api, 'if (item.offerClass === "cosmetic")', 'if (false)', 'E1a c|E1a sequence cosmetic', 'tests/commsApi.test.ts', 'tests/educationDispatchActor.test.ts'),
- ('d-unsubscribe', api, 'item.consentClass === "marketing" && channel === "email" && !deps.emailUnsubscribeEndpoint?.trim()', 'false', 'E1a d|E1a sequence unsubscribe|E1a prepared email', 'tests/commsApi.test.ts', 'tests/educationDispatchActor.test.ts'),
- ('e-consent-api', api, 'body.channel === "sms" && item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)', 'item.consentClass === "marketing" && !hasRecordedMarketingConsent(patient)', 'E1a e.*allowed=true', 'tests/commsApi.test.ts'),
- ('e-consent-wrapper', gate, 'channel === "sms" && request.suppression.requiresMarketingConsent', 'request.suppression.requiresMarketingConsent', 'E1a email wrapper', 'tests/commsSuppression.test.ts'),
- ('e-explicit-off', gate, 'if (purpose && !effectiveCommsPreferences(patient, deps)[purpose][channel].value', 'if (false && purpose && !effectiveCommsPreferences(patient, deps)[purpose][channel].value', 'E1a e.*allowed=false', 'tests/commsApi.test.ts'),
+ ('d-unsubscribe', api, 'item.consentClass === "marketing" && channel === "email"', 'false', 'E1a d|R3 |E1a sequence unsubscribe|E1a prepared email', 'tests/commsApi.test.ts', 'tests/educationDispatchActor.test.ts'),
+ ('e-consent-wrapper', gate, 'channel === "sms" && request.suppression.requiresMarketingConsent', 'request.suppression.requiresMarketingConsent', 'E1a e email wrapper', 'tests/commsSuppression.test.ts'),
+ ('e-explicit-off', gate, 'if (purpose && !effectiveCommsPreferences(patient, deps)[purpose][channel].value', 'if (false && purpose && !effectiveCommsPreferences(patient, deps)[purpose][channel].value', 'E1a e.*allowed=false', 'tests/commsSuppression.test.ts'),
  ('f-override', api, 'const staffEducationOverride = actor.kind === "staff" && item.consentClass === "transactional";', 'const staffEducationOverride = false;', 'E1a f', 'tests/commsApi.test.ts'),
  ('f-write-on', api, 'if (withheldEducationEmail && actor.kind === "staff")', 'if (false)', 'E1a f', 'tests/commsApi.test.ts'),
  ('sequence-probe', api, 'subject: prepared.subject,', 'subject: prepared.item.title,', 'E1a sequence preflight', 'tests/educationDispatchActor.test.ts'),
  ('sequence-send', api, '      subject,\n      body: url,', '      subject: item.title,\n      body: url,', 'E1a sequence preflight', 'tests/educationDispatchActor.test.ts'),
- ('wrapper-validation', gate, '...(provider.validateEmailConfiguration ? { validateEmailConfiguration: provider.validateEmailConfiguration } : {}),', '', 'E1a b|E1a email wrapper', 'tests/commsApi.test.ts', 'tests/commsSuppression.test.ts'),
+ ('wrapper-validation', gate, '...(provider.validateEmailConfiguration ? { validateEmailConfiguration: provider.validateEmailConfiguration } : {}),', '', 'E1a b|E1a e email wrapper', 'tests/commsApi.test.ts', 'tests/commsSuppression.test.ts'),
  ('scheduled-detail', 'mcp/src/comms/education-sequence-worker.ts', 'prepared.detail ?? prepared.reason', 'prepared.reason', 'E1a scheduled', 'tests/educationSequenceWorker.test.ts'),
  ('catalog-required', schema, 'item.consentClass === "marketing" && item.offerClass === undefined', 'false', 'E1a catalog|G18|E1a published marketing', 'tests/educationCatalog.test.ts', 'tests/visionforgeEducationCatalog.test.ts'),
  ('catalog-default', schema, 'offerClass: item.offerClass ?? "eyecare"', 'offerClass: item.offerClass', 'E1a catalog|G18', 'tests/educationCatalog.test.ts', 'tests/visionforgeEducationCatalog.test.ts'),
  ('catalog-propagation', schema, '.transform(item => ({ ...item, offerClass: item.offerClass ?? "eyecare" }))', '.transform(item => ({ ...item, offerClass: "eyecare" as const }))', 'E1a published cosmetic', 'tests/visionforgeEducationCatalog.test.ts'),
  ('ui-disclosure', 'ui/src/components/comms/EngageSheet.tsx', '{pending.educationEmailWithheld && <p className="text-sm text-[color:var(--odos-amber)]">Education email is off for this patient. Sending will turn it back on.</p>}', '', 'E1a education email disclosure', 'tests/engageCommunicationPreferences.test.tsx'),
- ('write-inventory', 'scripts/fhir-read-grant-check.ts', '  { path: "mcp/src/index.ts", line: 7945, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },', '', 'FHIR read grant CLI passes', '../tests/preflight/fhir-read-grant-check.test.ts'),
+ ('write-inventory', 'scripts/fhir-read-grant-check.ts', '  { path: "mcp/src/index.ts", line: 7944, callee: "fhir.patch", resourceType: "AccessPolicy", reason: "Policy sync uses the MCP process service client." },', '', 'FHIR read grant CLI passes', '../tests/preflight/fhir-read-grant-check.test.ts'),
+ ('R1-normalized-baseline', 'mcp/src/comms/visionforge-education-catalog.ts', 'snapshot = { ...structuredClone(row), localCopy };', 'snapshot = structuredClone(row);', 'R1 ', 'tests/visionforgeEducationCatalog.test.ts'),
+ ('R2-legacy-marketing', 'mcp/src/comms/visionforge-education-catalog.ts', 'item: storedItemSchema, absentUpstream', 'item: educationItemSchema, absentUpstream', 'R2 ', 'tests/visionforgeEducationCatalog.test.ts'),
+ ('R4-real-meaning', 'mcp/src/comms/visionforge-education-catalog.ts', '!isDeepStrictEqual(prior.item, entry.item) || prior.manifestSha256 !== entry.manifestSha256', 'false', 'R4 ', 'tests/visionforgeEducationCatalog.test.ts'),
+ ('R5-publication-order', api, '  if (!item.channels.includes(body.channel)) {\n    throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);\n  }\n  assertEducationOfferEnabled(item, body.channel);', '  assertEducationOfferEnabled(item, body.channel);\n  if (!item.channels.includes(body.channel)) {\n    throw new CommsApiCapabilityError(`Education content is not published for ${body.channel}.`);\n  }', 'R5 ', 'tests/commsApi.test.ts'),
+ ('G18-schema-pin', schema, 'title: z.string().trim().min(1).max(200)', 'title: z.string().trim().min(1).max(201)', 'G18 schema drift', 'tests/visionforgeEducationCatalog.test.ts'),
+ ('stored-invalid-class', 'mcp/src/comms/visionforge-education-catalog.ts', '!("offerClass" in item)', 'true', 'stored migration rejects.*class', 'tests/visionforgeEducationCatalog.test.ts'),
+ ('stored-practice-isolation', 'mcp/src/comms/visionforge-education-catalog.ts', 'if (row.practiceId !== config.practiceId)', 'if (false)', 'stored migration rejects foreign-practice', 'tests/visionforgeEducationCatalog.test.ts'),
+ ('legacy-receipt-recovery', api, '    if (evidence) {\n      if (evidence.outcome.outcome === "sent")', '    if (evidence) {\n      assertEducationOfferEnabled(evidence.frozen.item, body.channel);\n      if (evidence.outcome.outcome === "sent")', 'legacy frozen marketing email receipt', 'tests/educationDispatchActor.test.ts'),
 ]
 results = []
 for name, path, old, new, pattern, *tests in cases:

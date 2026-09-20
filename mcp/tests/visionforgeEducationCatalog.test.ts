@@ -274,3 +274,78 @@ test("G19 plan-set and protocol defaults remain the seed placeholder reader", as
   assert.match(protocol, /catalog \?\? loadDefaultEducationCatalogReader\(\)/);
   assert.equal(loadDefaultEducationCatalogReader().placeholderUrlHost, "education.invalid");
 });
+
+async function persistLegacySnapshot(f: Awaited<ReturnType<typeof setup>>, marketing = false) {
+  assert.equal((await f.reader.refresh()).outcome, "accepted");
+  const row = await f.store.load(practiceId); assert.ok(row);
+  for (const entry of row.localCopy) delete entry.item.offerClass;
+  if (marketing) row.localCopy.find(entry => entry.item.id === "history" && entry.item.version === 2)!.item.consentClass = "marketing";
+  await f.store.accept(row);
+  return row;
+}
+
+catalogTest("R1 pre-upgrade transactional snapshot accepts identical upstream", async t => {
+  const f = await setup(t); const legacy = await persistLegacySnapshot(f);
+  assert.ok(legacy.localCopy.every(entry => !Object.hasOwn(entry.item, "offerClass")));
+  const restarted = createVisionForgeEducationCatalogReader(f.config, f.store); await restarted.ready();
+  assert.deepEqual(await f.store.load(practiceId), legacy, "rehydration does not rewrite stored evidence");
+  assert.deepEqual(await restarted.refresh(), { outcome: "accepted" });
+  assert.equal(restarted.get("history", 2)?.offerClass, "eyecare");
+  assert.equal((await f.store.load(practiceId))?.localCopy[0].item.offerClass, "eyecare");
+});
+
+catalogTest("R2 pre-upgrade marketing snapshot loads while fresh marketing stays strict", async t => {
+  const f = await setup(t); const legacy = await persistLegacySnapshot(f, true);
+  const restarted = createVisionForgeEducationCatalogReader(f.config, f.store); await restarted.ready();
+  assert.notEqual(restarted.status().state, "unavailable");
+  assert.equal(restarted.list().length, 1);
+  assert.equal(restarted.list()[0].offerClass, "eyecare");
+  assert.equal(restarted.get("history", 1)?.version, 1);
+  assert.equal(restarted.get("withdrawn", 1), undefined);
+  assert.deepEqual(await f.store.load(practiceId), legacy);
+  const upstream = envelope(); upstream.entries[1].item.consentClass = "marketing"; f.set(upstream);
+  assert.deepEqual(await restarted.refresh(), { outcome: "refused", refusalCode: "entry-invalid" });
+  assert.equal(restarted.list().length, 1);
+  upstream.entries[1].item.offerClass = "eyecare"; f.set(upstream);
+  assert.deepEqual(await restarted.refresh(), { outcome: "accepted" });
+});
+
+for (const change of ["title", "hash"] as const) catalogTest(`R4 legacy snapshot still refuses real ${change} meaning change`, async t => {
+  const f = await setup(t); const legacy = await persistLegacySnapshot(f);
+  const restarted = createVisionForgeEducationCatalogReader(f.config, f.store); await restarted.ready();
+  const upstream = envelope();
+  if (change === "title") upstream.entries[1].item.title = "Changed synthetic content";
+  else upstream.entries[1].manifestSha256 = "d".repeat(64);
+  f.set(upstream);
+  assert.deepEqual(await restarted.refresh(), { outcome: "refused", refusalCode: "meaning-changed" });
+  assert.deepEqual((await f.store.load(practiceId))?.localCopy, legacy.localCopy);
+});
+
+for (const malformed of ["null-class", "unknown-class", "extra-field", "bad-title", "bad-lifecycle", "bad-hash", "bad-absence", "foreign-practice"] as const) {
+  catalogTest(`stored migration rejects ${malformed} without network or writes`, async t => {
+    const f = await setup(t); const row = await persistLegacySnapshot(f);
+    const item = row.localCopy[1].item as any;
+    if (malformed === "null-class") item.offerClass = null;
+    if (malformed === "unknown-class") item.offerClass = "unknown";
+    if (malformed === "extra-field") item.unexpected = true;
+    if (malformed === "bad-title") item.title = "";
+    if (malformed === "bad-lifecycle") (row.localCopy[1].lifecycle as any).state = "unknown";
+    if (malformed === "bad-hash") row.localCopy[1].manifestSha256 = "invalid";
+    if (malformed === "bad-absence") (row.localCopy[1] as any).absentUpstream = null;
+    if (malformed === "foreign-practice") row.practiceId = "other-practice";
+    let writes = 0;
+    const store: EducationCatalogSnapshotStore = { load: async () => structuredClone(row), accept: async () => { writes++; }, recordAttempt: async () => { writes++; } };
+    const restarted = createVisionForgeEducationCatalogReader(f.config, store); await restarted.ready();
+    assert.equal(restarted.status().state, "unavailable"); assert.deepEqual(restarted.list(), []);
+    const before = f.requests();
+    assert.deepEqual(await restarted.refresh(), { outcome: "refused", refusalCode: "storage-unavailable" });
+    assert.equal(f.requests(), before); assert.equal(writes, 0);
+  });
+}
+
+test("G18 schema drift tripwire requires explicit VisionForge compatibility assessment", () => {
+  // This pins reviewed ODOS bytes, not live cross-repo equivalence; retain the behavioral fixture test above.
+  const source = readFileSync(new URL("../src/comms/education-catalog.ts", import.meta.url), "utf8");
+  const block = source.split("const educationItemSchema = ")[1].split("\n\nconst educationCatalogManifestSchema")[0];
+  assert.equal(createHash("sha256").update(block).digest("hex"), "06aa74e56c93880ff1737bd65b86f4b23743261e5cb386d736fc600d43494780");
+});
