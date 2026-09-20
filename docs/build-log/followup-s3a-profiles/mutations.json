@@ -3,8 +3,8 @@
     "id": "G1",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G1' 'mcp/src/__tests__/follow-up-profile-keys.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "b5554e5a0bf6214985e6451934c8c25ce45db8d3ec0cac850f0e220782d6eccf",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "5bf29261b0d3e70bdc123e203b15e3fff17736fdb567c4a9e740b68fc512160b",
     "red": {
       "exit": 1,
       "summary": [
@@ -34,8 +34,8 @@
     "id": "G2",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G2' 'mcp/src/__tests__/follow-up-profile-keys.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "68a10f0e760b213f3f31a433e5d48146b6e2de0d1b8faa26a5bf2ec42de40f83",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "1e124d27dda51e31d8166efe2500a2b18f7a140984d3ad0a9d2ec7a87fac930e",
     "red": {
       "exit": 1,
       "summary": [
@@ -65,8 +65,8 @@
     "id": "G3-seed",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G3' 'mcp/src/__tests__/follow-up-profile-keys.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "07c41064f0705000c7d783a5eb0b14aece5a88b46c261f47d929c9538e581c68",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "5ef1fe5e11216859d88c3e0116d731930ac07382d18f5bc202d922c4a825769e",
     "red": {
       "exit": 1,
       "summary": [
@@ -95,8 +95,8 @@
     "id": "G3-request",
     "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G3' 'mcp/tests/followUpProfileEndpoint.test.ts'",
-    "originalHash": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
-    "mutantHash": "58b85f0421fe100db68f1127715d6b6f7968052447744bcf34a406a21675c4aa",
+    "originalHash": "50a57e27a4558a077bd88b4588b23d218d705034e81d73939511e3b7f634e5bf",
+    "mutantHash": "b1c67b171f756a36a4cf10b15c73c2a8ec18146bf5a53c938fbee6b8b8184c2c",
     "red": {
       "exit": 1,
       "summary": [
@@ -125,8 +125,8 @@
     "id": "G4",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G4' 'mcp/tests/followUpProfileStore.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "f58204d4d68fed88d9b3992de6b149f285cca6e5ee052e8f7b868d5b050f7851",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "de134a0152935b29a9845ea152d0e1d0dbbba86524ef23c2edba98fb93e051bb",
     "red": {
       "exit": 1,
       "summary": [
@@ -155,8 +155,8 @@
     "id": "G5a",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G5a' 'mcp/tests/followUpProfileStore.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "1e6638fb3b8ac6a74c08f0c6ed25d949632555dbdbb621709635280c5995dee4",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "1af4b478652ffd4da986ddd44aae6ca5c21a939da6575a195e1b4be7283980ee",
     "red": {
       "exit": 1,
       "summary": [
@@ -185,8 +185,8 @@
     "id": "G5b",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G5b' 'mcp/tests/followUpProfileStore.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "972ea820b57672443ae44779ac8aab5cd929d58d23ed10d8a184d701360dea44",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "13f53197f8c38246684f5aad4989c0441cb038f7a8f8e51926ec6458675d71ac",
     "red": {
       "exit": 1,
       "summary": [
@@ -215,8 +215,8 @@
     "id": "G5c",
     "file": "mcp/src/clinical-graph/follow-up-profile-store.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G5c' 'mcp/tests/followUpProfileStore.test.ts'",
-    "originalHash": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mutantHash": "04555042359100097eaf9fb061d80f9f6ffe7ff8ce4fd1c27f11e729bc8ac37b",
+    "originalHash": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mutantHash": "7fa200fd2026698bc3d82e3cbaa1b29c3ba7e5fb7220b653e30bfd8101f044a7",
     "red": {
       "exit": 1,
       "summary": [
@@ -245,8 +245,8 @@
     "id": "G6",
     "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G6' 'mcp/tests/followUpProfileEndpoint.test.ts'",
-    "originalHash": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
-    "mutantHash": "da23c9ba2e7c457f1570d60bfb2d9726c2f2b1db06c0313cde4e6f1f8c7edd1b",
+    "originalHash": "50a57e27a4558a077bd88b4588b23d218d705034e81d73939511e3b7f634e5bf",
+    "mutantHash": "d3d4431450b428bfbd3d484385ef8f69c2f50a00570f1b2b15010beb9e7d6215",
     "red": {
       "exit": 1,
       "summary": [
@@ -275,12 +275,42 @@
     "id": "G7",
     "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
     "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^G7' 'mcp/tests/followUpProfileEndpoint.test.ts'",
-    "originalHash": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
-    "mutantHash": "1d17070f3652b149348936d4683a22d2cc1f108a45bd2250863429a48a3edbfc",
+    "originalHash": "50a57e27a4558a077bd88b4588b23d218d705034e81d73939511e3b7f634e5bf",
+    "mutantHash": "bba616cda9991fc79fcaa468fad38fe0c938f5662400b63c634051036904ac38",
     "red": {
       "exit": 1,
       "summary": [
         "not ok 1 - G7 practice cannot publish a missing section or orderable without a reason",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0"
+      ]
+    }
+  },
+  {
+    "id": "server-fault",
+    "file": "mcp/src/clinical-graph/follow-up-profile-endpoint.ts",
+    "command": "'node' '--import' 'tsx' '--test' '--test-name-pattern=^write failures distinguish' 'mcp/tests/followUpProfileEndpoint.test.ts'",
+    "originalHash": "50a57e27a4558a077bd88b4588b23d218d705034e81d73939511e3b7f634e5bf",
+    "mutantHash": "00fa9f3ef32cd3e24122670accbfb9e37b7ac7a34be007c6d2e88697641b7911",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - write failures distinguish client conflicts and missing profiles from server faults",
         "# tests 1",
         "# pass 0",
         "# fail 1",

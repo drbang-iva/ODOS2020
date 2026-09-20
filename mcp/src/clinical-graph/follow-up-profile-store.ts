@@ -48,6 +48,11 @@ export class FollowUpProfileConcurrentEditError extends Error {
   constructor() { super("This follow-up profile changed concurrently — reload and retry."); }
 }
 
+export class FollowUpProfileNotFoundError extends Error {
+  readonly status = 404;
+  constructor() { super("Profile does not exist."); }
+}
+
 export class FhirFollowUpProfileStore {
   constructor(private readonly fhir: FollowUpProfileFhirClient, private readonly seeds: readonly FollowUpProfile[] = FOLLOW_UP_PROFILE_SEEDS) {}
 
@@ -70,7 +75,7 @@ export class FhirFollowUpProfileStore {
     const existing = rows.find(row => row.profile.profileKey === profile.profileKey)?.resource;
     const seed = this.seeds.find(row => row.profileKey === profile.profileKey);
     if (mode === "create" && (existing || seed)) throw new FollowUpProfileConcurrentEditError();
-    if (mode === "save" && !existing && !seed) throw Object.assign(new Error("Profile does not exist."), { status: 404 });
+    if (mode === "save" && !existing && !seed) throw new FollowUpProfileNotFoundError();
     const writeVersion = expectedVersion;
     if ((existing?.meta?.versionId ?? null) !== writeVersion) throw new FollowUpProfileConcurrentEditError();
     const writeToken = randomUUID();

@@ -78,3 +78,20 @@ test("retired references retain their keys and show unavailable context", async 
   assert.ok(display.testsQueuedByDefault.every(row => row.unavailableReason));
   assert.equal(original.sectionsOpen[0]!.unavailableReason, undefined);
 });
+
+test("write failures distinguish client conflicts and missing profiles from server faults", async () => {
+  const missing = fixture();
+  assert.equal((await handleFollowUpProfileWriteRequest(missing.deps, { authHeader: "synthetic", profileKey: "practice-copy", body: body() })).status, 404);
+  const conflict = fixture();
+  const seed = { profile: FOLLOW_UP_PROFILE_SEEDS[0], expectedVersion: "stale" };
+  assert.equal((await handleFollowUpProfileWriteRequest(conflict.deps, { authHeader: "synthetic", profileKey: "glaucoma", body: seed })).status, 409);
+  for (const operation of ["search", "create"] as const) {
+    const { deps } = fixture();
+    const fault = Object.assign(new Error("Synthetic backend fault"), { status: 400 });
+    deps.serviceFhir[operation] = async () => { throw fault; };
+    await assert.rejects(handleFollowUpProfileWriteRequest(deps, { authHeader: "synthetic", body: body() }), error => error === fault);
+  }
+  const corrupt = fixture();
+  corrupt.deps.serviceFhir.create = async resource => ({ ...resource, id: "corrupt", meta: { versionId: "1" }, extension: (resource as Basic).extension?.map(row => ({ ...row, valueString: "{}" })) });
+  await assert.rejects(handleFollowUpProfileWriteRequest(corrupt.deps, { authHeader: "synthetic", body: body() }), { name: "ZodError" });
+});

@@ -56,7 +56,7 @@ Source strings used as prior-value/history/diagnosis choices are retained from t
 
 ## G1–G9
 
-[GUARDS.md](GUARDS.md) quotes the command and red/restored output for every mutation. Structured evidence: [mutations.json](mutations.json) and [g7b-mutations.json](g7b-mutations.json). **17/17 deliberate breaks exit 1; 17/17 restorations exit 0.** No existing assertion was removed, shortened or skipped.
+[GUARDS.md](GUARDS.md) quotes the command and red/restored output for every mutation. Structured evidence: [mutations.json](mutations.json) and [g7b-mutations.json](g7b-mutations.json). **19/19 deliberate breaks exit 1; 19/19 restorations exit 0.** No existing assertion was removed, shortened or skipped.
 
 - G1: actual ocular-health builder keys, actual constructor section-group seeds, and the UI BuiltInSectionId AST form the cross-package oracle in `mcp/src/__tests__/follow-up-profile-keys.test.ts`. A fictional section fails.
 - G2: fictional orderable without a reason fails against the actual orderable/pending sets.
@@ -69,7 +69,7 @@ Source strings used as prior-value/history/diagnosis choices are retained from t
 - G8: deleting the extension registry entry fails preflight (`odos-extension-url-shape`); deleting the Caddy handle fails front-door parity.
 - G9: **verification, not mutation**. The allowlist forbids changing the chart to manufacture a red. The source seal lists all 14 application/test files and zero chart files. Every base UI test remains; only the authorized inventory number changed. Full UI: 1,808 base + 3 added = 1,811 passed.
 
-Tests added: 15 MCP tests and 3 UI tests. Three additional Settings mutations cover picker persistence, reset caller-version forwarding and read-only controls.
+Tests added: 16 MCP tests and 3 UI tests. Three additional Settings mutations cover picker persistence, reset caller-version forwarding and read-only controls. A fourth additional mutation removes route rate limiting: the real served 429 assertion fails, then passes after restoration; see rate-mutation.json. A server-fault classification guard adds one MCP test, for 16 MCP / 3 UI additions.
 
 Seed catalogue enforcement: G1/G2 are executable guards; breaking a resolving key goes red.
 
@@ -116,18 +116,24 @@ Proof 5: full-suite and typecheck/preflight summaries below.
 | Check | Base | Proposed |
 | --- | --- | --- |
 | `npm --prefix ui test` | 1,808 pass, 0 fail, 0 skip | 1,811 pass, 0 fail, 0 skip |
-| Full MCP CI command below | 6,089 pass, 0 fail, 55 skip; 6,144 total | 6,104 pass, 0 fail, 55 skip; 6,159 total |
+| Full MCP CI command below | 6,089 pass, 0 fail, 55 skip; 6,144 total | 6,105 pass, 0 fail, 55 skip; 6,160 total |
 | `npx tsc --noEmit` in ui | exit 0 | exit 0 |
 | `npx tsc --noEmit` in mcp | exit 0 | exit 0 |
 | `npm run preflight` | 0 warnings, 0 blocks | 0 warnings, 0 blocks |
 
-MCP count: 6,144 base + 15 added = 6,159 total. The 55 existing skips are gated tests; no new skips. Full MCP follows the repository's CI lane command from mcp/, with ODOS_POSTGRES_URL pointing to task-owned synthetic Postgres:
+MCP count: 6,144 base + 16 added = 6,160 total. The 55 existing skips are gated tests; no new skips. Full MCP follows the repository's CI lane command from mcp/, with ODOS_POSTGRES_URL pointing to task-owned synthetic Postgres:
 
 ```sh
 node --import tsx --test --test-concurrency=1 'src/__tests__/**/*.test.ts' 'tests/**/*.test.ts' '../tests/boundaries/**/*.test.ts' '../tests/observation-status-machine/**/*.test.ts' '../tests/setup-wizard/**/*.test.ts' '../tests/preflight/**/*.test.ts' '../tests/smart/**/*.test.ts' '../tests/cds/**/*.test.ts' '../tests/agentops/**/*.test.ts' '../tests/bulk-data/**/*.test.ts' '../tests/mandate-8/**/*.test.ts'
 ```
 
 Production MCP/UI build and `git diff --check`: exit 0. Front-door coverage: PASS, zero missing route families. Earlier misconfigured combined MCP invocations are disclosed in REV2-BLOCKED.md; they are not counted as successful runs or hidden by test edits. Existing gated live suites are not represented as locally executed by the full CI-command run; the new feature's real staff authorization is proven separately above.
+
+## Automatic review corrections
+
+CodeQL reported missing rate limiting on the three new routes at 44ad3bb8 (alerts 269–271). The allowed registration block now applies the existing express-rate-limit pattern, 120 requests per minute, to all three routes. No shared chart route changed. Real unauthenticated requests return 401 before the limit and all three return 429 with rate-limit and retry headers after it. Removing the limiter gives a red served assertion; restoring it gives green. The final MCP rerun remains 6,105 pass / 55 skip / 0 fail. Production build, preflight and the two-width browser proof were rerun after the correction.
+
+CodeRabbit also identified the base-runtime selection and write-error classification. The browser now selects the correct runtime before reading its manifest, credentials and fixture, and derives both ports from those manifests. The write handler catches only dedicated reference-validation, concurrency and missing-profile errors; transport/catalogue/stored-JSON faults propagate to the route wrapper for a generic HTTP 500. A new test covers known 404/409 responses and propagation of search, create and stored-resource parsing faults. Restoring the old broad 400 catch makes it red; restoring the fix makes it green. Both capture modes and the complete MCP suite were rerun.
 
 ## Cleanup, limits and handoff
 

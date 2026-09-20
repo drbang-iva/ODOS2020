@@ -294,6 +294,35 @@ Restored, exit 0:
 # todo 0
 ```
 
+## server-fault
+
+File: `mcp/src/clinical-graph/follow-up-profile-endpoint.ts`
+
+```sh
+'node' '--import' 'tsx' '--test' '--test-name-pattern=^write failures distinguish' 'mcp/tests/followUpProfileEndpoint.test.ts'
+```
+
+Red, exit 1:
+```text
+not ok 1 - write failures distinguish client conflicts and missing profiles from server faults
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+```
+
+Restored, exit 0:
+```text
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+```
+
 ## G8-registry
 
 File: `data/canonical-extensions/registry.json`
@@ -471,4 +500,22 @@ ok 1 - clinical-graph requests share the literal Vite route and Medplum authoriz
 # pass 1
 # fail 0
 # skipped 0
+```
+
+## Served route rate limit
+
+File: `mcp/src/index.ts`
+
+```sh
+node docs/build-log/followup-s3a-profiles/rate-mutation.mjs
+```
+
+Red, exit 1:
+```text
+AssertionError [ERR_ASSERTION]: Profile requests must reach 429 within 121 attempts
+```
+
+Restored, exit 0:
+```text
+All three profile routes: unauthenticated 401 before limit; 429 with rate-limit/retry headers at limit.
 ```

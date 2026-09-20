@@ -5,10 +5,10 @@
     "data/canonical-extensions/registry.json": "fddcfbe8136a14cb074d0d2d17227fb8baa69484c347180e0f1be6c295c4d09a",
     "deploy/frontdoor/Caddyfile": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
     "mcp/src/__tests__/follow-up-profile-keys.test.ts": "9bf65da49d46149d03f77c4fec9b43f1b048ee2fc33feeb25eb33d99a344420f",
-    "mcp/src/clinical-graph/follow-up-profile-endpoint.ts": "a2b58a7a9758d47e69d93a0b2fd1c2f3009d8210af26c701b3a845c77014edd9",
-    "mcp/src/clinical-graph/follow-up-profile-store.ts": "10e8066d7ed705e8cf872c9d5177ce2e0b3e3ad3120d6f9e7e64d3a34161e219",
-    "mcp/src/index.ts": "84c40869d4c4c9b0404c9c531a9e3cf56d7c2d4db88bbe90a87a7549209970ce",
-    "mcp/tests/followUpProfileEndpoint.test.ts": "8e50b72fc65c72462140a83ddf44ba0cd980391afdfe61d3c79f7daca419dc1a",
+    "mcp/src/clinical-graph/follow-up-profile-endpoint.ts": "50a57e27a4558a077bd88b4588b23d218d705034e81d73939511e3b7f634e5bf",
+    "mcp/src/clinical-graph/follow-up-profile-store.ts": "60fed730f35058c49fb947d0a0879f3b6dec911bfee3606ce781e17d1767e225",
+    "mcp/src/index.ts": "d0be915d6afff72a8a5080a60d6a496be82e59d3e25a41ea5ccf1f3771cc9c2b",
+    "mcp/tests/followUpProfileEndpoint.test.ts": "ac63ce0bf362be42fbda7c4ea71471154fcb87971d839d4e104628bdd7239c97",
     "mcp/tests/followUpProfileStore.test.ts": "a538f49c8623d0bbe9130a27b09080a717208cac81fe3dca86214a0d76c4fd50",
     "ui/src/components/settings/FollowUpProfilesSettings.tsx": "6afc2f2dfb82c282179e2ea2d24e1d7eb67d1f899033ffa4f00e99a6742b7e11",
     "ui/src/lib/follow-up-profiles.ts": "40e98b335a6322ed2667b9cbb1cf5d4e0f3e3ae6ca0e1b13febeeef14168c3e8",
@@ -32,13 +32,13 @@
       "proxy": 26655,
       "control": 26656
     },
-    "builtBase": "b217714c2f8963a3c87d537fd00910133257c2a8",
     "mcpHash": "ba3f7395f46976506583975ab8de6a41cae4f49f3979b23ec95888201721dbaf",
     "servedAssets": {
       "/assets/index-r3zoFPgS.js": "4368535b537fb039388c0ff7fab8dd139b9d01d7a47965f4c23d150db3c80eb8",
       "/assets/index-CzcEbW1c.css": "0444daa20d870ac01809f52fc156fdff3b376fa9fc2c1b67a0ddbbb8f1f8b237"
     },
-    "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3"
+    "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+    "builtBase": "b217714c2f8963a3c87d537fd00910133257c2a8"
   },
   "after": {
     "ports": {
@@ -50,12 +50,12 @@
       "proxy": 26645,
       "control": 26646
     },
-    "builtBase": "b217714c2f8963a3c87d537fd00910133257c2a8",
-    "mcpHash": "c68e52ec1f6fcbfc9009ac5fd860c8d8225db510eabba393fc3d0beae0e2c136",
+    "mcpHash": "56475182edbc89df84b1cb4dce5e938689abf209d79679d086e82ea66d633f51",
     "servedAssets": {
       "/assets/index-XLG_Otpe.js": "e094a6e9cc5e6008f0b434109c48f69b8b4e2d0b5fba79dd00be9752b18ea1f5",
       "/assets/index-B-lAzhSj.css": "7c549e32d20be5f4d194b360da1c39006b31005e0fb6d2f5554e8c18aac0cf3a"
     },
-    "caddySourceHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169"
+    "caddySourceHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
+    "builtBase": "44ad3bb85543f5f51425c0e5f5ef317c7986af73"
   }
 }

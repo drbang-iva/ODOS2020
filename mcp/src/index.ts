@@ -8628,7 +8628,15 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
-      app.get("/follow-up-profiles", async (req, res) => {
+      const followUpProfileLimit = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { error: "Too many profile requests. Try again shortly." },
+      });
+
+      app.get("/follow-up-profiles", followUpProfileLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleFollowUpProfileCatalogRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization") });
@@ -8638,7 +8646,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           if (!res.headersSent) res.status(500).json({ error: "Follow-up profile catalogue unavailable." });
         }
       });
-      app.post("/follow-up-profiles", async (req, res) => {
+      app.post("/follow-up-profiles", followUpProfileLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleFollowUpProfileWriteRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization"), body: req.body });
@@ -8648,10 +8656,10 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
           if (!res.headersSent) res.status(500).json({ error: "Follow-up profile creation failed." });
         }
       });
-      app.post("/follow-up-profiles/:profileKey", async (req, res) => {
+      app.post("/follow-up-profiles/:profileKey", followUpProfileLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
-          const result = await handleFollowUpProfileWriteRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization"), profileKey: req.params.profileKey, body: req.body });
+          const result = await handleFollowUpProfileWriteRequest({ authenticate: authenticateStaffRouteForAction("finding-definitions.write"), serviceFhir: fhir }, { authHeader: req.header("authorization"), profileKey: req.params.profileKey as string, body: req.body });
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: follow-up profile update failed:", error);

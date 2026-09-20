@@ -23,6 +23,7 @@ const jobs = [
   { id: 'G5c', file: store, change: replace(header, `...(mode === "save" ? {} : { ${header} })`), command: test(storeTest, '^G5c') },
   { id: 'G6', file: endpoint, change: replace('  if (!staffHasBusinessAction(staff, "finding-definitions.write")) return { status: 403, body: { error: "finding-definitions.write required." } };', ''), command: test(endpointTest, '^G6') },
   { id: 'G7', file: endpoint, change: replace('    assertProfileReferences(profile, choices);', ''), command: test(endpointTest, '^G7') },
+  { id: 'server-fault', file: endpoint, change: replace('    throw error;', '    return { status: 400, body: { error: "misclassified server fault" } };'), command: test(endpointTest, '^write failures distinguish') },
   { id: 'G8-registry', file: 'data/canonical-extensions/registry.json', change: source => { const value = JSON.parse(source); value.extensions = value.extensions.filter(row => !row.url.endsWith('/odos-follow-up-profile-json')); return JSON.stringify(value, null, 2) + '\n'; }, command: ['npm', ['run', 'preflight']] },
   { id: 'G8-frontdoor', file: 'deploy/frontdoor/Caddyfile', change: replace('\thandle /follow-up-profiles* {\n\t\treverse_proxy 127.0.0.1:3333\n\t}\n', ''), command: [process.execPath, ['.claude/skills/tier0-census/scripts/check-frontdoor-coverage.mjs']] },
   { id: 'UI-save', file: ui, change: replace('expectedVersion: original?.versionId ?? null }', 'expectedVersion: null }'), command: test(uiTest, '^Settings reset') },

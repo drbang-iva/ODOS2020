@@ -6,6 +6,7 @@ import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { listProcedureFeeScheduleSnapshot } from "./procedure-fee-schedule.js";
 import {
   BUILT_IN_PROFILE_SECTIONS, FhirFollowUpProfileStore, FOLLOW_UP_PROFILE_SEEDS, followUpProfileSchema,
+  FollowUpProfileConcurrentEditError, FollowUpProfileNotFoundError,
   type FollowUpProfile, type FollowUpProfileRecord, type FollowUpProfileFhirClient, type ProfileReference, type ProfileTest,
 } from "./follow-up-profile-store.js";
 
@@ -29,6 +30,8 @@ export interface FollowUpProfileCatalog {
 const expectedVersion = z.string().min(1).nullable();
 const writeSchema = z.object({ profile: followUpProfileSchema, expectedVersion }).strict();
 const resetSchema = z.object({ action: z.literal("reset"), expectedVersion }).strict();
+
+class ProfileReferenceValidationError extends Error {}
 
 export async function loadFollowUpProfileChoices(fhir: FollowUpProfileFhirClient): Promise<FollowUpProfileChoices> {
   const [definitions, groups, fees, diagnoses] = await Promise.all([
@@ -64,12 +67,12 @@ export function profileWithUnavailableContext<T extends FollowUpProfile>(profile
 export function assertProfileReferences(profile: FollowUpProfile, choices: FollowUpProfileChoices): void {
   const sections = new Set(choices.sectionsOpen.map(row => row.key));
   const tests = new Set(choices.testsQueuedByDefault.map(row => row.orderable));
-  for (const row of profile.sectionsOpen) if (!sections.has(row.key) && !row.unavailableReason) throw new Error(`Unavailable section ${row.key} requires a reason.`);
-  for (const row of profile.testsQueuedByDefault) if (!tests.has(row.orderable) && !row.unavailableReason) throw new Error(`Unavailable test ${row.orderable} requires a reason.`);
+  for (const row of profile.sectionsOpen) if (!sections.has(row.key) && !row.unavailableReason) throw new ProfileReferenceValidationError(`Unavailable section ${row.key} requires a reason.`);
+  for (const row of profile.testsQueuedByDefault) if (!tests.has(row.orderable) && !row.unavailableReason) throw new ProfileReferenceValidationError(`Unavailable test ${row.orderable} requires a reason.`);
   const priorValues = new Set(choices.priorValuesShown.map(row => row.key));
-  for (const row of profile.priorValuesShown) if (!priorValues.has(row.key) && !row.unavailableReason) throw new Error(`Unknown prior-value choice ${row.key}.`);
-  for (const value of profile.historyItems) if (!choices.historyItems.includes(value)) throw new Error(`Unknown history question ${value}.`);
-  for (const value of profile.matchesDiagnosisFamilies) if (!choices.matchesDiagnosisFamilies.includes(value)) throw new Error(`Unknown diagnosis family ${value}.`);
+  for (const row of profile.priorValuesShown) if (!priorValues.has(row.key) && !row.unavailableReason) throw new ProfileReferenceValidationError(`Unknown prior-value choice ${row.key}.`);
+  for (const value of profile.historyItems) if (!choices.historyItems.includes(value)) throw new ProfileReferenceValidationError(`Unknown history question ${value}.`);
+  for (const value of profile.matchesDiagnosisFamilies) if (!choices.matchesDiagnosisFamilies.includes(value)) throw new ProfileReferenceValidationError(`Unknown diagnosis family ${value}.`);
 }
 
 export async function handleFollowUpProfileCatalogRequest(deps: FollowUpProfileEndpointDeps, input: { authHeader: string | undefined }): Promise<{ status: number; body: unknown }> {
@@ -102,7 +105,10 @@ export async function handleFollowUpProfileWriteRequest(deps: FollowUpProfileEnd
       : await store.create(profile, parsed.data.expectedVersion);
     return { status: input.profileKey ? 200 : 201, body: { profile: { ...result.profile, versionId: result.versionId } } };
   } catch (error) {
-    return { status: (error as { status?: number }).status ?? 400, body: { error: error instanceof Error ? error.message : String(error), ...((error as { code?: string }).code ? { code: (error as { code: string }).code } : {}) } };
+    if (error instanceof ProfileReferenceValidationError) return { status: 400, body: { error: error.message } };
+    if (error instanceof FollowUpProfileConcurrentEditError) return { status: error.status, body: { error: error.message, code: error.code } };
+    if (error instanceof FollowUpProfileNotFoundError) return { status: error.status, body: { error: error.message } };
+    throw error;
   }
 }
 
