@@ -23,6 +23,32 @@ Install Docker with Compose v2 from Docker's official documentation:
 
 Ledger row 47 verifies that Compose v2 uses `docker compose` and the Compose Specification. If your install exposes the standalone `docker-compose` binary instead, use the equivalent `docker-compose` command; the root npm scripts follow the binary available in this local development environment.
 
+## Ephemeral proof and evaluation stacks
+
+Use a separately named ephemeral stack for a proof or evaluation. Replace `<name>` with a unique
+project name for that one run:
+
+```bash
+docker-compose -p <name> -f docker-compose.yml -f docker-compose.ephemeral.yml up -d
+```
+
+The production compose file keeps `restart: unless-stopped` so a practice's services recover after
+a host restart. The ephemeral override sets those services to `restart: "no"` so an evaluation does
+not restart and quietly consume Docker resources after its owner has left.
+
+`npm run stack:down -- <name>` removes that project's containers, networks, and volumes. It
+**DESTROYS the stack's data** and refuses a running project unless `--force` is supplied. Review
+all Compose-labelled projects with `npm run stack:list`. Reap stopped, older orphaned stacks with
+`npm run stack:reap`; it is dry-run by default. `npm run stack:reap -- --yes` performs the displayed
+removal and **DESTROYS data**. The reaper never removes an unlabelled resource, protects the default
+ODOS and VisionForge projects, and requires an `--only <prefix>` of at least 12 characters when
+a minimum age below one hour is requested. If your Docker installation provides only `docker compose`, use that
+equivalent command in place of `docker-compose`.
+
+Before a confirmed reap removes each project, it inventories Docker again. On large hosts this can take
+minutes because each project scans the full container, volume, and network inventory; wait for the final
+`REMOVED`/`SKIPPED`/`FAILED` summary rather than treating a quiet run as hung.
+
 ## Start the Local Stack
 
 Create `.env` from `.env.example` and fill in the required values before starting

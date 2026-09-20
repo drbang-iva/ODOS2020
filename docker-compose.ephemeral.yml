@@ -1,0 +1,11 @@
+services:
+  postgres:
+    restart: "no"
+  redis:
+    restart: "no"
+  medplum-server:
+    restart: "no"
+  medplum-app:
+    restart: "no"
+  weasyprint:
+    restart: "no"
