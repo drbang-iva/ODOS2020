@@ -1,5 +1,7 @@
 # E1a sealed implementation bundle
 
+> Historical initial bundle. Superseded by [fixback 1](fixback-1/HANDOFF.md) after independent NEEDS-REVISION findings. In particular, the capability-flag claim below is no longer current.
+
 Status: **needs-review — NOT EVALUATED**. No merge or deployment authorized.
 
 The slice applies a neutral subject and mandatory plain-text practice footer to patient email.

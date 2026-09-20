@@ -1,0 +1,89 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=E1a catalog|G18", "tests/educationCatalog.test.ts", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=E1a catalog|G18 tests/educationCatalog.test.ts tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification
+not ok 1 - E1a catalog defaults transactional offers to eyecare and requires explicit marketing classification
+  ---
+  duration_ms: 2.694625
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/educationCatalog.test.ts:1:4753'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'eyecare'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'eyecare'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/educationCatalog.test.ts:169:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+not ok 2 - G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+  ---
+  duration_ms: 3.615625
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:1:13971'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + undefined
+    - 'eyecare'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'eyecare'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:236:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: G18 schema drift tripwire requires explicit VisionForge compatibility assessment
+not ok 3 - G18 schema drift tripwire requires explicit VisionForge compatibility assessment
+  ---
+  duration_ms: 0.233708
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:1:20841'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'fa2d9781e3372e7c4cd2064bfa6dcfb9c41988744af893839166c6855047fca6'
+    - '06aa74e56c93880ff1737bd65b86f4b23743261e5cb386d736fc600d43494780'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '06aa74e56c93880ff1737bd65b86f4b23743261e5cb386d736fc600d43494780'
+  actual: 'fa2d9781e3372e7c4cd2064bfa6dcfb9c41988744af893839166c6855047fca6'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:350:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 353.3105

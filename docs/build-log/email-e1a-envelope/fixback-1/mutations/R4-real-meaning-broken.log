@@ -1,0 +1,78 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=R4 ", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=R4  tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: R4 legacy snapshot still refuses real title meaning change
+not ok 1 - R4 legacy snapshot still refuses real title meaning change
+  ---
+  duration_ms: 82.761458
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:1:18893'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+    +   outcome: 'accepted'
+    -   outcome: 'refused',
+    -   refusalCode: 'meaning-changed'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    outcome: 'refused'
+    refusalCode: 'meaning-changed'
+  actual:
+    outcome: 'accepted'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:320:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: R4 legacy snapshot still refuses real hash meaning change
+not ok 2 - R4 legacy snapshot still refuses real hash meaning change
+  ---
+  duration_ms: 33.42575
+  type: 'test'
+  location: '/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:1:18893'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      {
+    +   outcome: 'accepted'
+    -   outcome: 'refused',
+    -   refusalCode: 'meaning-changed'
+      }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    outcome: 'refused'
+    refusalCode: 'meaning-changed'
+  actual:
+    outcome: 'accepted'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/odos-email-e1a-fixback-proof/mcp/tests/visionforgeEducationCatalog.test.ts:320:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 312.274292

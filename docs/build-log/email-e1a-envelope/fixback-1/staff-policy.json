@@ -1,0 +1,15 @@
+{
+  "projectId": "aa097324-3473-42c4-864d-5801c2e9d275",
+  "membershipReference": "ProjectMembership/61dd88e7-72e6-4675-8ea2-ae67abb28854",
+  "practitionerReference": "Practitioner/1c0f1e7e-10ad-40c8-aea2-4184c643d1d1",
+  "admin": false,
+  "policyReference": "AccessPolicy/cd4adb71-aae1-406d-b5eb-242eb6048f7e",
+  "policyVersion": "a80dca18-8434-47f6-afbb-b4eee5894474",
+  "policyTags": [
+    {
+      "system": "https://odos2020.com/fhir/NamingSystem/practice-role",
+      "code": "staff"
+    }
+  ],
+  "source": "Read-only SQL of task-owned synthetic membership and seeder FHIR read of canonical Staff policy; no policy edits for browser proof."
+}

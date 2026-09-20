@@ -1,0 +1,127 @@
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=R[12345] |stored migration|G18 tests/visionforgeEducationCatalog.test.ts tests/commsApi.test.ts
+
+TAP version 13
+# Subtest: R3 marketing email refuses obsolete configuration value=unset
+ok 1 - R3 marketing email refuses obsolete configuration value=unset
+  ---
+  duration_ms: 62.0675
+  type: 'test'
+  ...
+# Subtest: R3 marketing email refuses obsolete configuration value=
+ok 2 - R3 marketing email refuses obsolete configuration value=
+  ---
+  duration_ms: 17.777167
+  type: 'test'
+  ...
+# Subtest: R3 marketing email refuses obsolete configuration value=x
+ok 3 - R3 marketing email refuses obsolete configuration value=x
+  ---
+  duration_ms: 41.992833
+  type: 'test'
+  ...
+# Subtest: R3 marketing email refuses obsolete configuration value=https://synthetic.invalid/unsubscribe
+ok 4 - R3 marketing email refuses obsolete configuration value=https://synthetic.invalid/unsubscribe
+  ---
+  duration_ms: 13.466291
+  type: 'test'
+  ...
+# Subtest: R5 unpublished marketing email reports publication refusal first
+ok 5 - R5 unpublished marketing email reports publication refusal first
+  ---
+  duration_ms: 10.89275
+  type: 'test'
+  ...
+# Subtest: G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+ok 6 - G18 captured transactional catalog remains compatible and E1a requires marketing offerClass
+  ---
+  duration_ms: 2.380417
+  type: 'test'
+  ...
+# Subtest: R1 pre-upgrade transactional snapshot accepts identical upstream
+ok 7 - R1 pre-upgrade transactional snapshot accepts identical upstream
+  ---
+  duration_ms: 82.293834
+  type: 'test'
+  ...
+# Subtest: R2 pre-upgrade marketing snapshot loads while fresh marketing stays strict
+ok 8 - R2 pre-upgrade marketing snapshot loads while fresh marketing stays strict
+  ---
+  duration_ms: 53.984
+  type: 'test'
+  ...
+# Subtest: R4 legacy snapshot still refuses real title meaning change
+ok 9 - R4 legacy snapshot still refuses real title meaning change
+  ---
+  duration_ms: 27.40275
+  type: 'test'
+  ...
+# Subtest: R4 legacy snapshot still refuses real hash meaning change
+ok 10 - R4 legacy snapshot still refuses real hash meaning change
+  ---
+  duration_ms: 27.441042
+  type: 'test'
+  ...
+# Subtest: stored migration rejects null-class without network or writes
+ok 11 - stored migration rejects null-class without network or writes
+  ---
+  duration_ms: 24.708041
+  type: 'test'
+  ...
+# Subtest: stored migration rejects unknown-class without network or writes
+ok 12 - stored migration rejects unknown-class without network or writes
+  ---
+  duration_ms: 22.559125
+  type: 'test'
+  ...
+# Subtest: stored migration rejects extra-field without network or writes
+ok 13 - stored migration rejects extra-field without network or writes
+  ---
+  duration_ms: 23.269667
+  type: 'test'
+  ...
+# Subtest: stored migration rejects bad-title without network or writes
+ok 14 - stored migration rejects bad-title without network or writes
+  ---
+  duration_ms: 23.058167
+  type: 'test'
+  ...
+# Subtest: stored migration rejects bad-lifecycle without network or writes
+ok 15 - stored migration rejects bad-lifecycle without network or writes
+  ---
+  duration_ms: 25.58875
+  type: 'test'
+  ...
+# Subtest: stored migration rejects bad-hash without network or writes
+ok 16 - stored migration rejects bad-hash without network or writes
+  ---
+  duration_ms: 21.8805
+  type: 'test'
+  ...
+# Subtest: stored migration rejects bad-absence without network or writes
+ok 17 - stored migration rejects bad-absence without network or writes
+  ---
+  duration_ms: 21.803834
+  type: 'test'
+  ...
+# Subtest: stored migration rejects foreign-practice without network or writes
+ok 18 - stored migration rejects foreign-practice without network or writes
+  ---
+  duration_ms: 23.128292
+  type: 'test'
+  ...
+# Subtest: G18 schema drift tripwire requires explicit VisionForge compatibility assessment
+ok 19 - G18 schema drift tripwire requires explicit VisionForge compatibility assessment
+  ---
+  duration_ms: 0.235
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1054.3725

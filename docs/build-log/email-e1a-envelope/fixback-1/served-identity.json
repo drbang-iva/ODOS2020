@@ -1,0 +1,24 @@
+{
+  "root": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+  "head": "b2d706a1b3286e44edf5be29596e739a4602e8da",
+  "dirty": true,
+  "mcpHash": "ba3f7395f46976506583975ab8de6a41cae4f49f3979b23ec95888201721dbaf",
+  "caddySourceHash": "556758e5c791f250348bab3744fca3bb855a2137dbfeeb983ad5a6f688241ac3",
+  "servedAssets": {
+    "/assets/index-eESeQNkv.js": "2b9968da3f7d298e9d261fc2d4dbaa7806f0243cf9eb7ee4a3e40b27a43ec916",
+    "/assets/index-DF84U2Dz.css": "9ae30a7aac6735d2220cd62fdf6da90190f414fbd6eb303d8882c44c2b5782be"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 32190,
+    "medplum": 32103,
+    "postgres": 29433,
+    "redis": 30380,
+    "mcp": 27334,
+    "proxy": 27335,
+    "control": 27336
+  },
+  "project": "odos-email-e1a-proof",
+  "mcpPid": 45888,
+  "caddyPid": 45901
+}

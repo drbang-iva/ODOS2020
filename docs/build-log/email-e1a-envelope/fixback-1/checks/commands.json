@@ -1,0 +1,44 @@
+[
+  {
+    "command": "ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:29433/medplum ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "mcp-full.log.gz"
+  },
+  {
+    "command": "npm --prefix ui test",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "ui-full.log.gz"
+  },
+  {
+    "command": "npm --prefix mcp run build",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "mcp-build.log"
+  },
+  {
+    "command": "npm --prefix ui run build",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "ui-build.log"
+  },
+  {
+    "command": "npm run typecheck:scripts",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "scripts-typecheck.log"
+  },
+  {
+    "command": "npm run preflight",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "preflight.log"
+  },
+  {
+    "command": "node .claude/skills/tier0-census/scripts/check-proxy-coverage.mjs",
+    "cwd": "/Users/ericr.bang/.codex/worktrees/email-e1a-envelope/ODOS2020",
+    "exit": 0,
+    "log": "proxy-census.log"
+  }
+]

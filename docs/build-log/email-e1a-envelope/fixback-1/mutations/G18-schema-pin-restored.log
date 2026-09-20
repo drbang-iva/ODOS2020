@@ -1,0 +1,22 @@
+cwd: /private/tmp/odos-email-e1a-fixback-proof/mcp
+command: ["npm", "test", "--", "--test-name-pattern=G18 schema drift", "tests/visionforgeEducationCatalog.test.ts"]
+
+> odos-mcp@0.1.0 test
+> node scripts/run-tests.mjs --test-name-pattern=G18 schema drift tests/visionforgeEducationCatalog.test.ts
+
+TAP version 13
+# Subtest: G18 schema drift tripwire requires explicit VisionForge compatibility assessment
+ok 1 - G18 schema drift tripwire requires explicit VisionForge compatibility assessment
+  ---
+  duration_ms: 0.620958
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 179.240375
