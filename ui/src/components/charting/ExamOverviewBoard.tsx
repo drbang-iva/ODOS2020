@@ -101,6 +101,7 @@ export interface ExamOverviewProjection {
   encounterReference: string;
   patientReference: string;
   examScope?: string;
+  sectionsOpen?: string[];
   historySummary?: string;
   findings: ExamOverviewFindingProjection[];
   sections: ExamOverviewSectionProjection[];
@@ -153,7 +154,7 @@ export function ExamOverviewBoard({ projection, editorEntries, activeEditorId, o
     groupsBySheetSection.set(sectionKey, [...(groupsBySheetSection.get(sectionKey) ?? []), group]);
   }
   const traceBySectionKey = new Map(projection.completeness.trace.map(row => [row.sectionKey, row]));
-  const opened = new Set([...openedEditorIds, ...(activeEditorId ? [activeEditorId] : [])]);
+  const opened = new Set([...(projection.sectionsOpen ?? []), ...openedEditorIds, ...(activeEditorId ? [activeEditorId] : [])]);
   const collapsed = new Set(viewState.collapsed);
   const shelved = new Set(viewState.shelved);
   const saved = new Set(savedEditorIds);
@@ -659,6 +660,7 @@ export function isExamOverviewProjection(value: unknown): value is ExamOverviewP
   return typeof value.encounterReference === "string" &&
     typeof value.patientReference === "string" &&
     optionalString(value.examScope) &&
+    (value.sectionsOpen === undefined || (Array.isArray(value.sectionsOpen) && value.sectionsOpen.every(key => typeof key === "string"))) &&
     optionalString(value.historySummary) &&
     Array.isArray(value.findings) && value.findings.every(isFindingProjection) &&
     Array.isArray(value.sections) && value.sections.every(isSectionProjection) &&

@@ -19,6 +19,10 @@ import type {
 } from "@medplum/fhirtypes";
 import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestation-policy-urls.js";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
+import { FhirFollowUpProfileStore } from "./follow-up-profile-store.js";
+import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
+import { parseDiagnosisIdentifier } from "./diagnosis-identifier.js";
+import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 import { FhirEncounterExamScopeStore } from "./exam-scope-store.js";
 import { searchAll } from "../fhir-search.js";
 import { encounterDiagnosisProblemStatus } from "../fhir/condition.js";
@@ -45,8 +49,8 @@ export interface ExamOverviewFhirClient {
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
-  create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
-  update<T extends Basic | Encounter>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  create<T extends Resource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
 }
 
 export interface ExamOverviewEndpointDeps {
@@ -84,13 +88,12 @@ export async function handleExamOverviewRequest(
     }
     const encounterReference = `Encounter/${encounterId}`;
     const serviceFhir = deps.serviceFhir ?? staff.fhir;
-    const [definitions, currentObservations, patientObservations, conditions, scope, complaintDefinitions, complaints] =
+    const [definitions, currentObservations, patientObservations, conditions, complaintDefinitions, complaints] =
       await Promise.all([
         deps.findingDefinitions(),
         searchAll<Observation>(staff.fhir, "Observation", { encounter: encounterReference }),
         searchAll<Observation>(staff.fhir, "Observation", { subject: patientReference }),
         searchAll<Condition>(staff.fhir, "Condition", { encounter: encounterReference }),
-        new FhirEncounterExamScopeStore(serviceFhir).get(encounterId),
         new FhirComplaintDefinitionStore(staff.fhir).list(),
         new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId),
       ]);
@@ -100,6 +103,33 @@ export async function handleExamOverviewRequest(
     const encounterConditions = conditions.filter((condition) =>
       condition.subject.reference === patientReference
     );
+    const scopeStore = new FhirEncounterExamScopeStore(serviceFhir);
+    let scope = await scopeStore.get(encounterId);
+    if (!scope.versionId) {
+      try {
+        scope = await scopeStore.shapeIfAbsent(encounterId, { reference: staff.staffReference }, async () => {
+          const [profiles, catalog] = await Promise.all([
+            new FhirFollowUpProfileStore(serviceFhir).list(),
+            new FhirDiagnosisCatalogStore(serviceFhir).list(),
+          ]);
+          const normalizeFamily = (value: string) => value.trim().toLowerCase().replace(/[-_]+/g, " ");
+          const families = new Set(encounterConditions.flatMap(condition => {
+            if (condition.verificationStatus?.coding?.some(coding => ["entered-in-error", "refuted"].includes(coding.code ?? ""))) return [];
+            const identifier = condition.identifier?.find(row => row.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
+            const key = parseDiagnosisIdentifier(identifier, encounterId).diagnosisKey;
+            const diagnosis = catalog.find(row => row.stableKey === key);
+            return diagnosis ? [normalizeFamily(diagnosis.clinicalFamily)] : [];
+          }));
+          return profiles.filter(profile => profile.active && profile.matchesDiagnosisFamilies.some(family => families.has(normalizeFamily(family))));
+        });
+      } catch (error) {
+        // Opening the board must not depend on bookkeeping persistence.
+        const status = errorStatus(error);
+        if (status === 409 || status === 412) {
+          try { scope = await scopeStore.get(encounterId); } catch { /* Keep this request unshaped if confirmation is unavailable. */ }
+        }
+      }
+    }
     const sharedEvidence = await loadOverviewFindingEvidence(staff.fhir, patientReference, encounterReference, definitions);
     const homes = new Map(sharedEvidence.projection.currentFacts.flatMap(f=>f.contributors.map(c=>[c.reference,f.homes] as const)));
     const linkedConditions = encounterConditions.map(condition=>({...condition,evidence:[...(condition.evidence ?? []),{detail:[...homes].filter(([,refs])=>refs.includes(`Condition/${condition.id}`)).map(([reference])=>({reference}))}]}));
@@ -120,6 +150,7 @@ export async function handleExamOverviewRequest(
       encounterReference,
       patientReference,
       examScope: scope.examScope,
+      ...(scope.sectionsOpen ? { sectionsOpen: scope.sectionsOpen } : {}),
       definitions,
       currentObservations: current,
       sharedProjection: sharedEvidence.projection,

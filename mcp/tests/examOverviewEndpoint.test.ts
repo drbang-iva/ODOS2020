@@ -59,6 +59,7 @@ test("exam overview requires chart read access before touching FHIR", async () =
 
 test("derived completeness and prior change survive a fresh reload with zero clinical writes", async () => {
   const resources: Resource[] = [
+    legacyScope(),
     encounter(),
     ...visitTypeContext(),
     historyFinding("history-current", "e1", "2026-08-16T12:00:00.000Z"),
@@ -763,8 +764,9 @@ class OverviewMemoryFhir implements ExamOverviewFhirClient {
 
   async create<T extends Resource>(resource: T): Promise<T> {
     this.writeCount += 1;
-    this.resources.push(structuredClone(resource));
-    return structuredClone(resource);
+    const persisted = { ...structuredClone(resource), id: resource.id ?? `resource-${this.resources.length}`, meta: { ...resource.meta, versionId: "1" } };
+    this.resources.push(persisted);
+    return structuredClone(persisted);
   }
 
   async update<T extends Resource>(
@@ -836,7 +838,7 @@ test("S2a G1 G3 scheduling categories cannot change default comprehensive conten
   for (const category of ["exams", "medical"]) {
     const e = encounter();
     e.type = [{ coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: category }] }];
-    const fhir = new HistoryWorkflowFhir([e]);
+    const fhir = new HistoryWorkflowFhir([e, legacyScope()]);
     const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
     assert.equal(result.status, 200);
     const p = result.body as ExamOverviewProjection;
@@ -888,4 +890,71 @@ test("S2a G7 projection path cannot import or use the scheduling category", () =
     const source = readFileSync(new URL(`../src/clinical-graph/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /resolveVisitTypeCategory|visitTypeCategoryId|clinic-summary/);
   }
+});
+
+test("S3b1 overview freezes the catalogue profile selected by encounter diagnosis family", async () => {
+  const { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } = await import("../src/clinical-graph/diagnosis-pick-endpoint.js");
+  const fhir = new HistoryWorkflowFhir([encounter(), {
+    resourceType: "Condition", id: "shape-diagnosis", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: "e1::ocular_hypertension::bilateral" }],
+  }]);
+  const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.ok((result.body as ExamOverviewProjection).sectionsOpen?.includes("iop"));
+  const saved = fhir.resources.find(r => r.resourceType === "Basic" && r.identifier?.some(i => i.system === "urn:odos:encounter-exam-scope")) as Basic;
+  assert.ok(saved);
+  assert.deepEqual(JSON.parse(saved.extension![0].valueString!).profilesApplied, [{ profileKey: "glaucoma", version: 1, versionId: null }]);
+  assert.deepEqual(await handleExamOverviewRequest(deps(fhir, "provider"), request()), result);
+});
+
+function legacyScope(): Basic {
+  return { resourceType: "Basic", id: "legacy-scope", meta: { versionId: "1" },
+    identifier: [{ system: "urn:odos:encounter-exam-scope", value: "e1" }],
+    code: { coding: [{ system: "urn:odos:encounter-exam-scope", code: "exam-scope" }] },
+    subject: { reference: "Encounter/e1" }, author: { reference: "Practitioner/doc" },
+    extension: [{ url: "urn:odos:encounter-exam-scope:value", valueString: JSON.stringify({ examScope: "comprehensive", setAt: "2026-09-19T12:00:00Z" }) }],
+  };
+}
+
+test("S3b1 G8 an unconfirmed shape create serves the unshaped overview and retries next open", async () => {
+  const fhir = new OverviewMemoryFhir([encounter()]);
+  let creates = 0;
+  fhir.create = async resource => { creates++; return resource; };
+  const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const projection = result.body as ExamOverviewProjection;
+  assert.equal(projection.sectionsOpen, undefined);
+  assert.equal(projection.examScope, "comprehensive");
+  assert.equal(projection.completeness.requiredSectionCount, 6);
+  const legacy = new OverviewMemoryFhir([encounter(), legacyScope()]);
+  assert.deepEqual(result, await handleExamOverviewRequest(deps(legacy, "provider"), request()));
+  assert.equal((await handleExamOverviewRequest(deps(fhir, "provider"), request())).status, 200);
+  assert.equal(creates, 2);
+});
+
+for (const status of [409, 412]) {
+  test(`S3b1 conflict ${status} re-reads the winner without a second write`, async () => {
+    const fhir = new HistoryWorkflowFhir([encounter()]);
+    let creates = 0;
+    fhir.create = async () => {
+      creates++;
+      const winner = legacyScope();
+      winner.extension![0].valueString = JSON.stringify({ examScope: "office-visit", setAt: "2026-09-19T12:00:00Z", shapedAt: "2026-09-19T12:00:00Z", profilesApplied: [], sectionsOpen: ["pachymetry"] });
+      fhir.resources.push(winner);
+      throw Object.assign(new Error("another request won"), { status });
+    };
+    const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    assert.deepEqual((result.body as ExamOverviewProjection).sectionsOpen, ["pachymetry"]);
+    assert.equal((result.body as ExamOverviewProjection).examScope, "office-visit");
+    assert.equal(creates, 1);
+  });
+}
+
+test("S3b1 failed bookkeeping write serves the unchanged overview", async () => {
+  const fhir = new OverviewMemoryFhir([encounter()]);
+  fhir.create = async () => { throw Object.assign(new Error("write unavailable"), { status: 503 }); };
+  const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal((result.body as ExamOverviewProjection).sectionsOpen, undefined);
 });
