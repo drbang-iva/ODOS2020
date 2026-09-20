@@ -1,0 +1,149 @@
+{
+  "records": [
+    {
+      "label": "1440-original",
+      "rowCount": 1,
+      "versionId": "f3251abb-4efd-47c3-a1f7-d0329652bcc2",
+      "value": {
+        "examScope": "office-visit",
+        "setAt": "2026-09-20T22:40:41.344Z",
+        "profilesApplied": [
+          {
+            "profileKey": "glaucoma",
+            "version": 1,
+            "versionId": "c77da908-0780-4151-a36f-01e4524648d9"
+          }
+        ],
+        "sectionsOpen": [
+          "hpi",
+          "va",
+          "pupils",
+          "cvf",
+          "iop",
+          "dilation",
+          "cup-disc",
+          "ocular-health:posterior:fundus",
+          "imaging",
+          "assessment"
+        ],
+        "shapedAt": "2026-09-20T22:40:41.190Z",
+        "writeToken": "d1be0b7c-8035-4183-9712-15dfe0498139"
+      }
+    },
+    {
+      "label": "1440-new",
+      "rowCount": 1,
+      "versionId": "cd01c697-dc75-4e17-9a5d-08b6845343ca",
+      "value": {
+        "examScope": "office-visit",
+        "setAt": "2026-09-20T22:40:44.007Z",
+        "profilesApplied": [
+          {
+            "profileKey": "glaucoma",
+            "version": 1,
+            "versionId": "55fd3516-b9bc-4b2e-9a3b-0094ce620fc4"
+          }
+        ],
+        "sectionsOpen": [
+          "hpi",
+          "va",
+          "pupils",
+          "cvf",
+          "iop",
+          "dilation",
+          "cup-disc",
+          "ocular-health:posterior:fundus",
+          "imaging",
+          "assessment",
+          "pachymetry"
+        ],
+        "shapedAt": "2026-09-20T22:40:43.866Z",
+        "writeToken": "7abb26ea-3243-421e-b568-514cbc3ad944"
+      }
+    },
+    {
+      "label": "1440-legacy",
+      "rowCount": 1,
+      "versionId": "cdbd3303-9366-4b9d-ba56-759b9acb9e83",
+      "value": {
+        "examScope": "office-visit",
+        "setAt": "2026-09-19T12:00:00Z"
+      }
+    },
+    {
+      "label": "390-original",
+      "rowCount": 1,
+      "versionId": "20faff97-4bc2-403c-a0cf-01310a6185b9",
+      "value": {
+        "examScope": "office-visit",
+        "setAt": "2026-09-20T22:40:48.868Z",
+        "profilesApplied": [
+          {
+            "profileKey": "glaucoma",
+            "version": 1,
+            "versionId": "6e08c6b5-1b3d-4d1a-a57d-bfa7892d569a"
+          }
+        ],
+        "sectionsOpen": [
+          "hpi",
+          "va",
+          "pupils",
+          "cvf",
+          "iop",
+          "dilation",
+          "cup-disc",
+          "ocular-health:posterior:fundus",
+          "imaging",
+          "assessment"
+        ],
+        "shapedAt": "2026-09-20T22:40:48.731Z",
+        "writeToken": "c0391734-4925-4f67-8335-41d736580b96"
+      }
+    },
+    {
+      "label": "390-new",
+      "rowCount": 1,
+      "versionId": "39e610c2-cde1-4122-870d-af80c71e59cf",
+      "value": {
+        "examScope": "office-visit",
+        "setAt": "2026-09-20T22:40:51.459Z",
+        "profilesApplied": [
+          {
+            "profileKey": "glaucoma",
+            "version": 1,
+            "versionId": "223fca2e-0bd6-47ac-b3f8-e6e11a05dca4"
+          }
+        ],
+        "sectionsOpen": [
+          "hpi",
+          "va",
+          "pupils",
+          "cvf",
+          "iop",
+          "dilation",
+          "cup-disc",
+          "ocular-health:posterior:fundus",
+          "imaging",
+          "assessment",
+          "pachymetry"
+        ],
+        "shapedAt": "2026-09-20T22:40:51.320Z",
+        "writeToken": "49fed9a1-4ff7-4ad0-a94b-2f070073bf4c"
+      }
+    },
+    {
+      "label": "390-legacy",
+      "rowCount": 1,
+      "versionId": "5e4af804-5a60-456a-92c6-e8384bb45c31",
+      "value": {
+        "examScope": "office-visit",
+        "setAt": "2026-09-19T12:00:00Z"
+      }
+    }
+  ],
+  "concurrentCreate": {
+    "rowCount": 1,
+    "fulfilled": 1,
+    "rejected": 1
+  }
+}

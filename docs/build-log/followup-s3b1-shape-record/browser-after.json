@@ -1,0 +1,200 @@
+[
+  {
+    "width": 1440,
+    "legacyLines": [
+      "hpi",
+      "assessment",
+      "prescription"
+    ],
+    "legacyUnchanged": true,
+    "original": {
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": "c77da908-0780-4151-a36f-01e4524648d9"
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment"
+      ],
+      "shapedAt": "2026-09-20T22:40:41.190Z",
+      "examScope": "office-visit",
+      "versionId": "f3251abb-4efd-47c3-a1f7-d0329652bcc2",
+      "setBy": {
+        "reference": "Practitioner/900890a5-dcb6-4d82-b11b-7406a069bb32",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-20T22:40:41.344Z",
+      "canWrite": true
+    },
+    "newScope": {
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": "55fd3516-b9bc-4b2e-9a3b-0094ce620fc4"
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment",
+        "pachymetry"
+      ],
+      "shapedAt": "2026-09-20T22:40:43.866Z",
+      "examScope": "office-visit",
+      "versionId": "cd01c697-dc75-4e17-9a5d-08b6845343ca",
+      "setBy": {
+        "reference": "Practitioner/900890a5-dcb6-4d82-b11b-7406a069bb32",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-20T22:40:44.007Z",
+      "canWrite": true
+    },
+    "originalLines": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "assessment",
+      "prescription",
+      "imaging"
+    ],
+    "newLines": [
+      "hpi",
+      "pachymetry",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "assessment",
+      "prescription",
+      "imaging"
+    ],
+    "editAndRetireFrozen": true,
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "legacyLines": [
+      "hpi",
+      "assessment",
+      "prescription"
+    ],
+    "legacyUnchanged": true,
+    "original": {
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": "6e08c6b5-1b3d-4d1a-a57d-bfa7892d569a"
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment"
+      ],
+      "shapedAt": "2026-09-20T22:40:48.731Z",
+      "examScope": "office-visit",
+      "versionId": "20faff97-4bc2-403c-a0cf-01310a6185b9",
+      "setBy": {
+        "reference": "Practitioner/900890a5-dcb6-4d82-b11b-7406a069bb32",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-20T22:40:48.868Z",
+      "canWrite": true
+    },
+    "newScope": {
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": "223fca2e-0bd6-47ac-b3f8-e6e11a05dca4"
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment",
+        "pachymetry"
+      ],
+      "shapedAt": "2026-09-20T22:40:51.320Z",
+      "examScope": "office-visit",
+      "versionId": "39e610c2-cde1-4122-870d-af80c71e59cf",
+      "setBy": {
+        "reference": "Practitioner/900890a5-dcb6-4d82-b11b-7406a069bb32",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-20T22:40:51.459Z",
+      "canWrite": true
+    },
+    "originalLines": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "assessment",
+      "prescription",
+      "imaging"
+    ],
+    "newLines": [
+      "hpi",
+      "pachymetry",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "assessment",
+      "prescription",
+      "imaging"
+    ],
+    "editAndRetireFrozen": true,
+    "pageErrors": []
+  }
+]

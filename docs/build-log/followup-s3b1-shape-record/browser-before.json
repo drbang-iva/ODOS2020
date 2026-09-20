@@ -1,0 +1,20 @@
+[
+  {
+    "width": 1440,
+    "legacyLines": [
+      "hpi",
+      "assessment",
+      "prescription"
+    ],
+    "legacyUnchanged": true
+  },
+  {
+    "width": 390,
+    "legacyLines": [
+      "hpi",
+      "assessment",
+      "prescription"
+    ],
+    "legacyUnchanged": true
+  }
+]
