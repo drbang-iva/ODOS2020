@@ -260,3 +260,48 @@ test("S3c2c1b G8 chart.read-only, signed, and unreadable encounters refuse befor
   assert.equal((await compartment.accept()).status, 403);
   assert.equal(compartment.staff.writes.length, 0);
 });
+
+test("S3c2c2a1 G10 a result before Accept leaves the row eligible for Accept", async () => {
+  const { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } = await import("../src/fhir/ophthalmology/codeBindings.js");
+  const { handleFollowUpQueueRequest } = await import("../src/clinical-graph/follow-up-queue-endpoint.js");
+  const h = await acceptFixture();
+  h.staff.resources.push({ resourceType: "Media", id: "photo-1", status: "completed", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+    modality: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: "fundus-photo" }] }, content: { contentType: "image/jpeg", title: "synthetic.jpg" },
+  });
+  const queue = await handleFollowUpQueueRequest({ authenticate: h.deps.authenticate, serviceFhir: h.service as any }, { authHeader: "Bearer synthetic", params: { encounterId: "e1" } });
+  assert.equal(queue.status, 200);
+  assert.equal((queue.body as any).rows[0].state, "for-review");
+  assert.equal((queue.body as any).rows[0].unreviewedResult, true);
+  assert.equal((await h.accept()).status, 200);
+});
+
+test("S3c2c2a1 G12 Accept refuses every ineligible row with 409 and zero new writes", async () => {
+  const { FhirFollowUpDecisionStore } = await import("../src/clinical-graph/follow-up-decision-store.js");
+  const notToday = await acceptFixture();
+  await new FhirFollowUpDecisionStore(notToday.service as any).apply("e1", { orderable: optic.orderable, focus: optic.focus, decision: "not-today" }, actor);
+  const cases: Array<{ name: string; h: Awaited<ReturnType<typeof acceptFixture>>; focus?: string }> = [{ name: "not-today", h: notToday }];
+  const unavailable = await acceptFixture();
+  (unavailable.service.resources.find(row => row.resourceType === "ChargeItemDefinition") as any).status = "retired";
+  cases.push({ name: "unavailable", h: unavailable });
+  const billed = await acceptFixture();
+  assert.equal((await billed.accept()).status, 200);
+  cases.push({ name: "billed", h: billed });
+  const removed = await acceptFixture();
+  assert.equal((await removed.accept()).status, 200);
+  const { handleProcedureChargePatchRequest } = await import("../src/clinical-graph/manual-procedure-charge-endpoint.js");
+  const proposalId = (await removed.charges())[0]!.id;
+  assert.equal((await handleProcedureChargePatchRequest({ authenticate: removed.deps.authenticate }, {
+    authHeader: "Bearer synthetic", params: { encounterId: "e1", proposalId }, body: { state: "removed" },
+  })).status, 200);
+  cases.push({ name: "removed", h: removed });
+  const uncoded = await acceptFixture([optic], false);
+  assert.equal((await uncoded.accept()).status, 200);
+  cases.push({ name: "uncoded", h: uncoded });
+  cases.push({ name: "not-on-visit", h: await acceptFixture(), focus: "retina" });
+  for (const { name, h, focus } of cases) {
+    const before = h.staff.writes.length;
+    const reply = await h.accept(focus ?? "optic nerve");
+    assert.equal(reply.status, 409, name);
+    assert.equal(h.staff.writes.length, before, name);
+  }
+});

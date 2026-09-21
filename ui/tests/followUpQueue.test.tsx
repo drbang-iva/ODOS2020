@@ -241,3 +241,25 @@ test("S3c2c1b G12 stale charge diagnosis shows no selected visit diagnosis", asy
     assert.deepEqual(select.findAllByType("option").map(option => option.props.value), ["", "Condition/macula", "Condition/glaucoma"]);
   } finally { await h.close(); }
 });
+
+test("S3c2c2a1 G14 current Follow-up UI renders additive result fields unchanged", async () => {
+  const baseline = { ...decisionPayload, rows: [
+    { ...decisionPayload.rows[0] },
+    { ...decisionPayload.rows[2] },
+  ] };
+  const augmented = { ...baseline, rows: [
+    { ...baseline.rows[0], unreviewedResult: true },
+    { ...baseline.rows[1], result: {
+      status: "needs-interpretation", items: [{ mediaReference: "Media/photo-1", title: "synthetic.jpg", date: "2026-09-21T15:00:00Z" }], candidates: [],
+    } },
+  ] };
+  const plain = await mounted(async () => Response.json(baseline));
+  let expected: unknown;
+  try { expected = text(plain.renderer.toJSON()); } finally { await plain.close(); }
+  const linked = await mounted(async () => Response.json(augmented));
+  try {
+    assert.equal(text(linked.renderer.toJSON()), expected);
+    assert.equal(linked.renderer.root.findAllByType("li").length, 2);
+    assert.deepEqual(linked.renderer.root.findAllByType("li").map(row => row.findAllByType("button").map(button => button.children.join(""))), [["Not today"], []]);
+  } finally { await linked.close(); }
+});

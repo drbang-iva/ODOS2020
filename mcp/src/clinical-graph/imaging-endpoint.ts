@@ -3,9 +3,11 @@ import type {
   Bundle,
   CodeableConcept,
   DiagnosticReport,
+  Encounter,
   Media,
   Provenance,
   QuestionnaireResponse,
+  ServiceRequest,
 } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
@@ -27,6 +29,7 @@ import {
   referralBinaryId,
 } from "../referral/referral-service.js";
 import type { ClinicalProcedureDefinition } from "./procedure-definition-store.js";
+import { resultKind } from "./follow-up-result-kinds.js";
 
 export const MANUAL_IMAGING_CONTENT_TYPE = "application/vnd.odos.manual-imaging+json";
 export const LONGITUDINAL_IMAGING_CONTENT_TYPE = "application/vnd.odos.longitudinal-imaging+json";
@@ -99,6 +102,7 @@ const MAX_BASE64_LENGTH = Math.ceil(MAX_MANUAL_IMAGING_BYTES / 3) * 4;
 const imagingRequestSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
+  basedOnReference: z.string().regex(/^ServiceRequest\/[A-Za-z0-9.-]+$/).optional(),
   category: z.enum(IMAGING_CATEGORIES),
   interpretation: z.string().trim().max(5000).optional(),
   file: z.object({
@@ -195,6 +199,32 @@ export async function handleImagingCaptureRequest(
     return { status: 400, body: { error: "Imaging files may not exceed 15 MB." } };
   }
 
+  if (parsed.data.basedOnReference) {
+    const fhir = staff.fhir as unknown as {
+      read<T extends Encounter | ServiceRequest>(resourceType: T["resourceType"], id: string): Promise<T>;
+    };
+    const read = async <T extends Encounter | ServiceRequest>(resourceType: T["resourceType"], id: string): Promise<T | { status: number; body: unknown }> => {
+      try { return await fhir.read<T>(resourceType, id); }
+      catch (error) {
+        const status = (error as { status?: number; statusCode?: number }).status ?? (error as { statusCode?: number }).statusCode;
+        if (status === 401 || status === 403) return { status: 403, body: { error: `${resourceType} is outside the caller's patient compartment.` } };
+        if (status === 404 || status === 410) return { status: 404, body: { error: `${resourceType} was not found.` } };
+        return { status: 502, body: { error: "The imaging order could not be loaded." } };
+      }
+    };
+    const encounter = await read<Encounter>("Encounter", parsed.data.encounterReference.slice(10));
+    if ("body" in encounter) return encounter;
+    if (encounter.status === "finished") return { status: 409, body: { error: "Signed encounter cannot be edited." } };
+    const order = await read<ServiceRequest>("ServiceRequest", parsed.data.basedOnReference.slice(15));
+    if ("body" in order) return order;
+    const kind = resultKind(order.code?.text ?? "", order.bodySite?.[0]?.text);
+    if (encounter.subject?.reference !== parsed.data.patientReference || order.status !== "active" ||
+      order.subject?.reference !== parsed.data.patientReference || order.encounter?.reference !== parsed.data.encounterReference ||
+      kind.kind !== "image" || kind.category !== parsed.data.category) {
+      return { status: 409, body: { code: "result-order-mismatch", error: "This imaging result does not match the order." } };
+    }
+  }
+
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const upload = await uploadTrackedBinary(
     deps.binaryAttempts,
@@ -219,6 +249,7 @@ export async function handleImagingCaptureRequest(
           interpretation,
           staff.staffReference,
           recordedAt,
+          parsed.data.basedOnReference,
         ),
         WRITE_HEADERS,
       )
@@ -511,6 +542,7 @@ function buildMedia(
     modality: odosConcept(input.category, CATEGORY_DISPLAY[input.category]),
     subject: reference(input.patientReference),
     encounter: reference(input.encounterReference),
+    ...(input.basedOnReference ? { basedOn: [reference(input.basedOnReference)] } : {}),
     createdDateTime: recordedAt,
     issued: recordedAt,
     operator: reference(staffReference),
@@ -586,7 +618,7 @@ function imagingBodySite(
   };
 }
 
-function imagingCategory(media: Media): ImagingCategory {
+export function imagingCategory(media: Media): ImagingCategory {
   const code = media.modality?.coding?.find((coding) =>
     coding.code && Object.hasOwn(CATEGORY_DISPLAY, coding.code)
   )?.code;
@@ -634,7 +666,7 @@ function attachmentContentUrl(
   return url;
 }
 
-async function searchImagingMedia(
+export async function searchImagingMedia(
   fhir: ImagingFhirClient,
   params: Record<string, string>,
 ): Promise<Media[]> {
@@ -677,7 +709,7 @@ async function readImagingMediaBatch(
   return orderedIds.flatMap((id) => canonicalById.get(id) ?? []);
 }
 
-function isImagingReadSurfaceMedia(media: Media): boolean {
+export function isImagingReadSurfaceMedia(media: Media): boolean {
   if (isLongitudinalMedia(media)) return false;
   const codedImaging = media.modality?.coding?.some((coding) =>
     coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM
@@ -782,6 +814,7 @@ function buildDiagnosticReport(
   interpretation: string,
   staffReference: string,
   recordedAt: string,
+  basedOnReference?: string,
 ): DiagnosticReport {
   return {
     resourceType: "DiagnosticReport",
@@ -789,6 +822,7 @@ function buildDiagnosticReport(
     code: odosConcept("manual-imaging-interpretation", "Manual imaging interpretation"),
     subject: reference(patientReference),
     encounter: reference(encounterReference),
+    ...(basedOnReference ? { basedOn: [reference(basedOnReference)] } : {}),
     effectiveDateTime: recordedAt,
     issued: recordedAt,
     resultsInterpreter: [reference(staffReference)],

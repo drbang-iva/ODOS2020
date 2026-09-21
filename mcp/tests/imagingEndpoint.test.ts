@@ -656,3 +656,82 @@ class TestBinaryAttemptStore implements BinaryAttemptStore {
     return next;
   }
 }
+
+function orderedCapture(options: { encounterStatus?: string; orderStatus?: string; patient?: string; encounter?: string; orderable?: string; focus?: string; readStatus?: number } = {}) {
+  const fixture = deps();
+  const authenticate = fixture.deps.authenticate;
+  fixture.deps.authenticate = async (header) => {
+    const staff = await authenticate(header);
+    if (!staff) return null;
+    const fhir = {
+      ...staff.fhir,
+      read: async (type: string, id: string) => {
+        if (options.readStatus) throw Object.assign(new Error("unreadable"), { status: options.readStatus });
+        if (type === "Encounter") return { resourceType: "Encounter", id, status: options.encounterStatus ?? "in-progress", subject: { reference: "Patient/p1" } };
+        if (type === "ServiceRequest") return {
+          resourceType: "ServiceRequest", id, status: options.orderStatus ?? "active", intent: "plan",
+          subject: { reference: options.patient ?? "Patient/p1" }, encounter: { reference: options.encounter ?? "Encounter/e1" },
+          code: { text: options.orderable ?? "visual-field-threshold" },
+          ...(options.focus ? { bodySite: [{ text: options.focus }] } : {}),
+        };
+        throw new Error("Unexpected read");
+      },
+    } as unknown as ImagingFhirClient;
+    return { ...staff, fhir };
+  };
+  return fixture;
+}
+
+test("S3c2c2a1 G2 capture refuses invalid order links before Binary or Media writes", async () => {
+  for (const options of [
+    { orderStatus: "revoked" }, { patient: "Patient/other" }, { encounter: "Encounter/other" },
+    { orderable: "gonioscopy" }, { orderable: "erg" },
+  ]) {
+    const h = orderedCapture(options);
+    const reply = await handleImagingCaptureRequest(h.deps, { authHeader: AUTH, body: { ...BODY, basedOnReference: "ServiceRequest/sr1" } });
+    assert.equal(reply.status, 409, JSON.stringify(options));
+    assert.equal((reply.body as { code?: string }).code, "result-order-mismatch");
+    assert.equal(h.binaryBodies.length, 0);
+    assert.equal(h.created.length, 0);
+  }
+  const mismatch = orderedCapture();
+  const reply = await handleImagingCaptureRequest(mismatch.deps, { authHeader: AUTH, body: { ...BODY, category: "oct", basedOnReference: "ServiceRequest/sr1" } });
+  assert.equal(reply.status, 409);
+  assert.equal((reply.body as { code?: string }).code, "result-order-mismatch");
+  assert.equal(mismatch.binaryBodies.length, 0);
+  assert.equal(mismatch.created.length, 0);
+  for (const readStatus of [401, 403, 404, 410]) {
+    const h = orderedCapture({ readStatus });
+    const denied = await handleImagingCaptureRequest(h.deps, { authHeader: AUTH, body: { ...BODY, basedOnReference: "ServiceRequest/sr1" } });
+    assert.equal(denied.status, readStatus < 404 ? 403 : 404);
+    assert.equal(h.binaryBodies.length, 0);
+  }
+});
+
+test("S3c2c2a1 G3 capture writes basedOn to both resources only for an explicit order", async () => {
+  const linked = orderedCapture();
+  const saved = await handleImagingCaptureRequest(linked.deps, { authHeader: AUTH, body: { ...BODY, interpretation: "Normal", basedOnReference: "ServiceRequest/sr1" } });
+  assert.equal(saved.status, 200);
+  const media = linked.created[0]!.resource as Media;
+  const report = linked.created[1]!.resource as DiagnosticReport;
+  assert.deepEqual(media.basedOn, [{ reference: "ServiceRequest/sr1" }]);
+  assert.deepEqual(report.basedOn, [{ reference: "ServiceRequest/sr1" }]);
+  const plain = deps();
+  const original = await handleImagingCaptureRequest(plain.deps, { authHeader: AUTH, body: { ...BODY, interpretation: "Normal" } });
+  assert.equal(original.status, 200);
+  const { basedOn: _mediaLink, ...unlinkedMedia } = media;
+  const { basedOn: _reportLink, ...unlinkedReport } = report;
+  assert.deepEqual(unlinkedMedia, plain.created[0]!.resource);
+  assert.deepEqual(unlinkedReport, plain.created[1]!.resource);
+  assert.equal(Object.hasOwn(plain.created[0]!.resource, "basedOn"), false);
+  assert.equal(Object.hasOwn(plain.created[1]!.resource, "basedOn"), false);
+});
+
+test("S3c2c2a1 G4 signed encounter refuses an ordered capture before upload", async () => {
+  const h = orderedCapture({ encounterStatus: "finished" });
+  const reply = await handleImagingCaptureRequest(h.deps, { authHeader: AUTH, body: { ...BODY, basedOnReference: "ServiceRequest/sr1" } });
+  assert.equal(reply.status, 409);
+  assert.deepEqual(reply.body, { error: "Signed encounter cannot be edited." });
+  assert.equal(h.binaryBodies.length, 0);
+  assert.equal(h.created.length, 0);
+});
