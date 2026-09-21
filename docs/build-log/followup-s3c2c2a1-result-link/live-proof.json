@@ -1,0 +1,184 @@
+[
+  {
+    "step": "1",
+    "row": {
+      "orderable": "visual-field-threshold",
+      "label": "Visual field",
+      "sources": [
+        "from the Glaucoma / glaucoma suspect shape"
+      ],
+      "state": "already-ordered",
+      "actionIds": [
+        "184bd529-5d5e-43aa-887a-bf0b1d5e784c"
+      ],
+      "charge": {
+        "status": "billed",
+        "proposalId": "manual-procedure-charge:9227e0c2-fb39-423e-ab26-03371ef6ae19"
+      },
+      "result": {
+        "status": "interpreted",
+        "items": [
+          {
+            "mediaReference": "Media/1f5d4544-fc42-4857-936c-61021c25433d",
+            "title": "synthetic.jpg",
+            "date": "2026-09-21T22:16:18.485Z"
+          }
+        ],
+        "candidates": []
+      }
+    }
+  },
+  {
+    "step": "2 candidate",
+    "retina": {
+      "orderable": "fundus-photography",
+      "focus": "retina",
+      "label": "Retina photos",
+      "sources": [
+        "from the Macular degeneration / retina shape"
+      ],
+      "state": "already-ordered",
+      "actionIds": [
+        "77c7b811-d5de-40fa-a48f-5e015507cdee"
+      ],
+      "charge": {
+        "status": "billed",
+        "proposalId": "manual-procedure-charge:7333a345-293e-4733-9212-bf0fe6267979"
+      },
+      "result": {
+        "status": "none",
+        "items": [],
+        "candidates": [
+          {
+            "mediaReference": "Media/53cc0236-ab97-4cd6-9be0-8aa731cdcfb9",
+            "title": "synthetic.jpg",
+            "date": "2026-09-21T22:16:18.545Z"
+          }
+        ]
+      }
+    },
+    "optic": {
+      "orderable": "fundus-photography",
+      "focus": "optic nerve",
+      "label": "Optic nerve photos",
+      "sources": [
+        "from the Glaucoma / glaucoma suspect shape"
+      ],
+      "state": "for-review",
+      "unreviewedResult": true
+    }
+  },
+  {
+    "step": "2 link",
+    "retina": {
+      "orderable": "fundus-photography",
+      "focus": "retina",
+      "label": "Retina photos",
+      "sources": [
+        "from the Macular degeneration / retina shape"
+      ],
+      "state": "already-ordered",
+      "actionIds": [
+        "77c7b811-d5de-40fa-a48f-5e015507cdee"
+      ],
+      "charge": {
+        "status": "billed",
+        "proposalId": "manual-procedure-charge:7333a345-293e-4733-9212-bf0fe6267979"
+      },
+      "result": {
+        "status": "needs-interpretation",
+        "items": [
+          {
+            "mediaReference": "Media/53cc0236-ab97-4cd6-9be0-8aa731cdcfb9",
+            "title": "synthetic.jpg",
+            "date": "2026-09-21T22:16:18.545Z"
+          }
+        ],
+        "candidates": []
+      }
+    },
+    "optic": {
+      "orderable": "fundus-photography",
+      "focus": "optic nerve",
+      "label": "Optic nerve photos",
+      "sources": [
+        "from the Glaucoma / glaucoma suspect shape"
+      ],
+      "state": "for-review"
+    }
+  },
+  {
+    "step": "2 unlink",
+    "retina": {
+      "orderable": "fundus-photography",
+      "focus": "retina",
+      "label": "Retina photos",
+      "sources": [
+        "from the Macular degeneration / retina shape"
+      ],
+      "state": "already-ordered",
+      "actionIds": [
+        "77c7b811-d5de-40fa-a48f-5e015507cdee"
+      ],
+      "charge": {
+        "status": "billed",
+        "proposalId": "manual-procedure-charge:7333a345-293e-4733-9212-bf0fe6267979"
+      },
+      "result": {
+        "status": "none",
+        "items": [],
+        "candidates": [
+          {
+            "mediaReference": "Media/53cc0236-ab97-4cd6-9be0-8aa731cdcfb9",
+            "title": "synthetic.jpg",
+            "date": "2026-09-21T22:16:18.545Z"
+          }
+        ]
+      }
+    },
+    "optic": {
+      "orderable": "fundus-photography",
+      "focus": "optic nerve",
+      "label": "Optic nerve photos",
+      "sources": [
+        "from the Glaucoma / glaucoma suspect shape"
+      ],
+      "state": "for-review",
+      "unreviewedResult": true
+    }
+  },
+  {
+    "step": "3 PDF",
+    "status": 200,
+    "mediaReference": "Media/61509904-2c0e-4bf8-abb4-65939f1b8ab7",
+    "basedOn": [
+      {
+        "reference": "ServiceRequest/ee6feae4-0012-487e-a2cf-dcd4433ff543"
+      }
+    ],
+    "contentType": "application/pdf"
+  },
+  {
+    "step": "4 mismatch",
+    "status": 409,
+    "body": {
+      "code": "result-order-mismatch",
+      "error": "This imaging result does not match the order."
+    },
+    "before": {
+      "Binary": 8,
+      "Media": 8
+    },
+    "after": {
+      "Binary": 8,
+      "Media": 8
+    }
+  },
+  {
+    "step": "4 signed",
+    "status": 409,
+    "body": {
+      "error": "Signed encounter cannot be edited."
+    }
+  }
+]

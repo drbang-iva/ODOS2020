@@ -1,0 +1,324 @@
+{
+  "base-mcp": [
+    "# tests 6268",
+    "# pass 6213",
+    "# fail 0",
+    "# skipped 55"
+  ],
+  "base-ui": [
+    "# tests 1844",
+    "# pass 1844",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "focused-mcp": [
+    "# tests 79",
+    "# pass 79",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "focused-ui": [
+    "# tests 15",
+    "# pass 15",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g1-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g1-mutation-red": [
+    "# tests 3",
+    "# pass 2",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g1-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g1-restored-green": [
+    "# tests 3",
+    "# pass 3",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g10-g12-green-try1": [
+    "# tests 2",
+    "# pass 2",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g10-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g10-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g11-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g11-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g12-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g12a-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g12b-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g13-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g13-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g13-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g13-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g14-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g14-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g14-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g2-g4-green": [
+    "# tests 3",
+    "# pass 3",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g2-g4-red": [
+    "# tests 3",
+    "# pass 0",
+    "# fail 3",
+    "# skipped 0"
+  ],
+  "g2-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g2-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g2b-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g2b-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g3-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g3-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g4-g11-green-try1": [
+    "# tests 9",
+    "# pass 9",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g4-g11-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g4-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g4-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g5-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g5-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g6-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g6-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g7-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g7-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g7-unlink-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g7-unlink-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g8-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g8-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "g9-mutation-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "g9-restored-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "head-mcp": [
+    "# tests 6282",
+    "# pass 6227",
+    "# fail 0",
+    "# skipped 55"
+  ],
+  "head-ui": [
+    "# tests 1845",
+    "# pass 1845",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "live-integration": [
+    "# tests 12",
+    "# pass 11",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "r1-live-integration": [
+    "# tests 12",
+    "# pass 12",
+    "# fail 0",
+    "# skipped 0",
+    "# tests 218",
+    "# pass 218",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r2-live-authz-configured": [
+    "# tests 78",
+    "# pass 78",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r2-live-authz": [
+    "# tests 35",
+    "# pass 28",
+    "# fail 7",
+    "# skipped 0"
+  ]
+}
