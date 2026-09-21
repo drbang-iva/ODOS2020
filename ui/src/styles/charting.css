@@ -2598,3 +2598,16 @@
     grid-column: 1 / 13;
   }
 }
+
+.odos-follow-up-queue { padding: 1rem; }
+.odos-follow-up-queue h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+.odos-follow-up-queue ul { list-style: none; margin: 0; padding: 0; }
+.odos-follow-up-queue li { padding: 1rem 0; border-bottom: 1px solid var(--border, #dce2e7); }
+.odos-follow-up-queue-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.odos-follow-up-queue-heading h3 { margin: 0; font-size: 1rem; }
+.odos-follow-up-queue-state { border-radius: 1rem; padding: .2rem .6rem; font-size: .8rem; font-weight: 600; }
+.odos-follow-up-queue-state[data-state="for-review"] { color: #704a00; background: #fff2cb; }
+.odos-follow-up-queue-state[data-state="already-ordered"] { color: #205547; background: #e2f3ec; }
+.odos-follow-up-queue-state[data-state="unavailable"] { color: #555d66; background: #edf0f3; }
+.odos-follow-up-queue-source { margin: .4rem 0 0; color: var(--muted, #626b75); font-size: .85rem; }
+.odos-follow-up-queue-reason { margin: .5rem 0 0; font-size: .9rem; }

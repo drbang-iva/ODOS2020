@@ -1,0 +1,62 @@
+{
+  "syntheticOnly": true,
+  "results": [
+    {
+      "width": 1440,
+      "visit": "glaucoma",
+      "states": [
+        "For review",
+        "For review",
+        "Already ordered"
+      ],
+      "hiddenRequests": 0,
+      "firstSelectionRequests": 1,
+      "afterReselectionRequests": 2,
+      "rowButtons": 0,
+      "tabAlerts": 0
+    },
+    {
+      "width": 1440,
+      "visit": "macula",
+      "states": [
+        "Unavailable",
+        "For review",
+        "Unavailable"
+      ],
+      "hiddenRequests": 0,
+      "firstSelectionRequests": 1,
+      "afterReselectionRequests": 2,
+      "rowButtons": 0,
+      "tabAlerts": 0
+    },
+    {
+      "width": 390,
+      "visit": "glaucoma",
+      "states": [
+        "For review",
+        "For review",
+        "Already ordered"
+      ],
+      "hiddenRequests": 0,
+      "firstSelectionRequests": 1,
+      "afterReselectionRequests": 2,
+      "rowButtons": 0,
+      "tabAlerts": 0
+    },
+    {
+      "width": 390,
+      "visit": "macula",
+      "states": [
+        "Unavailable",
+        "For review",
+        "Unavailable"
+      ],
+      "hiddenRequests": 0,
+      "firstSelectionRequests": 1,
+      "afterReselectionRequests": 2,
+      "rowButtons": 0,
+      "tabAlerts": 0
+    }
+  ],
+  "pageErrors": []
+}

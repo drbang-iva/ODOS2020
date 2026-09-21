@@ -1,0 +1,6 @@
+{
+  "head-mcp": "# tests 6222\n# suites 0\n# pass 6168\n# fail 0\n# cancelled 0\n# skipped 54\n# todo 0",
+  "head-ui": "# tests 1834\n# suites 0\n# pass 1834\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0",
+  "focused-server": "# tests 64\n# suites 0\n# pass 64\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0",
+  "focused-ui": "# tests 134\n# suites 0\n# pass 134\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+}

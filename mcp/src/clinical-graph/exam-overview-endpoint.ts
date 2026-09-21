@@ -633,7 +633,14 @@ export function resolveProfileTests(profiles: FollowUpProfileRecord[]): Proposed
   for (const profile of profiles) {
     try {
       for (const test of profile.testsQueuedByDefault) {
-        tests.push({ orderable: test.orderable, ...(test.focus ? { focus: test.focus } : {}), sources: [{ kind: "profile", profileKey: profile.profileKey }] });
+        tests.push({
+          orderable: test.orderable, ...(test.focus ? { focus: test.focus } : {}),
+          label: test.label,
+          ...(test.unavailableReason !== undefined ? { unavailableReason: test.unavailableReason } : {}),
+          ...(test.resultSection !== undefined ? { resultSection: test.resultSection } : {}),
+          ...(test.choice !== undefined ? { choice: test.choice } : {}),
+          sources: [{ kind: "profile", profileKey: profile.profileKey, profileLabel: profile.label }],
+        });
       }
     } catch {
       // Optional test resolution must not discard the rest of the encounter shape.

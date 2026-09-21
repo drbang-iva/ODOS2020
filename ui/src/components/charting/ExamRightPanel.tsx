@@ -1,10 +1,10 @@
 import type { KeyboardEvent, ReactNode } from "react";
 
-export type ExamRightPanelTab = "entry" | "images" | "imaging" | "engage";
+export type ExamRightPanelTab = "entry" | "images" | "imaging" | "engage" | "follow-up";
 
 export interface ExamRightPanelState {
   activeTab: ExamRightPanelTab;
-  returnTab: "images" | "imaging" | "engage";
+  returnTab: "images" | "imaging" | "engage" | "follow-up";
   summoned: boolean;
 }
 
@@ -19,6 +19,7 @@ export const EXAM_RIGHT_PANEL_IDS: Record<ExamRightPanelTab, string> = {
   images: "exam-right-panel-images",
   engage: "exam-right-panel-engage",
   imaging: "exam-right-panel-imaging",
+  "follow-up": "exam-right-panel-follow-up",
 };
 
 export function examRightPanelEntryTitle(sectionId: string, defaultTitle: string): string {
@@ -80,8 +81,8 @@ export function ExamRightPanelTabs({
   onSelect: (tab: ExamRightPanelTab) => void;
 }) {
   const tabs: ExamRightPanelTab[] = entryTitle
-    ? ["entry", "images", "imaging", "engage"]
-    : ["images", "imaging", "engage"];
+    ? ["entry", "images", "imaging", "engage", "follow-up"]
+    : ["images", "imaging", "engage", "follow-up"];
   const focusSelectedTab = (tab: ExamRightPanelTab) => {
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLElement>(
@@ -164,6 +165,19 @@ export function ExamRightPanelTabs({
       >
         Engage
       </button>
+      <button
+        id={`${instanceId}-follow-up-tab`}
+        type="button"
+        role="tab"
+        aria-selected={activeTab === "follow-up"}
+        aria-controls={EXAM_RIGHT_PANEL_IDS["follow-up"]}
+        tabIndex={activeTab === "follow-up" ? 0 : -1}
+        data-panel-tab="follow-up"
+        onClick={() => selectTab("follow-up")}
+        onKeyDown={onTabKeyDown}
+      >
+        Follow-up
+      </button>
     </div>
   );
 }
@@ -177,7 +191,7 @@ export function ExamRightPanelSurface({
   children,
 }: {
   active: boolean;
-  label: "Photos" | "Imaging" | "Engage";
+  label: "Photos" | "Imaging" | "Engage" | "Follow-up";
   panelId: string;
   labelledBy: string;
   tabs: ReactNode;

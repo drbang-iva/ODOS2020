@@ -1,0 +1,10 @@
+{
+  "syntheticOnly": true,
+  "requests": 121,
+  "firstStatus": 401,
+  "lastStatus": 429,
+  "counts": {
+    "401": 120,
+    "429": 1
+  }
+}

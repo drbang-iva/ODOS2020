@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { FollowUpProfileRecord } from "./follow-up-profile-store.js";
+import { profileTestSchema, type FollowUpProfileRecord } from "./follow-up-profile-store.js";
 import type { Basic, Practitioner, Reference } from "@medplum/fhirtypes";
 import { searchAll } from "../fhir-search.js";
 import type { ExamOverviewFhirClient } from "./exam-overview-endpoint.js";
@@ -12,8 +12,12 @@ export type ExamScope = "comprehensive" | "office-visit";
 const proposedTestSchema = z.object({
   orderable: z.string().min(1),
   focus: z.string().min(1).optional(),
+  label: profileTestSchema.shape.label.optional(),
+  unavailableReason: profileTestSchema.shape.unavailableReason,
+  resultSection: profileTestSchema.shape.resultSection,
+  choice: profileTestSchema.shape.choice,
   sources: z.array(z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("profile"), profileKey: z.string().min(1) }),
+    z.object({ kind: z.literal("profile"), profileKey: z.string().min(1), profileLabel: z.string().min(1).optional() }),
     z.object({ kind: z.literal("plan-set"), planSetKey: z.string().min(1) }),
   ])).min(1),
 });
@@ -157,6 +161,7 @@ function mergeProposedTests(tests: ProposedExamTest[]): ProposedExamTest[] {
     const key = `${test.orderable}|${test.focus ?? ""}`;
     const existing = merged.get(key);
     if (!existing) { merged.set(key, test); continue; }
+    // The first snapshot owns display fields; later profiles only add their sources.
     for (const source of test.sources) {
       if (!existing.sources.some(current => JSON.stringify(current) === JSON.stringify(source))) existing.sources.push(source);
     }

@@ -1,0 +1,48 @@
+{
+  "head": "e038de5a717fe4a79f0a91517201dfd8fd4082d4",
+  "dirty": false,
+  "mcpHash": "29adc399f97b19a37ba3e57a688d43d11da84257c80961da474baf4540c12382",
+  "caddySourceHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
+  "servedAssets": {
+    "/assets/index-BjlSAQ_H.js": "bfdbbd3412624194a5fd9e7503560563e09ba352a1e04456efbeb09830a51234",
+    "/assets/index-D0-LhNCo.css": "e97b61b00eb6565a780d93b7b004ecef3eb8566eddf15d474b3a4509500299b2"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 35891,
+    "medplum": 35904,
+    "postgres": 29866,
+    "redis": 30802,
+    "mcp": 29044,
+    "proxy": 29045,
+    "control": 29046
+  },
+  "project": "odos-s3c2a-proof",
+  "mcpPid": 9757,
+  "caddyPid": 9770,
+  "sourceSha256": {
+    "mcp/src/clinical-graph/exam-overview-endpoint.ts": "d2e7810130ab2e220c480b68a205eeb8994e1bdaeaa9f633948fb3ef51dab3e1",
+    "mcp/src/clinical-graph/exam-scope-store.ts": "1f14dfaedaa2c907185c90e3a4b7da35b861370cf587e0a1f32586fcd7c2fce8",
+    "mcp/src/clinical-graph/follow-up-queue-endpoint.ts": "0474b07105c57e7d55aff7a6292bc6f62b49e199c023ffee4136279a188d30e1",
+    "mcp/src/index.ts": "c5afc94caee3275adda8af924c76089f06f1b36608979e0aac274955df5c524e",
+    "mcp/tests/examOverviewEndpoint.test.ts": "7e04fbaab78eb3f41f7244de85524c6b5349b12fbac5d9bec8388f675d1c2164",
+    "mcp/tests/examShapeRecord.test.ts": "a1580804db887666d202ff8743fde40125a8fe9958b35173f4aa0d845074d2df",
+    "mcp/tests/findingDefinitionStore.test.ts": "30f6c61e018a390dd66cfeae1759ca745d540194b964e42987f03432c000097a",
+    "mcp/tests/followUpQueueEndpoint.test.ts": "69d8feb733c13c8b18403f9a97dec320f290774455a34f62961d64142c53964e",
+    "ui/src/components/charting/ExamRightPanel.tsx": "acefe072379aa76a67d018b005911c5113de2dbedb5fbfb2c446c0d8872fcbb3",
+    "ui/src/components/charting/FollowUpQueue.tsx": "e5abb22d364483eb8beaddee79aef0c76ab55b647cc4b45817b0403ff61720fe",
+    "ui/src/lib/follow-up-queue.ts": "4754249d4735912e2d4c0a57ce34f0c947653bfc78708dc02f44caefca0ae915",
+    "ui/src/scenes/EncounterCharting.tsx": "527739ce0a919634ecb69b231a473c4d27834b0b035343b9d064c97871e36d8c",
+    "ui/src/styles/charting.css": "6bd4f638e72ef130afd392d2ec016e3b86908d1559496ddc3c0d8274fcb1d023",
+    "ui/tests/clinicalGraphRouting.test.tsx": "e28acf1b10598292dc7e1ab7a2f3404437fed9798d3ac37bc789acb0cf2db220",
+    "ui/tests/examOverviewBoard.test.tsx": "d12ce32ae1c0fa9b7e81708d88232d0be3e4cdf53abfc8d6d957684a285ac14e",
+    "ui/tests/followUpQueue.test.tsx": "d807b0dbfc73ee47e694456c2adfc0b75bae94b7beb6315ec5e812f10ed65843"
+  },
+  "applicationAndTestTrees": {
+    "mcp/src": "292e4db4059728afcbee0deda2876302379191f1",
+    "mcp/tests": "5bae6871bac51a2688dfb5ba0beef427440254b9",
+    "ui/src": "c068fc4d887bf1ac3816857b0617c30663a5aa2b",
+    "ui/tests": "90e06a9fb9bfae382a3499cdbcf60f8b171555b0"
+  },
+  "note": "Built and served from this clean commit. Final descendant records proof outputs only; source/test tree hashes remain identical."
+}
