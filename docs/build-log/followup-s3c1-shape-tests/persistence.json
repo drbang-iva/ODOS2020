@@ -1,0 +1,333 @@
+{
+  "sourceSha256": {
+    "mcp/src/clinical-graph/exam-scope-store.ts": "ffbd9d004bc893f52e17ee93b70b5f6fc3e76f3e8e75f1642b59487c110b7d3d",
+    "mcp/src/clinical-graph/exam-overview-endpoint.ts": "3e0ffbb375eea91da6b18e18a85ead180a2ec53af078d39a22609f3e3f641889"
+  },
+  "syntheticOnly": true,
+  "project": "odos-s3c1-proof",
+  "before": {
+    "examScope": "comprehensive",
+    "setAt": "2026-09-21T04:43:13.553Z",
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 1,
+        "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "testsProposed": [
+      {
+        "orderable": "visual-field-threshold",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "scodi-optic-nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "fundus-photography",
+        "focus": "optic nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      }
+    ],
+    "shapedAt": "2026-09-21T04:43:13.553Z",
+    "source": "derived",
+    "writeToken": "10cbe93d-2294-449e-8684-2edb038fa56f"
+  },
+  "afterEdit": {
+    "examScope": "comprehensive",
+    "setAt": "2026-09-21T04:43:13.553Z",
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 1,
+        "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "testsProposed": [
+      {
+        "orderable": "visual-field-threshold",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "scodi-optic-nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "fundus-photography",
+        "focus": "optic nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      }
+    ],
+    "shapedAt": "2026-09-21T04:43:13.553Z",
+    "source": "derived",
+    "writeToken": "10cbe93d-2294-449e-8684-2edb038fa56f"
+  },
+  "afterRetirement": {
+    "examScope": "comprehensive",
+    "setAt": "2026-09-21T04:43:13.553Z",
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 1,
+        "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "testsProposed": [
+      {
+        "orderable": "visual-field-threshold",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "scodi-optic-nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "fundus-photography",
+        "focus": "optic nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      }
+    ],
+    "shapedAt": "2026-09-21T04:43:13.553Z",
+    "source": "derived",
+    "writeToken": "10cbe93d-2294-449e-8684-2edb038fa56f"
+  },
+  "newVisit": {
+    "examScope": "comprehensive",
+    "setAt": "2026-09-21T04:43:13.596Z",
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 2,
+        "versionId": "406219e6-423a-41e2-beaa-f7beda5031de"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "testsProposed": [
+      {
+        "orderable": "visual-field-threshold",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      }
+    ],
+    "shapedAt": "2026-09-21T04:43:13.596Z",
+    "source": "derived",
+    "writeToken": "e86d0e9f-947c-4647-bf1d-fa37c3983ea4"
+  },
+  "explicitVisit": {
+    "examScope": "office-visit",
+    "setAt": "2026-09-21T04:43:13.568Z",
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 1,
+        "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "testsProposed": [
+      {
+        "orderable": "visual-field-threshold",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "scodi-optic-nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      },
+      {
+        "orderable": "fundus-photography",
+        "focus": "optic nerve",
+        "sources": [
+          {
+            "kind": "profile",
+            "profileKey": "glaucoma"
+          }
+        ]
+      }
+    ],
+    "shapedAt": "2026-09-21T04:43:13.568Z",
+    "source": "explicit",
+    "chosenBy": {
+      "reference": "Practitioner/9a62d53c-7dc5-47aa-9765-9e897328e110"
+    },
+    "chosenAt": "2026-09-21T04:43:13.568Z",
+    "writeToken": "4d4afb89-f090-48f6-a253-adac61fc0537"
+  },
+  "legacyStored": {
+    "examScope": "comprehensive",
+    "setAt": "2026-09-21T04:43:13.553Z",
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 1,
+        "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "shapedAt": "2026-09-21T04:43:13.553Z",
+    "writeToken": "10cbe93d-2294-449e-8684-2edb038fa56f"
+  },
+  "legacyParsed": {
+    "profilesApplied": [
+      {
+        "profileKey": "glaucoma",
+        "version": 1,
+        "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
+      }
+    ],
+    "sectionsOpen": [
+      "hpi",
+      "va",
+      "pupils",
+      "cvf",
+      "iop",
+      "dilation",
+      "cup-disc",
+      "ocular-health:posterior:fundus",
+      "imaging",
+      "assessment"
+    ],
+    "shapedAt": "2026-09-21T04:43:13.553Z",
+    "source": "derived",
+    "examScope": "comprehensive",
+    "versionId": "f2303d29-5771-4bce-9024-165f5b63fd3f",
+    "setBy": {
+      "reference": "Practitioner/9a62d53c-7dc5-47aa-9765-9e897328e110"
+    },
+    "setAt": "2026-09-21T04:43:13.553Z"
+  },
+  "checks": [
+    "old visit unchanged after edit",
+    "new visit has edited tests",
+    "old and explicit visits unchanged after retirement",
+    "legacy tests absent and no retro-shape"
+  ]
+}

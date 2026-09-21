@@ -968,6 +968,46 @@ function pickerResources(): Resource[] {
 }
 const followPrior = { sourceEncounterReference: "Encounter/prior", sourceConditionReference: "Condition/prior-dx" };
 
+const glaucomaTestsProposed = [
+  { orderable: "visual-field-threshold", sources: [{ kind: "profile", profileKey: "glaucoma" }] },
+  { orderable: "scodi-optic-nerve", sources: [{ kind: "profile", profileKey: "glaucoma" }] },
+  { orderable: "fundus-photography", focus: "optic nerve", sources: [{ kind: "profile", profileKey: "glaucoma" }] },
+];
+
+test("S3c1 automatic overview persists profile tests with their sources", async () => {
+  const fhir = new HistoryWorkflowFhir([encounter(), {
+    resourceType: "Condition", id: "shape-diagnosis", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: "e1::ocular_hypertension::bilateral" }],
+  }]);
+  assert.equal((await handleExamOverviewRequest(deps(fhir, "provider"), request())).status, 200);
+  const saved = fhir.resources.find(r => r.resourceType === "Basic" && r.identifier?.some(i => i.system === "urn:odos:encounter-exam-scope")) as Basic;
+  assert.deepEqual(JSON.parse(saved.extension![0].valueString!).testsProposed, glaucomaTestsProposed);
+});
+
+test("S3c1 explicit pick persists profile tests with their sources", async () => {
+  const fhir = new HistoryWorkflowFhir(pickerResources());
+  const result = await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior });
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as any).testsProposed, glaucomaTestsProposed);
+});
+
+test("S3c1 unresolved tests retain partial proposals and still persist the shape and render the board", async (t) => {
+  const { FhirFollowUpProfileStore } = await import("../src/clinical-graph/follow-up-profile-store.js");
+  const fhir = new HistoryWorkflowFhir([encounter(), {
+    resourceType: "Condition", id: "shape-diagnosis", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: "e1::ocular_hypertension::bilateral" }],
+  }]);
+  const profile = (await new FhirFollowUpProfileStore(fhir).list())[0];
+  const brokenTest = { ...profile.testsQueuedByDefault[1], get orderable(): string { throw new Error("synthetic test resolution failure"); } };
+  t.mock.method(FhirFollowUpProfileStore.prototype, "list", async () => [{ ...profile, testsQueuedByDefault: [profile.testsQueuedByDefault[0], brokenTest] }]);
+  const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(result.status, 200);
+  assert.ok((result.body as ExamOverviewProjection).sectionsOpen?.includes("iop"));
+  const scope = await scopeRequest(fhir, "GET");
+  assert.deepEqual((scope.body as any).testsProposed, glaucomaTestsProposed.slice(0, 1));
+  assert.deepEqual((scope.body as any).profilesApplied, [{ profileKey: "glaucoma", version: 1, versionId: null }]);
+});
+
 test("S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes only the scope", async () => {
   const { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } = await import("../src/clinical-graph/diagnosis-pick-endpoint.js");
   const resources = pickerResources(); (resources[2] as Condition).identifier![0].system = DIAGNOSIS_KEY_IDENTIFIER_SYSTEM;

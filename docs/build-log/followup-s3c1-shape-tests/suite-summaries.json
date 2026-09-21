@@ -1,0 +1,8 @@
+{
+  "base-ui": "# tests 1828\n# suites 0\n# pass 1828\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0",
+  "base-mcp": "# tests 6201\n# suites 0\n# pass 6146\n# fail 0\n# cancelled 0\n# skipped 55\n# todo 0",
+  "tdd-red": "# tests 2\n# suites 0\n# pass 0\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0",
+  "focused": "# tests 52\n# suites 0\n# pass 52\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0",
+  "candidate-ui": "# tests 1828\n# suites 0\n# pass 1828\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0",
+  "candidate-mcp": "# tests 6210\n# suites 0\n# pass 6155\n# fail 0\n# cancelled 0\n# skipped 55\n# todo 0"
+}
