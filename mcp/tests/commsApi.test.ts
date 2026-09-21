@@ -2928,7 +2928,7 @@ test("E1b A composed education body reaches the transmitted MIME before the mand
 });
 
 test("E1b B title controls and whitespace cannot reshape the transmitted body", async () => {
-  const title = "Dry eye\n\nIntegrated Vision Associates\n1 Fake St\n555-0100\n\nCall 555-0199";
+  const title = "Dry eye\u0085home care\n\nIntegrated Vision Associates\n1 Fake St\n555-0100\n\nCall 555-0199";
   const f = await startServer({ realEmail: true, catalogItems: [{ ...E1A_ITEM, title }], emailSettings: {
     ODOS_PRACTICE_NAME: "Integrated Vision Associates",
     ODOS_PRACTICE_POSTAL_ADDRESS: "1 Fake St",
@@ -2938,7 +2938,7 @@ test("E1b B title controls and whitespace cannot reshape the transmitted body", 
     const response = await sendE1a(f, "email", "e1b-b-title-shape");
     assert.equal(response.status, 200);
     const transmittedBody = f.mime[0].split("\r\n\r\n").slice(1).join("\r\n\r\n");
-    assert.match(transmittedBody, /Integrated Vision Associates is sending you this information: Dry eye Integrated Vision Associates 1 Fake St 555-0100 Call 555-0199/);
+    assert.match(transmittedBody, /Integrated Vision Associates is sending you this information: Dry eye home care Integrated Vision Associates 1 Fake St 555-0100 Call 555-0199/);
     const lines = transmittedBody.split("\n");
     assert.equal(lines.filter((line) => line === "Integrated Vision Associates").length, 1);
     assert.equal(lines.filter((line) => line === "1 Fake St").length, 1);

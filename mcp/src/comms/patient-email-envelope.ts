@@ -15,8 +15,8 @@ export function patientEducationEmailBody(input: {
 }): string {
   const practiceName = required(input.practiceName, "practice name");
   const phone = required(input.phone, "practice phone");
-  const title = input.title.replace(/[\s\u0000-\u001f\u007f]+/g, " ").trim();
-  if (!title) throw new PatientEmailConfigurationError("Patient email is missing handout title in practice settings.");
+  const title = input.title.replace(/[\s\u0000-\u001f\u007f-\u009f]+/g, " ").trim();
+  if (!title) throw new PatientEmailConfigurationError("Patient email catalog item is missing handout title.");
   return [
     "Hello,",
     "",
