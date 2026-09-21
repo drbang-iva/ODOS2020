@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { collectBoundedSearch } from "../fhir-search.js";
 import type { Condition, DiagnosticReport, Encounter, Media, ServiceRequest } from "@medplum/fhirtypes";
 import { staffHasBusinessAction } from "../authz/roles.js";
 import { conditionClinicalFamily, normalizeClinicalFamily, practitionerNamesByReference, type ExamOverviewEndpointDeps, type ExamOverviewFhirClient } from "./exam-overview-endpoint.js";
@@ -223,7 +224,17 @@ async function withImagingResults(
     encounter: encounterReference, status: "completed", _sort: "-created", _count: "50",
   })).filter(media => media.encounter?.reference === encounterReference && isImagingReadSurfaceMedia(media));
   const reportBundle = await staffFhir.search<DiagnosticReport>("DiagnosticReport", { encounter: encounterReference, _count: "50" });
-  const reports = (reportBundle.entry ?? []).flatMap(entry => entry.resource && entry.resource.encounter?.reference === encounterReference ? [entry.resource] : []);
+  const seenReportPages = new Set<string>();
+  const reports = (await collectBoundedSearch<DiagnosticReport>({
+    baseUrl: staffFhir.baseUrl,
+    search: staffFhir.search.bind(staffFhir),
+    searchUrl: staffFhir.searchUrl ? async (url, type) => {
+      if (seenReportPages.has(url)) throw new Error("DiagnosticReport search returned a pagination cycle.");
+      seenReportPages.add(url);
+      return staffFhir.searchUrl!(url, type);
+    } : undefined,
+  }, "DiagnosticReport", reportBundle, { maxPages: 100, maxRows: 5_000 }))
+    .filter(report => report.encounter?.reference === encounterReference);
   const summary = (media: Media): FollowUpResultItem => ({
     mediaReference: `Media/${media.id}`,
     title: media.content.title ?? "Imaging result",
@@ -312,5 +323,5 @@ export async function handleFollowUpResultRequest(deps: Deps, input: { authHeade
   try {
     const fresh = await readQueue(serviceFhir, staff.fhir, encounter, encounterId, encounter.subject.reference.slice(8), true);
     return { status: 200, body: await withImagingResults(staff.fhir, fresh.queue, fresh.actions, encounterId) };
-  } catch { return loadFailure(); }
+  } catch { return { status: 200, body: { committed: true, reloadRequired: true } }; }
 }

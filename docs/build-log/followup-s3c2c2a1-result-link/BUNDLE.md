@@ -2,6 +2,30 @@
 
 Status: needs-review. NOT EVALUATED. Do not merge.
 
+## R3 review fixback (2026-09-21)
+
+PR: https://github.com/drbang-iva/ODOS2020/pull/655. Starting reviewed head: `f29083dd2ae4941eec8a1ab5e5367985e3c15c39`. R3 changes only follow-up-queue-endpoint.ts, followUpResults.test.ts, and this evidence directory. Base remains `f1ef67991f85f69d7179f089e965b0bd03c4c3c8`; #647 remains open.
+
+- **G15 / pagination fixed:** DiagnosticReport results now use the existing collectBoundedSearch helper with a 100-page / 5,000-report bound, local next-link validation, and an added seen-page set to refuse cycles. Encounter filtering still applies after collection. The 51-report fixture places its sole interpretation on page 2; it also tests cycles, the page bound, and a client unable to follow next links. Failures remain fail-closed (502, no rows).
+- **G16 / committed refresh failure fixed:** after successful Media update, either queue or result-refresh failure returns exactly `200 { committed: true, reloadRequired: true }`. Tests cover link and unlink, both failure locations, persisted basedOn state, one write, and a truthful 409 on retry. Failures before the update commits retain their existing response behavior.
+- **Signing race explicitly deferred by Eric's R3 ruling:** the initial finished check can race with a later sign. This is real and remains unfixed. Encounter If-Match in a transaction and post-commit Binary-attempt resolution belong to the cross-cutting 2b billing-gate state table. No lock, transaction, capture, or policy changes are made here. This deferral is not a safety claim.
+
+Fresh author verification (dedicated `odos-s3c2c2a1-pg`, ODOS_POSTGRES_URL set for every MCP test):
+
+| Check / mutation | Red output | Restored green output |
+|---|---|---|
+| New G15/G16 before implementation | tests 2, pass 0, fail 2, skipped 0 | focused result suite: tests 11, pass 11, fail 0, skipped 0 |
+| G15: read only first page | tests 1, pass 0, fail 1, skipped 0; exit 1 | tests 1, pass 1, fail 0, skipped 0; exit 0 |
+| G15: remove cycle guard | tests 1, pass 0, fail 1, skipped 0; exit 1 | tests 1, pass 1, fail 0, skipped 0; exit 0 |
+| G15: raise 100-page bound to 101 | tests 1, pass 0, fail 1, skipped 0; exit 1 | tests 1, pass 1, fail 0, skipped 0; exit 0 |
+| G16: return loadFailure after committed write | tests 1, pass 0, fail 1, skipped 0; exit 1 | tests 1, pass 1, fail 0, skipped 0; exit 0 |
+
+Commands: from mcp, `node --import tsx --test --test-name-pattern='S3c2c2a1 G15' tests/followUpResults.test.ts` (G16 uses the corresponding name); `node --import tsx --test tests/followUpResults.test.ts tests/imagingEndpoint.test.ts tests/followUpQueueEndpoint.test.ts tests/followUpAccept.test.ts tests/findingDefinitionStore.test.ts` → **81 tests, 81 pass, 0 fail, 0 skip, exit 0**. `npm --prefix mcp run build` → exit 0. `npm run preflight` → 0 warnings, 0 hard blocks, exit 0. `git diff --check` → clean.
+
+R3 adds two tests to the previously recorded full-suite inventory (expected total 6284); it does not claim a new local full-suite run. The prior head's UI/MCP CI completed successfully. The pushed fixback's final CI, exact-head automatic review, and thread resolution results are recorded in the PR description and final handoff after they finish. R2 live proof remains the persisted behavior evidence; no claim is made that it was rerun for this focused fixback.
+
+All original G1–G14 evidence, §4 grant restrictions, empty temporary-grant diffs, excluded scope, and Binary-create follow-up remain in force. NOT EVALUATED; Claude Opus 5 independent evaluation is required.
+
 ## Summary
 
 Server-only explicit imaging-result/order linking is implemented on `drbang-iva/followup-s3c2c2a1-result-link`.
@@ -132,7 +156,7 @@ Outside §4 follow-up: a separate Binary-create authorization slice. R2 resolves
 
 Not done: UI changes; billing interpretation gate; finding-recorded tests (gonioscopy, pachymetry, dry-eye); new row state; diagnosis-center write-up; ServiceRequest completed status; tasks; DICOM; device folder-watch; legacy import.
 
-Remaining: exact-head bot review and Claude Opus 5 independent evaluation, recorded on the PR. Full suite summaries are not a substitute for independent evaluation.
+Remaining at author commit: final-head CI/automatic review and Claude Opus 5 independent evaluation, recorded on the PR. Full suite summaries are not a substitute for independent evaluation.
 
 ⚠️ NOT EVALUATED — hand to Claude Opus 5 for independent evaluation before merge. Codex wrote this diff and cannot evaluate it.
 

@@ -250,3 +250,65 @@ test("S3c2c2a1 G11 recorded reads fail closed and unshaped responses stay exact"
   assert.deepEqual(reply.body, { recorded: false });
   assert.equal(empty.searches.filter(row => row.type === "Media" || row.type === "DiagnosticReport").length, 0);
 });
+
+test("S3c2c2a1 G15 report pagination includes page two and refuses cycles or excess pages", async () => {
+  const h = await resultFixture([retina], [retina]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  const reports: DiagnosticReport[] = Array.from({ length: 51 }, (_, index) => ({
+    resourceType: "DiagnosticReport", id: `report-${index}`, status: "preliminary", code: { text: "Synthetic report" },
+    subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+    ...(index === 50 ? { conclusion: "Interpreted on page two", basedOn: [{ reference: "ServiceRequest/sr-1" }] } : {}),
+  }));
+  const search = h.staff.search.bind(h.staff);
+  h.staff.search = async <T extends Resource>(type: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> => type === "DiagnosticReport"
+    ? { resourceType: "Bundle", type: "searchset", entry: reports.slice(0, 50).map(resource => ({ resource: resource as T })), link: [{ relation: "next", url: "/fhir/R4/DiagnosticReport?_page=2" }] }
+    : search<T>(type, params);
+  let pages = 0;
+  const client = h.staff as ResultsFhir & { searchUrl?: <T extends Resource>(url: string, type: T["resourceType"]) => Promise<Bundle<T>> };
+  client.searchUrl = async <T extends Resource>(url: string, type: T["resourceType"]): Promise<Bundle<T>> => {
+    pages += 1;
+    assert.equal(type, "DiagnosticReport");
+    assert.equal(url, "/fhir/R4/DiagnosticReport?_page=2");
+    return { resourceType: "Bundle", type: "searchset", entry: [{ resource: reports[50] as T }] };
+  };
+  assert.equal(resultRows(await h.get())[0]!.result?.status, "interpreted");
+  assert.equal(pages, 1);
+  for (const mode of ["cycle", "limit", "missing"] as const) {
+    pages = 0;
+    client.searchUrl = mode === "missing" ? undefined : async <T extends Resource>(): Promise<Bundle<T>> => {
+      pages += 1;
+      if (pages > 100) throw new Error("Fixture runaway ceiling");
+      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: `/fhir/R4/DiagnosticReport?_page=${mode === "cycle" ? 2 : pages + 2}` }] };
+    };
+    const reply = await h.get();
+    assert.equal(reply.status, 502);
+    assert.equal("rows" in (reply.body as object), false);
+    assert.equal(pages, mode === "cycle" ? 1 : mode === "limit" ? 99 : 0);
+  }
+});
+
+test("S3c2c2a1 G16 committed link and unlink acknowledge failed refresh and retain truthful retry refusal", async () => {
+  for (const action of ["link", "unlink"] as const) {
+    for (const failure of ["queue", "results"] as const) {
+      const h = await resultFixture([retina], [retina]);
+      h.staff.resources.push(image("photo-1", "fundus-photo", "e1", action === "unlink" ? "ServiceRequest/sr-1" : undefined));
+      const update = h.staff.update.bind(h.staff);
+      h.staff.update = async <T extends Resource>(type: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> => {
+        const saved = await update(type, id, resource, headers);
+        if (failure === "queue") h.service.failSearchType = "Basic";
+        else h.staff.failSearchType = "DiagnosticReport";
+        return saved;
+      };
+      const reply = await h.mutate("fundus-photography", "retina", "Media/photo-1", action);
+      assert.deepEqual(reply, { status: 200, body: { committed: true, reloadRequired: true } });
+      const stored = await h.staff.read<Media>("Media", "photo-1");
+      assert.deepEqual(stored.basedOn, action === "link" ? [{ reference: "ServiceRequest/sr-1" }] : undefined);
+      assert.equal(h.staff.writes.length, 1);
+      h.service.failSearchType = undefined;
+      h.staff.failSearchType = undefined;
+      const retry = await h.mutate("fundus-photography", "retina", "Media/photo-1", action);
+      assert.equal(retry.status, 409);
+      assert.equal(h.staff.writes.length, 1);
+    }
+  }
+});

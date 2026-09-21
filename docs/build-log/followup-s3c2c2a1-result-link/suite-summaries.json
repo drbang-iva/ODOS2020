@@ -320,5 +320,71 @@
     "# pass 28",
     "# fail 7",
     "# skipped 0"
+  ],
+  "r3-focused-green": [
+    "# tests 11",
+    "# pass 11",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r3-g15-bound-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r3-g15-bound-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "r3-g15-cycle-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r3-g15-cycle-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "r3-g15-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r3-g15-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "r3-g16-green": [
+    "# tests 1",
+    "# pass 1",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "r3-g16-red": [
+    "# tests 1",
+    "# pass 0",
+    "# fail 1",
+    "# skipped 0"
+  ],
+  "r3-initial-red": [
+    "# tests 2",
+    "# pass 0",
+    "# fail 2",
+    "# skipped 0"
+  ],
+  "r3-regression": [
+    "# tests 81",
+    "# pass 81",
+    "# fail 0",
+    "# skipped 0"
   ]
 }
