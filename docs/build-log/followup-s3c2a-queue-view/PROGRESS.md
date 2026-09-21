@@ -54,3 +54,5 @@ Both task stacks stopped. docker ps: vf-prac1b-walk-db Up 2 days. PR preparation
 PR 650 opened at 5a19dfaa2be2e3aad518a0051af19a1a7a6458ad. CodeQL flagged missing rate limiting; fixed within the one permitted route block with existing express-rate-limit. Real API/browser proof repeated successfully; 121-request limiter proof returned initial 401 and final 429. Rebuilt served/source hashes replaced. Full MCP repeated 6222 total / 6168 pass / 0 fail / 54 skipped. Three typechecks and preflight clean. Both task stacks stopped again; vf-prac1b-walk-db untouched.
 
 Full UI after rate-limit correction: 1834 / 1834 pass / 0 fail. All required local verification complete on the corrected source.
+
+CodeRabbit proof-only findings addressed at e038de5a717fe4a79f0a91517201dfd8fd4082d4: dirty builds rejected, same clean commit enforced before serve, exact fresh-window requests 1–120=401 and 121=429. Rebuilt and repeated API/browser proofs at that clean commit; source/test tree hashes unchanged from 401be894. All CI jobs/CodeQL passed at 401be894. Stacks stopped; docker ps only vf-prac1b-walk-db Up 2 days. Final evidence commit records regenerated outputs only.

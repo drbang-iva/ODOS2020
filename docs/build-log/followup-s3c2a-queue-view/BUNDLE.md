@@ -8,7 +8,7 @@ No write controls, new orderables, fees or billing codes were added.
 NOT EVALUATED — Claude Opus 5 must independently evaluate the PR head before merge. Do not merge.
 
 Base: `9adec598a7d012729ca239cce11aab1b726171f0`. Branch: `drbang-iva/followup-s3c2a-queue-view`.
-PR URL and exact committed head are supplied in the PR description and handoff; this evidence is part of that head.
+PR: https://github.com/drbang-iva/ODOS2020/pull/650. Clean evidence-producing commit: `e038de5a717fe4a79f0a91517201dfd8fd4082d4`. The final descendant commit only records regenerated evidence; its exact head is in the PR description/handoff. Application and test trees are identical to verified commit 401be89491f4e7f0b7d92d9f55512fe7b91d0ef4 and this clean build commit.
 Coder: Codex, GPT-6; high effort recommended, runtime effort/variant undisclosed by the session.
 Final pre-PR fetch: main unchanged; #647 OPEN. R1 rebase condition did not arise.
 
@@ -55,7 +55,7 @@ Own new-test helper correction: G12 initially serialized circular React Fiber ch
 
 ## Live proof 1–4
 
-Reproduction: `node docs/build-log/followup-s3c2a-queue-view/proof/stack.mjs prepare`, then `up`, `build`, `serve`; run `proof/live.ts` with tsx and the dedicated proof PostgreSQL URL (localhost:29866), then `node docs/build-log/followup-s3c2a-queue-view/proof/browser.mjs`. Runtime credentials remain gitignored. Never target a real practice.
+Reproduction: `node docs/build-log/followup-s3c2a-queue-view/proof/stack.mjs prepare`, then `up`, `build`, `serve`; run `proof/rate-limit.mjs` first against the fresh server, wait for its 60-second window to expire, run `proof/live.ts` with tsx and the dedicated proof PostgreSQL URL (localhost:29866), then `node docs/build-log/followup-s3c2a-queue-view/proof/browser.mjs`. Runtime credentials remain gitignored. Never target a real practice.
 The proof seeder persists shapes with the production resolver/store; G9 separately proves automatic and explicit endpoint paths. The existing protocol item-add HTTP route returned 200 for order-fundus-photography. Queue requests use the actual frontdoor/backend and synthetic staff authentication.
 
 ### glaucoma: stored testsProposed
@@ -176,7 +176,7 @@ Full responses and absent/empty proof are quoted below (also live-proof.json).
           ],
           "state": "already-ordered",
           "actionIds": [
-            "a75953e3-398d-4721-ad64-89f0dc327ef7"
+            "75efe68a-32f1-449d-87e6-2368339652fd"
           ]
         }
       ]
@@ -763,9 +763,11 @@ ok 1 - clinical-graph requests share the literal Vite route and Medplum authoriz
 
 ## Automatic-review correction
 
-At first commit 5a19dfaa2be2e3aad518a0051af19a1a7a6458ad, CodeQL flagged missing rate limiting on the new route. Added an isolated 120 requests/minute limiter within the same permitted route block, using the existing express-rate-limit import. No shared limiter, grant pins or other route changed; literal app.get remains. Repeated full MCP/UI suites, three typechecks, preflight, build, real API/browser proof. The actual route returned 401 initially and 429 on excess requests (121 requests: 108 HTTP 401, 13 HTTP 429; prior browser requests consumed part of the window). See rate-limit-proof.json and proof/rate-limit.mjs. Bootstrap briefly exhausted the synthetic login limit; waiting for its normal window restored login without security-setting changes.
+At first commit 5a19dfaa2be2e3aad518a0051af19a1a7a6458ad, CodeQL flagged missing rate limiting on the new route. Added an isolated 120 requests/minute limiter within the same permitted route block, using the existing express-rate-limit import. No shared limiter, grant pins or other route changed; literal app.get remains. Repeated full MCP/UI suites, three typechecks, preflight, build, real API/browser proof. The actual route returned 401 initially and 429 on excess requests (fresh window: requests 1–120 HTTP 401, request 121 HTTP 429). See rate-limit-proof.json and proof/rate-limit.mjs. Bootstrap briefly exhausted the synthetic login limit; waiting for its normal window restored login without security-setting changes.
 
 PR-Agent's ticket-compliance warning incorrectly used separate PR 647 (unsubscribe) as this task's ticket. It is solely R1's overlap dependency. The PR body clarifies this; PR-Agent reported no major issues or security concerns. This is author adjudication, not independent evaluation.
+
+CodeRabbit completed review at 401be89491f4e7f0b7d92d9f55512fe7b91d0ef4 with two proof-harness findings, both addressed: rate-limit.mjs now asserts the exact fresh-window sequence; stack.mjs rejects dirty builds and rechecks the same clean commit before serving. Dirty-build rejection and mismatched-build-head rejection both exited 1 before startup; restoring the clean matching build served successfully. Rebuilt and repeated exact throttle, API and browser proof at `e038de5a717fe4a79f0a91517201dfd8fd4082d4` (`dirty: false`). Source/test Git tree identities in artifact-identity.json bind the evidence to the final descendant without pretending an evidence file can contain its own commit hash. All CI jobs and CodeQL passed at 401be894; final-head bot results are reported in the PR handoff. No application/test changes after that verified head.
 
 ## Cleanup, risks and follow-ups
 

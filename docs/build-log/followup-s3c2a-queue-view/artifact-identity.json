@@ -1,6 +1,6 @@
 {
-  "head": "5a19dfaa2be2e3aad518a0051af19a1a7a6458ad",
-  "dirty": true,
+  "head": "e038de5a717fe4a79f0a91517201dfd8fd4082d4",
+  "dirty": false,
   "mcpHash": "29adc399f97b19a37ba3e57a688d43d11da84257c80961da474baf4540c12382",
   "caddySourceHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
   "servedAssets": {
@@ -18,8 +18,8 @@
     "control": 29046
   },
   "project": "odos-s3c2a-proof",
-  "mcpPid": 2612,
-  "caddyPid": 2625,
+  "mcpPid": 9757,
+  "caddyPid": 9770,
   "sourceSha256": {
     "mcp/src/clinical-graph/exam-overview-endpoint.ts": "d2e7810130ab2e220c480b68a205eeb8994e1bdaeaa9f633948fb3ef51dab3e1",
     "mcp/src/clinical-graph/exam-scope-store.ts": "1f14dfaedaa2c907185c90e3a4b7da35b861370cf587e0a1f32586fcd7c2fce8",
@@ -38,5 +38,11 @@
     "ui/tests/examOverviewBoard.test.tsx": "d12ce32ae1c0fa9b7e81708d88232d0be3e4cdf53abfc8d6d957684a285ac14e",
     "ui/tests/followUpQueue.test.tsx": "d807b0dbfc73ee47e694456c2adfc0b75bae94b7beb6315ec5e812f10ed65843"
   },
-  "note": "Rebuilt and served from first commit plus rate-limit correction; hashes bind final source and served artifacts. No production source changes after this build."
+  "applicationAndTestTrees": {
+    "mcp/src": "292e4db4059728afcbee0deda2876302379191f1",
+    "mcp/tests": "5bae6871bac51a2688dfb5ba0beef427440254b9",
+    "ui/src": "c068fc4d887bf1ac3816857b0617c30663a5aa2b",
+    "ui/tests": "90e06a9fb9bfae382a3499cdbcf60f8b171555b0"
+  },
+  "note": "Built and served from this clean commit. Final descendant records proof outputs only; source/test tree hashes remain identical."
 }

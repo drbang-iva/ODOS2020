@@ -3,17 +3,17 @@
   "project": "odos-s3c2a-proof",
   "patientId": "42b185ed-94f9-411b-8c58-a503f21f113f",
   "visits": {
-    "glaucoma": "6675e1ea-b65f-4bf7-a4d2-1a45f079659f",
-    "macula": "23274d9c-a71c-43cb-8cbc-a23e629d26d4",
-    "absent": "14afba42-937b-4c0c-891f-ef343d8b2e0b",
-    "empty": "4154acf2-8cc3-43ac-8d10-02af09fd5706"
+    "glaucoma": "d1510ecf-8b1b-44a3-aa9a-7a23562bf82d",
+    "macula": "c34b9f7e-ff78-4ce6-83e1-929112218c8a",
+    "absent": "71d13287-bf04-4a78-8335-a58f74b4850c",
+    "empty": "0ceef12c-d595-4cbb-91f7-dd28f3e290df"
   },
   "orderRoute": "/clinical-graph/protocols/items/add",
   "orderStatus": 200,
   "stored": {
     "glaucoma": {
       "examScope": "comprehensive",
-      "setAt": "2026-09-21T09:43:16.455Z",
+      "setAt": "2026-09-21T10:05:03.594Z",
       "profilesApplied": [
         {
           "profileKey": "glaucoma",
@@ -69,13 +69,13 @@
           ]
         }
       ],
-      "shapedAt": "2026-09-21T09:43:16.455Z",
+      "shapedAt": "2026-09-21T10:05:03.594Z",
       "source": "derived",
-      "writeToken": "6fbd46a8-01cc-49bc-8217-d9fd35b9cce0"
+      "writeToken": "012e9331-472d-44ec-addb-172a163b12f2"
     },
     "macula": {
       "examScope": "comprehensive",
-      "setAt": "2026-09-21T09:43:16.466Z",
+      "setAt": "2026-09-21T10:05:03.604Z",
       "profilesApplied": [
         {
           "profileKey": "macula-retina",
@@ -134,9 +134,9 @@
           ]
         }
       ],
-      "shapedAt": "2026-09-21T09:43:16.466Z",
+      "shapedAt": "2026-09-21T10:05:03.604Z",
       "source": "derived",
-      "writeToken": "5121cc43-88e8-4209-adfb-6044754e94cb"
+      "writeToken": "1145658c-02ba-4aa4-b848-7b2b2de23fc9"
     },
     "absent": {
       "examScope": "office-visit",
@@ -150,13 +150,13 @@
     },
     "empty": {
       "examScope": "comprehensive",
-      "setAt": "2026-09-21T09:43:16.476Z",
+      "setAt": "2026-09-21T10:05:03.614Z",
       "profilesApplied": [],
       "sectionsOpen": [],
       "testsProposed": [],
-      "shapedAt": "2026-09-21T09:43:16.476Z",
+      "shapedAt": "2026-09-21T10:05:03.614Z",
       "source": "derived",
-      "writeToken": "ba8e47c5-82f3-4498-8f8e-a36f4b862ebd"
+      "writeToken": "585cbc34-abb0-423f-81cd-4f869965c7a8"
     }
   },
   "responses": {
@@ -190,7 +190,7 @@
             ],
             "state": "already-ordered",
             "actionIds": [
-              "a75953e3-398d-4721-ad64-89f0dc327ef7"
+              "75efe68a-32f1-449d-87e6-2368339652fd"
             ]
           }
         ]
