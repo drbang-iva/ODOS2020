@@ -51,13 +51,13 @@ The projection needs no change: source comes from the existing exam-scope GET in
 | Check | Base | Rev 2 candidate |
 |---|---|---|
 | `npm --prefix ui test` | 1,816 tests; 1,816 pass; 0 fail; 0 skip | 1,824 tests; 1,824 pass; 0 fail; 0 skip |
-| Full MCP command below | 6,175 tests; 6,120 pass; 0 fail; 55 skip | 6,188 tests; 6,133 pass; 0 fail; 55 skip |
+| Full MCP command below | 6,175 tests; 6,120 pass; 0 fail; 55 skip | 6,190 tests; 6,135 pass; 0 fail; 55 skip |
 | `npx tsc --noEmit` at root, ui and mcp | all exit 0 | all exit 0 |
 | `npm run preflight` | 0 warnings; 0 hard blocks | 0 warnings; 0 hard blocks |
 | Production MCP/UI builds | exit 0 | exit 0 |
 | `git diff --check` | clean | clean |
 
-UI **1,816 + 8 = 1,824**; MCP **6,175 + 13 = 6,188**. Concise suite output: [suite-summaries.json](suite-summaries.json).
+UI **1,816 + 8 = 1,824**; MCP **6,175 + 15 = 6,190**. Concise suite output: [suite-summaries.json](suite-summaries.json).
 
 ```sh
 ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:28836/medplum ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test
@@ -346,15 +346,21 @@ The before records' shapes have profilesApplied `[]`, sectionsOpen `[]`, shapedA
 
 The recorded picker mutation is solely `PUT /clinical-graph/encounters/{id}/exam-scope`; server mutation spies independently reject any Condition, finding, plan or charge write. Source-free **unshaped** legacy rows remain unshaped, as the retained S3b-1 guards require.
 
+## CodeRabbit fixback after the first published head
+
+CodeRabbit reviewed `3c87b422d34e145d21b15cd9f99f1d0fd6acba35` and found one minor issue: a deleted prior Encounter/Condition fell through to the generic "Encounter was not found" response. Source reads now map only 404/410 to the existing stale-selection 409; authorization and other failures propagate to their existing responses. The catch is scoped to those two reads, so a missing current encounter still returns 404. Only the allowed endpoint/test files changed.
+
+The final full MCP rerun passed **6,135 / 6,190 total, 0 fail, 55 skip** (two tests added by this fixback).
+
+Two regression tests cover both source types, both missing statuses, 403, 503 and the current encounter. [review-fixback.json](review-fixback.json) quotes the red/green outputs. The missing-source test failed before the fix (1 fail, 1 pass), then both tests passed. Broadening the catch to swallow every error failed the authorization/outage test (1 fail), and restoring it passed (1 pass). Focused server tests increased **70 → 72 pass**, with 0 failures; MCP typecheck and preflight passed again.
+
+The real-stack screenshots and historical records above bind to the first published head `3c87b422`, whose four production hashes remain in source-hashes.json. The sole subsequent production delta is this missing-source error classification; its source hashes are in [fixback-source-hashes.json](fixback-source-hashes.json). No new real-stack screenshot is claimed for that delta. The UI and success paths are unchanged; the regression tests exercise the changed failure path.
+
 ## Cleanup, limits and follow-ups
 
 Task containers and app processes stopped, volumes retained. Final `docker ps --format '{{.Names}}\t{{.Status}}'` output (all remaining containers belong to other tasks):
 
 ```text
-odos-e1b1-test-pg	Up 6 minutes
-odos-email-e1c1-live-medplum-server-1	Up 9 minutes
-odos-email-e1c1-live-postgres-1	Up 9 minutes (healthy)
-odos-email-e1c1-live-redis-1	Up 9 minutes (healthy)
 vf-prac1b-walk-db	Up 46 hours
 ```
 

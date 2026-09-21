@@ -590,7 +590,13 @@ export async function handleExamScopeRequest(
           const [prior, condition] = await Promise.all([
             staff.fhir.read<Encounter>("Encounter", sourceEncounterReference.slice(10)),
             staff.fhir.read<Condition>("Condition", sourceConditionReference.slice(10)),
-          ]);
+          ]).catch(error => {
+            if ([404, 410].includes(errorStatus(error) as number)) return [undefined, undefined] as const;
+            throw error;
+          });
+          if (!prior || !condition) {
+            return { status: 409, body: { error: "This diagnosis is no longer an eligible prior visit diagnosis. Reload and choose again." } };
+          }
           const priorTime = Date.parse(prior.period?.start ?? ""), currentTime = Date.parse(encounter.period?.start ?? "");
           if (prior.status === "entered-in-error" || prior.subject?.reference !== encounter.subject.reference ||
             condition.subject.reference !== encounter.subject.reference || condition.encounter?.reference !== sourceEncounterReference ||

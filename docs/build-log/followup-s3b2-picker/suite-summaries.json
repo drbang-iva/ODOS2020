@@ -16,9 +16,9 @@
     "# skipped 55"
   ],
   "candidate-mcp": [
-    "# tests 6188",
+    "# tests 6190",
     "# suites 0",
-    "# pass 6133",
+    "# pass 6135",
     "# fail 0",
     "# cancelled 0",
     "# skipped 55",
@@ -43,6 +43,15 @@
     "# fail 0",
     "# cancelled 0",
     "# skipped 0",
+    "# todo 0"
+  ],
+  "pre-fixback-candidate-mcp": [
+    "# tests 6188",
+    "# suites 0",
+    "# pass 6133",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 55",
     "# todo 0"
   ]
 }

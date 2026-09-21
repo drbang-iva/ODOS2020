@@ -1020,3 +1020,32 @@ for (const scenario of ["foreign-patient", "wrong-encounter", "unlinked", "futur
     assert.equal(fhir.writeCount, 0);
   });
 }
+
+test("S3b2 missing source reads return stale-selection conflict without mutation", async () => {
+  for (const missingId of ["prior", "prior-dx"]) for (const status of [404, 410]) {
+    const fhir = new HistoryWorkflowFhir(pickerResources());
+    const read = fhir.read.bind(fhir);
+    fhir.read = async (type, id) => {
+      if (id === missingId) throw Object.assign(new Error("source removed"), { status });
+      return read(type, id);
+    };
+    const result = await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior });
+    assert.equal(result.status, 409, `${missingId} ${status}: ${JSON.stringify(result.body)}`);
+    assert.match((result.body as { error: string }).error, /no longer an eligible prior visit diagnosis/);
+    assert.equal(fhir.writeCount, 0);
+  }
+});
+
+test("S3b2 source error mapping preserves authorization, outages and missing current encounter", async () => {
+  for (const [failedId, status, expected] of [["prior", 403, 403], ["prior-dx", 403, 403], ["prior", 503, 502], ["prior-dx", 503, 502], ["e1", 404, 404]] as const) {
+    const fhir = new HistoryWorkflowFhir(pickerResources());
+    const read = fhir.read.bind(fhir);
+    fhir.read = async (type, id) => {
+      if (id === failedId) throw Object.assign(new Error("read failed"), { status });
+      return read(type, id);
+    };
+    const result = await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior });
+    assert.equal(result.status, expected, `${failedId} ${status}: ${JSON.stringify(result.body)}`);
+    assert.equal(fhir.writeCount, 0);
+  }
+});
