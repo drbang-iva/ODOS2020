@@ -1,0 +1,7 @@
+{
+  "mcp/src/clinical-graph/exam-view-state-store.ts": "cfa66ff552097a35f59c10825240fe608e66b8e377deea6826add0f0ce64cc8a",
+  "mcp/src/clinical-graph/exam-view-state-endpoint.ts": "818ba8c77f53f9550237a32849d7e181ccfcdbdaa82ecb83456450c6a00c6009",
+  "mcp/src/index.ts": "71f56ce1a05a2e15a4fdc8a8969635861031b6c9d601bf3490694af4f256831a",
+  "ui/src/lib/exam-view-state.ts": "9050ed4b988b4d632b3f83902e05b8b09ae4ba80da6ce24a6b8727071349c6fa",
+  "ui/src/scenes/EncounterCharting.tsx": "b2a98fe1e82b040d31bda259ab6564bb2a973e8b357f9d74c4e932bef78607ad"
+}

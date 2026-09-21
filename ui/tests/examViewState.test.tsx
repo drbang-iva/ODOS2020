@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import React, { useState } from "react";
+import React from "react";
 import { act, create, type ReactTestInstance } from "react-test-renderer";
 import { ExamOverviewBoard, UNFORMATTED_FINDING_VALUE, type ExamOverviewProjection } from "../src/components/charting/ExamOverviewBoard";
 import { chartEditorInventory } from "../src/components/charting/SpineNav";
@@ -18,8 +18,17 @@ const line = (root: ReactTestInstance, id: string) => root.findAll(node => typeo
 const control = (root: ReactTestInstance, action: string, id: string) => root.findByProps({ "data-exam-view-action": action, "data-editor-id": id });
 const storage = () => {
   const values = new Map<string, string>();
-  return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+  const requests: Array<{ path: string; method: string }> = [];
+  const request = (async (input, init) => {
+    const path = String(input), method = init?.method ?? "GET";
+    requests.push({ path, method });
+    if (method === "PUT") values.set(path, String(init?.body));
+    return new Response(values.get(path) ?? '{"collapsed":[],"shelved":[]}');
+  }) as typeof fetch;
+  return { values, requests, request };
 };
+const endpoint = (id: string) => `/clinical-graph/encounters/${id}/exam-view-state`;
+const settleWrites = () => new Promise(resolve => setTimeout(resolve, 350));
 
 async function viewModule() {
   const module = await import("../src/lib/exam-view-state").catch(() => undefined);
@@ -27,48 +36,47 @@ async function viewModule() {
   return module;
 }
 
-test("S2b2a G10 storage is scoped by encounter and malformed or inaccessible storage opens everything", async () => {
+test("S2b2a G10 server state is scoped by encounter and malformed or inaccessible responses open everything", async () => {
   const { loadExamViewState, saveExamViewState } = await viewModule();
   const store = storage();
-  saveExamViewState("one", { collapsed: ["iop"], shelved: ["cover-test"] }, store);
-  assert.equal(store.getItem("odos:exam-view:v1:one"), '{"collapsed":["iop"],"shelved":["cover-test"]}');
-  assert.deepEqual(loadExamViewState("one", store), { collapsed: ["iop"], shelved: ["cover-test"] });
-  assert.deepEqual(loadExamViewState("two", store), { collapsed: [], shelved: [] });
+  await saveExamViewState("one", { collapsed: ["iop"], shelved: ["cover-test"] }, store.request);
+  assert.equal(store.values.get(endpoint("one")), '{"collapsed":["iop"],"shelved":["cover-test"]}');
+  assert.deepEqual(await loadExamViewState("one", store.request), { collapsed: ["iop"], shelved: ["cover-test"] });
+  assert.deepEqual(await loadExamViewState("two", store.request), { collapsed: [], shelved: [] });
   for (const raw of ["broken json", "null", '{"collapsed":[1],"shelved":[]}', '{"collapsed":[],"shelved":"iop"}']) {
-    store.setItem("odos:exam-view:v1:one", raw);
-    assert.deepEqual(loadExamViewState("one", store), { collapsed: [], shelved: [] });
+    store.values.set(endpoint("one"), raw);
+    assert.deepEqual(await loadExamViewState("one", store.request), { collapsed: [], shelved: [] });
   }
-  for (const unavailable of [null, { getItem() { throw Error("read denied"); }, setItem() { throw Error("write denied"); } }]) {
-    assert.deepEqual(loadExamViewState("one", unavailable), { collapsed: [], shelved: [] });
-    assert.doesNotThrow(() => saveExamViewState("one", { collapsed: ["iop"], shelved: [] }, unavailable));
+  for (const unavailable of [async () => new Response("", { status: 503 }), async () => { throw Error("network denied"); }]) {
+    assert.deepEqual(await loadExamViewState("one", unavailable), { collapsed: [], shelved: [] });
+    await assert.doesNotReject(saveExamViewState("one", { collapsed: ["iop"], shelved: [] }, unavailable));
   }
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
   Object.defineProperty(globalThis, "window", { configurable: true, value: { get localStorage() { throw Error("storage getter denied"); } } });
   try {
-    assert.deepEqual(loadExamViewState("one"), { collapsed: [], shelved: [] });
-    assert.doesNotThrow(() => saveExamViewState("one", { collapsed: [], shelved: [] }));
+    store.values.delete(endpoint("one"));
+    assert.deepEqual(await loadExamViewState("one", store.request), { collapsed: [], shelved: [] });
+    await assert.doesNotReject(saveExamViewState("one", { collapsed: [], shelved: [] }, store.request));
   } finally {
     if (descriptor) Object.defineProperty(globalThis, "window", descriptor);
     else Reflect.deleteProperty(globalThis, "window");
   }
 });
 
-async function harness(projection = recorded(), store: ReturnType<typeof storage> | null = storage(), initial?: { collapsed: string[]; shelved: string[] }) {
-  const { loadExamViewState, saveExamViewState, changeExamViewState } = await viewModule();
+async function harness(projection = recorded(), store = storage(), initial?: { collapsed: string[]; shelved: string[] }) {
+  const { useExamViewState } = await viewModule();
+  if (initial) store.values.set(endpoint("synthetic-view"), JSON.stringify(initial));
   const calls = { refresh: 0, groupWrite: 0, open: [] as string[] };
   function Host() {
-    const [state, setState] = useState(() => initial ?? loadExamViewState("synthetic-view", store));
-    const change = (action: "collapse" | "expand" | "shelve" | "open", id: string) => setState(previous => {
-      const next = changeExamViewState(previous, action, id);
-      saveExamViewState("synthetic-view", next, store);
-      return next;
-    });
+    const { state, change } = useExamViewState("synthetic-view", store.request);
     return <ExamOverviewBoard projection={projection} editorEntries={inventory} refreshing={false}
       viewState={state} onCollapse={id => change("collapse", id)} onExpand={id => change("expand", id)} onShelve={id => change("shelve", id)}
       onOpenEditor={id => { calls.open.push(id); change("open", id); }}
       onRefresh={() => { calls.refresh++; }} onAddSectionGroup={() => { calls.groupWrite++; }} />;
   }
-  return { renderer: create(<Host />), calls, store, Host };
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => { renderer = create(<Host />); });
+  return { renderer, calls, store, Host };
 }
 
 test("S2b2a G3 collapsed data stays in order, summarizes values, survives remount and expands", async () => {
@@ -83,15 +91,15 @@ test("S2b2a G3 collapsed data stays in order, summarizes values, survives remoun
     assert.match(line(h.renderer.root, "iop").findByProps({ "data-testid": "exam-collapsed-line" }).props["aria-label"], /collapsed.*Has findings this visit.*17/);
     assert.equal(line(h.renderer.root, "iop").props["data-holds-data"], "true");
     assert.equal(line(h.renderer.root, "iop").findAllByProps({ "data-testid": "exam-finding-row" }).length, 0);
-    h.renderer.unmount();
-    h.renderer = create(<h.Host />);
+    await act(async () => { await settleWrites(); h.renderer.unmount(); });
+    await act(async () => { h.renderer = create(<h.Host />); });
     assert.match(text(line(h.renderer.root, "iop")), /collapsed/);
     act(() => control(h.renderer.root, "expand", "iop").props.onClick());
     assert.equal(line(h.renderer.root, "iop").findAllByProps({ "data-testid": "exam-finding-row" }).length, 1);
   } finally { h.renderer.unmount(); }
 });
 
-test("S2b2a G2 G7 view controls never fetch or call chart mutation props; shelf opening restores the line", async () => {
+test("S2b2a G2 G7 view controls only persist preferences, never call chart mutation props; shelf opening restores the line", async () => {
   const h = await harness();
   const fetchBefore = globalThis.fetch;
   let requests = 0;
@@ -108,11 +116,13 @@ test("S2b2a G2 G7 view controls never fetch or call chart mutation props; shelf 
     act(() => entry.props.onClick());
     assert.ok(line(h.renderer.root, "cover-test"));
     assert.deepEqual(h.calls.open, ["cover-test"]);
-    assert.equal(JSON.parse(h.store!.getItem("odos:exam-view:v1:synthetic-view")!).shelved.length, 0);
+    await act(async () => { await settleWrites(); });
+    assert.equal(JSON.parse(h.store.values.get(endpoint("synthetic-view"))!).shelved.length, 0);
+    assert.ok(h.store.requests.every(r => r.path === endpoint("synthetic-view") && ["GET", "PUT"].includes(r.method)));
   } finally { globalThis.fetch = fetchBefore; h.renderer.unmount(); }
 });
 
-test("S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope", async () => {
+test("S3b3 G3 S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope", async () => {
   for (const id of ["iop", "wearing"]) {
     const p = recorded(); p.examScope = "office-visit"; p.completeness.trace = [];
     const h = await harness(p, storage(), { collapsed: [id], shelved: [id] });
@@ -123,13 +133,16 @@ test("S2b2a G6 persisted shelving loses to saved data and unknown evidence, even
   }
 });
 
-test("S2b2a G10 absent and throwing storage keeps the board open and collapse works in-session", async () => {
-  for (const store of [null, { getItem() { throw Error("read denied"); }, setItem() {} },
-    { getItem() { return null; }, setItem() { throw Error("full"); } }]) {
+test("S3b3 G4 S2b2a G10 unavailable server keeps the board open and collapse works in-session", async () => {
+  for (const request of [async () => new Response("", { status: 503 }), async () => { throw Error("network denied"); },
+    async (_input: unknown, init?: RequestInit) => { if (init?.method === "PUT") throw Error("write denied"); return new Response('{"collapsed":[],"shelved":[]}'); }]) {
+    const store = { ...storage(), request: request as typeof fetch };
     const h = await harness(recorded(), store);
     try {
       assert.doesNotMatch(text(line(h.renderer.root, "iop")), /collapsed/);
       act(() => control(h.renderer.root, "collapse", "iop").props.onClick());
+      assert.match(text(line(h.renderer.root, "iop")), /collapsed/);
+      await act(async () => { await settleWrites(); });
       assert.match(text(line(h.renderer.root, "iop")), /collapsed/);
     } finally { h.renderer.unmount(); }
   }
