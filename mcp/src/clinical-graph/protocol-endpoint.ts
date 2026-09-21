@@ -1254,8 +1254,9 @@ export async function handleFollowUpAcceptRequest(
   }
   const test = loaded.scope.testsProposed?.find(item => item.orderable === orderable && (item.focus ?? "") === (focus ?? ""));
   const sourceKeys = new Set(test?.sources.flatMap(source => source.kind === "profile" ? [source.profileKey] : []) ?? []);
+  const { normalizeClinicalFamily } = await import("./exam-overview-endpoint.js");
   const families = new Set(loaded.profiles.filter(profile => profile.active && sourceKeys.has(profile.profileKey))
-    .flatMap(profile => profile.matchesDiagnosisFamilies.map(value => value.trim().toLowerCase().replace(/[-_]+/g, " "))));
+    .flatMap(profile => profile.matchesDiagnosisFamilies.map(normalizeClinicalFamily)));
   const diagnosis = loaded.queue.recorded ? loaded.queue.diagnoses?.find(item => families.has(loaded.conditionFamilyByReference.get(item.reference) ?? "")) : undefined;
   const { IN_PROCESS_ENCOUNTER_LOCK } = await import("./protocol-service.js");
   const { ProtocolBasicStore, PROTOCOL_BASIC_CODES } = await import("./protocol-store.js");

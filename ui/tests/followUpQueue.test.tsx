@@ -227,3 +227,17 @@ test("S3c2c1b G12 Change diagnosis offers matching diagnoses first and PATCHes o
     assert.deepEqual(calls, [{ dxPointer: "Condition/macula" }]);
   } finally { globalThis.fetch = previous; await h.close(); }
 });
+
+test("S3c2c1b G12 stale charge diagnosis shows no selected visit diagnosis", async () => {
+  const stale = { ...chargePayload, rows: [chargePayload.rows[0], {
+    ...chargePayload.rows[1], charge: { ...chargePayload.rows[1].charge, dxPointer: "Condition/historical" },
+  }] };
+  const h = await mounted(async () => Response.json(stale));
+  try {
+    const row = h.renderer.root.findAllByType("li")[1];
+    await act(async () => row.findAllByType("button").find(button => button.children.join("") === "Change diagnosis")!.props.onClick());
+    const select = h.renderer.root.findByType("select");
+    assert.equal(select.props.value, "");
+    assert.deepEqual(select.findAllByType("option").map(option => option.props.value), ["", "Condition/macula", "Condition/glaucoma"]);
+  } finally { await h.close(); }
+});

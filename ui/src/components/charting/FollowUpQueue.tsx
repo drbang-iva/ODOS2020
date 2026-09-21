@@ -4,6 +4,9 @@ import { procedureChargeApi } from "../../lib/clinical-graph-client";
 
 type LoadState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; value: FollowUpQueueResult };
 const stateLabels = { "for-review": "For review", "already-ordered": "Already ordered", unavailable: "Unavailable", "not-today": "Not today" };
+function selectedVisitDiagnosis(pointer: string | undefined, diagnoses: readonly { reference: string }[]): string | undefined {
+  return pointer && diagnoses.some(diagnosis => diagnosis.reference === pointer) ? pointer : undefined;
+}
 
 export function FollowUpQueue({ encounterId, active }: { encounterId: string; active: boolean }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -93,8 +96,8 @@ export function FollowUpQueue({ encounterId, active }: { encounterId: string; ac
         {canAccept && row.state === "already-ordered" && row.charge?.status === "billed" && <>
           <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={() => changeCharge(row, { state: "removed" })}>Remove charge</button>
           <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={() => setDiagnosisOpen(previous => ({ ...previous, [`${row.orderable}|${row.focus ?? ""}`]: !previous[`${row.orderable}|${row.focus ?? ""}`] }))}>Change diagnosis</button>
-          {diagnosisOpen[`${row.orderable}|${row.focus ?? ""}`] && <select aria-label={`Diagnosis for ${row.label}`} value={row.charge.dxPointer ?? ""} disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onChange={event => changeCharge(row, { dxPointer: event.target.value })}>
-            {!row.charge.dxPointer && <option value="">Select diagnosis</option>}
+          {diagnosisOpen[`${row.orderable}|${row.focus ?? ""}`] && <select aria-label={`Diagnosis for ${row.label}`} value={selectedVisitDiagnosis(row.charge.dxPointer, diagnoses) ?? ""} disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onChange={event => changeCharge(row, { dxPointer: event.target.value })}>
+            {!selectedVisitDiagnosis(row.charge.dxPointer, diagnoses) && <option value="">Select diagnosis</option>}
             {diagnoses.map(diagnosis => <option key={diagnosis.reference} value={diagnosis.reference}>{diagnosis.display}</option>)}
           </select>}
         </>}

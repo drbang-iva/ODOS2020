@@ -6,14 +6,14 @@ Base and current `origin/main`: `80c365fe6fecbf890d860977db68277aac19e936` after
 
 | Command | Base | Head |
 | --- | --- | --- |
-| `npm --prefix ui test` | 1,840 pass, 0 fail, 0 skip, exit 0 | 1,843 pass, 0 fail, 0 skip, exit 0 |
+| `npm --prefix ui test` | 1,840 pass, 0 fail, 0 skip, exit 0 | 1,844 pass, 0 fail, 0 skip, exit 0 |
 | `ODOS_POSTGRES_URL=... npm --prefix mcp test` | 6,193 pass, 0 fail, 55 skip, wrapper exit 1 | 6,210 pass, 0 fail, 55 skip, wrapper exit 1 |
 | `npm run typecheck:scripts` | exit 0 | exit 0 |
 | `cd mcp && npx tsc --noEmit` | exit 0 | exit 0 |
 | `cd ui && npx tsc --noEmit --skipLibCheck` | exit 0 | exit 0 |
 | `npm run preflight` | 0 warnings, 0 hard blocks | 0 warnings, 0 hard blocks |
 
-Each MCP run used its own dedicated `odos-s3c2c1b-*` PostgreSQL container and `ODOS_POSTGRES_URL`. The MCP wrapper's exit 1 reflects its live-stack authorization skip gate; the executed assertions had zero failures. Head is +3 UI tests and +17 MCP tests. G1–G16 break/red/restore/green counts are in `mutations.tsv`. Every mutation exited 1 while broken and 0 after restoration; the file names the failing assertions and the pass/fail counts.
+Each MCP run used its own dedicated `odos-s3c2c1b-*` PostgreSQL container and `ODOS_POSTGRES_URL`. The MCP wrapper's exit 1 reflects its live-stack authorization skip gate; the executed assertions had zero failures. Head is +4 UI tests and +17 MCP tests. G1–G16 break/red/restore/green counts are in `mutations.tsv`. Every mutation exited 1 while broken and 0 after restoration; the file names the failing assertions and the pass/fail counts. CodeRabbit's stale diagnosis control finding gained an additional test: before the fix, focused red was 0 pass/1 fail (`actual: Condition/historical`, `expected: ""`); after the fix, focused green was 2 pass/0 fail (the new test and existing diagnosis-switch test). Its family-normalization duplication finding was fixed by reusing the exported helper. At the review-adjusted head, changing G7 to choose the first diagnosis produced red 0 pass/1 fail; restoring the file byte-for-byte produced green 1 pass/0 fail. The full suites and money seam were rerun after both fixes.
 
 ## Live synthetic money seam
 
