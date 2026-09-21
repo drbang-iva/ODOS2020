@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import rateLimit from "express-rate-limit";
 import type { Application, Request, Response } from "express";
 import type { Basic, Patient } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
@@ -64,11 +65,13 @@ export function registerEmailUnsubscribeRoutes(
     now?: () => string;
   },
 ): void {
-  app.get("/comms/u/:token", (req: Request, res: Response) => {
+  const getLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false });
+  const postLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false });
+  app.get("/comms/u/:token", getLimit, (req: Request, res: Response) => {
     if (!validRouteToken(req)) { respond(res, 400, "Invalid link."); return; }
     respond(res, 200, CONFIRM_PAGE);
   });
-  app.post("/comms/u/:token", async (req: Request, res: Response) => {
+  app.post("/comms/u/:token", postLimit, async (req: Request, res: Response) => {
     if (!validRouteToken(req)) { respond(res, 400, "Invalid link."); return; }
     try {
       await deps.authenticateService?.();
@@ -227,6 +230,9 @@ function conditionalIdentifier(system: string, value: string): string { return n
 function validRouteToken(req: Request): boolean { return typeof req.params.token === "string" && TOKEN_RULE.test(req.params.token); }
 function respond(res: Response, status: number, body: string): void {
   res.sendDate = false;
+  // Keep endpoint responses byte-identical across token states; quota headers remain on middleware 429s.
+  res.removeHeader("RateLimit");
+  res.removeHeader("RateLimit-Policy");
   res.set({ "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'", "X-Content-Type-Options": "nosniff" });
   res.status(status).type("html").send(body);
 }

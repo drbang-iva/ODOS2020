@@ -126,6 +126,7 @@ export const NON_FHIR_LITERAL_CALL_SITES = [
 ] as const satisfies readonly NonFhirLiteralCallSite[];
 
 export const SERVICE_IDENTITY_FHIR_WRITE_CALL_SITES = [
+  { path: "mcp/src/comms/email-unsubscribe.ts", line: 107, callee: "fhir.update", resourceType: "Patient", reason: "Email unsubscribe patient preference update uses the MCP process service client." },
   { path: "mcp/src/clinic/guarantor-search.ts", line: 113, callee: "deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Unused guarantor discard is version-conditional and staff-attributed through the service client." },
   { path: "mcp/src/clinic/guarantor-search.ts", line: 57, callee: "deps.serviceFhir.executeTransactionAsActor", resourceType: "Person", reason: "Guarantor creation uses the explicit service client with staff attribution." },
   { path: "mcp/src/clinic/guarantor-link-operation.ts", line: 201, callee: "this.deps.serviceFhir.executeTransactionAsActor", resourceType: "Task", reason: "Guarantor operation uses the explicit service client with staff attribution." },

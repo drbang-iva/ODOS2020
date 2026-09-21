@@ -234,3 +234,26 @@ test("concurrent first clicks recover Patient version conflicts without duplicat
     assert.equal((await readEmailAddressSuppression(f.fhir, address))?.revokedAt, first);
   } finally { await f.close(); }
 });
+
+for (const method of ["GET", "POST"]) {
+  test(`I ${method} limits the requester across tokens before further storage access`, async () => {
+    const f = await fixture();
+    let lookups = 0;
+    const find = f.store.find;
+    f.store.find = async token => { lookups++; return find(token); };
+    try {
+      const valid = await f.issue();
+      for (let i = 0; i < 120; i++) {
+        assert.equal((await f.send(`unknown-token-${i}`, method)).status, 200);
+      }
+      for (const token of [valid.token, "another-unknown-token"]) {
+        const response = await f.send(token, method);
+        assert.equal(response.status, 429);
+        assert.ok(response.headers["retry-after"]);
+      }
+      assert.equal(lookups, method === "POST" ? 120 : 0);
+      const otherMethod = method === "GET" ? "POST" : "GET";
+      assert.equal((await f.send(valid.token, otherMethod)).status, 200);
+    } finally { await f.close(); }
+  });
+}
