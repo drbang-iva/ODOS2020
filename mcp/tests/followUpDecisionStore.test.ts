@@ -99,3 +99,37 @@ test("S3c2b retry preserves an already-recorded same-key decision and actor", as
   await decisions.apply("e1", command("optic nerve"), actorA);
   assert.equal(fhir.attempts, attempts);
 });
+
+
+test("S3c2b F1 update 500 rejects once without changing the stored record", async () => {
+  const fhir = new DecisionFhir(), decisions = await store(fhir);
+  await decisions.apply("e1", command("seed"), actorA);
+  const before = structuredClone(fhir.records), failure = { status: 500 };
+  fhir.attempts = 0;
+  fhir.update = async () => { fhir.attempts++; throw failure; };
+  await assert.rejects(decisions.apply("e1", command("optic nerve"), actorB), error => error === failure);
+  assert.equal(fhir.attempts, 1);
+  assert.deepEqual(fhir.records, before);
+});
+
+
+test("S3c2b F2 create 500 rejects once without creating a record", async () => {
+  const fhir = new DecisionFhir(), decisions = await store(fhir);
+  const failure = { status: 500 };
+  fhir.create = async () => { fhir.attempts++; throw failure; };
+  await assert.rejects(decisions.apply("e1", command("optic nerve"), actorA), error => error === failure);
+  assert.equal(fhir.attempts, 1);
+  assert.deepEqual(fhir.records, []);
+});
+
+
+test("S3c2b F3 update 403 rejects once without changing the stored record", async () => {
+  const fhir = new DecisionFhir(), decisions = await store(fhir);
+  await decisions.apply("e1", command("seed"), actorA);
+  const before = structuredClone(fhir.records), failure = { status: 403 };
+  fhir.attempts = 0;
+  fhir.update = async () => { fhir.attempts++; throw failure; };
+  await assert.rejects(decisions.apply("e1", command("optic nerve"), actorB), error => error === failure);
+  assert.equal(fhir.attempts, 1);
+  assert.deepEqual(fhir.records, before);
+});

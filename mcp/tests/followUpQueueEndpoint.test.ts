@@ -303,3 +303,33 @@ test("S3c2b strict body validation precedes Encounter and service reads", async 
     assert.equal(reply.status, 400); assert.deepEqual(h.staff.reads, []); assert.equal(JSON.stringify(h.service.resources), before);
   }
 });
+
+
+test("S3c2b F4 PUT decision write 500 returns load failure after one attempt", async () => {
+  const h = await decisionFixture();
+  const before = structuredClone(h.service.resources);
+  let attempts = 0;
+  h.service.create = async () => { attempts++; throw { status: 500 }; };
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 502);
+  assert.deepEqual(reply.body, { error: "The tests for this visit could not be loaded." });
+  assert.equal(Object.hasOwn(reply.body as object, "code"), false);
+  assert.equal(attempts, 1);
+  assert.ok(h.staff.reads.includes("Encounter/e1"));
+  assert.deepEqual(h.service.resources, before);
+});
+
+
+test("S3c2b F5 PUT decision write 403 returns load failure after one attempt", async () => {
+  const h = await decisionFixture();
+  const before = structuredClone(h.service.resources);
+  let attempts = 0;
+  h.service.create = async () => { attempts++; throw { status: 403 }; };
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 502);
+  assert.deepEqual(reply.body, { error: "The tests for this visit could not be loaded." });
+  assert.equal(Object.hasOwn(reply.body as object, "code"), false);
+  assert.equal(attempts, 1);
+  assert.ok(h.staff.reads.includes("Encounter/e1"));
+  assert.deepEqual(h.service.resources, before);
+});

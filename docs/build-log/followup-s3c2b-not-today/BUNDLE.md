@@ -1005,3 +1005,135 @@ vf-prac1b-walk-db   Up 2 days
 ```
 
 needs-review
+
+## FIXBACK-1 — non-conflict write failures
+
+Requested after the operator reported code PASS with one test gap at base `a3082799dbe327612e59d3fd7cf285421ad028e1`. This fixback appends exactly five tests and this bundle section. No production source change; all original test bytes are preserved. No `mcp/src/index.ts` change. Branch: `drbang-iva/followup-s3c2b-not-today`; PR #651; do not merge.
+
+### Added guards
+
+- F1: existing decision `update` throws the exact `{ status: 500 }` object; `apply` rejects with that object after one write attempt and the stored resource is unchanged.
+- F2: initial `create` throws `{ status: 500 }`; exact rejection, one attempt, no record.
+- F3: existing `update` throws `{ status: 403 }`; exact rejection, one attempt, stored resource unchanged.
+- F4: PUT decision `create` throws `{ status: 500 }`; 502 with exactly `The tests for this visit could not be loaded.`, no `code`, one write attempt, successful Encounter read and unchanged storage.
+- F5: same PUT write failure with `{ status: 403 }`; 502 with the same exact load-failure body, no compartment error or conflict code, one attempt and unchanged storage.
+
+The first unchanged-source run of both files passed: `tests 30; pass 30; fail 0; skipped 0` (the existing 25 plus F1–F5). No existing assertion was changed and no unexpected failure occurred.
+
+### Mandate 17 — deliberate break and restore
+
+Every MCP invocation below used `ODOS_POSTGRES_URL` against the task-owned `odos-s3c2b-postgres` PostgreSQL 16 container, mapped to loopback port 32782. No use of `vf-prac1b-walk-db`.
+
+From `mcp/`, focused command:
+
+```sh
+ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:32782/medplum \
+  node --import tsx --test --test-name-pattern='S3c2b F[1-5] ' \
+  tests/followUpDecisionStore.test.ts tests/followUpQueueEndpoint.test.ts
+```
+
+D4 temporarily replaced `if (status !== 409 && status !== 412) throw error;` with `void error;` in the store. Red, exit 1:
+
+```text
+not ok 1 - S3c2b F1 update 500 rejects once without changing the stored record
+not ok 2 - S3c2b F2 create 500 rejects once without creating a record
+not ok 3 - S3c2b F3 update 403 rejects once without changing the stored record
+not ok 4 - S3c2b F4 PUT decision write 500 returns load failure after one attempt
+not ok 5 - S3c2b F5 PUT decision write 403 returns load failure after one attempt
+# tests 5
+# pass 0
+# fail 5
+# skipped 0
+```
+
+F1–F3 caught `Error: The follow-up decisions changed concurrently. Reload and retry.` instead of the injected error object. F4–F5 reported `actual: 409; expected: 502`. Byte-for-byte source restoration, same command, exit 0:
+
+```text
+# tests 5
+# pass 5
+# fail 0
+# skipped 0
+```
+
+Separately inserted a status-403 return only in the PUT's final store-error catch, ahead of its concurrent-edit mapping:
+
+```ts
+if ((error as { status?: number })?.status === 403) return { status: 403, body: { error: "Encounter is outside the caller's patient compartment." } };
+```
+
+Ran the same two-file command with `--test-name-pattern='S3c2b F5 '`. Red, exit 1:
+
+```text
+not ok 2 - S3c2b F5 PUT decision write 403 returns load failure after one attempt
+expected: 502
+actual: 403
+# tests 2
+# pass 1
+# fail 1
+# skipped 0
+```
+
+The extra passing entry is Node's file-level entry for the store test file with no matching test names, not another F case. Byte-for-byte endpoint restoration, same command, exit 0:
+
+```text
+# tests 2
+# pass 2
+# fail 0
+# skipped 0
+```
+
+Production source diff after both restorations: empty.
+
+### Full verification — base plus addition
+
+Both base and post-addition MCP runs mirror `.github/workflows/ci.yml`'s MCP step, including `ODOS_REAL_WEASYPRINT_TEST=1`, WeasyPrint 69.0, dedicated PostgreSQL, and serial test execution. The local WeasyPrint executable was selected with `WEASYPRINT_BIN`. Full command from `mcp/`:
+
+```sh
+ODOS_REAL_WEASYPRINT_TEST=1 \
+ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:32782/medplum \
+node --import tsx --test --test-concurrency=1 \
+  'src/__tests__/**/*.test.ts' 'tests/**/*.test.ts' \
+  '../tests/boundaries/**/*.test.ts' '../tests/observation-status-machine/**/*.test.ts' \
+  '../tests/setup-wizard/**/*.test.ts' '../tests/preflight/**/*.test.ts' \
+  '../tests/smart/**/*.test.ts' '../tests/cds/**/*.test.ts' \
+  '../tests/agentops/**/*.test.ts' '../tests/bulk-data/**/*.test.ts' \
+  '../tests/mandate-8/**/*.test.ts'
+```
+
+| Suite | Base a3082799 | Added | Fixback result |
+|---|---|---|---|
+| Full MCP | 6237 tests, 6183 pass, 54 skip, 0 fail | 5 tests/pass | 6242 tests, 6188 pass, 54 skip, 0 fail |
+| Full UI (`npm test` from `ui/`) | 1839 tests/pass, 0 skip, 0 fail | 0 | 1839 tests/pass, 0 skip, 0 fail |
+
+All four suite processes exited 0. The 54 MCP skips remain explicit live-lane skips; this full MCP step is not a new credentialed live-authorization proof. This fixback changes only tests, and does not claim a new browser or policy proof.
+
+Typechecks, each exit 0: `npx tsc --noEmit`; `npx tsc --noEmit -p mcp/tsconfig.json`; `npx tsc --noEmit -p ui/tsconfig.json`; `npm run typecheck:scripts`.
+
+`npm run preflight` exited 0 after the MCP suite finished:
+
+```text
+FHIR read grant check: PASS (48 literal/marked resourceTypes under mcp/src + ui/src)
+FHIR operation grant coverage: PASS (943 read/write operations)
+ODOS preflight complete: 0 warning(s), 0 hard block(s).
+```
+
+`git diff --check`: exit 0. Byte-prefix comparison to `git show a3082799:<test-path>` confirms both original files are intact and additions are append-only. Exactly three changed files:
+
+```text
+mcp/tests/followUpDecisionStore.test.ts
+mcp/tests/followUpQueueEndpoint.test.ts
+docs/build-log/followup-s3c2b-not-today/BUNDLE.md
+```
+
+### Cleanup and handoff
+
+`docker stop odos-s3c2b-postgres` completed. Final `docker ps`:
+
+```text
+NAMES               STATUS      PORTS
+vf-prac1b-walk-db   Up 2 days   127.0.0.1:55481->5432/tcp
+```
+
+No new decision or Mandate 14 artifact; no decisions index or ledger change required. Keep the existing Coded-by declaration. The operator-reported evaluation belongs to base a3082799; the new head needs independent Fable/Opus evaluation before merge. No merge authorized or performed.
+
+needs-review
