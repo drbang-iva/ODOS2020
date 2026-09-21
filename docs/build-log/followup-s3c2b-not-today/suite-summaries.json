@@ -1,0 +1,30 @@
+{
+  "base-ui": {
+    "tests": 1834,
+    "pass": 1834,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "base-mcp-complete": {
+    "tests": 6222,
+    "pass": 6168,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 54
+  },
+  "head-ui": {
+    "tests": 1839,
+    "pass": 1839,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "head-mcp": {
+    "tests": 6237,
+    "pass": 6183,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 54
+  }
+}

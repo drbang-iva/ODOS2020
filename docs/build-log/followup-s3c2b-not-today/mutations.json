@@ -1,0 +1,783 @@
+[
+  {
+    "guard": "G1",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G1 T4 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G1 T4 Not today survives reload, profile edit, second problem and explicit repick until Put back"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    + actual - expected",
+        "    ",
+        "    + 'for-review'",
+        "    - 'not-today'",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G1 T4 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G2",
+    "file": "mcp/src/clinical-graph/follow-up-decision-store.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G2 tests/followUpDecisionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G2 decision identity includes focus and Put back deletes only its key"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly deep-equal:",
+        "    + actual - expected",
+        "    ",
+        "      [",
+        "    +   'photos'",
+        "    -   'photos|optic nerve',",
+        "    -   'photos|retina'",
+        "      ]"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G2 tests/followUpDecisionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G3",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G3 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G3 orders beat decisions; decisions beat deactivated fees; Put back exposes Unavailable"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    + actual - expected",
+        "    ",
+        "    + 'not-today'",
+        "    - 'already-ordered'",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G3 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G4",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G4 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G4 invalid transitions refuse; repeated decisions and inapplicable Put back never write"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    already-ordered",
+        "    ",
+        "    200 !== 409",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 409",
+        "  actual: 200"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G4 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G5",
+    "file": "mcp/src/clinical-graph/follow-up-decision-store.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G5 tests/followUpDecisionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G5 stale If-Match is refused then fresh reapply preserves both people"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly deep-equal:",
+        "    + actual - expected",
+        "    ",
+        "      [",
+        "        'photos|optic nerve',",
+        "    -   'photos|retina',",
+        "        'photos|seed'",
+        "      ]"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G5 tests/followUpDecisionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G6",
+    "file": "mcp/src/clinical-graph/follow-up-decision-store.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G6 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G6 exhausted conflicts map to concurrent-edit after exactly three attempts"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    ",
+        "    4 !== 3",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 3",
+        "  actual: 4"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G6 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G7",
+    "file": "mcp/src/clinical-graph/follow-up-decision-store.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G7 tests/followUpDecisionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G7 conditional create loser confirms token and preserves first writer"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly deep-equal:",
+        "    + actual - expected",
+        "    ",
+        "      [",
+        "    -   'photos|optic nerve',",
+        "        'photos|retina'",
+        "      ]",
+        "    "
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G7 tests/followUpDecisionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G8",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G8 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G8 chart.write grants staff and provider and exposes canDecide only for shaped visits"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    ",
+        "    200 !== 403",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 403",
+        "  actual: 200"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G8 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G9",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G9 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G9 signed Encounter refuses with ordinary conflict and no write"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    ",
+        "    200 !== 409",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 409",
+        "  actual: 200"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G9 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G10",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G10 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G10 Encounter compartment read precedes all service work in both handlers"
+      ],
+      "errorExcerpt": [
+        "  error: 'search unavailable'",
+        "  code: 'ERR_TEST_FAILURE'"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G10 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G11-empty",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G11 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G11 all downstream failures including HTTP statuses return 502 and no write"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    decisions undefined",
+        "    ",
+        "    200 !== 502",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 502",
+        "  actual: 200"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G11 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G11-mapping",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G11 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G11 all downstream failures including HTTP statuses return 502 and no write"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    shape 401",
+        "    ",
+        "    403 !== 502",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 502",
+        "  actual: 403"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G11 tests/followUpQueueEndpoint.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G12",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G12 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G12 buttons follow state and permission without Accept"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly deep-equal:",
+        "    + actual - expected",
+        "    ... Skipped lines",
+        "    ",
+        "      [",
+        "        [",
+        "          'Not today'",
+        "        ],"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G12 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G13-alert",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G13 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G13 failure is scoped, polite, exact and re-enables the row"
+      ],
+      "errorExcerpt": [
+        "  error: 'No instances found with props: {\"role\":\"status\"}'",
+        "  code: 'ERR_TEST_FAILURE'",
+        "    async Test.run (node:internal/test_runner/test:1054:7)",
+        "    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)",
+        "  ..."
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G13 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G13-message",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G13 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G13 failure is scoped, polite, exact and re-enables the row"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    + actual - expected",
+        "    ",
+        "    + 'A fixed error'",
+        "    - 'This record was changed by someone else since you opened it. Reload and reapply your change.'",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G13 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G14",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G14 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G14 successful PUT replaces the complete list with no GET"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    ",
+        "    2 !== 1",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 1",
+        "  actual: 2"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G14 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G15",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G15 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - S3c2b G15 who and machine-readable when are shown even without permission"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    The expression evaluated to a falsy value:",
+        "    ",
+        "      assert.ok(row.findAllByType(\"p\").some(p => p.children.includes(\"Tech Synthetic\")))",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: true",
+        "  actual: false"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=S3c2b G15 tests/followUpQueue.test.tsx",
+      "cwd": "ui",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  },
+  {
+    "guard": "G16",
+    "file": "mcp/src/index.ts",
+    "red": {
+      "command": "node --import tsx --test --test-name-pattern=every definition-backed clinical-graph HTTP closure tests/findingDefinitionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 1,
+      "summary": [
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [
+        "not ok 1 - every definition-backed clinical-graph HTTP closure receives the persistent dependency"
+      ],
+      "errorExcerpt": [
+        "  error: |-",
+        "    Expected values to be strictly equal:",
+        "    ",
+        "    106 !== 107",
+        "    ",
+        "  code: 'ERR_ASSERTION'",
+        "  name: 'AssertionError'",
+        "  expected: 107",
+        "  actual: 106"
+      ]
+    },
+    "green": {
+      "command": "node --import tsx --test --test-name-pattern=every definition-backed clinical-graph HTTP closure tests/findingDefinitionStore.test.ts",
+      "cwd": "mcp",
+      "exit": 0,
+      "summary": [
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "failures": [],
+      "errorExcerpt": []
+    }
+  }
+]

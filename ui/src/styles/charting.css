@@ -2611,3 +2611,8 @@
 .odos-follow-up-queue-state[data-state="unavailable"] { color: #555d66; background: #edf0f3; }
 .odos-follow-up-queue-source { margin: .4rem 0 0; color: var(--muted, #626b75); font-size: .85rem; }
 .odos-follow-up-queue-reason { margin: .5rem 0 0; font-size: .9rem; }
+
+.odos-follow-up-queue-state[data-state="not-today"] { color: #625445; background: #f1ece5; }
+.odos-follow-up-queue-decision { margin: .5rem 0 0; color: var(--muted, #626b75); font-size: .85rem; }
+.odos-follow-up-queue li > button { margin-top: .75rem; min-height: 44px; padding: .5rem .85rem; }
+.odos-follow-up-queue-error { margin: .5rem 0 0; color: var(--text, #29323c); }

@@ -147,3 +147,189 @@ test("S3c2a G10 legacy proposals load unchanged and use catalogue then key label
   assert.deepEqual(output[0].sources, ["from the old shape"]);
   assert.equal(rows(queue([legacy[0]], [fee(false)]))[0].label, "fundus-photography");
 });
+
+async function decisionRequest(dependencies: Parameters<typeof handleFollowUpQueueRequest>[0], body: unknown) {
+  const { handleFollowUpDecisionRequest } = await import("../src/clinical-graph/follow-up-queue-endpoint.js");
+  assert.equal(typeof handleFollowUpDecisionRequest, "function");
+  return handleFollowUpDecisionRequest(dependencies, { ...request, body });
+}
+const mark = { orderable: "fundus-photography", focus: "optic nerve", decision: "not-today" };
+const putBack = { ...mark, decision: "put-back" };
+async function decisionFixture() {
+  const staff = new QueueFhir(), service = new QueueFhir();
+  const scope = new FhirEncounterExamScopeStore(service);
+  await scope.pick("e1", "office-visit", actor, null, [], [proposed(), proposed({ focus: "retina" })]);
+  const { buildProcedureFeeDefinition } = await import("../src/clinical-graph/procedure-fee-schedule.js");
+  service.resources.push({ ...buildProcedureFeeDefinition(fee()), id: "photos" });
+  return { staff, service, scope, dependencies: deps(staff, service) };
+}
+function decisionSnapshot(service: QueueFhir) {
+  const record = service.resources.find(r => r.resourceType === "Basic" && r.identifier?.some(i => i.system === "urn:odos:encounter-follow-up-decisions")) as Basic | undefined;
+  return record ? JSON.parse(record.extension![0].valueString!) : undefined;
+}
+
+test("S3c2b G1 T4 Not today survives reload, profile edit, second problem and explicit repick until Put back", async () => {
+  const h = await decisionFixture();
+  assert.equal((await decisionRequest(h.dependencies, mark)).status, 200);
+  const original = decisionSnapshot(h.service);
+  const profiles = new FhirFollowUpProfileStore(h.service);
+  const profile = (await profiles.list()).find(p => p.profileKey === "glaucoma")!;
+  const { versionId, ...editable } = profile;
+  const check = async () => {
+    const reply = await handleFollowUpQueueRequest(h.dependencies, request);
+    assert.equal(reply.status, 200);
+    assert.equal(rows(reply.body as any)[0].state, "not-today");
+    assert.deepEqual(decisionSnapshot(h.service), original);
+  };
+  await check();
+  await profiles.save({ ...editable, version: profile.version + 1, label: "Edited shape" }, versionId ?? null);
+  await check();
+  h.staff.resources.push({ resourceType: "Condition", id: "second-problem", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" } });
+  await check();
+  const current = await h.scope.get("e1");
+  await h.scope.pick("e1", "office-visit", actor, current.versionId!, [profile], [proposed(), proposed({ focus: "retina" })]);
+  await check();
+  const reply = await decisionRequest(h.dependencies, putBack);
+  assert.equal(reply.status, 200); assert.equal(rows(reply.body as any)[0].state, "for-review");
+  assert.deepEqual(decisionSnapshot(h.service).decisions, {});
+});
+
+test("S3c2b G2 one focus decision leaves the same orderable other focus For review", async () => {
+  const h = await decisionFixture();
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 200);
+  assert.deepEqual(rows(reply.body as any).map(r => r.state), ["not-today", "for-review"]);
+});
+
+test("S3c2b G3 orders beat decisions; decisions beat deactivated fees; Put back exposes Unavailable", async () => {
+  const h = await decisionFixture();
+  await decisionRequest(h.dependencies, mark);
+  h.staff.resources.push(buildProtocolBasic(order(), PROTOCOL_BASIC_CODES.planActionInstance));
+  assert.equal(rows((await handleFollowUpQueueRequest(h.dependencies, request)).body as any)[0].state, "already-ordered");
+  h.staff.resources = [];
+  h.service.resources = h.service.resources.map(r => r.resourceType === "ChargeItemDefinition" ? { ...r, status: "retired" } : r);
+  assert.equal(rows((await handleFollowUpQueueRequest(h.dependencies, request)).body as any)[0].state, "not-today");
+  assert.equal(rows((await decisionRequest(h.dependencies, putBack)).body as any)[0].state, "unavailable");
+});
+
+test("S3c2b G4 invalid transitions refuse; repeated decisions and inapplicable Put back never write", async () => {
+  for (const state of ["already-ordered", "unavailable", "unknown"]) {
+    const h = await decisionFixture();
+    if (state === "already-ordered") h.staff.resources.push(buildProtocolBasic(order(), PROTOCOL_BASIC_CODES.planActionInstance));
+    if (state === "unavailable") h.service.resources = h.service.resources.map(r => r.resourceType === "ChargeItemDefinition" ? { ...r, status: "retired" } : r);
+    const before = JSON.stringify(h.service.resources);
+    const reply = await decisionRequest(h.dependencies, state === "unknown" ? { ...mark, focus: "missing" } : mark);
+    assert.equal(reply.status, 409, state); assert.deepEqual(reply.body, { error: "This test can no longer be marked Not today." });
+    assert.equal(JSON.stringify(h.service.resources), before);
+    assert.equal((await decisionRequest(h.dependencies, putBack)).status, 200);
+    assert.equal(JSON.stringify(h.service.resources), before);
+  }
+  const h = await decisionFixture();
+  await decisionRequest(h.dependencies, mark);
+  const before = JSON.stringify(h.service.resources);
+  const repeated = await decisionRequest({ ...h.dependencies, authenticate: async () => ({ staffReference: "Practitioner/second", actorRole: "staff", fhir: h.staff }) }, mark);
+  assert.equal(repeated.status, 200); assert.equal(JSON.stringify(h.service.resources), before);
+});
+
+test("S3c2b G6 exhausted conflicts map to concurrent-edit after exactly three attempts", async () => {
+  const h = await decisionFixture(); let attempts = 0;
+  h.service.create = async () => { attempts++; throw Object.assign(new Error("competing create"), { status: 409 }); };
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 409); assert.equal((reply.body as any).code, "concurrent-edit"); assert.equal(attempts, 3);
+});
+
+test("S3c2b G8 chart.write grants staff and provider and exposes canDecide only for shaped visits", async () => {
+  for (const role of ["provider", "staff", "admin"] as const) {
+    const h = await decisionFixture();
+    const dependencies = { ...h.dependencies, authenticate: async () => ({ staffReference: actor.reference, actorRole: role, fhir: h.staff }) };
+    const before = JSON.stringify(h.service.resources);
+    const get = await handleFollowUpQueueRequest(dependencies, request);
+    assert.equal(get.status, 200); assert.equal((get.body as any).canDecide, role !== "admin");
+    const put = await decisionRequest(dependencies, mark);
+    assert.equal(put.status, role === "admin" ? 403 : 200);
+    if (role === "admin") assert.equal(JSON.stringify(h.service.resources), before);
+    else assert.equal((put.body as any).canDecide, true);
+  }
+  assert.deepEqual((await handleFollowUpQueueRequest(deps(new QueueFhir()), request)).body, { recorded: false });
+});
+
+test("S3c2b G9 signed Encounter refuses with ordinary conflict and no write", async () => {
+  const h = await decisionFixture();
+  const read = h.staff.read.bind(h.staff);
+  h.staff.read = async (...args) => ({ ...await read(...args), status: "finished" }) as any;
+  const before = JSON.stringify(h.service.resources);
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 409); assert.deepEqual(reply.body, { error: "Signed encounter cannot be edited." });
+  assert.equal(JSON.stringify(h.service.resources), before);
+});
+
+test("S3c2b G10 Encounter compartment read precedes all service work in both handlers", async () => {
+  for (const status of [401, 403, 404, 410]) {
+    const h = await decisionFixture(); let searches = 0;
+    h.staff.failRead = status;
+    h.service.failSearch = () => { searches++; return true; };
+    const before = JSON.stringify(h.service.resources);
+    for (const result of [await handleFollowUpQueueRequest(h.dependencies, request), await decisionRequest(h.dependencies, mark)]) {
+      assert.equal(result.status, [401,403].includes(status) ? 403 : 404);
+    }
+    assert.equal(searches, 0); assert.equal(JSON.stringify(h.service.resources), before);
+  }
+});
+
+test("S3c2b G11 all downstream failures including HTTP statuses return 502 and no write", async () => {
+  for (const kind of ["shape", "fees", "actions", "decisions"]) for (const status of [undefined, 401, 403, 404, 410]) {
+    const h = await decisionFixture();
+    for (const client of [h.staff, h.service]) {
+      const search = client.search.bind(client);
+      client.search = async (type, params = {}) => {
+        const matches = kind === "shape" ? params.identifier?.startsWith("urn:odos:encounter-exam-scope|") : kind === "fees" ? type === "ChargeItemDefinition" : kind === "actions" ? params.code?.endsWith("|odos-plan-action-instance") : params.identifier?.startsWith("urn:odos:encounter-follow-up-decisions|");
+        if (matches) throw Object.assign(new Error("synthetic downstream failure"), status ? { status } : {});
+        return search(type, params);
+      };
+    }
+    const before = JSON.stringify(h.service.resources);
+    for (const reply of [await handleFollowUpQueueRequest(h.dependencies, request), await decisionRequest(h.dependencies, mark)]) {
+      assert.equal(reply.status, 502, `${kind} ${status}`);
+      assert.deepEqual(reply.body, { error: "The tests for this visit could not be loaded." });
+    }
+    assert.equal(JSON.stringify(h.service.resources), before);
+  }
+});
+
+test("S3c2b strict body validation precedes Encounter and service reads", async () => {
+  for (const body of [null, {}, { ...mark, extra: true }, { ...mark, decision: "accept" }, { ...mark, orderable: "" }, { ...mark, focus: 42 }]) {
+    const h = await decisionFixture(); const before = JSON.stringify(h.service.resources);
+    const reply = await decisionRequest(h.dependencies, body);
+    assert.equal(reply.status, 400); assert.deepEqual(h.staff.reads, []); assert.equal(JSON.stringify(h.service.resources), before);
+  }
+});
+
+
+test("S3c2b F4 PUT decision write 500 returns load failure after one attempt", async () => {
+  const h = await decisionFixture();
+  const before = structuredClone(h.service.resources);
+  let attempts = 0;
+  h.service.create = async () => { attempts++; throw { status: 500 }; };
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 502);
+  assert.deepEqual(reply.body, { error: "The tests for this visit could not be loaded." });
+  assert.equal(Object.hasOwn(reply.body as object, "code"), false);
+  assert.equal(attempts, 1);
+  assert.ok(h.staff.reads.includes("Encounter/e1"));
+  assert.deepEqual(h.service.resources, before);
+});
+
+
+test("S3c2b F5 PUT decision write 403 returns load failure after one attempt", async () => {
+  const h = await decisionFixture();
+  const before = structuredClone(h.service.resources);
+  let attempts = 0;
+  h.service.create = async () => { attempts++; throw { status: 403 }; };
+  const reply = await decisionRequest(h.dependencies, mark);
+  assert.equal(reply.status, 502);
+  assert.deepEqual(reply.body, { error: "The tests for this visit could not be loaded." });
+  assert.equal(Object.hasOwn(reply.body as object, "code"), false);
+  assert.equal(attempts, 1);
+  assert.ok(h.staff.reads.includes("Encounter/e1"));
+  assert.deepEqual(h.service.resources, before);
+});
