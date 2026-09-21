@@ -1,13 +1,17 @@
 import { z } from "zod";
-import type { Encounter } from "@medplum/fhirtypes";
+import type { Condition, Encounter } from "@medplum/fhirtypes";
 import { staffHasBusinessAction } from "../authz/roles.js";
-import { practitionerNamesByReference, type ExamOverviewEndpointDeps, type ExamOverviewFhirClient } from "./exam-overview-endpoint.js";
+import { conditionClinicalFamily, normalizeClinicalFamily, practitionerNamesByReference, type ExamOverviewEndpointDeps, type ExamOverviewFhirClient } from "./exam-overview-endpoint.js";
 import { FhirEncounterExamScopeStore, type ProposedExamTest } from "./exam-scope-store.js";
-import { listProcedureFeeScheduleSnapshot, type ProcedureFeeScheduleItem } from "./procedure-fee-schedule.js";
+import { isVisitProcedureConceptKey, listProcedureFeeScheduleSnapshot, type ProcedureFeeScheduleItem } from "./procedure-fee-schedule.js";
 import { ProtocolBasicStore, PROTOCOL_BASIC_CODES } from "./protocol-store.js";
 import type { PlanActionInstance } from "./protocol-types.js";
 import { FhirFollowUpDecisionStore, followUpDecisionKey, type FollowUpDecisions } from "./follow-up-decision-store.js";
 import { PENDING_ORDERABLES } from "./plan-sets/glaucoma.js";
+import { encounterDiagnoses, isManualProcedureProposal } from "./manual-procedure-charge-endpoint.js";
+import type { ChargeProposal } from "./protocol-types.js";
+import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
+import { FhirFollowUpProfileStore } from "./follow-up-profile-store.js";
 
 export interface FollowUpQueueRow {
   orderable: string;
@@ -19,8 +23,13 @@ export interface FollowUpQueueRow {
   decidedAt?: string;
   actionIds?: string[];
   reason?: string;
+  charge?: FollowUpRowCharge;
 }
-export type FollowUpQueue = { recorded: false } | { recorded: true; rows: FollowUpQueueRow[]; canDecide?: boolean };
+export type FollowUpRowCharge =
+  | { status: "billed"; proposalId: string; dxPointer?: string; dxDisplay?: string }
+  | { status: "removed"; proposalId: string; removedBy: string }
+  | { status: "none" | "uncoded" | "protocol-pending" | "charged-elsewhere" | "finalized" };
+export type FollowUpQueue = { recorded: false } | { recorded: true; rows: FollowUpQueueRow[]; canDecide?: boolean; canAccept?: boolean; diagnoses?: Array<{ reference: string; display: string; rank?: number; matches: boolean }> };
 
 export function deriveFollowUpQueue(
   testsProposed: readonly ProposedExamTest[] | undefined,
@@ -59,7 +68,7 @@ const commandSchema = z.object({ orderable: z.string().min(1), focus: z.string()
 const loadFailure = () => ({ status: 502, body: { error: "The tests for this visit could not be loaded." } });
 type Deps = Pick<ExamOverviewEndpointDeps, "authenticate" | "serviceFhir">;
 
-async function encounterForCaller(fhir: ExamOverviewFhirClient, encounterId: string): Promise<Encounter | { status: number; body: { error: string } }> {
+export async function encounterForCaller(fhir: ExamOverviewFhirClient, encounterId: string): Promise<Encounter | { status: number; body: { error: string } }> {
   try {
     return await fhir.read<Encounter>("Encounter", encounterId);
   } catch (error) {
@@ -70,18 +79,70 @@ async function encounterForCaller(fhir: ExamOverviewFhirClient, encounterId: str
   }
 }
 
-async function readQueue(serviceFhir: ExamOverviewFhirClient, staffFhir: ExamOverviewFhirClient, encounterId: string, patientId: string, canDecide: boolean) {
+export async function readQueue(serviceFhir: ExamOverviewFhirClient, staffFhir: ExamOverviewFhirClient, encounter: Encounter, encounterId: string, patientId: string, canDecide: boolean) {
   const [scope, fees, actions, decisions] = await Promise.all([
     new FhirEncounterExamScopeStore(serviceFhir).get(encounterId),
     listProcedureFeeScheduleSnapshot(serviceFhir),
     new ProtocolBasicStore<PlanActionInstance>(staffFhir, PROTOCOL_BASIC_CODES.planActionInstance).list(),
     new FhirFollowUpDecisionStore(serviceFhir).get(encounterId),
   ]);
+  const proposals = scope.testsProposed === undefined ? [] :
+    (await new ProtocolBasicStore<ChargeProposal>(staffFhir, PROTOCOL_BASIC_CODES.chargeProposal).list())
+      .filter(proposal => proposal.encounterId === encounterId);
+  const diagnoses = scope.testsProposed === undefined ? [] : await encounterDiagnoses(staffFhir, encounter);
+  const profileKeys = new Set(scope.testsProposed?.flatMap(test => test.sources.flatMap(source => source.kind === "profile" ? [source.profileKey] : [])) ?? []);
+  const [catalog, profiles] = diagnoses.length ? await Promise.all([
+    new FhirDiagnosisCatalogStore(serviceFhir).list(), new FhirFollowUpProfileStore(serviceFhir).list(),
+  ]) : [[], []];
+  const matchedFamilies = new Set(profiles.filter(profile => profile.active && profileKeys.has(profile.profileKey))
+    .flatMap(profile => profile.matchesDiagnosisFamilies.map(normalizeClinicalFamily)));
+  const conditionFamilyByReference = new Map<string, string | undefined>();
+  const diagnosed = await Promise.all(diagnoses.map(async diagnosis => {
+    const condition = await staffFhir.read<Condition>("Condition", diagnosis.reference.slice(10));
+    const family = conditionClinicalFamily(condition, encounterId, catalog);
+    conditionFamilyByReference.set(diagnosis.reference, family);
+    return { ...diagnosis, matches: family !== undefined && matchedFamilies.has(family) };
+  }));
+  const actorNames = await practitionerNamesByReference(staffFhir, proposals.filter(proposal => proposal.state === "removed")
+    .map(proposal => ({ reference: proposal.lastAmendment?.actor ?? proposal.provenance.actor })));
   const derive = (currentDecisions = decisions): FollowUpQueue => {
     const queue = deriveFollowUpQueue(scope.testsProposed, fees, actions, encounterId, patientId, currentDecisions);
-    return queue.recorded ? { ...queue, canDecide } : queue;
+    if (!queue.recorded) return queue;
+    const rows = queue.rows.map(row => row.state === "already-ordered"
+      ? { ...row, charge: rowCharge(row, actions, proposals, fees, encounterId, diagnosed, actorNames) }
+      : row);
+    return { ...queue, rows, canDecide, canAccept: canDecide && encounter.status !== "finished", diagnoses: diagnosed };
   };
-  return { queue: derive(), derive };
+  return { queue: derive(), derive, scope, fees, actions, profiles, conditionFamilyByReference };
+}
+
+function rowCharge(
+  row: FollowUpQueueRow,
+  actions: readonly PlanActionInstance[],
+  proposals: readonly ChargeProposal[],
+  fees: readonly ProcedureFeeScheduleItem[],
+  encounterId: string,
+  diagnoses: readonly { reference: string; display: string }[],
+  actorNames: ReadonlyMap<string, string>,
+): FollowUpRowCharge {
+  const matching = proposals.filter(proposal => proposal.encounterId === encounterId && proposal.procedureConceptKey === row.orderable);
+  const live = matching.find(proposal => proposal.state !== "removed");
+  if (live?.state === "finalized") return { status: "finalized" };
+  if (live?.state === "staged") return { status: "protocol-pending" };
+  if (live?.state === "accepted" && isManualProcedureProposal(live, encounterId)) {
+    const dxPointer = live.dxPointers[0];
+    const dxDisplay = diagnoses.find(diagnosis => diagnosis.reference === dxPointer)?.display;
+    return { status: "billed", proposalId: live.id, ...(dxPointer ? { dxPointer } : {}), ...(dxDisplay ? { dxDisplay } : {}) };
+  }
+  if (live) return { status: "charged-elsewhere" };
+  const linked = new Set(actions.filter(action => row.actionIds?.includes(action.id)).map(action => action.chargeProposalRef));
+  const removed = matching.find(proposal => proposal.state === "removed" && linked.has(proposal.id) && isManualProcedureProposal(proposal, encounterId));
+  if (removed) {
+    const actor = removed.lastAmendment?.actor ?? removed.provenance.actor;
+    return { status: "removed", proposalId: removed.id, removedBy: actorNames.get(actor) ?? actor };
+  }
+  const coded = !isVisitProcedureConceptKey(row.orderable) && fees.some(fee => fee.procedureConceptKey === row.orderable && fee.active && fee.billingCode?.trim());
+  return { status: coded ? "none" : "uncoded" };
 }
 
 export async function handleFollowUpQueueRequest(deps: Deps, input: { authHeader: string | undefined; params: unknown }): Promise<{ status: number; body: unknown }> {
@@ -95,7 +156,7 @@ export async function handleFollowUpQueueRequest(deps: Deps, input: { authHeader
   if ("body" in encounter) return encounter;
   if (!encounter.subject?.reference?.match(/^Patient\/[^/]+$/)) return { status: 400, body: { error: "Encounter patient required." } };
   try {
-    const { queue } = await readQueue(deps.serviceFhir ?? staff.fhir, staff.fhir, encounterId, encounter.subject.reference.slice(8), staffHasBusinessAction(staff, "chart.write"));
+    const { queue } = await readQueue(deps.serviceFhir ?? staff.fhir, staff.fhir, encounter, encounterId, encounter.subject.reference.slice(8), staffHasBusinessAction(staff, "chart.write"));
     return { status: 200, body: queue };
   } catch { return loadFailure(); }
 }
@@ -114,7 +175,7 @@ export async function handleFollowUpDecisionRequest(deps: Deps, input: { authHea
   const serviceFhir = deps.serviceFhir ?? staff.fhir;
   let loaded;
   try {
-    loaded = await readQueue(serviceFhir, staff.fhir, encounterId, encounter.subject.reference.slice(8), true);
+    loaded = await readQueue(serviceFhir, staff.fhir, encounter, encounterId, encounter.subject.reference.slice(8), true);
   } catch { return loadFailure(); }
   const row = loaded.queue.recorded ? loaded.queue.rows.find(row => followUpDecisionKey(row) === followUpDecisionKey(command.data)) : undefined;
   if (command.data.decision === "not-today") {

@@ -168,25 +168,31 @@ export async function handleProcedureChargeCreateRequest(
     if (await findLiveProcedureCharge(staff.fhir, params.data.encounterId, body.data.procedureConceptKey)) {
       return duplicateCharge(fee.display);
     }
-    const at = deps.now?.() ?? new Date().toISOString();
-    const proposal: ChargeProposal = {
-      id,
-      encounterId: params.data.encounterId,
-      planActionRef: id,
-      procedureConceptKey: body.data.procedureConceptKey,
-      units: 1,
-      dxPointers: principalDiagnosisPointers(encounter),
-      evidenceRefs: [],
-      coverageEvaluations: [],
-      state: "accepted",
-      provenance: {
-        source: "clinician-entered",
-        actor: staff.staffReference,
-        at,
-      },
-    };
-    return { status: 201, body: { proposal: await store.save(proposal) } };
+    return createAcceptedManualProcedureCharge({
+      fhir: staff.fhir, encounterId: params.data.encounterId, procedureConceptKey: body.data.procedureConceptKey,
+      dxPointers: principalDiagnosisPointers(encounter), actor: staff.staffReference,
+      proposalId: id, now: deps.now,
+    });
   });
+}
+
+export async function createAcceptedManualProcedureCharge(input: {
+  fhir: ManualProcedureChargeFhir;
+  encounterId: string;
+  procedureConceptKey: string;
+  dxPointers: string[];
+  actor: string;
+  proposalId?: string;
+  now?: () => string;
+}) {
+  const id = input.proposalId ?? `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}${randomUUID()}`;
+  const at = input.now?.() ?? new Date().toISOString();
+  const proposal: ChargeProposal = {
+    id, encounterId: input.encounterId, planActionRef: id, procedureConceptKey: input.procedureConceptKey,
+    units: 1, dxPointers: [...input.dxPointers], evidenceRefs: [], coverageEvaluations: [], state: "accepted",
+    provenance: { source: "clinician-entered", actor: input.actor, at },
+  };
+  return { status: 201, body: { proposal: await chargeStore(input.fhir).save(proposal) } };
 }
 
 export async function handleProcedureChargePatchRequest(
@@ -283,6 +289,7 @@ function isManualProcedureProposal(proposal: ChargeProposal, encounterId: string
     proposal.planActionRef === proposal.id &&
     !isVisitProcedureConceptKey(proposal.procedureConceptKey);
 }
+export { isManualProcedureProposal };
 
 async function listProcedureOptions(fhir: ManualProcedureChargeFhir) {
   return (await listActiveCodedNonVisitProcedureFees(fhir)).map((option) => ({
@@ -292,7 +299,7 @@ async function listProcedureOptions(fhir: ManualProcedureChargeFhir) {
   }));
 }
 
-async function encounterDiagnoses(fhir: ManualProcedureChargeFhir, encounter: Encounter) {
+export async function encounterDiagnoses(fhir: ManualProcedureChargeFhir, encounter: Encounter) {
   const diagnoses = [];
   for (const diagnosis of encounter.diagnosis ?? []) {
     const reference = diagnosis.condition.reference;

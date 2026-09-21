@@ -1267,3 +1267,16 @@ test("G7 duplicate rejection has duplicate-charge code", async () => {
   assert.equal(result.status, 409);
   assert.equal((result.body as { code: string }).code, "duplicate-charge");
 });
+
+test("S3c2c1b G14 simultaneous Restores leave one accepted manual proposal", async () => {
+  const { deps, fhir, store } = fixture();
+  const a = manualProcedure({ id: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}restore-a`, planActionRef: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}restore-a`, state: "removed" });
+  const b = manualProcedure({ id: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}restore-b`, planActionRef: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}restore-b`, state: "removed" });
+  await seed(fhir, a, b);
+  const restore = (proposalId: string) => handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician", params: { encounterId: "enc-1", proposalId }, body: { state: "accepted" },
+  });
+  const replies = await Promise.all([restore(a.id), restore(b.id)]);
+  assert.deepEqual(replies.map(reply => reply.status).sort(), [200, 409]);
+  assert.equal((await store.list()).filter(row => row.encounterId === "enc-1" && row.procedureConceptKey === a.procedureConceptKey && row.state !== "removed").length, 1);
+});

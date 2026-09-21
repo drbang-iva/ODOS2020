@@ -672,6 +672,33 @@ export class ProtocolService {
     return created;
   }
 
+  // Caller holds IN_PROCESS_ENCOUNTER_LOCK for this encounter.
+  async addQueueOrder(input: { encounterId: string; patientId: string; orderable: string; focus?: string; actor: string; linkedDx: string[] }): Promise<PlanActionInstance> {
+    const action: PlanActionInstance = {
+      id: this.id(), encounterId: input.encounterId, patientId: input.patientId,
+      protocolApplicationId: null, actionType: "order", state: "selected",
+      payload: { orderableKey: input.orderable, ...(input.focus ? { focus: input.focus } : {}) },
+      linkedDx: [...input.linkedDx], linkedFindings: [], modifiedFields: [],
+      provenance: { source: "clinician-entered", actor: input.actor, at: this.now() },
+    };
+    const reference = await this.projection.materializeAction(action);
+    if (!reference) throw new Error("The queue order was not materialized.");
+    action.materializedFhirRef = reference;
+    try {
+      return await this.actions.save(action);
+    } catch (error) {
+      await this.projection.removeMaterialized?.(reference, action);
+      throw error;
+    }
+  }
+
+  // Caller holds IN_PROCESS_ENCOUNTER_LOCK for this encounter.
+  async compensateQueueOrder(action: PlanActionInstance): Promise<void> {
+    if (action.materializedFhirRef) await this.projection.removeMaterialized?.(action.materializedFhirRef, action);
+    const current = await this.actions.get(action.id);
+    if (current) await this.actions.save({ ...current, state: "removed" });
+  }
+
   async confirmFollowUp(encounterId: string, actionId: string, actor: string, edit?: { interval: number; unit: "days" | "weeks" | "months"; reason?: string }): Promise<PlanActionInstance> {
     return this.encounterLock.run(encounterId, async () => {
       const action = await this.actions.get(actionId);
