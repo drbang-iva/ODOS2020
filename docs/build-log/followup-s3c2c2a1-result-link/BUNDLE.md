@@ -93,18 +93,18 @@ All premises were inspected at the exact base before implementation:
 
 Temporary mutation grants were restored byte-for-byte. `git diff f1ef6799 -- mcp/src/clinical-graph/protocol-endpoint.ts ui/src/lib/follow-up-queue.ts` is empty. The final committed-range diff for these two temporary-grant paths must also remain empty; verified at commit. No changes to ui/src, policy, scripts, data, billing, fee seeds, or lock acquisition.
 
-## Full verification counts
+## Pre-R3 full verification counts (f29083dd)
 
 All MCP runs used task-prefixed dedicated Postgres with ODOS_POSTGRES_URL set. Full suites used the existing package test commands.
 
-| Command | Base | Working diff |
+| Command | Base f1ef6799 | Pre-R3 working diff f29083dd |
 |---|---|---|
 | npm --prefix ui test | 1844 tests, 1844 pass, 0 fail, 0 skip; exit 0 | 1845 tests, 1845 pass, 0 fail, 0 skip; exit 0 |
 | npm --prefix mcp test | 6268 tests, 6213 pass, 0 fail, 55 skip; wrapper exit 1 for unconfigured live lane | with ODOS_ALLOW_UNGATED_MCP=1: 6282 tests, 6227 pass, 0 fail, 55 skip; exit 0; NOT live authorization proof |
 | focused MCP | — | 79/79 |
 | focused UI | — | 15/15 |
 
-Deltas: +14 MCP tests, +1 UI test. Full logs are excluded; summary lines are in suite-summaries.json.
+Pre-R3 deltas: +14 MCP tests, +1 UI test. R3 adds G15/G16 (+2 MCP tests); 6,284 is the expected inventory, not a claim of a new local full-suite run. Full logs are excluded; summary lines are in suite-summaries.json.
 Commands: `npm --prefix mcp run build`, `npm --prefix ui run build`, `npm run typecheck:scripts`, `npm run preflight`.
 
 Three checks: MCP build/typecheck exit 0 (R2 final rerun after restored G2 mutation), UI build/typecheck exit 0 (bundle size warning), scripts typecheck exit 0. Preflight: 0 warnings, 0 hard blocks, no missing FHIR read grant. git diff --check: clean.
