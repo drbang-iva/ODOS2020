@@ -479,7 +479,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   // GET diagnosis-newness and PUT diagnoses/:conditionId/newness use staff authentication and the status store, not definition-store route dependencies.
   // Protocol item add and follow-up confirmation authenticate with chart.write and service FHIR, matching protocol apply rather than definition-store route dependencies.
   // The follow-up queue authenticates with chart.read and reads the shape, fee schedule and plan actions, not definition-store route dependencies.
-  assert.equal(clinicalRoutes.length, 106);
+  // The follow-up decision route authenticates with chart.write and writes its own decision record, not definition-store route dependencies.
+  assert.equal(clinicalRoutes.length, 107);
   assert.match(source, /handleDiagnosisProblemStatusRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.diagnosis\.write"\) \}/);
   assert.match(source, /app\.post\("\/clinical-graph\/protocols\/encounters\/:encounterId\/actions\/:actionId\/confirm-follow-up"/);
   assert.match(source, /handleProtocolFollowUpConfirmRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);

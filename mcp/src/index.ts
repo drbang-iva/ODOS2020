@@ -8705,6 +8705,27 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
+      const { handleFollowUpDecisionRequest } = await import("./clinical-graph/follow-up-queue-endpoint.js");
+      const followUpDecisionLimit = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { error: "Too many follow-up requests. Try again shortly." },
+      });
+      app.put("/clinical-graph/encounters/:encounterId/follow-up-queue/decisions", followUpDecisionLimit, async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFollowUpDecisionRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write"), serviceFhir: fhir },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch {
+          if (!res.headersSent) res.status(502).json({ error: "The tests for this visit could not be loaded." });
+        }
+      });
+
       await new Promise<void>((resolve, reject) => {
         const listener = app.listen(port, host, () => {
           void educationCatalog.refresh();

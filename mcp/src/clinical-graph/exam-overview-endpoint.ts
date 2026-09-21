@@ -333,7 +333,7 @@ function attestationForObservation(
     : undefined;
 }
 
-async function practitionerNamesByReference(
+export async function practitionerNamesByReference(
   fhir: ExamOverviewFhirClient,
   signers: readonly Reference[],
 ): Promise<Map<string, string>> {
