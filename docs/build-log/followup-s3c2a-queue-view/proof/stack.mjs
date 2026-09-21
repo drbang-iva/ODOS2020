@@ -29,6 +29,10 @@ const composeBinary = spawnSync('docker', ['compose', 'version'], { env: cleanEn
 const compose = (...args) => run(composeBinary[0], [...composeBinary.slice(1), '-p', project, '-f', composePath, ...args]);
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
+function cleanHead() {
+  if (run('git', ['status', '--porcelain'], { cwd: appRoot }).trim()) throw new Error('Proof build/serve requires a clean worktree.');
+  return run('git', ['rev-parse', 'HEAD'], { cwd: appRoot }).trim();
+}
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitHealth(url, seconds = 120, accepted = [200]) {
   const deadline = Date.now() + seconds * 1000;
@@ -85,14 +89,17 @@ if (command === 'prepare') {
     console.log(`Synthetic stack and identities ready; credentials remain in ${runtime}/credentials.json`);
   } catch (error) { stopContainers(); throw error; }
 } else if (command === 'build') {
-  const head = run('git', ['rev-parse', 'HEAD'], { cwd: appRoot }).trim();
+  const head = cleanHead();
   const log = openSync(join(runtime, 'build.log'), 'a', 0o600);
   run('npm', ['--prefix', 'mcp', 'run', 'build'], { cwd: appRoot, stdio: ['ignore', log, log] });
   run('npm', ['--prefix', 'ui', 'run', 'build'], { cwd: appRoot, env: { ...cleanEnv, VITE_ODOS_MCP_BASE_URL: '' }, stdio: ['ignore', log, log] });
   cpSync(join(appRoot, 'data'), join(appRoot, 'mcp/dist/data'), { recursive: true });
-  writeJson(join(runtime, 'build.json'), { root: appRoot, head, dirty: !!run('git', ['status', '--porcelain'], { cwd: appRoot }).trim(), mcpHash: createHash('sha256').update(readFileSync(join(appRoot, 'mcp/dist/mcp/src/index.js'))).digest('hex') });
+  if (cleanHead() !== head) throw new Error('Commit changed during proof build.');
+  writeJson(join(runtime, 'build.json'), { root: appRoot, head, dirty: false, mcpHash: createHash('sha256').update(readFileSync(join(appRoot, 'mcp/dist/mcp/src/index.js'))).digest('hex') });
   console.log(`Built MCP and UI from ${head}; ${appRoot}`);
 } else if (command === 'serve') {
+  const build = readJson(join(runtime, 'build.json'));
+  if (build.dirty || cleanHead() !== build.head) throw new Error('Proof serve must use the same clean commit as build.');
   await waitHealth(`http://127.0.0.1:${ports.medplum}/healthcheck`, 180);
   await Promise.all([ports.frontdoor, ports.mcp, ports.proxy, ports.control].map(freePort));
   const smartKeyPath = join(runtime, 'smart-signing.pem');
@@ -101,7 +108,6 @@ if (command === 'prepare') {
     writeFileSync(smartKeyPath, privateKey, { mode: 0o600 });
   }
   const credentials = readJson(join(runtime, 'credentials.json'));
-  const build = readJson(join(runtime, 'build.json'));
   if (build.root !== appRoot) throw new Error('App root differs from recorded build. Build selected root first.');
   const source = readFileSync(join(appRoot, 'deploy/frontdoor/Caddyfile'), 'utf8');
   const generated = generateCaddyfile(source, ports);
