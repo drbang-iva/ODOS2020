@@ -1,0 +1,43 @@
+base mcp
+# tests 6242
+# suites 0
+# pass 6187
+# fail 0
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 162399.234875
+
+Wrapper exit 1: credentialed live coverage unavailable. 47 recorded live skips; 55 total skips. This is not a fully green MCP gate.
+
+base ui
+# tests 1839
+# suites 0
+# pass 1839
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 215022.639084
+
+head mcp
+# tests 6248
+# suites 0
+# pass 6193
+# fail 0
+# cancelled 0
+# skipped 55
+# todo 0
+# duration_ms 148814.468875
+
+Wrapper exit 1: credentialed live coverage unavailable. 47 recorded live skips; 55 total skips. This is not a fully green MCP gate.
+
+head ui
+# tests 1840
+# suites 0
+# pass 1840
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 212874.041708

@@ -1,0 +1,122 @@
+G1 red: exit 1
+not ok 1 - G1 create refuses a duplicate without writes and permits other visits concepts and replacement
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+201 !== 409
+
+G1 green: exit 0
+ok 1 - G1 create refuses a duplicate without writes and permits other visits concepts and replacement
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+
+G2 red: exit 1
+not ok 1 - G2 revive refuses a live sibling without writes and ordinary edits still succeed
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+200 !== 409
+
+G2 green: exit 0
+ok 1 - G2 revive refuses a live sibling without writes and ordinary edits still succeed
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+
+G3 red: exit 1
+not ok 1 - G3 simultaneous manual adds leave exactly one live charge
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+2 !== 1
+
+G3 green: exit 0
+ok 1 - G3 simultaneous manual adds leave exactly one live charge
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+
+G4 red: exit 1
+not ok 1 - G4 manual add and default protocol commit share the encounter lock
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+2 !== 1
+
+G4 green: exit 0
+ok 1 - G4 manual add and default protocol commit share the encounter lock
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+
+G5 red: exit 1
+not ok 1 - G5 staged and finalized protocol charges both prevent a manual duplicate
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+201 !== 409
+
+G5 green: exit 0
+ok 1 - G5 staged and finalized protocol charges both prevent a manual duplicate
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+
+G6 red: exit 1
+not ok 1 - G6 duplicate charge sentence reaches the doctor and leaves the list unchanged
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
++ actual - expected
++ 'This record was changed by someone else since you opened it. Reload and reapply your change.'
+- 'Gonioscopy is already charged on this visit.'
+
+G6 green: exit 0
+ok 1 - G6 duplicate charge sentence reaches the doctor and leaves the list unchanged
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+
+G7 red: exit 1
+not ok 1 - G7 duplicate rejection has duplicate-charge code
+# tests 1
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
++ actual - expected
++ 'concurrent-edit'
+- 'duplicate-charge'
+
+G7 green: exit 0
+ok 1 - G7 duplicate rejection has duplicate-charge code
+# tests 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
