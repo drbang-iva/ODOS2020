@@ -20,11 +20,11 @@ import type {
 } from "@medplum/fhirtypes";
 import { ODOS_CLINICAL_ATTESTATION_POLICY_URL } from "../../../policy/attestation-policy-urls.js";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
-import { FhirFollowUpProfileStore } from "./follow-up-profile-store.js";
+import { FhirFollowUpProfileStore, type FollowUpProfileRecord } from "./follow-up-profile-store.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { parseDiagnosisIdentifier } from "./diagnosis-identifier.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
-import { FhirEncounterExamScopeStore } from "./exam-scope-store.js";
+import { FhirEncounterExamScopeStore, type ProposedExamTest } from "./exam-scope-store.js";
 import { searchAll } from "../fhir-search.js";
 import { encounterDiagnosisProblemStatus } from "../fhir/condition.js";
 import {
@@ -109,7 +109,10 @@ export async function handleExamOverviewRequest(
     if (!scope.versionId) {
       try {
         scope = await scopeStore.shapeIfAbsent(encounterId, { reference: staff.staffReference },
-          () => resolveFollowUpProfiles(serviceFhir, encounterConditions, encounterId));
+          async () => {
+            const profiles = await resolveFollowUpProfiles(serviceFhir, encounterConditions, encounterId);
+            return { profiles, testsProposed: resolveProfileTests(profiles) };
+          });
       } catch (error) {
         // Opening the board must not depend on bookkeeping persistence.
         const status = errorStatus(error);
@@ -608,7 +611,7 @@ export async function handleExamScopeRequest(
           profiles = await resolveFollowUpProfiles(deps.serviceFhir ?? staff.fhir, [condition], sourceEncounterReference.slice(10));
           if (!profiles.length) return { status: 409, body: { error: "No active follow-up shape matches this diagnosis." } };
         }
-        scope = await store.pick(encounterId, body!.examScope as "comprehensive" | "office-visit", actor, body!.expectedVersion as string | null, profiles);
+        scope = await store.pick(encounterId, body!.examScope as "comprehensive" | "office-visit", actor, body!.expectedVersion as string | null, profiles, resolveProfileTests(profiles));
       } else {
         scope = await store.set(encounterId, body!.examScope as "comprehensive" | "office-visit", actor, body!.expectedVersion as string | null);
       }
@@ -623,4 +626,18 @@ export async function handleExamScopeRequest(
     if (status === 404 || status === 410) return { status: 404, body: { error: "Encounter was not found." } };
     return { status: 502, body: { error: "Exam scope could not be loaded or saved." } };
   }
+}
+
+export function resolveProfileTests(profiles: FollowUpProfileRecord[]): ProposedExamTest[] {
+  const tests: ProposedExamTest[] = [];
+  for (const profile of profiles) {
+    try {
+      for (const test of profile.testsQueuedByDefault) {
+        tests.push({ orderable: test.orderable, ...(test.focus ? { focus: test.focus } : {}), sources: [{ kind: "profile", profileKey: profile.profileKey }] });
+      }
+    } catch {
+      // Optional test resolution must not discard the rest of the encounter shape.
+    }
+  }
+  return tests;
 }

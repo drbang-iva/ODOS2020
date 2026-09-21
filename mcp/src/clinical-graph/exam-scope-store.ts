@@ -9,9 +9,23 @@ const SCOPE_SYSTEM = "urn:odos:encounter-exam-scope";
 const SCOPE_EXTENSION = "urn:odos:encounter-exam-scope:value";
 
 export type ExamScope = "comprehensive" | "office-visit";
+const proposedTestSchema = z.object({
+  orderable: z.string().min(1),
+  focus: z.string().min(1).optional(),
+  sources: z.array(z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("profile"), profileKey: z.string().min(1) }),
+    z.object({ kind: z.literal("plan-set"), planSetKey: z.string().min(1) }),
+  ])).min(1),
+});
+export type ProposedExamTest = z.infer<typeof proposedTestSchema>;
+export interface ResolvedExamShape {
+  profiles: FollowUpProfileRecord[];
+  testsProposed: ProposedExamTest[];
+}
 const shapeSchema = z.object({
   profilesApplied: z.array(z.object({ profileKey: z.string().min(1), version: z.number().int().positive(), versionId: z.string().min(1).nullable() })),
   sectionsOpen: z.array(z.string().min(1)),
+  testsProposed: z.array(proposedTestSchema).optional(),
   shapedAt: z.string().datetime(),
   source: z.enum(["derived", "explicit"]).default("derived"),
   chosenBy: z.object({ reference: z.string().regex(/^Practitioner\/[^/]+$/), display: z.string().optional() }).optional(),
@@ -52,25 +66,27 @@ export class FhirEncounterExamScopeStore {
     return resource ? parseScope(resource) : { examScope: "comprehensive" };
   }
 
-  async shapeIfAbsent(encounterId: string, setBy: Reference<Practitioner>, resolve: () => Promise<FollowUpProfileRecord[]>): Promise<EncounterExamScope> {
+  async shapeIfAbsent(encounterId: string, setBy: Reference<Practitioner>, resolve: () => Promise<ResolvedExamShape>): Promise<EncounterExamScope> {
     const existing = await this.stored(encounterId);
     if (existing) return parseScope(existing);
-    const profiles = await resolve();
+    const { profiles, testsProposed } = await resolve();
     const shape: ExamShape = {
       ...freezeProfiles(profiles),
+      testsProposed: mergeProposedTests(testsProposed),
       shapedAt: new Date().toISOString(),
       source: "derived",
     };
     return this.write(encounterId, "comprehensive", setBy, null, undefined, shape);
   }
 
-  async pick(encounterId: string, examScope: ExamScope, chosenBy: Reference<Practitioner>, expectedVersion: string | null, profiles: FollowUpProfileRecord[]): Promise<EncounterExamScope> {
+  async pick(encounterId: string, examScope: ExamScope, chosenBy: Reference<Practitioner>, expectedVersion: string | null, profiles: FollowUpProfileRecord[], testsProposed: ProposedExamTest[] = []): Promise<EncounterExamScope> {
     const existing = await this.stored(encounterId);
     if (existing) parseScope(existing);
     if ((existing?.meta?.versionId ?? null) !== expectedVersion) throw concurrentEdit();
     const chosenAt = new Date().toISOString();
     const shape = shapeSchema.parse({
       ...freezeProfiles(profiles),
+      testsProposed: mergeProposedTests(testsProposed),
       shapedAt: chosenAt, source: "explicit", chosenBy, chosenAt,
     });
     return this.write(encounterId, examScope, chosenBy, expectedVersion, existing, shape);
@@ -132,4 +148,18 @@ function freezeProfiles(profiles: FollowUpProfileRecord[]) {
     profilesApplied: profiles.map(({ profileKey, version, versionId }) => ({ profileKey, version, versionId })),
     sectionsOpen: [...new Set(profiles.flatMap(profile => profile.sectionsOpen.map(section => section.key)))],
   };
+}
+
+function mergeProposedTests(tests: ProposedExamTest[]): ProposedExamTest[] {
+  const merged = new Map<string, ProposedExamTest>();
+  for (const candidate of tests) {
+    const test = proposedTestSchema.parse(candidate);
+    const key = `${test.orderable}|${test.focus ?? ""}`;
+    const existing = merged.get(key);
+    if (!existing) { merged.set(key, test); continue; }
+    for (const source of test.sources) {
+      if (!existing.sources.some(current => JSON.stringify(current) === JSON.stringify(source))) existing.sources.push(source);
+    }
+  }
+  return [...merged.values()];
 }

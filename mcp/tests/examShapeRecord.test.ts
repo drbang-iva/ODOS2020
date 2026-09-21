@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
 import { FhirEncounterExamScopeStore } from "../src/clinical-graph/exam-scope-store.js";
 import { FhirFollowUpProfileStore } from "../src/clinical-graph/follow-up-profile-store.js";
-import type { ExamOverviewFhirClient } from "../src/clinical-graph/exam-overview-endpoint.js";
+import { resolveProfileTests, type ExamOverviewFhirClient } from "../src/clinical-graph/exam-overview-endpoint.js";
 
 class ShapeFhir implements ExamOverviewFhirClient {
   readonly baseUrl = "http://localhost/";
@@ -60,7 +60,7 @@ test("S3b1 G5 untouched seed records numeric revision and explicit null versionI
   const seed = (await new FhirFollowUpProfileStore(fhir).list()).find(p => p.profileKey === "glaucoma")!;
   assert.equal(seed.versionId, null);
   const store = new FhirEncounterExamScopeStore(fhir);
-  const shaped = await store.shapeIfAbsent("e1", actor, async () => [seed]);
+  const shaped = await store.shapeIfAbsent("e1", actor, async () => resolved([seed]));
   assert.deepEqual(shaped.profilesApplied, [{ profileKey: "glaucoma", version: seed.version, versionId: null }]);
   const json = JSON.parse(fhir.rows[0].extension![0].valueString!);
   assert.deepEqual(json.profilesApplied, [{ profileKey: "glaucoma", version: seed.version, versionId: null }]);
@@ -73,7 +73,7 @@ test("S3b1 G1 profile edit and retirement never reshape a stored visit, scope ed
   const { versionId: _, ...profile } = seed;
   await profiles.save(profile, null);
   const store = new FhirEncounterExamScopeStore(fhir);
-  const resolve = async () => (await profiles.list()).filter(p => p.profileKey === "glaucoma" && p.active);
+  const resolve = async () => resolved((await profiles.list()).filter(p => p.profileKey === "glaucoma" && p.active));
   const first = await store.shapeIfAbsent("e1", actor, resolve);
   assert.deepEqual(first.profilesApplied, [{ profileKey: "glaucoma", version: 1, versionId: "1" }]);
   await profiles.save({ ...profile, version: 2, sectionsOpen: [{ key: "hpi" }, { key: "assessment" }] }, "1");
@@ -94,7 +94,7 @@ test("S3b2 G1 explicit shape survives automatic shaping at the store boundary", 
   const explicit = await store.pick("e1", "office-visit", actor, null, [seed]);
   assert.equal(explicit.source, "explicit");
   let resolved = false;
-  const next = await store.shapeIfAbsent("e1", actor, async () => { resolved = true; return []; });
+  const next = await store.shapeIfAbsent("e1", actor, async () => { resolved = true; return { profiles: [], testsProposed: [] }; });
   assert.deepEqual(next, explicit);
   assert.equal(resolved, false);
 });
@@ -102,7 +102,7 @@ test("S3b2 G1 explicit shape survives automatic shaping at the store boundary", 
 test("S3b2 G2 explicit replaces derived and explicit, with independent chooser and time", async () => {
   const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
   const seed = (await new FhirFollowUpProfileStore(fhir).list())[0];
-  const derived = await store.shapeIfAbsent("e1", actor, async () => [seed]);
+  const derived = await store.shapeIfAbsent("e1", actor, async () => resolved([seed]));
   assert.equal(derived.source, "derived");
   const explicit = await store.pick("e1", "office-visit", actor, derived.versionId!, []);
   assert.equal(explicit.source, "explicit");
@@ -122,19 +122,19 @@ test("S3b2 G3 profile edits do not reshape either source", async () => {
   const fhir = new ShapeFhir(); const profiles = new FhirFollowUpProfileStore(fhir);
   const seed = (await profiles.list())[0]; const { versionId: _, ...profile } = seed;
   const store = new FhirEncounterExamScopeStore(fhir);
-  await store.shapeIfAbsent("derived", actor, async () => [seed]);
+  await store.shapeIfAbsent("derived", actor, async () => resolved([seed]));
   await store.pick("explicit", "office-visit", actor, null, [seed]);
   const before = await Promise.all([store.get("derived"), store.get("explicit")]);
   await profiles.save({ ...profile, version: 2, sectionsOpen: [{ key: "hpi" }, { key: "assessment" }] }, null);
   for (const [index, id] of ["derived", "explicit"].entries()) {
-    assert.deepEqual(await store.shapeIfAbsent(id, actor, () => profiles.list()), before[index]);
+    assert.deepEqual(await store.shapeIfAbsent(id, actor, async () => resolved(await profiles.list())), before[index]);
     assert.deepEqual(await store.get(id), before[index]);
   }
 });
 
 test("S3b2 G4 stored S3b1 shape without source reads derived without rewriting", async () => {
   const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
-  const shaped = await store.shapeIfAbsent("e1", actor, async () => []);
+  const shaped = await store.shapeIfAbsent("e1", actor, async () => resolved([]));
   const value = JSON.parse(fhir.rows[0].extension![0].valueString!);
   delete value.source;
   fhir.rows[0].extension![0].valueString = JSON.stringify(value);
@@ -151,4 +151,96 @@ test("S3b2 explicit conditional create and token confirmation retain one winner"
   assert.equal(fhir.rows.length, 1);
   fhir.mismatch = true;
   await assert.rejects(store.pick("e2", "office-visit", actor, null, []), /concurrently/);
+});
+
+function resolved(profiles: Awaited<ReturnType<FhirFollowUpProfileStore["list"]>>) {
+  return { profiles, testsProposed: resolveProfileTests(profiles) };
+}
+
+test("S3c1 G1 frozen tests survive profile edits and retirement; new visits use edited tests", async () => {
+  const fhir = new ShapeFhir(); const profiles = new FhirFollowUpProfileStore(fhir);
+  const seed = (await profiles.list())[0]; const { versionId: _, ...profile } = seed;
+  const store = new FhirEncounterExamScopeStore(fhir);
+  const resolve = async () => resolved((await profiles.list()).filter(p => p.profileKey === seed.profileKey && p.active));
+  const first = await store.shapeIfAbsent("old", actor, resolve);
+  const expected = resolveProfileTests([seed]);
+  assert.deepEqual(first.testsProposed, expected);
+  await profiles.save({ ...profile, version: 2, testsQueuedByDefault: [profile.testsQueuedByDefault[0]] }, null);
+  assert.deepEqual((await store.get("old")).testsProposed, expected);
+  assert.deepEqual(await store.shapeIfAbsent("old", actor, resolve), first);
+  assert.deepEqual((await store.shapeIfAbsent("new", actor, resolve)).testsProposed, expected.slice(0, 1));
+  await profiles.save({ ...profile, version: 3, active: false, testsQueuedByDefault: [] }, "1");
+  assert.deepEqual((await store.get("old")).testsProposed, expected);
+  assert.deepEqual(await store.shapeIfAbsent("old", actor, resolve), first);
+  assert.deepEqual((await store.shapeIfAbsent("retired", actor, resolve)).testsProposed, []);
+  const scopeEdit = await store.set("old", "office-visit", actor, first.versionId!);
+  assert.deepEqual(scopeEdit.testsProposed, expected);
+});
+
+test("S3c1 G2 dedup uses orderable plus focus and preserves all sources", async () => {
+  const fhir = new ShapeFhir(); const seeds = await new FhirFollowUpProfileStore(fhir).list();
+  const first = { ...seeds[0], testsQueuedByDefault: [
+    { orderable: "fundus-photography", focus: "optic nerve", label: "Same label" },
+    { orderable: "fundus-photography", focus: "retina", label: "Same label" },
+    { orderable: "visual-field-threshold", label: "Same label" },
+  ] };
+  const second = { ...seeds[1], testsQueuedByDefault: [
+    { orderable: "fundus-photography", focus: "optic nerve", label: "Different label" },
+  ] };
+  const store = new FhirEncounterExamScopeStore(fhir);
+  const result = await store.shapeIfAbsent("dedup", actor, async () => resolved([first, second]));
+  assert.deepEqual(result.testsProposed, [
+    { orderable: "fundus-photography", focus: "optic nerve", sources: [{ kind: "profile", profileKey: first.profileKey }, { kind: "profile", profileKey: second.profileKey }] },
+    { orderable: "fundus-photography", focus: "retina", sources: [{ kind: "profile", profileKey: first.profileKey }] },
+    { orderable: "visual-field-threshold", sources: [{ kind: "profile", profileKey: first.profileKey }] },
+  ]);
+});
+
+test("S3c1 G3 every proposed test records its profile including unavailable tests", async () => {
+  const fhir = new ShapeFhir(); const profiles = await new FhirFollowUpProfileStore(fhir).list();
+  const profile = profiles.find(p => p.profileKey === "macula-retina")!;
+  const shaped = await new FhirEncounterExamScopeStore(fhir).shapeIfAbsent("sources", actor, async () => resolved([profile]));
+  assert.equal(shaped.testsProposed!.length, profile.testsQueuedByDefault.length);
+  assert.ok(shaped.testsProposed!.some(test => test.orderable === "erg"));
+  for (const test of shaped.testsProposed!) assert.deepEqual(test.sources, [{ kind: "profile", profileKey: "macula-retina" }]);
+});
+
+test("S3c1 G4 S3b-era shapes without tests load unchanged and report none", async () => {
+  for (const source of [undefined, "explicit"] as const) {
+    const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
+    await store.set("legacy", "office-visit", actor, null);
+    const value = JSON.parse(fhir.rows[0].extension![0].valueString!);
+    Object.assign(value, { profilesApplied: [], sectionsOpen: ["hpi", "assessment"], shapedAt: value.setAt,
+      ...(source ? { source, chosenBy: actor, chosenAt: value.setAt } : {}) });
+    fhir.rows[0].extension![0].valueString = JSON.stringify(value);
+    const before = structuredClone(fhir.rows);
+    const parsed = await store.get("legacy");
+    assert.equal(Object.hasOwn(parsed, "testsProposed"), false);
+    assert.deepEqual(parsed.testsProposed ?? [], []);
+    assert.equal(parsed.source, source ?? "derived");
+    assert.deepEqual(parsed.sectionsOpen, ["hpi", "assessment"]);
+    assert.deepEqual(await store.shapeIfAbsent("legacy", actor, async () => { throw new Error("legacy must not resolve"); }), parsed);
+    assert.deepEqual(fhir.rows, before);
+  }
+});
+
+test("S3c1 G5 both automatic and explicit write paths carry tests", async () => {
+  const fhir = new ShapeFhir(); const profiles = [(await new FhirFollowUpProfileStore(fhir).list())[0]];
+  const input = resolved(profiles); const store = new FhirEncounterExamScopeStore(fhir);
+  const derived = await store.shapeIfAbsent("derived", actor, async () => input);
+  const explicit = await store.pick("explicit", "office-visit", actor, null, profiles, input.testsProposed);
+  assert.ok(input.testsProposed.length);
+  assert.deepEqual(derived.testsProposed, input.testsProposed);
+  assert.deepEqual(explicit.testsProposed, input.testsProposed);
+  input.testsProposed[0].sources.length = 0;
+  assert.deepEqual((await store.get("explicit")).testsProposed, explicit.testsProposed);
+});
+
+test("S3c1 G7 legacy scope is never retro-shaped at the store boundary", async () => {
+  const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
+  const legacy = await store.set("legacy", "office-visit", actor, null);
+  let calls = 0;
+  assert.deepEqual(await store.shapeIfAbsent("legacy", actor, async () => { calls++; return resolved([]); }), legacy);
+  assert.equal(calls, 0);
+  assert.equal(fhir.rows.length, 1);
 });
