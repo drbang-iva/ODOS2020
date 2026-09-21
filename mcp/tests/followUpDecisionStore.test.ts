@@ -133,3 +133,14 @@ test("S3c2b F3 update 403 rejects once without changing the stored record", asyn
   assert.equal(fhir.attempts, 1);
   assert.deepEqual(fhir.records, before);
 });
+
+test("S3c2c1b G15 status-less update failure is propagated after one write", async () => {
+  const fhir = new DecisionFhir(), decisions = await store(fhir);
+  await decisions.apply("e1", command("seed"), actorA);
+  const before = structuredClone(fhir.records), failure = new Error("status-less write failure");
+  fhir.attempts = 0;
+  fhir.update = async () => { fhir.attempts++; throw failure; };
+  await assert.rejects(decisions.apply("e1", command("retina"), actorB), error => error === failure);
+  assert.equal(fhir.attempts, 1);
+  assert.deepEqual(fhir.records, before);
+});

@@ -538,15 +538,27 @@ async function resolveFollowUpProfiles(fhir: ExamOverviewFhirClient, conditions:
   const [profiles, catalog] = await Promise.all([
     new FhirFollowUpProfileStore(fhir).list(), new FhirDiagnosisCatalogStore(fhir).list(),
   ]);
-  const normalizeFamily = (value: string) => value.trim().toLowerCase().replace(/[-_]+/g, " ");
   const families = new Set(conditions.flatMap(condition => {
-    if (condition.verificationStatus?.coding?.some(coding => ["entered-in-error", "refuted"].includes(coding.code ?? ""))) return [];
-    const identifier = condition.identifier?.find(row => row.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
-    const key = parseDiagnosisIdentifier(identifier, encounterId).diagnosisKey;
-    const diagnosis = catalog.find(row => row.stableKey === key);
-    return diagnosis ? [normalizeFamily(diagnosis.clinicalFamily)] : [];
+    const family = conditionClinicalFamily(condition, encounterId, catalog);
+    return family ? [family] : [];
   }));
-  return profiles.filter(profile => profile.active && profile.matchesDiagnosisFamilies.some(family => families.has(normalizeFamily(family))));
+  return profiles.filter(profile => profile.active && profile.matchesDiagnosisFamilies.some(family => families.has(normalizeClinicalFamily(family))));
+}
+
+export function normalizeClinicalFamily(value: string): string {
+  return value.trim().toLowerCase().replace(/[-_]+/g, " ");
+}
+
+export function conditionClinicalFamily(
+  condition: Condition,
+  encounterId: string,
+  catalog: readonly { stableKey: string; clinicalFamily: string }[],
+): string | undefined {
+  if (condition.verificationStatus?.coding?.some(coding => ["entered-in-error", "refuted"].includes(coding.code ?? ""))) return undefined;
+  const identifier = condition.identifier?.find(row => row.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
+  const key = parseDiagnosisIdentifier(identifier, encounterId).diagnosisKey;
+  const diagnosis = catalog.find(row => row.stableKey === key);
+  return diagnosis ? normalizeClinicalFamily(diagnosis.clinicalFamily) : undefined;
 }
 
 const followingSchema = z.object({

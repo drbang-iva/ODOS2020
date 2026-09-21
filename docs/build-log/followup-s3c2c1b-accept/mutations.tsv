@@ -1,0 +1,16 @@
+G1	red rc=1 pass=1 fail=1 names=['S3c2c1b G1 Accept creates one ServiceRequest and one accepted manual charge linked to the order']	green rc=0 pass=2 fail=0
+G2	red rc=1 pass=0 fail=1 names=['S3c2c1b G2 concurrent Accept clicks leave one live order and one live charge']	green rc=0 pass=1 fail=0
+G3	red rc=1 pass=0 fail=1 names=['S3c2c1b G3 two photo focuses create two orders sharing one charge']	green rc=0 pass=1 fail=0
+G4	red rc=1 pass=0 fail=1 names=['S3c2c1b G4 existing protocol and Visit charges block another charge']	green rc=0 pass=1 fail=0
+G5	red rc=1 pass=0 fail=1 names=['S3c2c1b G5 an active uncoded fee orders without a charge or Add charge']	green rc=0 pass=1 fail=0
+G6	red rc=1 pass=0 fail=1 names=['S3c2c1b G6 order materialization fails cleanly and charge failure leaves an Add charge path']	green rc=0 pass=1 fail=0
+G7	red rc=1 pass=0 fail=1 names=['S3c2c1b G7 retina photos choose matching macular diagnosis over the principal glaucoma problem']	green rc=0 pass=1 fail=0
+G8	red rc=1 pass=0 fail=1 names=['S3c2c1b G8 chart.read-only, signed, and unreadable encounters refuse before writes']	green rc=0 pass=1 fail=0
+G9	red rc=1 pass=1 fail=1 names=['S3c2c1b G9 ordered rows derive one charge per concept across all charge states']	green rc=0 pass=2 fail=0
+G10	red rc=1 pass=0 fail=1 names=['S3c2c1b G10 failed charge read refuses rows while unshaped visits stay exact']	green rc=0 pass=1 fail=0
+G11	red rc=1 pass=0 fail=1 names=['S3c2c1b G11 Accept and charge controls require their new permission and charge fields']	green rc=0 pass=1 fail=0
+G12	red rc=1 pass=1 fail=1 names=['S3c2c1b G12 Remove and Restore PATCH then re-GET, while duplicate-charge stays row-scoped']	green rc=0 pass=2 fail=0
+G13	red rc=1 pass=0 fail=1 names=['S3c2c1b G13 queue order creates a distinct materialized action without a merge identity']	green rc=0 pass=1 fail=0
+G15	red rc=1 pass=0 fail=2 names=['S3c2c1b G15 status-less update failure is propagated after one write', 'S3c2c1b G15 status-less decision update failure returns 502, not concurrent-edit']	green rc=0 pass=2 fail=0
+G16	red rc=1 pass=12 fail=1 names=['every definition-backed clinical-graph HTTP closure receives the persistent dependency']	green rc=0 pass=13 fail=0
+G14	red rc=1 pass=0 fail=1 names=['S3c2c1b G14 simultaneous Restores leave one accepted manual proposal']	green rc=0 pass=1 fail=0

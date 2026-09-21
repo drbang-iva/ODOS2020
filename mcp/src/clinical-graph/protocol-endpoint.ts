@@ -1218,3 +1218,84 @@ async function assertProtocolMutation(staff: Staff, scope:{encounterId:string;pa
     (context.validatedReferences ??= new Set()).add(reference);
   }
 }
+
+const followUpAcceptParamsSchema = z.object({ encounterId: z.string().regex(/^[A-Za-z0-9.-]+$/) }).strict();
+const followUpAcceptBodySchema = z.object({ orderable: z.string().min(1), focus: z.string().min(1).optional() }).strict();
+
+export async function handleFollowUpAcceptRequest(
+  deps: Pick<ProtocolEndpointDeps, "authenticate" | "serviceFhir" | "now">,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required." } };
+  if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  const params = followUpAcceptParamsSchema.safeParse(input.params);
+  const command = followUpAcceptBodySchema.safeParse(input.body);
+  if (!params.success || !command.success) return { status: 400, body: { error: "A valid encounter and test are required." } };
+  const { encounterId } = params.data;
+  const { orderable, focus } = command.data;
+  const { encounterForCaller, readQueue } = await import("./follow-up-queue-endpoint.js");
+  const queueStaffFhir = staff.fhir as unknown as import("./exam-overview-endpoint.js").ExamOverviewFhirClient;
+  const encounter = await encounterForCaller(queueStaffFhir, encounterId);
+  if ("body" in encounter) return encounter;
+  if (encounter.status === "finished") return { status: 409, body: { error: "Signed encounter cannot be edited." } };
+  const patientReference = encounter.subject?.reference;
+  if (!patientReference?.match(/^Patient\/[^/]+$/)) return { status: 400, body: { error: "Encounter patient required." } };
+  const serviceFhir = deps.serviceFhir ?? staff.fhir;
+  const queueServiceFhir = serviceFhir as import("./exam-overview-endpoint.js").ExamOverviewFhirClient;
+  const loadFailure = { status: 502, body: { error: "The tests for this visit could not be loaded." } };
+  let loaded: Awaited<ReturnType<typeof readQueue>>;
+  try {
+    loaded = await readQueue(queueServiceFhir, queueStaffFhir, encounter, encounterId, patientReference.slice(8), true);
+  } catch { return loadFailure; }
+  const row = loaded.queue.recorded ? loaded.queue.rows.find(item => item.orderable === orderable && (item.focus ?? "") === (focus ?? "")) : undefined;
+  if (row?.state !== "for-review" && !(row?.state === "already-ordered" && row.charge?.status === "none")) {
+    return { status: 409, body: { error: "This test cannot be accepted." } };
+  }
+  const test = loaded.scope.testsProposed?.find(item => item.orderable === orderable && (item.focus ?? "") === (focus ?? ""));
+  const sourceKeys = new Set(test?.sources.flatMap(source => source.kind === "profile" ? [source.profileKey] : []) ?? []);
+  const families = new Set(loaded.profiles.filter(profile => profile.active && sourceKeys.has(profile.profileKey))
+    .flatMap(profile => profile.matchesDiagnosisFamilies.map(value => value.trim().toLowerCase().replace(/[-_]+/g, " "))));
+  const diagnosis = loaded.queue.recorded ? loaded.queue.diagnoses?.find(item => families.has(loaded.conditionFamilyByReference.get(item.reference) ?? "")) : undefined;
+  const { IN_PROCESS_ENCOUNTER_LOCK } = await import("./protocol-service.js");
+  const { ProtocolBasicStore, PROTOCOL_BASIC_CODES } = await import("./protocol-store.js");
+  const { findLiveProcedureCharge, isManualProcedureProposal, createAcceptedManualProcedureCharge } = await import("./manual-procedure-charge-endpoint.js");
+  const { listActiveCodedNonVisitProcedureFees } = await import("./procedure-fee-schedule.js");
+  const result = await IN_PROCESS_ENCOUNTER_LOCK.run(encounterId, async () => {
+    const service = liveService(staff, deps.now);
+    let created: PlanActionInstance | undefined;
+    let chargeStarted = false;
+    try {
+      const actions = await new ProtocolBasicStore<PlanActionInstance>(staff.fhir, PROTOCOL_BASIC_CODES.planActionInstance).list();
+      let action = actions.find(item => item.encounterId === encounterId && item.patientId === patientReference.slice(8) &&
+        item.actionType === "order" && !["removed", "cancelled"].includes(item.state) &&
+        item.payload.orderableKey === orderable && (item.payload.focus ?? "") === (focus ?? ""));
+      if (!action) {
+        action = await service.addQueueOrder({ encounterId, patientId: patientReference.slice(8), orderable, ...(focus ? { focus } : {}),
+          actor: staff.staffReference, linkedDx: diagnosis ? [diagnosis.reference] : [] });
+        created = action;
+      }
+      const coded = (await listActiveCodedNonVisitProcedureFees(serviceFhir)).find(fee => fee.procedureConceptKey === orderable);
+      const live = await findLiveProcedureCharge(staff.fhir, encounterId, orderable);
+      let manual = live && isManualProcedureProposal(live, encounterId) ? live : undefined;
+      if (coded && !live) {
+        chargeStarted = true;
+        const written = await createAcceptedManualProcedureCharge({ fhir: staff.fhir as unknown as Parameters<typeof createAcceptedManualProcedureCharge>[0]["fhir"], encounterId, procedureConceptKey: orderable,
+          dxPointers: diagnosis ? [diagnosis.reference] : [], actor: staff.staffReference, now: deps.now });
+        if (written.status !== 201 || !("proposal" in written.body)) return loadFailure;
+        manual = written.body.proposal;
+      }
+      if (manual && action.chargeProposalRef !== manual.id) await service.actions.save({ ...action, chargeProposalRef: manual.id });
+      return undefined;
+    } catch {
+      if (created && !chargeStarted) {
+        try { await service.compensateQueueOrder(created); } catch { return loadFailure; }
+      }
+      return loadFailure;
+    }
+  });
+  if (result) return result;
+  try {
+    return { status: 200, body: (await readQueue(queueServiceFhir, queueStaffFhir, encounter, encounterId, patientReference.slice(8), true)).queue };
+  } catch { return loadFailure; }
+}

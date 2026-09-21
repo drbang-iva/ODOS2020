@@ -6,7 +6,7 @@ import { resolveProfileTests } from "../src/clinical-graph/exam-overview-endpoin
 import { FhirEncounterExamScopeStore, type ProposedExamTest } from "../src/clinical-graph/exam-scope-store.js";
 import { FhirFollowUpProfileStore } from "../src/clinical-graph/follow-up-profile-store.js";
 import { buildProtocolBasic, PROTOCOL_BASIC_CODES } from "../src/clinical-graph/protocol-store.js";
-import type { PlanActionInstance } from "../src/clinical-graph/protocol-types.js";
+import type { ChargeProposal, PlanActionInstance } from "../src/clinical-graph/protocol-types.js";
 import type { ProcedureFeeScheduleItem } from "../src/clinical-graph/procedure-fee-schedule.js";
 import { deriveFollowUpQueue, handleFollowUpQueueRequest } from "../src/clinical-graph/follow-up-queue-endpoint.js";
 
@@ -332,4 +332,140 @@ test("S3c2b F5 PUT decision write 403 returns load failure after one attempt", a
   assert.equal(attempts, 1);
   assert.ok(h.staff.reads.includes("Encounter/e1"));
   assert.deepEqual(h.service.resources, before);
+});
+
+test("S3c2c1b G9 ordered rows derive one charge per concept across all charge states", async () => {
+  const { buildProcedureFeeDefinition } = await import("../src/clinical-graph/procedure-fee-schedule.js");
+  const base: ChargeProposal = {
+    id: "manual-procedure-charge:one", encounterId: "e1", planActionRef: "manual-procedure-charge:one",
+    procedureConceptKey: "fundus-photography", units: 1, dxPointers: [], evidenceRefs: [],
+    coverageEvaluations: [], state: "accepted", provenance: { source: "clinician-entered", actor: actor.reference, at: "2026-09-21T14:05:00.000Z" },
+  };
+  const cases = [
+    { name: "manual accepted", proposal: base, expected: "billed" },
+    { name: "removed manual", proposal: { ...base, state: "removed" as const, lastAmendment: { actor: actor.reference, at: "2026-09-21T14:05:00.000Z" } }, expected: "removed" },
+    { name: "protocol staged", proposal: { ...base, id: "protocol-one", planActionRef: "order-1", state: "staged" as const }, expected: "protocol-pending" },
+    { name: "protocol accepted", proposal: { ...base, id: "protocol-one", planActionRef: "order-1" }, expected: "charged-elsewhere" },
+    { name: "finalized", proposal: { ...base, id: "protocol-one", planActionRef: "order-1", state: "finalized" as const }, expected: "finalized" },
+  ];
+  for (const item of cases) {
+    const h = await decisionFixture();
+    h.service.resources = h.service.resources.filter(r => r.resourceType !== "ChargeItemDefinition");
+    h.service.resources.push({ ...buildProcedureFeeDefinition({ ...fee(), billingCode: "SYNTHETIC" }), id: "photos" });
+    h.staff.resources.push(buildProtocolBasic(order({ chargeProposalRef: base.id }), PROTOCOL_BASIC_CODES.planActionInstance));
+    h.staff.resources.push(buildProtocolBasic(order({ id: "order-2", ...(item.expected === "removed" ? { chargeProposalRef: base.id } : {}), payload: { orderableKey: "fundus-photography", focus: "retina" } }), PROTOCOL_BASIC_CODES.planActionInstance));
+    h.staff.resources.push(buildProtocolBasic(item.proposal, PROTOCOL_BASIC_CODES.chargeProposal));
+    const reply = await handleFollowUpQueueRequest(h.dependencies, request);
+    assert.equal(reply.status, 200, item.name);
+    assert.deepEqual(rows(reply.body as any).map(row => row.charge?.status), [item.expected, item.expected], item.name);
+  }
+  for (const [coded, expected] of [[true, "none"], [false, "uncoded"]] as const) {
+    const h = await decisionFixture();
+    h.service.resources = h.service.resources.filter(r => r.resourceType !== "ChargeItemDefinition");
+    h.service.resources.push({ ...buildProcedureFeeDefinition({ ...fee(), ...(coded ? { billingCode: "SYNTHETIC" } : {}) }), id: "photos" });
+    h.staff.resources.push(buildProtocolBasic(order(), PROTOCOL_BASIC_CODES.planActionInstance));
+    const reply = await handleFollowUpQueueRequest(h.dependencies, request);
+    assert.equal(reply.status, 200);
+    assert.equal(rows(reply.body as any)[0].charge?.status, expected);
+  }
+});
+
+test("S3c2c1b G10 failed charge read refuses rows while unshaped visits stay exact", async () => {
+  const h = await decisionFixture();
+  h.staff.resources.push(buildProtocolBasic(order(), PROTOCOL_BASIC_CODES.planActionInstance));
+  h.staff.failSearch = (_type, params) => Boolean(params.code?.endsWith("|odos-charge-proposal"));
+  const result = await handleFollowUpQueueRequest(h.dependencies, request);
+  assert.equal(result.status, 502);
+  assert.equal("rows" in (result.body as object), false);
+  const unshaped = await handleFollowUpQueueRequest(deps(new QueueFhir()), request);
+  assert.deepEqual(unshaped.body, { recorded: false });
+});
+
+test("S3c2c1b G8 shaped queue advertises Accept only to chart writers", async () => {
+  const h = await decisionFixture();
+  const allowed = await handleFollowUpQueueRequest(h.dependencies, request);
+  const forbidden = await handleFollowUpQueueRequest({ ...h.dependencies, authenticate: async () => ({ staffReference: actor.reference, actorRole: "forbidden" as never, fhir: h.staff }) }, request);
+  assert.equal(allowed.status, 200);
+  assert.equal((allowed.body as any).canAccept, true);
+  assert.equal(forbidden.status, 403);
+  assert.equal((forbidden.body as any).canAccept, undefined);
+});
+
+test("S3c2c1b G7 diagnosis options retain rank and mark families from queued profiles", async () => {
+  const { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } = await import("../src/clinical-graph/diagnosis-pick-endpoint.js");
+  class DiagnosisQueueFhir extends QueueFhir {
+    override async read<T extends Resource>(type: T["resourceType"], id: string): Promise<T> {
+      this.reads.push(`${type}/${id}`);
+      if (type === "Encounter") return {
+        resourceType: "Encounter", id, status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p1" },
+        diagnosis: [{ condition: { reference: "Condition/glaucoma" }, rank: 1 }, { condition: { reference: "Condition/macula" }, rank: 2 }],
+      } as T;
+      const found = this.resources.find(row => row.resourceType === type && row.id === id);
+      if (!found) throw Object.assign(new Error("missing"), { status: 404 });
+      return structuredClone(found) as T;
+    }
+  }
+  const staff = new DiagnosisQueueFhir(), service = new QueueFhir();
+  const condition = (id: string, key: string, display: string) => ({
+    resourceType: "Condition" as const, id, subject: { reference: "Patient/p1" },
+    code: { text: display }, identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: key }],
+  });
+  staff.resources.push(condition("glaucoma", "poag_mild", "Glaucoma"), condition("macula", "macular_drusen", "Macular drusen"));
+  await new FhirEncounterExamScopeStore(service).pick("e1", "office-visit", actor, null, [], [
+    proposed(), proposed({ focus: "retina", sources: [{ kind: "profile", profileKey: "macula-retina" }] }),
+  ]);
+  const reply = await handleFollowUpQueueRequest(deps(staff, service), request);
+  assert.equal(reply.status, 200);
+  assert.deepEqual((reply.body as any).diagnoses.map((row: any) => [row.reference, row.rank, row.matches]), [
+    ["Condition/glaucoma", 1, true], ["Condition/macula", 2, true],
+  ]);
+});
+
+test("S3c2c1b G15 status-less decision update failure returns 502, not concurrent-edit", async () => {
+  const h = await decisionFixture();
+  assert.equal((await decisionRequest(h.dependencies, mark)).status, 200);
+  const before = structuredClone(h.service.resources);
+  let attempts = 0;
+  h.service.update = async () => { attempts++; throw new Error("status-less write failure"); };
+  const reply = await decisionRequest(h.dependencies, { ...mark, focus: "retina" });
+  assert.equal(reply.status, 502);
+  assert.equal((reply.body as any).code, undefined);
+  assert.equal(attempts, 1);
+  assert.deepEqual(h.service.resources, before);
+});
+
+test("S3c2c1b G9 billed diagnosis and removed actor display come from staff resources", async () => {
+  class DisplayFhir extends QueueFhir {
+    finished = false;
+    override async read<T extends Resource>(type: T["resourceType"], id: string): Promise<T> {
+      this.reads.push(`${type}/${id}`);
+      if (type === "Encounter") return {
+        resourceType: "Encounter", id, status: this.finished ? "finished" : "in-progress", class: { code: "AMB" },
+        subject: { reference: "Patient/p1" }, diagnosis: [{ condition: { reference: "Condition/glaucoma" }, rank: 1 }],
+      } as T;
+      const found = this.resources.find(row => row.resourceType === type && row.id === id);
+      if (!found) throw Object.assign(new Error("missing"), { status: 404 });
+      return structuredClone(found) as T;
+    }
+  }
+  const staff = new DisplayFhir(), service = new QueueFhir();
+  await new FhirEncounterExamScopeStore(service).pick("e1", "office-visit", actor, null, [], [proposed()]);
+  staff.resources.push({ resourceType: "Condition", id: "glaucoma", subject: { reference: "Patient/p1" }, code: { text: "Glaucoma" } });
+  staff.resources.push({ resourceType: "Practitioner", id: "tech", name: [{ given: ["Tech"], family: "Synthetic" }] });
+  staff.resources.push(buildProtocolBasic(order({ chargeProposalRef: "manual-procedure-charge:one" }), PROTOCOL_BASIC_CODES.planActionInstance));
+  const proposal: ChargeProposal = {
+    id: "manual-procedure-charge:one", encounterId: "e1", planActionRef: "manual-procedure-charge:one",
+    procedureConceptKey: "fundus-photography", units: 1, dxPointers: ["Condition/glaucoma"], evidenceRefs: [],
+    coverageEvaluations: [], state: "accepted", provenance: { source: "clinician-entered", actor: actor.reference, at: "2026-09-21T14:00:00.000Z" },
+  };
+  staff.resources.push(buildProtocolBasic(proposal, PROTOCOL_BASIC_CODES.chargeProposal));
+  const billed = await handleFollowUpQueueRequest(deps(staff, service), request);
+  assert.equal(rows(billed.body as any)[0].charge?.dxDisplay, "Glaucoma");
+  staff.resources = staff.resources.filter(row => row.resourceType !== "Basic" || !row.code?.coding?.some(code => code.code === PROTOCOL_BASIC_CODES.chargeProposal));
+  staff.resources.push(buildProtocolBasic({ ...proposal, state: "removed", lastAmendment: { actor: "Practitioner/tech", at: "2026-09-21T14:01:00.000Z" } }, PROTOCOL_BASIC_CODES.chargeProposal));
+  const removed = await handleFollowUpQueueRequest(deps(staff, service), request);
+  assert.equal(rows(removed.body as any)[0].charge?.removedBy, "Tech Synthetic");
+  staff.finished = true;
+  const signed = await handleFollowUpQueueRequest(deps(staff, service), request);
+  assert.equal((signed.body as any).canAccept, false);
 });

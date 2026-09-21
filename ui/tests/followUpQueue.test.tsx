@@ -162,3 +162,68 @@ test("S3c2b malformed Not today and permission payloads are refused", async () =
     try { assert.match(text(h.renderer.toJSON()), /The tests for this visit could not be loaded/); } finally { await h.close(); }
   }
 });
+
+const chargePayload = { recorded: true, canDecide: true, canAccept: true, diagnoses: [
+  { reference: "Condition/glaucoma", display: "Glaucoma", rank: 1, matches: false },
+  { reference: "Condition/macula", display: "Macular drusen", rank: 2, matches: true },
+], rows: [
+  { orderable: "field", label: "Visual field", state: "for-review", sources: ["from the Glaucoma shape"] },
+  { orderable: "photos", focus: "retina", label: "Retina photos", state: "already-ordered", actionIds: ["one"], sources: ["from the Retina shape"], charge: { status: "billed", proposalId: "manual-procedure-charge:one", dxPointer: "Condition/glaucoma", dxDisplay: "Glaucoma" } },
+] };
+
+test("S3c2c1b G11 Accept and charge controls require their new permission and charge fields", async () => {
+  for (const value of [chargePayload, { ...chargePayload, canAccept: false }, { ...chargePayload, canAccept: undefined, rows: chargePayload.rows.map(row => ({ ...row, charge: undefined })) }]) {
+    const h = await mounted(async () => Response.json(value));
+    try {
+      const labels = h.renderer.root.findAllByType("li").map(row => row.findAllByType("button").map(button => button.children.join("")));
+      if (value.canAccept) assert.deepEqual(labels, [["Not today", "Accept"], ["Remove charge", "Change diagnosis"]]);
+      else assert.deepEqual(labels, [["Not today"], []]);
+    } finally { await h.close(); }
+  }
+});
+
+test("S3c2c1b G12 Remove and Restore PATCH then re-GET, while duplicate-charge stays row-scoped", async () => {
+  const initial = { ...chargePayload, rows: [chargePayload.rows[1], { ...chargePayload.rows[1], orderable: "oct", label: "OCT", charge: { status: "removed", proposalId: "manual-procedure-charge:oct", removedBy: "Tech Synthetic" } }] };
+  const calls: Array<{ method: string; url: string; body?: unknown }> = [];
+  let current: unknown = initial;
+  const h = await mounted(async () => Response.json(current));
+  const previous = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const method = init?.method ?? "GET";
+    calls.push({ method, url: String(input), ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}) });
+    if (method === "PATCH" && String(input).endsWith("manual-procedure-charge%3Aoct")) return Response.json({ code: "duplicate-charge", error: "OCT is already charged on this visit." }, { status: 409 });
+    if (method === "PATCH") {
+      current = { ...initial, rows: [{ ...initial.rows[0], charge: { status: "removed", proposalId: "manual-procedure-charge:one", removedBy: "Tech Synthetic" } }, initial.rows[1]] };
+      return Response.json({ proposal: {} });
+    }
+    return Response.json(current);
+  };
+  try {
+    const rows = h.renderer.root.findAllByType("li");
+    await act(async () => rows[0].findAllByType("button").find(button => button.children.join("") === "Remove charge")!.props.onClick());
+    assert.deepEqual(calls.slice(0, 2).map(call => [call.method, call.body]), [["PATCH", { state: "removed" }], ["GET", undefined]]);
+    await act(async () => h.renderer.root.findAllByType("li")[1].findAllByType("button").find(button => button.children.join("") === "Restore charge")!.props.onClick());
+    assert.deepEqual(calls[2].body, { state: "accepted" });
+    assert.match(text(h.renderer.root.findAllByType("li")[1].findByProps({ role: "status" }).children), /already charged/);
+    assert.equal(h.renderer.root.findAllByProps({ role: "alert" }).length, 0);
+  } finally { globalThis.fetch = previous; await h.close(); }
+});
+
+test("S3c2c1b G12 Change diagnosis offers matching diagnoses first and PATCHes only the chosen Encounter diagnosis", async () => {
+  const calls: unknown[] = [];
+  const h = await mounted(async () => Response.json(chargePayload));
+  const previous = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (init?.method === "PATCH") calls.push(JSON.parse(String(init.body)));
+    return init?.method === "PATCH" ? Response.json({ proposal: {} }) : Response.json(chargePayload);
+  };
+  try {
+    const row = h.renderer.root.findAllByType("li")[1];
+    await act(async () => row.findAllByType("button").find(button => button.children.join("") === "Change diagnosis")!.props.onClick());
+    const select = h.renderer.root.findByType("select");
+    assert.deepEqual(select.findAllByType("option").map(option => option.props.value), ["Condition/macula", "Condition/glaucoma"]);
+    assert.equal(select.props.value, "Condition/glaucoma");
+    await act(async () => select.props.onChange({ target: { value: "Condition/macula" } }));
+    assert.deepEqual(calls, [{ dxPointer: "Condition/macula" }]);
+  } finally { globalThis.fetch = previous; await h.close(); }
+});
