@@ -176,6 +176,7 @@ export interface ExamOverviewProjection {
   encounterReference: string;
   patientReference: string;
   examScope?: string;
+  sectionsOpen?: string[];
   historySummary?: string;
   findings: ExamOverviewFindingProjection[];
   sections: ExamOverviewSectionProjection[];
@@ -186,6 +187,7 @@ export interface BuildExamOverviewProjectionInput {
   encounterReference: string;
   patientReference: string;
   examScope?: string;
+  sectionsOpen?: string[];
   definitions: readonly ClinicalFindingDefinition[];
   currentObservations: readonly Observation[];
   conditions?: readonly Condition[];
@@ -344,6 +346,7 @@ export function buildExamOverviewProjection(
       encounterReference: input.encounterReference,
       patientReference: input.patientReference,
       examScope,
+      ...(input.sectionsOpen ? { sectionsOpen: input.sectionsOpen } : {}),
       findings,
       sections: [],
       completeness: unconfiguredCompleteness(),
@@ -380,6 +383,7 @@ export function buildExamOverviewProjection(
     encounterReference: input.encounterReference,
     patientReference: input.patientReference,
     examScope,
+    ...(input.sectionsOpen ? { sectionsOpen: input.sectionsOpen } : {}),
     findings,
     sections: [...requiredSections, ...notIndicatedSections],
     completeness: {

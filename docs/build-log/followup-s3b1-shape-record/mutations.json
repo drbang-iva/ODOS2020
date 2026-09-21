@@ -1,0 +1,98 @@
+[
+  {
+    "guard": "G1",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G1' mcp/tests/examShapeRecord.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G1 profile edit and retirement never reshape a stored visit, scope edits preserve shape\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G2a",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G2' ui/tests/examOverviewBoard.test.tsx",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G2 legacy row parses and keeps exactly the same drawn lines without retro-shaping\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G2b",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G2' ui/tests/examOverviewBoard.test.tsx",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G2 legacy row parses and keeps exactly the same drawn lines without retro-shaping\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G3",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G3' ui/tests/examOverviewBoard.test.tsx",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G3 shaped lines union with every existing line and ignore unavailable keys\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G4-stale",
+    "command": "node --import tsx --test '--test-name-pattern=S2a scope store guards' mcp/tests/examScopeStore.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S2a scope store guards first creation and versioned edits\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G4-create",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G4 conditional' mcp/tests/examShapeRecord.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G4 conditional concurrent creates leave exactly one persisted row\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G4-token",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G4 write-token' mcp/tests/examShapeRecord.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G4 write-token mismatch refuses identical persisted field values\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G5",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G5' mcp/tests/examShapeRecord.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G5 untouched seed records numeric revision and explicit null versionId\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G6",
+    "command": "node --import tsx --test '--test-name-pattern=S2a G7' mcp/tests/examOverviewEndpoint.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S2a G7 projection path cannot import or use the scheduling category\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "G8",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 G8' mcp/tests/examOverviewEndpoint.test.ts ui/tests/examOverviewBoard.test.tsx",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 G8 an unconfirmed shape create serves the unshaped overview and retries next open\nnot ok 2 - S3b1 G8 unconfirmed bookkeeping write still draws the unshaped board\n# tests 2\n# pass 0\n# fail 2\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 2\n# pass 2\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "conflict-reread",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 conflict' mcp/tests/examOverviewEndpoint.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 conflict 409 re-reads the winner without a second write\nnot ok 2 - S3b1 conflict 412 re-reads the winner without a second write\n# tests 2\n# pass 0\n# fail 2\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 2\n# pass 2\n# fail 0\n# skipped 0"
+  },
+  {
+    "guard": "diagnosis-match",
+    "command": "node --import tsx --test '--test-name-pattern=S3b1 overview freezes' mcp/tests/examOverviewEndpoint.test.ts",
+    "redExit": 1,
+    "red": "not ok 1 - S3b1 overview freezes the catalogue profile selected by encounter diagnosis family\n# tests 1\n# pass 0\n# fail 1\n# skipped 0",
+    "greenExit": 0,
+    "green": "# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+  }
+]

@@ -4618,3 +4618,61 @@ test("S2b2a G-FB6 a failed clear keeps status-derived protection through the act
     assert.equal(h.renderer.root.findAllByProps({ "data-exam-view-action": "collapse", "data-editor-id": "iop" }).length, 1);
   } finally { h.restore(); }
 });
+
+test("S3b1 G3 shaped lines union with every existing line and ignore unavailable keys", () => {
+  const projection = { ...zeroFindingComprehensiveProjection(), examScope: "office-visit", findings: PROJECTION.findings, completeness: { ...PROJECTION.completeness, trace: PROJECTION.completeness.trace.filter(row => ["history", "assessment"].includes(row.sectionKey)) } };
+  const draw = (p: typeof projection & { sectionsOpen?: string[] }) => {
+    const renderer = create(<ExamOverviewBoard projection={p} editorEntries={chartEditorInventory()} refreshing={false} onOpenEditor={() => {}} onRefresh={() => {}} />);
+    try { return [...renderer.root.findAll(node => typeof node.type === "string" && node.props["data-drawn-editor-id"]).map(node => node.props["data-drawn-editor-id"]), ...renderer.root.findAll(node => typeof node.type === "string" && node.props["data-finding-key"]).map(node => `finding:${node.props["data-finding-key"]}`)]; }
+    finally { renderer.unmount(); }
+  };
+  const before = draw(projection);
+  const after = draw({ ...projection, sectionsOpen: ["pachymetry", "no-longer-resolves"] });
+  assert.ok(after.includes("pachymetry"));
+  for (const id of before) assert.ok(after.includes(id), `retained ${id}`);
+  assert.ok(after.includes("finding:intraocular-pressure"));
+  assert.ok(!after.includes("no-longer-resolves"));
+});
+
+test("S3b1 G2 legacy row parses and keeps exactly the same drawn lines without retro-shaping", async () => {
+  const { FhirEncounterExamScopeStore } = await import("../../mcp/src/clinical-graph/exam-scope-store.js");
+  const { FhirFollowUpProfileStore } = await import("../../mcp/src/clinical-graph/follow-up-profile-store.js");
+  const stored = { resourceType: "Basic", id: "legacy", meta: { versionId: "1" },
+    identifier: [{ system: "urn:odos:encounter-exam-scope", value: "legacy" }],
+    code: { coding: [{ system: "urn:odos:encounter-exam-scope", code: "exam-scope" }] },
+    subject: { reference: "Encounter/legacy" }, author: { reference: "Practitioner/synthetic" },
+    extension: [{ url: "urn:odos:encounter-exam-scope:value", valueString: JSON.stringify({ examScope: "office-visit", setAt: "2026-09-19T12:00:00Z" }) }],
+  };
+  const fhir = { baseUrl: "http://localhost/", async search(_type: string, params: Record<string, string>) {
+    return { resourceType: "Bundle", type: "searchset", entry: params.identifier ? [{ resource: structuredClone(stored) }] : [] };
+  }, async update(_type: string, _id: string, resource: typeof stored) { return { ...resource, meta: { versionId: "2" } }; } } as unknown as import("../../mcp/src/clinical-graph/exam-overview-endpoint.js").ExamOverviewFhirClient;
+  const store = new FhirEncounterExamScopeStore(fhir);
+  assert.deepEqual(await store.get("legacy"), { examScope: "office-visit", versionId: "1", setBy: { reference: "Practitioner/synthetic" }, setAt: "2026-09-19T12:00:00Z" });
+  const shaped = await store.shapeIfAbsent("legacy", { reference: "Practitioner/synthetic" }, async () => (await new FhirFollowUpProfileStore(fhir).list()).filter(p => p.profileKey === "glaucoma"));
+  const draw = (scope: { examScope: string; sectionsOpen?: string[] }) => {
+    const p = buildExamOverviewProjection({ encounterReference: "Encounter/legacy", patientReference: "Patient/synthetic", ...scope, definitions: [], currentObservations: [], priorObservationCandidates: [], assessmentRows: [] });
+    const renderer = create(<ExamOverviewBoard projection={p} editorEntries={chartEditorInventory()} refreshing={false} onOpenEditor={() => {}} onRefresh={() => {}} />);
+    try { return renderer.root.findAll(node => typeof node.type === "string" && node.props["data-drawn-editor-id"]).map(node => node.props["data-drawn-editor-id"]); }
+    finally { renderer.unmount(); }
+  };
+  const baseline = draw({ examScope: "office-visit" });
+  assert.ok(baseline.length > 0);
+  assert.deepEqual(draw(shaped), baseline);
+  assert.equal(shaped.sectionsOpen, undefined);
+});
+
+test("S3b1 G8 unconfirmed bookkeeping write still draws the unshaped board", async () => {
+  const { handleExamOverviewRequest } = await import("../../mcp/src/clinical-graph/exam-overview-endpoint.js");
+  const fhir = { baseUrl: "http://localhost/", async read() { return { resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/p1" } }; },
+    async search() { return { resourceType: "Bundle", type: "searchset", entry: [] }; }, async create(resource: unknown) { return resource; } } as unknown as import("../../mcp/src/clinical-graph/exam-overview-endpoint.js").ExamOverviewFhirClient;
+  const result = await handleExamOverviewRequest({ findingDefinitions: () => [], authenticate: async () => ({ actorRole: "provider", staffReference: "Practitioner/synthetic", fhir }) }, { authHeader: "synthetic", params: { encounterId: "e1" } });
+  assert.equal(result.status, 200);
+  const projection = result.body as ExamOverviewProjection;
+  assert.equal(projection.sectionsOpen, undefined);
+  const draw = (p: ExamOverviewProjection) => {
+    const renderer = create(<ExamOverviewBoard projection={p} editorEntries={chartEditorInventory()} refreshing={false} onOpenEditor={() => {}} onRefresh={() => {}} />);
+    try { return renderer.root.findAll(node => typeof node.type === "string" && node.props["data-drawn-editor-id"]).map(node => node.props["data-drawn-editor-id"]); }
+    finally { renderer.unmount(); }
+  };
+  assert.deepEqual(draw(projection), draw(zeroFindingComprehensiveProjection()));
+});

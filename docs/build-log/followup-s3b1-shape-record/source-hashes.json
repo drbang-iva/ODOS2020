@@ -1,0 +1,6 @@
+{
+  "mcp/src/clinical-graph/exam-scope-store.ts": "98f33af4d4066e89ae04d7161d4eec073e7440eb2f8e56bbc8b8f396f2b3d59e",
+  "mcp/src/clinical-graph/exam-overview-endpoint.ts": "bc512553b4eb5df2e3bccc95a93da70e29aedb9d7f20a4b39305a189b3b2d401",
+  "mcp/src/clinical-graph/exam-overview-projection.ts": "e2f9f31af04b50d9193e95915cb6d82083572e16cf05db5f1aedaded9625671e",
+  "ui/src/components/charting/ExamOverviewBoard.tsx": "e13c877efd044554887d6f45cd9479c0d31d54d25ca284a2695a79797338d98a"
+}
