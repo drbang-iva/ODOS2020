@@ -3421,12 +3421,12 @@ test("DXIMAGING diagnosis owns no imaging strip", async () => {
   } finally { harness.restore(); }
 });
 
-test("DXIMAGING imaging preference survives stages with four tabs", async () => {
+test("DXIMAGING imaging preference survives stages with five tabs", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
     await act(async () => editorControl(harness.renderer.root, "hpi").props.onClick());
     const tabs = harness.renderer.root.findAllByType(ExamRightPanelTabs)[0];
-    assert.equal(tabs.findAllByProps({ role: "tab" }).length, 4);
+    assert.equal(tabs.findAllByProps({ role: "tab" }).length, 5);
     await selectContextTab(harness.renderer.root, "imaging");
     await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
     assert.equal(activeContextTab(harness.renderer.root), "imaging");
@@ -3455,7 +3455,7 @@ test("C1 panel is available off the structure stage", async () => {
   try {
     await act(async () => chartViewButton(harness.renderer.root, "By diagnosis").props.onClick());
     const panels = harness.renderer.root.findAllByType(ExamRightPanelSurface);
-    assert.equal(panels.length, 2);
+    assert.equal(panels.length, 3);
     assert.equal(panels[0].props.active, true);
     assert.equal(harness.renderer.root.findByProps({ className: "odos-charting-stage" }).props["data-entry-sheet-open"], "true");
   } finally { harness.restore(); }
@@ -3464,7 +3464,7 @@ test("C1 panel is available off the structure stage", async () => {
 test("C1 modal editor still suppresses the panel", async () => {
   const harness = await renderEncounter(PROJECTION);
   try {
-    assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 2);
+    assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 3);
     await act(async () => editorControl(harness.renderer.root, "refraction").props.onClick());
     assert.equal(harness.renderer.root.findAllByType(RefractionSection).length, 1);
     assert.equal(harness.renderer.root.findAllByType(ExamRightPanelSurface).length, 0);
@@ -4073,6 +4073,10 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
   globalThis.fetch = (async (input, init) => {
     const url = String(input);
     if (init?.method && !["GET", "HEAD"].includes(init.method)) options.writeRequests?.push({ url, method: init.method, body: init.body ? JSON.parse(String(init.body)) : undefined });
+    if (url.endsWith("/clinical-graph/encounters/exam-1/follow-up-queue")) {
+      followUpQueueRequests.push(url);
+      return jsonResponse({ recorded: true, rows: [] });
+    }
     if (url.endsWith("/clinical-graph/encounters/exam-1/section-groups")) return jsonResponse({ override: { groupKeys: ["dry-eye-workup"] } });
     if (url.endsWith("/clinical-graph/encounters/exam-1/exam-scope")) {
       if (init?.method === "PUT") {
@@ -4717,3 +4721,22 @@ for (const kind of ["failed", "unrecognized"] as const) {
     } finally { h.restore(); }
   });
 }
+
+const followUpQueueRequests: string[] = [];
+
+test("S3c2a G11 real chart requests queue only when Follow-up is selected, including re-selection", async () => {
+  followUpQueueRequests.length = 0;
+  const harness = await renderEncounter(PROJECTION);
+  try {
+    assert.equal(followUpQueueRequests.length, 0);
+    await act(async () => harness.renderer.root.findAllByType(ExamRightPanelTabs)[0].props.onSelect("follow-up"));
+    assert.equal(followUpQueueRequests.length, 1);
+    const surface = harness.renderer.root.findAllByType(ExamRightPanelSurface).find(node => node.props.label === "Follow-up")!;
+    assert.equal(surface.props.active, true);
+    assert.match(textContent(surface), /No tests are proposed for this visit/);
+    await selectContextTab(harness.renderer.root, "images");
+    assert.equal(followUpQueueRequests.length, 1);
+    await act(async () => harness.renderer.root.findAllByType(ExamRightPanelTabs)[0].props.onSelect("follow-up"));
+    assert.equal(followUpQueueRequests.length, 2);
+  } finally { harness.restore(); }
+});

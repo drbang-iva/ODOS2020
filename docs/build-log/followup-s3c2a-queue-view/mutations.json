@@ -1,0 +1,262 @@
+[
+  {
+    "guard": "R3-tab-count",
+    "file": "ui/src/components/charting/ExamRightPanel.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=DXIMAGING imaging preference survives stages tests/examOverviewBoard.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - DXIMAGING imaging preference survives stages with five tabs\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - DXIMAGING imaging preference survives stages with five tabs\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "R4-surface-counts",
+    "file": "ui/src/scenes/EncounterCharting.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=C1 panel is available off|C1 modal editor still tests/examOverviewBoard.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - C1 panel is available off the structure stage\nnot ok 2 - C1 modal editor still suppresses the panel\n# tests 2\n# pass 0\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - C1 panel is available off the structure stage\nok 2 - C1 modal editor still suppresses the panel\n# tests 2\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "R5-route-inventory",
+    "file": "mcp/src/index.ts",
+    "command": "node --import tsx --test --test-name-pattern=every definition-backed clinical-graph HTTP closure mcp/tests/findingDefinitionStore.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - every definition-backed clinical-graph HTTP closure receives the persistent dependency\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - every definition-backed clinical-graph HTTP closure receives the persistent dependency\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G1",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G1\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G1 queue uses frozen labels and reasons after profile edits\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G1 queue uses frozen labels and reasons after profile edits\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G2",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G2\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G2 matches orderable and focus, retaining multiple matching action ids\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G2 matches orderable and focus, retaining multiple matching action ids\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G3-state",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G3\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G3 only a live order for this encounter and patient counts\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G3 only a live order for this encounter and patient counts\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G3-encounter",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G3\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G3 only a live order for this encounter and patient counts\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G3 only a live order for this encounter and patient counts\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G4",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G4\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G4 a real order wins over unavailable fees\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G4 a real order wins over unavailable fees\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G5",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G5\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G5 availability is live and reason precedence is frozen then pending then catalogue\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G5 availability is live and reason precedence is frozen then pending then catalogue\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G6",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G6\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G6 any failed order, shape or catalogue read refuses the queue\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G6 any failed order, shape or catalogue read refuses the queue\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G7",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G7\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G7 absent and explicitly empty remain distinct\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G7 absent and explicitly empty remain distinct\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G8",
+    "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G8\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G8 enforces authentication, chart.read and staff Encounter compartment before service reads\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G8 enforces authentication, chart.read and staff Encounter compartment before service reads\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G9",
+    "file": "mcp/src/clinical-graph/exam-overview-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G9\\b mcp/tests/examOverviewEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G9 automatic and explicit shaping freeze all display fields\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G9 automatic and explicit shaping freeze all display fields\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G9-merge",
+    "file": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G9\\b mcp/tests/examShapeRecord.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G9 merge retains every first display field and both profile sources\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G9 merge retains every first display field and both profile sources\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G10",
+    "file": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3c2a G10\\b mcp/tests/followUpQueueEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G10 legacy proposals load unchanged and use catalogue then key labels\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G10 legacy proposals load unchanged and use catalogue then key labels\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G11",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=S3c2a G11\\b tests/examOverviewBoard.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G11 real chart requests queue only when Follow-up is selected, including re-selection\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G11 real chart requests queue only when Follow-up is selected, including re-selection\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G12-empty",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=S3c2a G12\\b tests/followUpQueue.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G12 failure has polite status and retry, never emptiness or alert\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G12 failure has polite status and retry, never emptiness or alert\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G12-alert",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=S3c2a G12\\b tests/followUpQueue.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G12 failure has polite status and retry, never emptiness or alert\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G12 failure has polite status and retry, never emptiness or alert\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G13",
+    "file": "ui/src/components/charting/FollowUpQueue.tsx",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=S3c2a G13\\b tests/followUpQueue.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3c2a G13 all three states show labels, sources and reasons without row buttons\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3c2a G13 all three states show labels, sources and reasons without row buttons\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  },
+  {
+    "guard": "G14",
+    "file": "ui/src/lib/follow-up-queue.ts",
+    "command": "cd ui && node --import tsx --test --test-name-pattern=clinical-graph requests share the literal tests/clinicalGraphRouting.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
+    }
+  }
+]

@@ -1,0 +1,248 @@
+{
+  "syntheticOnly": true,
+  "project": "odos-s3c2a-proof",
+  "patientId": "42b185ed-94f9-411b-8c58-a503f21f113f",
+  "visits": {
+    "glaucoma": "8677ec19-36bb-4f56-bb73-a82e7a29b4f2",
+    "macula": "cf6b5d20-e617-4266-9d1e-d089e5e0d2af",
+    "absent": "4d9cb5e6-e0b0-492d-aa74-ed03a913c0dc",
+    "empty": "6b626d86-5aa0-4410-b3e4-a84d8bce5204"
+  },
+  "orderRoute": "/clinical-graph/protocols/items/add",
+  "orderStatus": 200,
+  "stored": {
+    "glaucoma": {
+      "examScope": "comprehensive",
+      "setAt": "2026-09-21T09:28:06.194Z",
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": null
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment"
+      ],
+      "testsProposed": [
+        {
+          "orderable": "visual-field-threshold",
+          "label": "Visual field",
+          "sources": [
+            {
+              "kind": "profile",
+              "profileKey": "glaucoma",
+              "profileLabel": "Glaucoma / glaucoma suspect"
+            }
+          ]
+        },
+        {
+          "orderable": "scodi-optic-nerve",
+          "label": "OCT optic nerve",
+          "sources": [
+            {
+              "kind": "profile",
+              "profileKey": "glaucoma",
+              "profileLabel": "Glaucoma / glaucoma suspect"
+            }
+          ]
+        },
+        {
+          "orderable": "fundus-photography",
+          "focus": "optic nerve",
+          "label": "Optic nerve photos",
+          "sources": [
+            {
+              "kind": "profile",
+              "profileKey": "glaucoma",
+              "profileLabel": "Glaucoma / glaucoma suspect"
+            }
+          ]
+        }
+      ],
+      "shapedAt": "2026-09-21T09:28:06.194Z",
+      "source": "derived",
+      "writeToken": "6eced4fb-26a5-479d-88fe-3dd501d07545"
+    },
+    "macula": {
+      "examScope": "comprehensive",
+      "setAt": "2026-09-21T09:28:06.205Z",
+      "profilesApplied": [
+        {
+          "profileKey": "macula-retina",
+          "version": 1,
+          "versionId": null
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "dilation",
+        "ocular-health:posterior:macula",
+        "ocular-health:posterior:vessels",
+        "ocular-health:posterior:vitreous",
+        "ocular-health:posterior:periphery",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment"
+      ],
+      "testsProposed": [
+        {
+          "orderable": "oct-retina",
+          "label": "OCT retina",
+          "unavailableReason": "No OCT retina orderable exists in ODOS yet",
+          "sources": [
+            {
+              "kind": "profile",
+              "profileKey": "macula-retina",
+              "profileLabel": "Macular degeneration / retina"
+            }
+          ]
+        },
+        {
+          "orderable": "fundus-photography",
+          "focus": "retina",
+          "label": "Retina photos",
+          "sources": [
+            {
+              "kind": "profile",
+              "profileKey": "macula-retina",
+              "profileLabel": "Macular degeneration / retina"
+            }
+          ]
+        },
+        {
+          "orderable": "erg",
+          "label": "ERG",
+          "unavailableReason": "ERG is on ODOS's pending-orderables list — plan-sets/glaucoma.ts:2",
+          "sources": [
+            {
+              "kind": "profile",
+              "profileKey": "macula-retina",
+              "profileLabel": "Macular degeneration / retina"
+            }
+          ]
+        }
+      ],
+      "shapedAt": "2026-09-21T09:28:06.205Z",
+      "source": "derived",
+      "writeToken": "b490d1b6-b156-4af9-8ddb-3d6324b036cb"
+    },
+    "absent": {
+      "examScope": "office-visit",
+      "setAt": "2026-09-21T14:00:00Z",
+      "profilesApplied": [],
+      "sectionsOpen": [
+        "hpi",
+        "assessment"
+      ],
+      "shapedAt": "2026-09-21T14:00:00Z"
+    },
+    "empty": {
+      "examScope": "comprehensive",
+      "setAt": "2026-09-21T09:28:06.215Z",
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "testsProposed": [],
+      "shapedAt": "2026-09-21T09:28:06.215Z",
+      "source": "derived",
+      "writeToken": "ee8802c8-4bf5-4718-a65d-c808ae80c7c3"
+    }
+  },
+  "responses": {
+    "glaucoma": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "already-ordered",
+            "actionIds": [
+              "e8de3686-d57b-409b-87aa-1538375cce1c"
+            ]
+          }
+        ]
+      }
+    },
+    "macula": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "oct-retina",
+            "label": "OCT retina",
+            "sources": [
+              "from the Macular degeneration / retina shape"
+            ],
+            "state": "unavailable",
+            "reason": "No OCT retina orderable exists in ODOS yet"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "retina",
+            "label": "Retina photos",
+            "sources": [
+              "from the Macular degeneration / retina shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "erg",
+            "label": "ERG",
+            "sources": [
+              "from the Macular degeneration / retina shape"
+            ],
+            "state": "unavailable",
+            "reason": "ERG is on ODOS's pending-orderables list — plan-sets/glaucoma.ts:2"
+          }
+        ]
+      }
+    },
+    "absent": {
+      "status": 200,
+      "body": {
+        "recorded": false
+      }
+    },
+    "empty": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": []
+      }
+    }
+  }
+}

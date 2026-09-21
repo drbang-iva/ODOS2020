@@ -190,9 +190,9 @@ test("S3c1 G2 dedup uses orderable plus focus and preserves all sources", async 
   const store = new FhirEncounterExamScopeStore(fhir);
   const result = await store.shapeIfAbsent("dedup", actor, async () => resolved([first, second]));
   assert.deepEqual(result.testsProposed, [
-    { orderable: "fundus-photography", focus: "optic nerve", sources: [{ kind: "profile", profileKey: first.profileKey }, { kind: "profile", profileKey: second.profileKey }] },
-    { orderable: "fundus-photography", focus: "retina", sources: [{ kind: "profile", profileKey: first.profileKey }] },
-    { orderable: "visual-field-threshold", sources: [{ kind: "profile", profileKey: first.profileKey }] },
+    { orderable: "fundus-photography", focus: "optic nerve", label: "Same label", sources: [{ kind: "profile", profileKey: first.profileKey, profileLabel: first.label }, { kind: "profile", profileKey: second.profileKey, profileLabel: second.label }] },
+    { orderable: "fundus-photography", focus: "retina", label: "Same label", sources: [{ kind: "profile", profileKey: first.profileKey, profileLabel: first.label }] },
+    { orderable: "visual-field-threshold", label: "Same label", sources: [{ kind: "profile", profileKey: first.profileKey, profileLabel: first.label }] },
   ]);
 });
 
@@ -202,7 +202,7 @@ test("S3c1 G3 every proposed test records its profile including unavailable test
   const shaped = await new FhirEncounterExamScopeStore(fhir).shapeIfAbsent("sources", actor, async () => resolved([profile]));
   assert.equal(shaped.testsProposed!.length, profile.testsQueuedByDefault.length);
   assert.ok(shaped.testsProposed!.some(test => test.orderable === "erg"));
-  for (const test of shaped.testsProposed!) assert.deepEqual(test.sources, [{ kind: "profile", profileKey: "macula-retina" }]);
+  for (const test of shaped.testsProposed!) assert.deepEqual(test.sources, [{ kind: "profile", profileKey: "macula-retina", profileLabel: "Macular degeneration / retina" }]);
 });
 
 test("S3c1 G4 S3b-era shapes without tests load unchanged and report none", async () => {
@@ -243,4 +243,17 @@ test("S3c1 G7 legacy scope is never retro-shaped at the store boundary", async (
   assert.deepEqual(await store.shapeIfAbsent("legacy", actor, async () => { calls++; return resolved([]); }), legacy);
   assert.equal(calls, 0);
   assert.equal(fhir.rows.length, 1);
+});
+
+test("S3c2a G9 merge retains every first display field and both profile sources", async () => {
+  const fhir = new ShapeFhir();
+  const seeds = await new FhirFollowUpProfileStore(fhir).list();
+  const first = { ...seeds[0], testsQueuedByDefault: [{ orderable: "fundus-photography", focus: "optic nerve", label: "First label", unavailableReason: "First reason", resultSection: { key: "imaging", label: "First result" }, choice: { name: "First choice", options: [{ code: "first" }] } }] };
+  const second = { ...seeds[1], testsQueuedByDefault: [{ orderable: "fundus-photography", focus: "optic nerve", label: "Second label", unavailableReason: "Second reason", resultSection: { key: "other" }, choice: { name: "Second choice", options: [{ code: "second" }] } }] };
+  const store = new FhirEncounterExamScopeStore(fhir);
+  const saved = await store.shapeIfAbsent("merge-display", actor, async () => resolved([first, second]));
+  assert.deepEqual(saved.testsProposed, [{ orderable: "fundus-photography", focus: "optic nerve", label: "First label", unavailableReason: "First reason", resultSection: { key: "imaging", label: "First result" }, choice: { name: "First choice", options: [{ code: "first" }] }, sources: [
+    { kind: "profile", profileKey: "glaucoma", profileLabel: "Glaucoma / glaucoma suspect" },
+    { kind: "profile", profileKey: "macula-retina", profileLabel: "Macular degeneration / retina" },
+  ] }]);
 });

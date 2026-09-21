@@ -8684,6 +8684,20 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         });
       }
 
+      const { handleFollowUpQueueRequest } = await import("./clinical-graph/follow-up-queue-endpoint.js");
+      app.get("/clinical-graph/encounters/:encounterId/follow-up-queue", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFollowUpQueueRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read"), serviceFhir: fhir },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch {
+          if (!res.headersSent) res.status(502).json({ error: "The tests for this visit could not be loaded." });
+        }
+      });
+
       await new Promise<void>((resolve, reject) => {
         const listener = app.listen(port, host, () => {
           void educationCatalog.refresh();

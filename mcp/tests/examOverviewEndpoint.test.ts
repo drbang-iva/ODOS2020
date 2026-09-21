@@ -969,9 +969,9 @@ function pickerResources(): Resource[] {
 const followPrior = { sourceEncounterReference: "Encounter/prior", sourceConditionReference: "Condition/prior-dx" };
 
 const glaucomaTestsProposed = [
-  { orderable: "visual-field-threshold", sources: [{ kind: "profile", profileKey: "glaucoma" }] },
-  { orderable: "scodi-optic-nerve", sources: [{ kind: "profile", profileKey: "glaucoma" }] },
-  { orderable: "fundus-photography", focus: "optic nerve", sources: [{ kind: "profile", profileKey: "glaucoma" }] },
+  { orderable: "visual-field-threshold", label: "Visual field", sources: [{ kind: "profile", profileKey: "glaucoma", profileLabel: "Glaucoma / glaucoma suspect" }] },
+  { orderable: "scodi-optic-nerve", label: "OCT optic nerve", sources: [{ kind: "profile", profileKey: "glaucoma", profileLabel: "Glaucoma / glaucoma suspect" }] },
+  { orderable: "fundus-photography", focus: "optic nerve", label: "Optic nerve photos", sources: [{ kind: "profile", profileKey: "glaucoma", profileLabel: "Glaucoma / glaucoma suspect" }] },
 ];
 
 test("S3c1 automatic overview persists profile tests with their sources", async () => {
@@ -1087,5 +1087,33 @@ test("S3b2 source error mapping preserves authorization, outages and missing cur
     const result = await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior });
     assert.equal(result.status, expected, `${failedId} ${status}: ${JSON.stringify(result.body)}`);
     assert.equal(fhir.writeCount, 0);
+  }
+});
+
+test("S3c2a G9 automatic and explicit shaping freeze all display fields", async (t) => {
+  const { FhirFollowUpProfileStore } = await import("../src/clinical-graph/follow-up-profile-store.js");
+  const seedFhir = new HistoryWorkflowFhir([]);
+  const seed = (await new FhirFollowUpProfileStore(seedFhir).list())[0];
+  const profile = { ...seed, label: "Frozen shape", testsQueuedByDefault: [{
+    orderable: "fundus-photography", focus: "optic nerve", label: "Frozen photos",
+    unavailableReason: "Frozen reason", resultSection: { key: "imaging", label: "Frozen result", unavailableReason: "Result unavailable" },
+    choice: { name: "Frozen choice", options: [{ code: "synthetic", unavailableReason: "Choice unavailable" }] },
+  }] };
+  t.mock.method(FhirFollowUpProfileStore.prototype, "list", async () => [profile]);
+  const automatic = new HistoryWorkflowFhir([encounter(), {
+    resourceType: "Condition", id: "shape-diagnosis", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: "e1::ocular_hypertension::bilateral" }],
+  }]);
+  assert.equal((await handleExamOverviewRequest(deps(automatic, "provider"), request())).status, 200);
+  const explicit = new HistoryWorkflowFhir(pickerResources());
+  assert.equal((await scopeRequest(explicit, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior })).status, 200);
+  for (const fhir of [automatic, explicit]) {
+    const stored = fhir.resources.find(r => r.resourceType === "Basic" && r.identifier?.some(i => i.system === "urn:odos:encounter-exam-scope")) as Basic;
+    assert.deepEqual(JSON.parse(stored.extension![0].valueString!).testsProposed, [{
+      orderable: "fundus-photography", focus: "optic nerve", label: "Frozen photos", unavailableReason: "Frozen reason",
+      resultSection: { key: "imaging", label: "Frozen result", unavailableReason: "Result unavailable" },
+      choice: { name: "Frozen choice", options: [{ code: "synthetic", unavailableReason: "Choice unavailable" }] },
+      sources: [{ kind: "profile", profileKey: "glaucoma", profileLabel: "Frozen shape" }],
+    }]);
   }
 });

@@ -1,3 +1,4 @@
+import { FollowUpQueue } from "../components/charting/FollowUpQueue";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
@@ -1304,6 +1305,17 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
               setRightPanelState((current) => closeExamRightPanelEngage(current, Boolean(entrySheetSection)));
             }}
           />
+        )}
+        {rightPanelForward && (
+          <ExamRightPanelSurface
+            active={rightPanelState.activeTab === "follow-up"}
+            label="Follow-up"
+            panelId={EXAM_RIGHT_PANEL_IDS["follow-up"]}
+            labelledBy="follow-up-panel-follow-up-tab"
+            tabs={rightPanelTabs("follow-up-panel")}
+          >
+            <FollowUpQueue encounterId={encounterId} active={rightPanelState.activeTab === "follow-up"} />
+          </ExamRightPanelSurface>
         )}
       </div>
       {creatingSection && (

@@ -1,0 +1,12 @@
+{
+  "ui": "# tests 1828\n# suites 0\n# pass 1828\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0",
+  "mcp": "# tests 6210\n# suites 0\n# pass 6156\n# fail 0\n# cancelled 0\n# skipped 54\n# todo 0",
+  "typechecks": "root, mcp and ui: no diagnostics",
+  "preflight": "0 warnings, 0 hard blocks",
+  "mcp-environment": {
+    "ODOS_REAL_WEASYPRINT_TEST": "1",
+    "ODOS_POSTGRES_URL": "dedicated odos-s3c2a-suite-postgres, localhost port 29857",
+    "WEASYPRINT_BIN": "isolated Python 3.12 environment, WeasyPrint 69.0",
+    "ODOS_ALLOW_UNGATED_MCP": "1"
+  }
+}
