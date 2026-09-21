@@ -3087,3 +3087,17 @@ test("E1a f real email suppression preserves staff override and preference write
     assert.equal(cell.allowed, true); assert.equal(cell.surface, "staff-manual-send");
   } finally { await f.close(); }
 });
+
+
+test("G E1c1 marketing email still refuses before any provider invocation", async () => {
+  const f = await startServer({ realEmail: true,
+    catalogItems: [{ ...E1A_ITEM, consentClass: "marketing", offerClass: "eyecare" }] });
+  try {
+    const response = await sendE1a(f, "email", "e1c1-marketing-refusal");
+    assert.equal(response.status, 409);
+    assert.equal((await response.json() as { reason: string }).reason,
+      "Promotional email requires a working unsubscribe link, which is not configured yet.");
+    assert.equal(f.emailVendorCalls.length, 0);
+    assert.equal(f.mime.length, 0);
+  } finally { await f.close(); }
+});

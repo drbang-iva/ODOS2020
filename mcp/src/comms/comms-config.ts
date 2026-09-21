@@ -27,6 +27,7 @@ import {
   type SmsStopScope,
   type SuppressionFhir,
 } from "./suppression-gate.js";
+import type { EmailAddressSuppressionReader } from "./email-unsubscribe.js";
 
 export const COMMS_CHANNEL_ROLES = [
   "voice",
@@ -65,6 +66,7 @@ export type CommsAdapterRegistration =
     };
 
 export interface CommsDispatchDeps {
+  isEmailAddressSuppressed?: EmailAddressSuppressionReader;
   channelRouting?: CommsChannelRoutingConfig;
   error?: (message: string) => void;
   fetchImpl?: typeof fetch;
@@ -237,6 +239,7 @@ export function createCommsDispatch(
     const smsSenderNumber = role ? senderNumberFor(role) : senderNumberForProvider(provider);
     const registration = withSmsSenderNumber(configured, smsSenderNumber);
     const suppression = {
+      isEmailAddressSuppressed: deps.isEmailAddressSuppressed,
       fhir: callerFhir,
       practiceTimeZone: deps.practiceTimeZone ?? "UTC",
       smsSenderNumber,
