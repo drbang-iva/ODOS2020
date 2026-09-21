@@ -33,6 +33,7 @@ const credentials: any = existsSync(join(runtime, 'credentials.json')) ? read('c
   provider: { email: 'r10-a3-2-provider@example.test', password: `R10-${randomBytes(24).toString('base64url')}!` },
   staff: { email: 'r10-a3-2-staff@example.test', password: `R10-${randomBytes(24).toString('base64url')}!` },
 };
+credentials.reader ??= { email: 's3c2b-reader@example.test', password: `S3c2b-${randomBytes(24).toString('base64url')}!` };
 save('credentials.json', credentials);
 const serviceAuth = await createAuthenticatedFhirClient({ baseUrl, ...service });
 const setup = await runSetupPractice({ config: {
@@ -56,7 +57,7 @@ if (!fixture.patientReference) {
   fixture.patientReference = `Patient/${patient.id}`;
   save('fixture.json', fixture);
 }
-for (const role of ['provider', 'staff'] as const) {
+for (const role of ['provider', 'staff', 'reader'] as const) {
   if (credentials[role].membershipReference) continue;
   const headers = { Authorization: `Bearer ${serviceAuth.accessToken}`, 'Content-Type': 'application/json' };
   const invite = await fetch(`${baseUrl}/admin/projects/${credentials.projectId}/invite`, {
@@ -69,7 +70,7 @@ for (const role of ['provider', 'staff'] as const) {
   const memberships = await serviceAuth.fhir.search<ProjectMembership>('ProjectMembership', { user: `User/${users.entry![0].resource!.id}` });
   const membership = memberships.entry?.flatMap(entry => entry.resource?.project.reference === `Project/${credentials.projectId}` ? [entry.resource] : [])[0];
   assert.ok(membership?.id && membership.profile.reference);
-  const policy = policies.find(policy => policy.meta?.tag?.some(tag => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === role));
+  const policy = policies.find(policy => policy.meta?.tag?.some(tag => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === (role === 'reader' ? 'admin' : role)));
   assert.ok(policy?.id);
   const bound = { ...membership, admin: false, access: buildProjectMembershipAccess({ policyReference: `AccessPolicy/${policy.id}`, parameters: {
     patientCompartmentReference: fixture.patientReference,

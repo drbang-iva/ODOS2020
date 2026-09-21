@@ -1,0 +1,21 @@
+{
+  "syntheticOnly": true,
+  "results": [
+    {
+      "width": 1440,
+      "role": "staff",
+      "whoWhen": "R10 Synthetic staff · 07:02 AM",
+      "puts": 2,
+      "extraGets": 0,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "role": "staff",
+      "whoWhen": "R10 Synthetic staff · 07:02 AM",
+      "puts": 2,
+      "extraGets": 0,
+      "pageErrors": []
+    }
+  ]
+}

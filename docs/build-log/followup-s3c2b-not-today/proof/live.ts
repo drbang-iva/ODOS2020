@@ -7,6 +7,16 @@ import { createAuthenticatedFhirClient } from '../../../../scripts/r10-served-ro
 import { FhirFollowUpProfileStore } from '../../../../mcp/src/clinical-graph/follow-up-profile-store.js';
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from '../../../../mcp/src/clinical-graph/diagnosis-pick-endpoint.js';
 
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (...args: Parameters<typeof fetch>) => {
+  for (let attempt = 0; ; attempt++) {
+    const response = await originalFetch(...args);
+    if (response.status !== 429 || attempt >= 3) return response;
+    await response.arrayBuffer();
+    await new Promise(resolve => setTimeout(resolve, 60000));
+  }
+};
+
 const runtime = join(process.cwd(), '.odos/s3c2b-proof');
 const read = (name: string) => JSON.parse(readFileSync(join(runtime, name), 'utf8'));
 const { ports, project } = read('manifest.json'); assert.equal(project, 'odos-s3c2b-proof');
@@ -14,7 +24,7 @@ const credentials = read('credentials.json'), fixture = read('fixture.json');
 const baseUrl = `http://127.0.0.1:${ports.medplum}`;
 const { fhir } = await loadVerifiedOperatorFhirClient({ baseUrl, projectId: credentials.projectId,
   postgresUrl: `postgresql://medplum:medplum@127.0.0.1:${ports.postgres}/medplum`, credentialPath: join(runtime, 'operator.env'), statePath: join(runtime, 'operator-state.json') });
-const sessions = Object.fromEntries(await Promise.all(['provider','staff','admin'].map(async role => [role, await createAuthenticatedFhirClient({ baseUrl, ...credentials[role] })])));
+const sessions = Object.fromEntries(await Promise.all(['provider','staff','reader'].map(async role => [role, await createAuthenticatedFhirClient({ baseUrl, ...credentials[role] })])));
 const responses: Record<string, unknown> = {};
 async function api(name: string, role: string, path: string, body?: unknown, expected = 200) {
   const response = await fetch(`http://127.0.0.1:${ports.frontdoor}${path}`, { method: body ? 'PUT' : 'GET', headers: { Authorization: `Bearer ${sessions[role].accessToken}`, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -50,8 +60,8 @@ await profiles.save({ ...editable, version:profile.version+1, testsQueuedByDefau
 assert.equal(row(await api('profileEdited','staff',`${path}/follow-up-queue`)).state,'not-today');
 shape = await api('repick','provider',`${path}/exam-scope`,{ examScope:'office-visit',expectedVersion:shape.versionId,following });
 assert.equal(row(await api('afterRepick','staff',`${path}/follow-up-queue`)).state,'not-today');
-const readOnly = await api('readOnlyGet','admin',`${path}/follow-up-queue`); assert.equal(readOnly.canDecide,false);
-await api('readOnlyPut','admin',`${path}/follow-up-queue/decisions`,mark,403);
+const readOnly = await api('readOnlyGet','reader',`${path}/follow-up-queue`); assert.equal(readOnly.canDecide,false);
+await api('readOnlyPut','reader',`${path}/follow-up-queue/decisions`,mark,403);
 await api('signedPut','provider',`/clinical-graph/encounters/${closed.id}/follow-up-queue/decisions`,mark,409);
 assert.equal(row(await api('providerPutBack','provider',`${path}/follow-up-queue/decisions`,{...mark,decision:'put-back'})).state,'for-review');
 const final = await fhir.search<Basic>('Basic',{identifier:`urn:odos:encounter-follow-up-decisions|${current.id}`});

@@ -1,0 +1,433 @@
+{
+  "syntheticOnly": true,
+  "project": "odos-s3c2b-proof",
+  "decisionRecord": {
+    "decisions": {
+      "fundus-photography|optic nerve": {
+        "decision": "not-today",
+        "by": {
+          "reference": "Practitioner/1a0cecb4-f064-42b3-af90-1d5e05161b8c",
+          "display": "R10 Synthetic staff"
+        },
+        "at": "2026-09-21T11:01:52.579Z"
+      }
+    },
+    "writeToken": "944aadc0-4245-487c-8529-e1d566fd82dd"
+  },
+  "finalDecisionRecord": {
+    "decisions": {},
+    "writeToken": "08b1f653-e43f-4fbf-be69-4ae78a2b4f45"
+  },
+  "responses": {
+    "initialPick": {
+      "status": 200,
+      "body": {
+        "profilesApplied": [
+          {
+            "profileKey": "glaucoma",
+            "version": 2,
+            "versionId": "f6550711-9c8d-4fda-a771-cfbdd102d230"
+          }
+        ],
+        "sectionsOpen": [
+          "hpi",
+          "va",
+          "pupils",
+          "cvf",
+          "iop",
+          "dilation",
+          "cup-disc",
+          "ocular-health:posterior:fundus",
+          "imaging",
+          "assessment"
+        ],
+        "testsProposed": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited",
+            "sources": [
+              {
+                "kind": "profile",
+                "profileKey": "glaucoma",
+                "profileLabel": "Glaucoma / glaucoma suspect"
+              }
+            ]
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited",
+            "sources": [
+              {
+                "kind": "profile",
+                "profileKey": "glaucoma",
+                "profileLabel": "Glaucoma / glaucoma suspect"
+              }
+            ]
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              {
+                "kind": "profile",
+                "profileKey": "glaucoma",
+                "profileLabel": "Glaucoma / glaucoma suspect"
+              }
+            ]
+          }
+        ],
+        "shapedAt": "2026-09-21T11:01:52.404Z",
+        "source": "explicit",
+        "chosenBy": {
+          "reference": "Practitioner/42b968d4-c4b2-4dad-83db-1b1b609131b0",
+          "display": "R10 Synthetic provider"
+        },
+        "chosenAt": "2026-09-21T11:01:52.404Z",
+        "examScope": "office-visit",
+        "versionId": "5f1a41cd-02a9-4cf2-a44e-5cad25722d16",
+        "setBy": {
+          "reference": "Practitioner/42b968d4-c4b2-4dad-83db-1b1b609131b0",
+          "display": "R10 Synthetic provider"
+        },
+        "setAt": "2026-09-21T11:01:52.404Z",
+        "canWrite": true
+      }
+    },
+    "before": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          }
+        ],
+        "canDecide": true
+      }
+    },
+    "staffNotToday": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "not-today",
+            "decidedBy": "R10 Synthetic staff",
+            "decidedAt": "2026-09-21T11:01:52.579Z"
+          }
+        ],
+        "canDecide": true
+      }
+    },
+    "reload": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "not-today",
+            "decidedBy": "R10 Synthetic staff",
+            "decidedAt": "2026-09-21T11:01:52.579Z"
+          }
+        ],
+        "canDecide": true
+      }
+    },
+    "profileEdited": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "not-today",
+            "decidedBy": "R10 Synthetic staff",
+            "decidedAt": "2026-09-21T11:01:52.579Z"
+          }
+        ],
+        "canDecide": true
+      }
+    },
+    "repick": {
+      "status": 200,
+      "body": {
+        "profilesApplied": [
+          {
+            "profileKey": "glaucoma",
+            "version": 3,
+            "versionId": "626f39df-418b-4507-892f-60b1a89d3e2f"
+          }
+        ],
+        "sectionsOpen": [
+          "hpi",
+          "va",
+          "pupils",
+          "cvf",
+          "iop",
+          "dilation",
+          "cup-disc",
+          "ocular-health:posterior:fundus",
+          "imaging",
+          "assessment"
+        ],
+        "testsProposed": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited edited",
+            "sources": [
+              {
+                "kind": "profile",
+                "profileKey": "glaucoma",
+                "profileLabel": "Glaucoma / glaucoma suspect"
+              }
+            ]
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited edited",
+            "sources": [
+              {
+                "kind": "profile",
+                "profileKey": "glaucoma",
+                "profileLabel": "Glaucoma / glaucoma suspect"
+              }
+            ]
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              {
+                "kind": "profile",
+                "profileKey": "glaucoma",
+                "profileLabel": "Glaucoma / glaucoma suspect"
+              }
+            ]
+          }
+        ],
+        "shapedAt": "2026-09-21T11:01:52.861Z",
+        "source": "explicit",
+        "chosenBy": {
+          "reference": "Practitioner/42b968d4-c4b2-4dad-83db-1b1b609131b0",
+          "display": "R10 Synthetic provider"
+        },
+        "chosenAt": "2026-09-21T11:01:52.861Z",
+        "examScope": "office-visit",
+        "versionId": "e87a2a9c-b209-422c-a61c-82aa747d5ce6",
+        "setBy": {
+          "reference": "Practitioner/42b968d4-c4b2-4dad-83db-1b1b609131b0",
+          "display": "R10 Synthetic provider"
+        },
+        "setAt": "2026-09-21T11:01:52.862Z",
+        "canWrite": true
+      }
+    },
+    "afterRepick": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "not-today",
+            "decidedBy": "R10 Synthetic staff",
+            "decidedAt": "2026-09-21T11:01:52.579Z"
+          }
+        ],
+        "canDecide": true
+      }
+    },
+    "readOnlyGet": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "not-today",
+            "decidedBy": "R10 Synthetic staff",
+            "decidedAt": "2026-09-21T11:01:52.579Z"
+          }
+        ],
+        "canDecide": false
+      }
+    },
+    "readOnlyPut": {
+      "status": 403,
+      "body": {
+        "error": "chart.write role required"
+      }
+    },
+    "signedPut": {
+      "status": 409,
+      "body": {
+        "error": "Signed encounter cannot be edited."
+      }
+    },
+    "providerPutBack": {
+      "status": 200,
+      "body": {
+        "recorded": true,
+        "rows": [
+          {
+            "orderable": "visual-field-threshold",
+            "label": "Visual field edited edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "scodi-optic-nerve",
+            "label": "OCT optic nerve edited edited",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          },
+          {
+            "orderable": "fundus-photography",
+            "focus": "optic nerve",
+            "label": "Optic nerve photos",
+            "sources": [
+              "from the Glaucoma / glaucoma suspect shape"
+            ],
+            "state": "for-review"
+          }
+        ],
+        "canDecide": true
+      }
+    }
+  }
+}
