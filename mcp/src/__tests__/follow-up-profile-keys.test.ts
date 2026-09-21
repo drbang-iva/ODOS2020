@@ -50,3 +50,58 @@ test("G3 no MDM field anywhere in any seed", () => {
   }
   check(FOLLOW_UP_PROFILE_SEEDS, "seeds");
 });
+
+function seedUnavailableReasons(): Record<string, string> {
+  const reasons: Record<string, string> = {};
+  function walk(value: unknown, path: string) {
+    if (value && typeof value === "object") for (const [key, child] of Object.entries(value)) {
+      const childPath = `${path}.${key}`;
+      if (key === "unavailableReason") {
+        assert.equal(typeof child, "string", childPath);
+        reasons[childPath] = child as string;
+      } else {
+        walk(child, childPath);
+      }
+    }
+  }
+  for (const profile of FOLLOW_UP_PROFILE_SEEDS) walk(profile, profile.profileKey);
+  return reasons;
+}
+
+test("Wording G1 every seeded unavailable reason is clinician facing", () => {
+  const reasons = Object.values(seedUnavailableReasons());
+  assert.equal(reasons.length, 14);
+  for (const reason of reasons) {
+    assert.ok(reason.trim());
+    assert.doesNotMatch(reason, /\.[jt]sx?\b|:\d|§|#\d|\bNEW\b|orderables?\b|pending|draft|design|shipped|endpoint|plan-sets|content/i);
+  }
+});
+
+test("Wording G2 all fourteen seeded reasons match the approved clinical wording", () => {
+  assert.deepEqual(seedUnavailableReasons(), {
+    "macula-retina.testsQueuedByDefault.0.unavailableReason": "OCT retina can't be ordered in ODOS yet.",
+    "macula-retina.testsQueuedByDefault.2.unavailableReason": "ERG can't be ordered in ODOS yet.",
+    "macula-retina.historyTemplate.unavailableReason": "The macular degeneration history template isn't available yet.",
+    "dry-eye.testsQueuedByDefault.0.unavailableReason": "Ocular surface staining can't be ordered in ODOS yet.",
+    "dry-eye.testsQueuedByDefault.0.choice.options.2.unavailableReason": "Rose bengal isn't one of the vital dye choices yet.",
+    "dry-eye.testsQueuedByDefault.1.unavailableReason": "Tear osmolarity can't be ordered in ODOS yet.",
+    "dry-eye.testsQueuedByDefault.2.unavailableReason": "InflammaDry (MMP-9) can't be ordered in ODOS yet.",
+    "dry-eye.testsQueuedByDefault.3.unavailableReason": "Meibography can't be ordered in ODOS yet. Images can still be captured in the gland structure section.",
+    "dry-eye.priorValuesShown.5.unavailableReason": "Punctal plug status isn't recorded in ODOS yet.",
+    "dry-eye.historyTemplate.unavailableReason": "The dry eye history template isn't available yet.",
+    "red-eye.historyTemplate.unavailableReason": "The red eye history template isn't available yet.",
+    "bv-vt.sectionsOpen.7.unavailableReason": "The binocular vision section isn't available yet.",
+    "bv-vt.sectionsOpen.8.unavailableReason": "The sensory section isn't available yet.",
+    "bv-vt.historyTemplate.unavailableReason": "The binocular vision history template isn't available yet.",
+  });
+});
+
+test("Wording G3 changed seeds advance to version two while glaucoma stays at one", () => {
+  assert.deepEqual(Object.fromEntries(FOLLOW_UP_PROFILE_SEEDS.map(profile => [profile.profileKey, profile.version])), {
+    glaucoma: 1,
+    "macula-retina": 2,
+    "dry-eye": 2,
+    "red-eye": 2,
+    "bv-vt": 2,
+  });
+});

@@ -90,7 +90,7 @@ test("S3c2a G4 a real order wins over unavailable fees", () => {
 test("S3c2a G5 availability is live and reason precedence is frozen then pending then catalogue", () => {
   assert.equal(rows(queue([proposed({ unavailableReason: "Frozen" })]))[0].state, "for-review");
   const output = rows(queue([proposed({ orderable: "erg", unavailableReason: "Frozen" }), proposed({ orderable: "erg" }), proposed()], []));
-  assert.deepEqual(output.map(r => [r.state, r.reason]), [["unavailable", "Frozen"], ["unavailable", "On ODOS's pending-orderables list."], ["unavailable", "Not in the practice catalogue."]]);
+  assert.deepEqual(output.map(r => [r.state, r.reason]), [["unavailable", "Frozen"], ["unavailable", "This test can't be ordered in ODOS yet."], ["unavailable", "Not in the practice catalogue."]]);
   assert.equal(rows(queue([proposed()], [fee(false)]))[0].state, "unavailable");
 });
 
