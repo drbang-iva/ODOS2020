@@ -78,7 +78,7 @@ Each mutant was applied alone, executed, restored in a finally block, and execut
 
 ### G1
 
-Working directory: `.`. Command: `node --import tsx --test --test-name-pattern=S3b2 G1 mcp/tests/examShapeRecord.test.ts`.
+Working directory: `.`. Command: `node --import tsx --test --test-name-pattern='S3b2 G1' mcp/tests/examShapeRecord.test.ts`.
 
 Broken, exit 1:
 
@@ -102,7 +102,7 @@ ok 1 - S3b2 G1 explicit shape survives automatic shaping at the store boundary
 
 ### G2
 
-Working directory: `.`. Command: `node --import tsx --test --test-name-pattern=S3b2 G2 mcp/tests/examShapeRecord.test.ts`.
+Working directory: `.`. Command: `node --import tsx --test --test-name-pattern='S3b2 G2' mcp/tests/examShapeRecord.test.ts`.
 
 Broken, exit 1:
 
@@ -126,7 +126,7 @@ ok 1 - S3b2 G2 explicit replaces derived and explicit, with independent chooser 
 
 ### G3
 
-Working directory: `.`. Command: `node --import tsx --test --test-name-pattern=S3b2 G3 mcp/tests/examShapeRecord.test.ts`.
+Working directory: `.`. Command: `node --import tsx --test --test-name-pattern='S3b2 G3' mcp/tests/examShapeRecord.test.ts`.
 
 Broken, exit 1:
 
@@ -150,7 +150,7 @@ ok 1 - S3b2 G3 profile edits do not reshape either source
 
 ### G4
 
-Working directory: `.`. Command: `node --import tsx --test --test-name-pattern=S3b2 G4 mcp/tests/examShapeRecord.test.ts`.
+Working directory: `.`. Command: `node --import tsx --test --test-name-pattern='S3b2 G4' mcp/tests/examShapeRecord.test.ts`.
 
 Broken, exit 1:
 
@@ -174,7 +174,7 @@ ok 1 - S3b2 G4 stored S3b1 shape without source reads derived without rewriting
 
 ### G5
 
-Working directory: `.`. Command: `node --import tsx --test --test-name-pattern=S3b2 G1 G2 G5 mcp/tests/examOverviewEndpoint.test.ts`.
+Working directory: `.`. Command: `node --import tsx --test --test-name-pattern='S3b2 G1 G2 G5' mcp/tests/examOverviewEndpoint.test.ts`.
 
 Broken, exit 1:
 
@@ -198,7 +198,7 @@ ok 1 - S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes o
 
 ### G6
 
-Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern=S3b2 G6 tests/followingPicker.test.tsx`.
+Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern='S3b2 G6' tests/followingPicker.test.tsx`.
 
 Broken, exit 1:
 
@@ -222,7 +222,7 @@ ok 1 - S3b2 G6 picker and projection never infer scope from scheduling
 
 ### G7
 
-Working directory: `.`. Command: `node --import tsx --test --test-name-pattern=S3b1 G8 mcp/tests/examOverviewEndpoint.test.ts`.
+Working directory: `.`. Command: `node --import tsx --test --test-name-pattern='S3b1 G8' mcp/tests/examOverviewEndpoint.test.ts`.
 
 Broken, exit 1:
 
@@ -246,7 +246,7 @@ ok 1 - S3b1 G8 an unconfirmed shape create serves the unshaped overview and retr
 
 ### G8
 
-Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern=clinical-graph requests share tests/clinicalGraphRouting.test.tsx`.
+Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern='clinical-graph requests share' tests/clinicalGraphRouting.test.tsx`.
 
 Broken, exit 1:
 
@@ -274,7 +274,7 @@ G9a changes the picker failure status to `role="alert"`. G9b silently maps the f
 
 ### G9a
 
-Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern=S3b2 G9a tests/examOverviewBoard.test.tsx`.
+Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern='S3b2 G9a' tests/examOverviewBoard.test.tsx`.
 
 Broken, exit 1:
 
@@ -300,7 +300,7 @@ ok 2 - S3b2 G9a unrecognized previous-exams read preserves the chart alert count
 
 ### G9b
 
-Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern=S3b2 G9b tests/followingPicker.test.tsx`.
+Working directory: `ui`. Command: `node --import tsx --test --test-name-pattern='S3b2 G9b' tests/followingPicker.test.tsx`.
 
 Broken, exit 1:
 

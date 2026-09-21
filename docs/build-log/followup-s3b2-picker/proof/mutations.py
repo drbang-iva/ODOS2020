@@ -1,5 +1,5 @@
 from pathlib import Path
-import json, subprocess
+import json, subprocess, shlex
 root=Path(__file__).resolve().parents[4]
 store='mcp/src/clinical-graph/exam-scope-store.ts'
 endpoint='mcp/src/clinical-graph/exam-overview-endpoint.ts'
@@ -29,7 +29,7 @@ for guard,file,before,after,command,cwd in cases:
   red=run(command,cwd)
  finally: path.write_text(original)
  green=run(command,cwd)
- row={'guard':guard,'file':file,'command':' '.join(command),'cwd':cwd,'red':red,'green':green}; results.append(row)
+ row={'guard':guard,'file':file,'command':shlex.join(command),'cwd':cwd,'red':red,'green':green}; results.append(row)
  print(guard, 'red',red['exit'],'green',green['exit'],flush=True)
  (root/'docs/build-log/followup-s3b2-picker/mutations.json').write_text(json.dumps(results,indent=2)+'\n')
  assert red['exit'] != 0 and green['exit'] == 0, row

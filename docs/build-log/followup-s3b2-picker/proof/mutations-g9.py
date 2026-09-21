@@ -1,5 +1,5 @@
 from pathlib import Path
-import json, subprocess
+import json, subprocess, shlex
 root=Path(__file__).resolve().parents[4]
 path=root/'ui/src/components/charting/FollowingPicker.tsx'
 cases=[
@@ -17,7 +17,7 @@ for guard,before,after,testfile in cases:
   path.write_text(original.replace(before,after,1)); red=run()
  finally: path.write_text(original)
  green=run()
- results.append({'guard':guard,'command':' '.join(command),'cwd':'ui','red':red,'green':green})
+ results.append({'guard':guard,'command':shlex.join(command),'cwd':'ui','red':red,'green':green})
  print(guard,'red',red['exit'],'green',green['exit'],flush=True)
  (root/'docs/build-log/followup-s3b2-picker/mutations-g9.json').write_text(json.dumps(results,indent=2)+'\n')
  assert red['exit']!=0 and green['exit']==0

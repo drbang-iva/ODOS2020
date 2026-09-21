@@ -1,7 +1,7 @@
 [
   {
     "guard": "G9a",
-    "command": "node --import tsx --test --test-name-pattern=S3b2 G9a tests/examOverviewBoard.test.tsx",
+    "command": "node --import tsx --test --test-name-pattern='S3b2 G9a' tests/examOverviewBoard.test.tsx",
     "cwd": "ui",
     "red": {
       "exit": 1,
@@ -14,7 +14,7 @@
   },
   {
     "guard": "G9b",
-    "command": "node --import tsx --test --test-name-pattern=S3b2 G9b tests/followingPicker.test.tsx",
+    "command": "node --import tsx --test --test-name-pattern='S3b2 G9b' tests/followingPicker.test.tsx",
     "cwd": "ui",
     "red": {
       "exit": 1,
