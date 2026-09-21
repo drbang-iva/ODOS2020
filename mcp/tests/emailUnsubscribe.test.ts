@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import type { AddressInfo } from "node:net";
 import express from "express";
@@ -257,3 +258,22 @@ for (const method of ["GET", "POST"]) {
     } finally { await f.close(); }
   });
 }
+
+
+test("J persisted token is its SHA-256 digest and plaintext still resolves", async () => {
+  const f = await fixture();
+  try {
+    const issued = await f.issue();
+    const digest = createHash("sha256").update(issued.token).digest("hex");
+    const row = f.rows.find(r => r.resourceType === "Basic") as Basic;
+    assert.notEqual(row.identifier?.[0].value, issued.token);
+    assert.equal(row.identifier?.[0].value, digest);
+    assert.ok(!JSON.stringify(f.rows).includes(issued.token));
+    assert.equal(issued.url, `https://practice.invalid/comms/u/${issued.token}`);
+    assert.equal((await f.store.find(issued.token))?.patientReference, "Patient/a");
+    assert.equal((await f.send(issued.token)).status, 200);
+    assert.equal((await readEmailAddressSuppression(f.fhir, address))?.email, address.toLowerCase());
+    const receipt = f.rows.find(r => r.resourceType === "Basic" && r.identifier?.some(i => i.value === address.toLowerCase()));
+    assert.ok(receipt);
+  } finally { await f.close(); }
+});

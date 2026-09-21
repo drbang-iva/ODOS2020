@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import rateLimit from "express-rate-limit";
 import type { Application, Request, Response } from "express";
 import type { Basic, Patient } from "@medplum/fhirtypes";
@@ -135,12 +135,14 @@ export function createInMemoryEmailUnsubscribeStore(): EmailUnsubscribeStore {
 export function createFhirEmailUnsubscribeStore(fhir: Pick<MedplumClient, "create" | "search">): EmailUnsubscribeStore {
   return {
     async create(record) {
-      await fhir.create<Basic>(resource(record, "email-unsubscribe-token", TOKEN_SYSTEM, record.token), {
-        "If-None-Exist": conditionalIdentifier(TOKEN_SYSTEM, record.token),
+      const digest = createHash("sha256").update(record.token).digest("hex");
+      await fhir.create<Basic>(resource(record, "email-unsubscribe-token", TOKEN_SYSTEM, digest), {
+        "If-None-Exist": conditionalIdentifier(TOKEN_SYSTEM, digest),
       });
     },
     async find(token) {
-      const found = await findRecord(fhir, TOKEN_SYSTEM, token, "email-unsubscribe-token");
+      const digest = createHash("sha256").update(token).digest("hex");
+      const found = await findRecord(fhir, TOKEN_SYSTEM, digest, "email-unsubscribe-token");
       if (!found) return undefined;
       return { ...parseRecord(found), token };
     },
