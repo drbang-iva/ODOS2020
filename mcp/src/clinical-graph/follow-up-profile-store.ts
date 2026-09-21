@@ -242,7 +242,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       "Smoking status reviewed"
     ],
     "source": "operator direction 2026-09-19 incl. §1.8 · reconciliation §4",
-    "version": 1,
+    "version": 2,
     "active": true,
     "sectionsOpen": [
       {
@@ -283,7 +283,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       {
         "orderable": "oct-retina",
         "label": "OCT retina",
-        "unavailableReason": "No OCT retina orderable exists in ODOS yet"
+        "unavailableReason": "OCT retina can't be ordered in ODOS yet."
       },
       {
         "orderable": "fundus-photography",
@@ -293,7 +293,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       {
         "orderable": "erg",
         "label": "ERG",
-        "unavailableReason": "ERG is on ODOS's pending-orderables list — plan-sets/glaucoma.ts:2"
+        "unavailableReason": "ERG can't be ordered in ODOS yet."
       }
     ],
     "priorValuesShown": [
@@ -318,7 +318,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
     ],
     "historyTemplate": {
       "key": "dry-macular-degeneration",
-      "unavailableReason": "NEW — named in the 2026-09-03 history proposal's shipped-eight list, not built (only glaucoma and routine exist)"
+      "unavailableReason": "The macular degeneration history template isn't available yet."
     }
   },
   {
@@ -338,7 +338,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       "Screen hours and contact lens wear since last visit"
     ],
     "source": "operator direction 2026-09-19 incl. §1.7 · reconciliation §4 · shipped dry-eye workup definitions",
-    "version": 1,
+    "version": 2,
     "active": true,
     "episodeType": "dry-eye",
     "sectionsOpen": [
@@ -377,7 +377,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       {
         "orderable": "ocular-surface-staining",
         "label": "Ocular surface staining",
-        "unavailableReason": "No staining orderable exists in ODOS yet",
+        "unavailableReason": "Ocular surface staining can't be ordered in ODOS yet.",
         "resultSection": {
           "key": "dry-eye:conjunctival-staining"
         },
@@ -392,7 +392,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
             },
             {
               "code": "rose-bengal",
-              "unavailableReason": "not in the shipped 'Vital dye' list — dry-eye-finding-definition.ts:168-171; add as content"
+              "unavailableReason": "Rose bengal isn't one of the vital dye choices yet."
             }
           ]
         }
@@ -400,7 +400,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       {
         "orderable": "tear-osmolarity",
         "label": "Tear osmolarity",
-        "unavailableReason": "No tear osmolarity orderable exists in ODOS yet",
+        "unavailableReason": "Tear osmolarity can't be ordered in ODOS yet.",
         "resultSection": {
           "key": "dry-eye:markers"
         }
@@ -408,7 +408,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       {
         "orderable": "inflammadry-mmp-9",
         "label": "InflammaDry (MMP-9)",
-        "unavailableReason": "No InflammaDry orderable exists in ODOS yet",
+        "unavailableReason": "InflammaDry (MMP-9) can't be ordered in ODOS yet.",
         "resultSection": {
           "key": "dry-eye:markers"
         }
@@ -416,7 +416,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       {
         "orderable": "meibography",
         "label": "Meibography",
-        "unavailableReason": "Meibography capture exists (dry-eye-meibography-endpoint.ts); no orderable yet",
+        "unavailableReason": "Meibography can't be ordered in ODOS yet. Images can still be captured in the gland structure section.",
         "resultSection": {
           "key": "dry-eye:gland-structure"
         }
@@ -440,7 +440,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       },
       {
         "key": "Punctal plug status, per punctum — last recorded (present / retained / lost) with the date placed",
-        "unavailableReason": "Punctal plug status finding is not built."
+        "unavailableReason": "Punctal plug status isn't recorded in ODOS yet."
       },
       {
         "key": "Current ocular-surface treatment"
@@ -451,7 +451,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
     ],
     "historyTemplate": {
       "key": "dry-eye",
-      "unavailableReason": "NEW"
+      "unavailableReason": "The dry eye history template isn't available yet."
     }
   },
   {
@@ -474,7 +474,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       "Anyone at home with the same"
     ],
     "source": "operator direction 2026-09-19 · Eyefinity walk addendum (red eye)",
-    "version": 1,
+    "version": 2,
     "active": true,
     "sectionsOpen": [
       {
@@ -534,7 +534,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
     ],
     "historyTemplate": {
       "key": "red-eye",
-      "unavailableReason": "NEW"
+      "unavailableReason": "The red eye history template isn't available yet."
     }
   },
   {
@@ -556,7 +556,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       "Schoolwork or job change noticed"
     ],
     "source": "operator direction 2026-09-19 · documents/drafts/2026-09-19-odos-findings-and-records-draft.md §10–§11",
-    "version": 1,
+    "version": 2,
     "active": true,
     "episodeType": "vision-therapy",
     "sectionsOpen": [
@@ -583,11 +583,11 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
       },
       {
         "key": "group:binocular-vision",
-        "unavailableReason": "NEW #238 group proposed in the BV draft §10.2"
+        "unavailableReason": "The binocular vision section isn't available yet."
       },
       {
         "key": "group:sensory",
-        "unavailableReason": "NEW #238 group proposed in the BV draft §10.2"
+        "unavailableReason": "The sensory section isn't available yet."
       },
       {
         "key": "assessment"
@@ -613,7 +613,7 @@ export const FOLLOW_UP_PROFILE_SEEDS: readonly FollowUpProfile[] = [
     ],
     "historyTemplate": {
       "key": "binocular-vision",
-      "unavailableReason": "NEW"
+      "unavailableReason": "The binocular vision history template isn't available yet."
     }
   }
 ];

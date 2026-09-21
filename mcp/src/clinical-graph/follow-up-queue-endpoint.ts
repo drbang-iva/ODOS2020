@@ -58,7 +58,7 @@ export function deriveFollowUpQueue(
     const decision = decisions[followUpDecisionKey(test)];
     if (decision) return { ...row, state: "not-today", decidedBy: decision.by.display ?? decision.by.reference, decidedAt: decision.at };
     if (!fee) return { ...row, state: "unavailable", reason: test.unavailableReason ?? (PENDING_ORDERABLES.has(test.orderable)
-      ? "On ODOS's pending-orderables list." : "Not in the practice catalogue.") };
+      ? "This test can't be ordered in ODOS yet." : "Not in the practice catalogue.") };
     return { ...row, state: "for-review" };
   }) };
 }
