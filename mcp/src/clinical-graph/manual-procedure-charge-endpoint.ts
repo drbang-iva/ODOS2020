@@ -10,6 +10,7 @@ import {
   type ProcedureFeeScheduleFhir,
 } from "./procedure-fee-schedule.js";
 import { PROTOCOL_BASIC_CODES, ProtocolBasicStore, type ProtocolFhirClient } from "./protocol-store.js";
+import { IN_PROCESS_ENCOUNTER_LOCK } from "./protocol-service.js";
 import type { ChargeProposal } from "./protocol-types.js";
 
 export const MANUAL_PROCEDURE_CHARGE_ID_PREFIX = "manual-procedure-charge:";
@@ -153,33 +154,39 @@ export async function handleProcedureChargeCreateRequest(
   }
 
   const options = await listActiveCodedNonVisitProcedureFees(staff.fhir);
-  if (!options.some((option) => option.procedureConceptKey === body.data.procedureConceptKey)) {
+  const fee = options.find((option) => option.procedureConceptKey === body.data.procedureConceptKey);
+  if (!fee) {
     return { status: 400, body: { error: "An active coded non-visit procedure concept is required." } };
   }
-  const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
-  const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}${deps.id?.() ?? randomUUID()}`;
-  const store = chargeStore(staff.fhir);
-  if (await store.get(id)) {
-    return { status: 409, body: { error: "Manual procedure charge identity already exists; no charge was changed." } };
-  }
-  const at = deps.now?.() ?? new Date().toISOString();
-  const proposal: ChargeProposal = {
-    id,
-    encounterId: params.data.encounterId,
-    planActionRef: id,
-    procedureConceptKey: body.data.procedureConceptKey,
-    units: 1,
-    dxPointers: principalDiagnosisPointers(encounter),
-    evidenceRefs: [],
-    coverageEvaluations: [],
-    state: "accepted",
-    provenance: {
-      source: "clinician-entered",
-      actor: staff.staffReference,
-      at,
-    },
-  };
-  return { status: 201, body: { proposal: await store.save(proposal) } };
+  return IN_PROCESS_ENCOUNTER_LOCK.run(params.data.encounterId, async () => {
+    const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+    const id = `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}${deps.id?.() ?? randomUUID()}`;
+    const store = chargeStore(staff.fhir);
+    if (await store.get(id)) {
+      return { status: 409, body: { error: "Manual procedure charge identity already exists; no charge was changed." } };
+    }
+    if (await findLiveProcedureCharge(staff.fhir, params.data.encounterId, body.data.procedureConceptKey)) {
+      return duplicateCharge(fee.display);
+    }
+    const at = deps.now?.() ?? new Date().toISOString();
+    const proposal: ChargeProposal = {
+      id,
+      encounterId: params.data.encounterId,
+      planActionRef: id,
+      procedureConceptKey: body.data.procedureConceptKey,
+      units: 1,
+      dxPointers: principalDiagnosisPointers(encounter),
+      evidenceRefs: [],
+      coverageEvaluations: [],
+      state: "accepted",
+      provenance: {
+        source: "clinician-entered",
+        actor: staff.staffReference,
+        at,
+      },
+    };
+    return { status: 201, body: { proposal: await store.save(proposal) } };
+  });
 }
 
 export async function handleProcedureChargePatchRequest(
@@ -195,52 +202,77 @@ export async function handleProcedureChargePatchRequest(
     return { status: 400, body: { error: "A valid procedure charge change is required." } };
   }
 
-  const store = chargeStore(staff.fhir);
-  const proposal = await store.get(params.data.proposalId);
-  if (!proposal) return { status: 404, body: { error: "Procedure charge proposal not found." } };
-  if (!isManualProcedureProposal(proposal, params.data.encounterId)) {
-    return { status: 409, body: { error: "Conflicting manual procedure charge identity; no charge was changed." } };
-  }
-  if (proposal.state === "finalized" || proposal.chargeItemRef) {
-    return { status: 409, body: { error: "A finalized procedure charge cannot be changed." } };
-  }
-  const removalOnly = body.data.state === "removed" &&
-    body.data.laterality === undefined && body.data.dxPointer === undefined;
-  if (!removalOnly) {
-    const options = await listActiveCodedNonVisitProcedureFees(staff.fhir);
-    if (!options.some((option) => option.procedureConceptKey === proposal.procedureConceptKey)) {
-      return { status: 409, body: { error: "The procedure charge concept is no longer active and coded." } };
+  return IN_PROCESS_ENCOUNTER_LOCK.run(params.data.encounterId, async () => {
+    const store = chargeStore(staff.fhir);
+    const proposal = await store.get(params.data.proposalId);
+    if (!proposal) return { status: 404, body: { error: "Procedure charge proposal not found." } };
+    if (!isManualProcedureProposal(proposal, params.data.encounterId)) {
+      return { status: 409, body: { error: "Conflicting manual procedure charge identity; no charge was changed." } };
     }
-  }
-  if (body.data.dxPointer !== undefined && body.data.dxPointer !== null) {
-    const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
-    if (!encounterDiagnosisReferences(encounter).includes(body.data.dxPointer)) {
-      return { status: 400, body: { error: "The diagnosis pointer is not present on this encounter." } };
+    if (proposal.state === "finalized" || proposal.chargeItemRef) {
+      return { status: 409, body: { error: "A finalized procedure charge cannot be changed." } };
     }
-  }
+    const removalOnly = body.data.state === "removed" &&
+      body.data.laterality === undefined && body.data.dxPointer === undefined;
+    if (!removalOnly) {
+      const options = await listActiveCodedNonVisitProcedureFees(staff.fhir);
+      const fee = options.find((option) => option.procedureConceptKey === proposal.procedureConceptKey);
+      if (!fee) {
+        return { status: 409, body: { error: "The procedure charge concept is no longer active and coded." } };
+      }
+      if (body.data.state === "accepted" && proposal.state === "removed" &&
+        await findLiveProcedureCharge(staff.fhir, params.data.encounterId, proposal.procedureConceptKey, proposal.id)) {
+        return duplicateCharge(fee.display);
+      }
+    }
+    if (body.data.dxPointer !== undefined && body.data.dxPointer !== null) {
+      const encounter = await staff.fhir.read<Encounter>("Encounter", params.data.encounterId);
+      if (!encounterDiagnosisReferences(encounter).includes(body.data.dxPointer)) {
+        return { status: 400, body: { error: "The diagnosis pointer is not present on this encounter." } };
+      }
+    }
 
-  const at = deps.now?.() ?? new Date().toISOString();
-  let updated: ChargeProposal = {
-    ...proposal,
-    ...(body.data.dxPointer === undefined
-      ? {}
-      : { dxPointers: body.data.dxPointer === null ? [] : [body.data.dxPointer] }),
-    ...(body.data.state === undefined ? {} : { state: body.data.state }),
-    lastAmendment: {
-      actor: staff.staffReference,
-      at,
-    },
-  };
-  if (body.data.laterality === null) {
-    const { laterality: _laterality, ...withoutLaterality } = updated;
-    updated = withoutLaterality;
-  } else if (body.data.laterality !== undefined) {
-    updated = { ...updated, laterality: body.data.laterality };
-  }
-  return { status: 200, body: { proposal: await store.save(updated) } };
+    const at = deps.now?.() ?? new Date().toISOString();
+    let updated: ChargeProposal = {
+      ...proposal,
+      ...(body.data.dxPointer === undefined
+        ? {}
+        : { dxPointers: body.data.dxPointer === null ? [] : [body.data.dxPointer] }),
+      ...(body.data.state === undefined ? {} : { state: body.data.state }),
+      lastAmendment: {
+        actor: staff.staffReference,
+        at,
+      },
+    };
+    if (body.data.laterality === null) {
+      const { laterality: _laterality, ...withoutLaterality } = updated;
+      updated = withoutLaterality;
+    } else if (body.data.laterality !== undefined) {
+      updated = { ...updated, laterality: body.data.laterality };
+    }
+    return { status: 200, body: { proposal: await store.save(updated) } };
+  });
 }
 
-function chargeStore(fhir: ManualProcedureChargeFhir): ProtocolBasicStore<ChargeProposal> {
+export async function findLiveProcedureCharge(
+  fhir: ProtocolFhirClient,
+  encounterId: string,
+  procedureConceptKey: string,
+  excludeProposalId?: string,
+): Promise<ChargeProposal | undefined> {
+  return (await chargeStore(fhir).list()).find((proposal) =>
+    proposal.encounterId === encounterId &&
+    proposal.procedureConceptKey === procedureConceptKey &&
+    proposal.state !== "removed" &&
+    proposal.id !== excludeProposalId
+  );
+}
+
+function duplicateCharge(display: string) {
+  return { status: 409, body: { code: "duplicate-charge", error: `${display} is already charged on this visit.` } };
+}
+
+function chargeStore(fhir: ProtocolFhirClient): ProtocolBasicStore<ChargeProposal> {
   return new ProtocolBasicStore<ChargeProposal>(fhir, PROTOCOL_BASIC_CODES.chargeProposal);
 }
 

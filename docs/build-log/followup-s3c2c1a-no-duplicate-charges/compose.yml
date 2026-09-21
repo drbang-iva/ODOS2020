@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: medplum
+      POSTGRES_USER: medplum
+      POSTGRES_PASSWORD: medplum
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medplum -d medplum"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "medplum"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "medplum", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  binary-init:
+    image: alpine:3.21
+    user: "0:0"
+    command: ["chown", "-R", "1000:1000", "/data/binary"]
+    volumes:
+      - binary:/data/binary
+  medplum-server:
+    image: medplum/medplum-server:5.1.8
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      binary-init:
+        condition: service_completed_successfully
+    env_file:
+      - ../../../.odos/medplum-dr-drill-signing.env
+    volumes:
+      - ../../../medplum.dr-drill.config.json:/config/medplum.config.json:ro
+      - binary:/data/binary
+    ports:
+      - "127.0.0.1:18103:8103"
+    command: ["file:/config/medplum.config.json,env"]
+volumes:
+  postgres:
+  binary:

@@ -742,8 +742,8 @@ test("procedure lifecycle leaves the visit and every protocol proposal byte-iden
   await seed(
     fhir,
     visitProposal(),
-    protocolProposal("protocol-one"),
-    protocolProposal("protocol-two", { state: "accepted" }),
+    protocolProposal("protocol-one", { procedureConceptKey: "visual-field-threshold" }),
+    protocolProposal("protocol-two", { state: "accepted", procedureConceptKey: "visual-field-threshold" }),
   );
   const before = protectedProposalBytes(fhir, protectedIds);
   const created = await handleProcedureChargeCreateRequest(deps, {
@@ -958,7 +958,7 @@ test("behavioral acceptance: one visit and three procedure charges stay isolated
   };
   const photography = feeDefinition(fhir, "fundus-photography");
   photography.status = "active";
-  const protocol = protocolProposal("protocol-acceptance");
+  const protocol = protocolProposal("protocol-acceptance", { procedureConceptKey: "visual-field-threshold" });
   await seed(fhir, protocol);
   const protocolSnapshot = structuredClone(protocol);
   const assertProtocolUnchanged = async () => {
@@ -1128,4 +1128,142 @@ test("behavioral acceptance: one visit and three procedure charges stay isolated
     extension.valueReference?.reference === `ChargeItem/${odCharge.id}`
   ));
   assert.equal(odClaimItem?.bodySite?.text, "OD");
+});
+
+test("G1 create refuses a duplicate without writes and permits other visits concepts and replacement", async () => {
+  let id = 0;
+  const { deps, fhir, store } = fixture({ id: () => `g1-${++id}` });
+  fhir.resources.push(encounter({ id: "enc-2" }));
+  feeDefinition(fhir, "fundus-photography").status = "active";
+  const add = (encounterId = "enc-1", procedureConceptKey = "gonioscopy") =>
+    handleProcedureChargeCreateRequest(deps, { authHeader: "Bearer clinician", params: { encounterId }, body: { procedureConceptKey } });
+  const first = await add();
+  assert.equal(first.status, 201);
+  const before = chargeProposalBytes(fhir);
+  fhir.resetWrites();
+  const duplicate = await add();
+  assert.equal(duplicate.status, 409);
+  assert.equal((duplicate.body as { error: string }).error, "Gonioscopy is already charged on this visit.");
+  assert.deepEqual(fhir.writes, []);
+  assert.deepEqual(chargeProposalBytes(fhir), before);
+  assert.equal((await add("enc-2")).status, 201);
+  assert.equal((await add("enc-1", "fundus-photography")).status, 201);
+  assert.equal((await handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician", params: { encounterId: "enc-1", proposalId: (first.body as { proposal: ChargeProposal }).proposal.id }, body: { state: "removed" },
+  })).status, 200);
+  assert.equal((await add()).status, 201);
+  assert.equal((await store.list()).filter(row => row.encounterId === "enc-1" && row.procedureConceptKey === "gonioscopy" && row.state !== "removed").length, 1);
+});
+
+test("G2 revive refuses a live sibling without writes and ordinary edits still succeed", async () => {
+  const { deps, fhir, store } = fixture();
+  const a = manualProcedure({ id: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}g2-a`, planActionRef: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}g2-a`, state: "removed" });
+  const b = manualProcedure({ id: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}g2-b`, planActionRef: `${MANUAL_PROCEDURE_CHARGE_ID_PREFIX}g2-b` });
+  await seed(fhir, a, b);
+  const patch = (proposalId: string, body: unknown) => handleProcedureChargePatchRequest(deps, {
+    authHeader: "Bearer clinician", params: { encounterId: "enc-1", proposalId }, body,
+  });
+  const before = chargeProposalBytes(fhir);
+  const refused = await patch(a.id, { state: "accepted" });
+  assert.equal(refused.status, 409);
+  assert.deepEqual(refused.body, { code: "duplicate-charge", error: "Gonioscopy is already charged on this visit." });
+  assert.deepEqual(fhir.writes, []);
+  assert.deepEqual(chargeProposalBytes(fhir), before);
+  assert.equal((await patch(b.id, { dxPointer: "Condition/secondary" })).status, 200);
+  assert.equal((await patch(b.id, { laterality: "OS" })).status, 200);
+  assert.deepEqual((await store.get(b.id))?.dxPointers, ["Condition/secondary"]);
+  assert.equal((await store.get(b.id))?.laterality, "OS");
+  assert.equal((await patch(b.id, { state: "removed" })).status, 200);
+  assert.equal((await patch(a.id, { state: "accepted" })).status, 200);
+  assert.equal((await store.get(a.id))?.state, "accepted");
+});
+
+test("G3 simultaneous manual adds leave exactly one live charge", async () => {
+  let id = 0;
+  const { deps, fhir, store } = fixture({ id: () => `g3-${++id}` });
+  const search = fhir.search.bind(fhir);
+  fhir.search = async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}) => {
+    const result = await search<T>(resourceType, params);
+    if (params.code?.endsWith(`|${PROTOCOL_BASIC_CODES.chargeProposal}`)) {
+      await new Promise<void>(resolve => setImmediate(resolve));
+    }
+    return result;
+  };
+  const add = () => handleProcedureChargeCreateRequest(deps, {
+    authHeader: "Bearer clinician", params: { encounterId: "enc-1" }, body: { procedureConceptKey: "gonioscopy" },
+  });
+  const results = await Promise.all([add(), add()]);
+  assert.equal((await store.list()).filter(row => row.state !== "removed").length, 1);
+  assert.deepEqual(results.map(row => row.status).sort(), [201, 409]);
+});
+
+test("G4 manual add and default protocol commit share the encounter lock", async () => {
+  const { ProtocolService } = await import("../clinical-graph/protocol-service.js");
+  const { deps, fhir, store } = fixture();
+  let id = 0;
+  const service = new ProtocolService(fhir, {
+    async commitFinding() { throw new Error("No findings in charge-only protocol"); },
+    async materializeAction() { throw new Error("No actions in charge-only protocol"); },
+  }, () => NOW, () => `g4-${++id}`);
+  await service.definitions.save({
+    id: "g4-protocol", version: 1, title: "Synthetic gonioscopy", status: "active",
+    trigger: { kind: "diagnosis", dxKeys: ["synthetic"] }, ownership: { ownerId: "Practitioner/clinician", sharing: "private" }, categories: [],
+    items: [{ itemKey: "charge", itemType: "charge-seed", defaultSelected: true, lateralityMode: "OU-always", payload: { procedureConceptKey: "gonioscopy" } }],
+    authoring: { origin: "clinician", at: NOW, actor: "Practitioner/clinician" }, audit: { createdBy: "Practitioner/clinician", createdAt: NOW },
+  });
+  const { application } = await service.open("g4-protocol", {
+    encounterId: "enc-1", patientId: "patient-1", actor: "Practitioner/clinician",
+    diagnosis: { reference: "Condition/principal", code: "synthetic", confirmed: true },
+  });
+  for (const resource of fhir.resources) resource.meta = { versionId: "1" };
+  let entered!: () => void;
+  let release!: () => void;
+  const paused = new Promise<void>(resolve => { entered = resolve; });
+  const resume = new Promise<void>(resolve => { release = resolve; });
+  const search = fhir.search.bind(fhir);
+  let pauseOnce = true;
+  fhir.search = async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}) => {
+    const result = await search<T>(resourceType, params);
+    if (pauseOnce && !params.identifier && params.code?.endsWith(`|${PROTOCOL_BASIC_CODES.chargeProposal}`)) {
+      pauseOnce = false;
+      entered();
+      await resume;
+    }
+    return result;
+  };
+  const manual = handleProcedureChargeCreateRequest(deps, {
+    authHeader: "Bearer clinician", params: { encounterId: "enc-1" }, body: { procedureConceptKey: "gonioscopy" },
+  });
+  await paused;
+  const protocol = service.commit(application.id, [], ["Condition/principal"]);
+  await new Promise<void>(resolve => setImmediate(resolve));
+  release();
+  const [manualResult] = await Promise.all([manual, protocol]);
+  assert.equal(manualResult.status, 201);
+  assert.equal((await store.list()).filter(row => row.encounterId === "enc-1" && row.procedureConceptKey === "gonioscopy" && row.state !== "removed").length, 1);
+  assert.equal((await service.applications.get(application.id))?.confirmed, true);
+});
+
+test("G5 staged and finalized protocol charges both prevent a manual duplicate", async () => {
+  for (const state of ["staged", "finalized"] as const) {
+    const { deps, fhir } = fixture();
+    await seed(fhir, protocolProposal(`g5-${state}`, { state }));
+    const before = chargeProposalBytes(fhir);
+    const result = await handleProcedureChargeCreateRequest(deps, {
+      authHeader: "Bearer clinician", params: { encounterId: "enc-1" }, body: { procedureConceptKey: "gonioscopy" },
+    });
+    assert.equal(result.status, 409);
+    assert.deepEqual(fhir.writes, []);
+    assert.deepEqual(chargeProposalBytes(fhir), before);
+  }
+});
+
+test("G7 duplicate rejection has duplicate-charge code", async () => {
+  const { deps, fhir } = fixture();
+  await seed(fhir, manualProcedure());
+  const result = await handleProcedureChargeCreateRequest(deps, {
+    authHeader: "Bearer clinician", params: { encounterId: "enc-1" }, body: { procedureConceptKey: "gonioscopy" },
+  });
+  assert.equal(result.status, 409);
+  assert.equal((result.body as { code: string }).code, "duplicate-charge");
 });

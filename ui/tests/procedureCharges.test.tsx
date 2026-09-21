@@ -207,3 +207,23 @@ test("procedure row mutation failure stays inline while add controls remain avai
   assert.equal(renderer.root.findAll((node) => node.props.role === "dialog").length, 0);
   act(() => renderer.unmount());
 });
+
+test("G6 duplicate charge sentence reaches the doctor and leaves the list unchanged", async () => {
+  const api = procedureChargeApi(async (_input, init) => init?.method === "POST"
+    ? Response.json({ code: "duplicate-charge", error: "Gonioscopy is already charged on this visit." }, { status: 409 })
+    : Response.json({ ...RESPONSE, proposals: [PROPOSAL] }));
+  let renderer!: ReactTestRenderer;
+  await act(async () => { renderer = create(<ProcedureChargeList encounterId="enc-1" api={api} />); });
+  try {
+    const before = renderer.root.findAllByProps({ "data-testid": "procedure-charge-row" }).map(row => JSON.stringify(row.findAllByType("select").map(select => select.props.value)));
+    assert.equal(before.length, 1);
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Procedure to add" }).props.onChange({ target: { value: "gonioscopy" } });
+    });
+    await act(async () => { await renderer.root.findByProps({ children: "Add procedure" }).props.onClick(); });
+    assert.equal(renderer.root.findByProps({ "data-testid": "procedure-charge-error" }).props.children, "Gonioscopy is already charged on this visit.");
+    assert.deepEqual(renderer.root.findAllByProps({ "data-testid": "procedure-charge-row" }).map(row => JSON.stringify(row.findAllByType("select").map(select => select.props.value))), before);
+  } finally {
+    act(() => renderer.unmount());
+  }
+});

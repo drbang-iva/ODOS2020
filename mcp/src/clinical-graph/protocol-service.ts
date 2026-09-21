@@ -86,7 +86,7 @@ class InProcessProtocolItemAddLock implements ProtocolItemAddLock {
 // docker-compose runs one MCP server process with no replicas, so this lock fences live writers in that process.
 // The conditional FHIR claim and lease below remain the cross-process backstop and crash recovery mechanism.
 const IN_PROCESS_ITEM_ADD_LOCK = new InProcessProtocolItemAddLock();
-const IN_PROCESS_ENCOUNTER_LOCK = new InProcessProtocolItemAddLock();
+export const IN_PROCESS_ENCOUNTER_LOCK = new InProcessProtocolItemAddLock();
 
 const TAPPABLE_PROTOCOL_ITEM_TYPES: ReadonlySet<ProtocolItemType> = new Set([
   "order",
