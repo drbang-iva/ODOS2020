@@ -176,7 +176,7 @@ Full responses and absent/empty proof are quoted below (also live-proof.json).
           ],
           "state": "already-ordered",
           "actionIds": [
-            "e8de3686-d57b-409b-87aa-1538375cce1c"
+            "a75953e3-398d-4721-ad64-89f0dc327ef7"
           ]
         }
       ]
@@ -760,6 +760,12 @@ ok 1 - clinical-graph requests share the literal Vite route and Medplum authoriz
 - `ui/tests/examOverviewBoard.test.tsx`
 - `ui/tests/followUpQueue.test.tsx`
 - `docs/build-log/followup-s3c2a-queue-view/` (proof, summaries, screenshots, rulings)
+
+## Automatic-review correction
+
+At first commit 5a19dfaa2be2e3aad518a0051af19a1a7a6458ad, CodeQL flagged missing rate limiting on the new route. Added an isolated 120 requests/minute limiter within the same permitted route block, using the existing express-rate-limit import. No shared limiter, grant pins or other route changed; literal app.get remains. Repeated full MCP/UI suites, three typechecks, preflight, build, real API/browser proof. The actual route returned 401 initially and 429 on excess requests (121 requests: 108 HTTP 401, 13 HTTP 429; prior browser requests consumed part of the window). See rate-limit-proof.json and proof/rate-limit.mjs. Bootstrap briefly exhausted the synthetic login limit; waiting for its normal window restored login without security-setting changes.
+
+PR-Agent's ticket-compliance warning incorrectly used separate PR 647 (unsubscribe) as this task's ticket. It is solely R1's overlap dependency. The PR body clarifies this; PR-Agent reported no major issues or security concerns. This is author adjudication, not independent evaluation.
 
 ## Cleanup, risks and follow-ups
 

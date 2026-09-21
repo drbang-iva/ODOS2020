@@ -1,7 +1,7 @@
 {
-  "head": "9adec598a7d012729ca239cce11aab1b726171f0",
+  "head": "5a19dfaa2be2e3aad518a0051af19a1a7a6458ad",
   "dirty": true,
-  "mcpHash": "21ae2790da06a6c486927bfbc2aa17e790f621a6feaada3df3ad738e9a26fb8c",
+  "mcpHash": "29adc399f97b19a37ba3e57a688d43d11da84257c80961da474baf4540c12382",
   "caddySourceHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
   "servedAssets": {
     "/assets/index-BjlSAQ_H.js": "bfdbbd3412624194a5fd9e7503560563e09ba352a1e04456efbeb09830a51234",
@@ -18,13 +18,13 @@
     "control": 29046
   },
   "project": "odos-s3c2a-proof",
-  "mcpPid": 94837,
-  "caddyPid": 94850,
+  "mcpPid": 2612,
+  "caddyPid": 2625,
   "sourceSha256": {
     "mcp/src/clinical-graph/exam-overview-endpoint.ts": "d2e7810130ab2e220c480b68a205eeb8994e1bdaeaa9f633948fb3ef51dab3e1",
     "mcp/src/clinical-graph/exam-scope-store.ts": "1f14dfaedaa2c907185c90e3a4b7da35b861370cf587e0a1f32586fcd7c2fce8",
     "mcp/src/clinical-graph/follow-up-queue-endpoint.ts": "0474b07105c57e7d55aff7a6292bc6f62b49e199c023ffee4136279a188d30e1",
-    "mcp/src/index.ts": "51ece597187862eca9e2c21a889b6d5df912f5d8a056455a810e4d258d15dd4c",
+    "mcp/src/index.ts": "c5afc94caee3275adda8af924c76089f06f1b36608979e0aac274955df5c524e",
     "mcp/tests/examOverviewEndpoint.test.ts": "7e04fbaab78eb3f41f7244de85524c6b5349b12fbac5d9bec8388f675d1c2164",
     "mcp/tests/examShapeRecord.test.ts": "a1580804db887666d202ff8743fde40125a8fe9958b35173f4aa0d845074d2df",
     "mcp/tests/findingDefinitionStore.test.ts": "30f6c61e018a390dd66cfeae1759ca745d540194b964e42987f03432c000097a",
@@ -38,5 +38,5 @@
     "ui/tests/examOverviewBoard.test.tsx": "d12ce32ae1c0fa9b7e81708d88232d0be3e4cdf53abfc8d6d957684a285ac14e",
     "ui/tests/followUpQueue.test.tsx": "d807b0dbfc73ee47e694456c2adfc0b75bae94b7beb6315ec5e812f10ed65843"
   },
-  "note": "Built from the uncommitted candidate at base HEAD. Source hashes bind tested files; served hashes bind browser artifacts. No production source changes after build."
+  "note": "Rebuilt and served from first commit plus rate-limit correction; hashes bind final source and served artifacts. No production source changes after this build."
 }

@@ -50,3 +50,7 @@ R5: Applied only route inventory 105 -> 106 plus one authorized comment; depende
 Real synthetic live proof passed: frozen glaucoma/macula JSON, protocol order route HTTP 200, real queue HTTP responses, absent vs empty. Browser proof passed both visits at 1440 and 390 widths, request counts 0/1/2, no row buttons or tab alerts, no page errors. Phone navigation uses the existing Photos launcher to summon the panel before selecting Follow-up; no launcher was added. Own live harness initially expected the wrong macula row order and was corrected to stored order (OCT retina, Retina photos, ERG); production unchanged. New endpoint test provenance fixture corrected to the existing InstanceProvenance shape.
 
 Both task stacks stopped. docker ps: vf-prac1b-walk-db Up 2 days. PR preparation at origin/main 9adec598a7d012729ca239cce11aab1b726171f0, #647 OPEN. No rebase required. See BUNDLE.md and RULINGS.md for final evidence.
+
+PR 650 opened at 5a19dfaa2be2e3aad518a0051af19a1a7a6458ad. CodeQL flagged missing rate limiting; fixed within the one permitted route block with existing express-rate-limit. Real API/browser proof repeated successfully; 121-request limiter proof returned initial 401 and final 429. Rebuilt served/source hashes replaced. Full MCP repeated 6222 total / 6168 pass / 0 fail / 54 skipped. Three typechecks and preflight clean. Both task stacks stopped again; vf-prac1b-walk-db untouched.
+
+Full UI after rate-limit correction: 1834 / 1834 pass / 0 fail. All required local verification complete on the corrected source.

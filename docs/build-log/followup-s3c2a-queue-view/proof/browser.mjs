@@ -14,7 +14,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const results = [];
 try {
   for (const width of [1440, 390]) {
-    const context = await browser.newContext({ viewport: { width, height: width === 390 ? 1100 : 1000 } });
+    const context = await browser.newContext({ viewport: { width, height: width === 390 ? 1100 : 1400 } });
     try {
       const page = await context.newPage(); page.setDefaultTimeout(30000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));

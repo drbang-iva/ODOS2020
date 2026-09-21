@@ -8685,7 +8685,14 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
       }
 
       const { handleFollowUpQueueRequest } = await import("./clinical-graph/follow-up-queue-endpoint.js");
-      app.get("/clinical-graph/encounters/:encounterId/follow-up-queue", async (req, res) => {
+      const followUpQueueLimit = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: { error: "Too many follow-up requests. Try again shortly." },
+      });
+      app.get("/clinical-graph/encounters/:encounterId/follow-up-queue", followUpQueueLimit, async (req, res) => {
         try {
           await authenticateWithMedplum();
           const result = await handleFollowUpQueueRequest(
