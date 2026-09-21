@@ -1,5 +1,5 @@
 from pathlib import Path
-import json, re, subprocess
+import json, re, shlex, subprocess
 
 root = Path(__file__).resolve().parents[4]
 store = root / 'mcp/src/clinical-graph/exam-scope-store.ts'
@@ -11,7 +11,7 @@ def run(pattern, test_file='mcp/tests/examShapeRecord.test.ts'):
     command = ['node', '--import', 'tsx', '--test', '--test-name-pattern=' + pattern, test_file]
     result = subprocess.run(command, cwd=root, text=True, capture_output=True)
     summary = '\n'.join(line for line in result.stdout.splitlines() if re.match(r'^(?:not )?ok |^# (tests|pass|fail|cancelled|skipped|todo) ', line))
-    return {'command': ' '.join(command), 'exit': result.returncode, 'summary': summary}
+    return {'command': shlex.join(command), 'exit': result.returncode, 'summary': summary}
 
 live_read = '''if (resource) {
       const shape = parseScope(resource);

@@ -11,6 +11,6 @@ P1–P7 verified at origin/main. P8 corrected: 8 tests; caller inventory 58.
 - Real synthetic Medplum proof: old 3 tests unchanged after edit/retirement; new visit 1 edited test; explicit visit 3 tests; legacy no recorded tests and no rewrite.
 - Final MCP: 6155 pass, 55 existing skips, zero failures. All three typechecks and preflight pass. UI final: 1828 pass, zero fail/skip, matching base.
 - Both odos-s3c1-proof and odos-s3c1-postgres stopped; volumes retained. Unrelated services left alone.
-- PR and automatic bot reviews pending. Independent evaluation remains Claude Opus 5; NOT EVALUATED.
+- PR #649 opened. Initial PR-Agent: no major issues; CodeRabbit: three evidence-tool comments confirmed and fixed. Mutation proofs rerun and persistence proof passed twice consecutively with cleanup. Final-head bot checks pending. Independent evaluation remains Claude Opus 5; NOT EVALUATED.
 
 No outside-scope edit required. Initial MCP invocation lacked Postgres; the complete configured rerun used task-owned Postgres and the prior slice's documented ODOS_ALLOW_UNGATED_MCP=1 command. Credential-dependent skips are disclosed and are not live authorization proof.

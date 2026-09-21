@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Basic, Encounter, Patient, Practitioner } from '@medplum/fhirtypes';
@@ -36,33 +37,40 @@ const before = await stored(oldId);
 const explicit = await scopes.pick(explicitId, 'office-visit', actor, null, original.profiles, original.testsProposed);
 assert.deepEqual(explicit.testsProposed, first.testsProposed);
 const { versionId, ...profile } = original.profiles[0];
-const edited = await profiles.save({ ...profile, version: profile.version + 1, testsQueuedByDefault: profile.testsQueuedByDefault.slice(0, 1) }, versionId);
-assert.deepEqual(await scopes.shapeIfAbsent(oldId, actor, resolve), first);
-const afterEdit = await stored(oldId);
-assert.deepEqual(afterEdit, before);
-const next = await scopes.shapeIfAbsent(newId, actor, resolve);
-assert.deepEqual(next.testsProposed, first.testsProposed!.slice(0, 1));
-await profiles.save({ ...edited.profile, active: false, version: edited.profile.version + 1 }, edited.versionId);
-assert.deepEqual(await scopes.shapeIfAbsent(oldId, actor, resolve), first);
-assert.deepEqual(await scopes.get(explicitId), explicit);
-const afterRetirement = await stored(oldId);
-assert.deepEqual(afterRetirement, before);
-const legacyValue = { ...before };
-delete legacyValue.testsProposed;
-delete legacyValue.source;
-await fhir.create<Basic>({ resourceType: 'Basic',
-  identifier: [{ system: 'urn:odos:encounter-exam-scope', value: legacyId }],
-  code: { coding: [{ system: 'urn:odos:encounter-exam-scope', code: 'exam-scope' }] },
-  subject: { reference: `Encounter/${legacyId}` }, author: actor,
-  extension: [{ url: 'urn:odos:encounter-exam-scope:value', valueString: JSON.stringify(legacyValue) }],
-});
-const legacyParsed = await scopes.get(legacyId);
-assert.equal(Object.hasOwn(legacyParsed, 'testsProposed'), false);
-assert.deepEqual(legacyParsed.testsProposed ?? [], []);
-assert.deepEqual(await scopes.shapeIfAbsent(legacyId, actor, async () => { throw new Error('must not retro-shape'); }), legacyParsed);
-assert.deepEqual(await stored(legacyId), legacyValue);
-const evidence = { syntheticOnly: true, project: manifest.project, before, afterEdit, afterRetirement,
-  newVisit: await stored(newId), explicitVisit: await stored(explicitId), legacyStored: legacyValue, legacyParsed,
-  checks: ['old visit unchanged after edit', 'new visit has edited tests', 'old and explicit visits unchanged after retirement', 'legacy tests absent and no retro-shape'] };
-writeFileSync('docs/build-log/followup-s3c1-shape-tests/persistence.json', JSON.stringify(evidence, null, 2) + '\n');
-console.log(JSON.stringify({ oldVisitTests: first.testsProposed!.length, newVisitTests: next.testsProposed!.length, explicitVisitTests: explicit.testsProposed!.length, legacyRecordedTests: legacyParsed.testsProposed ?? [], checksPassed: evidence.checks.length }));
+try {
+  const edited = await profiles.save({ ...profile, version: profile.version + 1, testsQueuedByDefault: profile.testsQueuedByDefault.slice(0, 1) }, versionId);
+  assert.deepEqual(await scopes.shapeIfAbsent(oldId, actor, resolve), first);
+  const afterEdit = await stored(oldId);
+  assert.deepEqual(afterEdit, before);
+  const next = await scopes.shapeIfAbsent(newId, actor, resolve);
+  assert.deepEqual(next.testsProposed, first.testsProposed!.slice(0, 1));
+  await profiles.save({ ...edited.profile, active: false, version: edited.profile.version + 1 }, edited.versionId);
+  assert.deepEqual(await scopes.shapeIfAbsent(oldId, actor, resolve), first);
+  assert.deepEqual(await scopes.get(explicitId), explicit);
+  const afterRetirement = await stored(oldId);
+  assert.deepEqual(afterRetirement, before);
+  const legacyValue = { ...before };
+  delete legacyValue.testsProposed;
+  delete legacyValue.source;
+  await fhir.create<Basic>({ resourceType: 'Basic',
+    identifier: [{ system: 'urn:odos:encounter-exam-scope', value: legacyId }],
+    code: { coding: [{ system: 'urn:odos:encounter-exam-scope', code: 'exam-scope' }] },
+    subject: { reference: `Encounter/${legacyId}` }, author: actor,
+    extension: [{ url: 'urn:odos:encounter-exam-scope:value', valueString: JSON.stringify(legacyValue) }],
+  });
+  const legacyParsed = await scopes.get(legacyId);
+  assert.equal(Object.hasOwn(legacyParsed, 'testsProposed'), false);
+  assert.deepEqual(legacyParsed.testsProposed ?? [], []);
+  assert.deepEqual(await scopes.shapeIfAbsent(legacyId, actor, async () => { throw new Error('must not retro-shape'); }), legacyParsed);
+  assert.deepEqual(await stored(legacyId), legacyValue);
+  const sourceSha256 = Object.fromEntries(['mcp/src/clinical-graph/exam-scope-store.ts', 'mcp/src/clinical-graph/exam-overview-endpoint.ts'].map(path => [path, createHash('sha256').update(readFileSync(path)).digest('hex')]));
+  const evidence = { sourceSha256, syntheticOnly: true, project: manifest.project, before, afterEdit, afterRetirement,
+    newVisit: await stored(newId), explicitVisit: await stored(explicitId), legacyStored: legacyValue, legacyParsed,
+    checks: ['old visit unchanged after edit', 'new visit has edited tests', 'old and explicit visits unchanged after retirement', 'legacy tests absent and no retro-shape'] };
+  writeFileSync('docs/build-log/followup-s3c1-shape-tests/persistence.json', JSON.stringify(evidence, null, 2) + '\n');
+  console.log(JSON.stringify({ oldVisitTests: first.testsProposed!.length, newVisitTests: next.testsProposed!.length, explicitVisitTests: explicit.testsProposed!.length, legacyRecordedTests: legacyParsed.testsProposed ?? [], checksPassed: evidence.checks.length }));
+} finally {
+  const current = (await profiles.list()).find(row => row.profileKey === profile.profileKey)!;
+  await profiles.save(profile, current.versionId);
+}
+console.log('Original active profile restored; retained stack is ready for another proof run.');

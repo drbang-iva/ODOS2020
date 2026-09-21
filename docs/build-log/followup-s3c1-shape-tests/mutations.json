@@ -2,12 +2,12 @@
   {
     "guard": "G1",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G1 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G1' mcp/tests/examShapeRecord.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3c1 G1 frozen tests survive profile edits and retirement; new visits use edited tests\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G1 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G1' mcp/tests/examShapeRecord.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3c1 G1 frozen tests survive profile edits and retirement; new visits use edited tests\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }
@@ -15,12 +15,12 @@
   {
     "guard": "G2",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G2 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G2' mcp/tests/examShapeRecord.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3c1 G2 dedup uses orderable plus focus and preserves all sources\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G2 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G2' mcp/tests/examShapeRecord.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3c1 G2 dedup uses orderable plus focus and preserves all sources\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }
@@ -28,12 +28,12 @@
   {
     "guard": "G3",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G3 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G3' mcp/tests/examShapeRecord.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3c1 G3 every proposed test records its profile including unavailable tests\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G3 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G3' mcp/tests/examShapeRecord.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3c1 G3 every proposed test records its profile including unavailable tests\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }
@@ -41,12 +41,12 @@
   {
     "guard": "G4",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G4 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G4' mcp/tests/examShapeRecord.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3c1 G4 S3b-era shapes without tests load unchanged and report none\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G4 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G4' mcp/tests/examShapeRecord.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3c1 G4 S3b-era shapes without tests load unchanged and report none\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }
@@ -54,12 +54,12 @@
   {
     "guard": "G5",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G5 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G5' mcp/tests/examShapeRecord.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3c1 G5 both automatic and explicit write paths carry tests\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G5 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G5' mcp/tests/examShapeRecord.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3c1 G5 both automatic and explicit write paths carry tests\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }
@@ -67,12 +67,12 @@
   {
     "guard": "G7",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G7|S3b2 G1 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G7|S3b2 G1' mcp/tests/examShapeRecord.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3b2 G1 explicit shape survives automatic shaping at the store boundary\nnot ok 2 - S3c1 G7 legacy scope is never retro-shaped at the store boundary\n# tests 2\n# pass 0\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 G7|S3b2 G1 mcp/tests/examShapeRecord.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 G7|S3b2 G1' mcp/tests/examShapeRecord.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3b2 G1 explicit shape survives automatic shaping at the store boundary\nok 2 - S3c1 G7 legacy scope is never retro-shaped at the store boundary\n# tests 2\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }
@@ -80,12 +80,12 @@
   {
     "guard": "best-effort additional guard",
     "red": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 unresolved tests mcp/tests/examOverviewEndpoint.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 unresolved tests' mcp/tests/examOverviewEndpoint.test.ts",
       "exit": 1,
       "summary": "not ok 1 - S3c1 unresolved tests retain partial proposals and still persist the shape and render the board\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0"
     },
     "green": {
-      "command": "node --import tsx --test --test-name-pattern=S3c1 unresolved tests mcp/tests/examOverviewEndpoint.test.ts",
+      "command": "node --import tsx --test '--test-name-pattern=S3c1 unresolved tests' mcp/tests/examOverviewEndpoint.test.ts",
       "exit": 0,
       "summary": "ok 1 - S3c1 unresolved tests retain partial proposals and still persist the shape and render the board\n# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0"
     }

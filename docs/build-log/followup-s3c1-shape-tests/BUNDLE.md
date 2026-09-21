@@ -44,7 +44,7 @@ All mutations were restored byte-for-byte before their green run. Commands and s
 
 ### G1
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 G1 mcp/tests/examShapeRecord.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 G1' mcp/tests/examShapeRecord.test.ts`
 
 RED (exit 1):
 
@@ -71,7 +71,7 @@ ok 1 - S3c1 G1 frozen tests survive profile edits and retirement; new visits use
 
 ### G2
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 G2 mcp/tests/examShapeRecord.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 G2' mcp/tests/examShapeRecord.test.ts`
 
 RED (exit 1):
 
@@ -98,7 +98,7 @@ ok 1 - S3c1 G2 dedup uses orderable plus focus and preserves all sources
 
 ### G3
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 G3 mcp/tests/examShapeRecord.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 G3' mcp/tests/examShapeRecord.test.ts`
 
 RED (exit 1):
 
@@ -125,7 +125,7 @@ ok 1 - S3c1 G3 every proposed test records its profile including unavailable tes
 
 ### G4
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 G4 mcp/tests/examShapeRecord.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 G4' mcp/tests/examShapeRecord.test.ts`
 
 RED (exit 1):
 
@@ -152,7 +152,7 @@ ok 1 - S3c1 G4 S3b-era shapes without tests load unchanged and report none
 
 ### G5
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 G5 mcp/tests/examShapeRecord.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 G5' mcp/tests/examShapeRecord.test.ts`
 
 RED (exit 1):
 
@@ -179,7 +179,7 @@ ok 1 - S3c1 G5 both automatic and explicit write paths carry tests
 
 ### G7
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 G7|S3b2 G1 mcp/tests/examShapeRecord.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 G7|S3b2 G1' mcp/tests/examShapeRecord.test.ts`
 
 RED (exit 1):
 
@@ -208,7 +208,7 @@ ok 2 - S3c1 G7 legacy scope is never retro-shaped at the store boundary
 
 ### best-effort additional guard
 
-Command: `node --import tsx --test --test-name-pattern=S3c1 unresolved tests mcp/tests/examOverviewEndpoint.test.ts`
+Command: `node --import tsx --test '--test-name-pattern=S3c1 unresolved tests' mcp/tests/examOverviewEndpoint.test.ts`
 
 RED (exit 1):
 
@@ -250,12 +250,12 @@ Stored JSON before profile editing:
 ```json
 {
   "examScope": "comprehensive",
-  "setAt": "2026-09-21T04:30:52.220Z",
+  "setAt": "2026-09-21T04:43:13.553Z",
   "profilesApplied": [
     {
       "profileKey": "glaucoma",
       "version": 1,
-      "versionId": null
+      "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
     }
   ],
   "sectionsOpen": [
@@ -300,9 +300,9 @@ Stored JSON before profile editing:
       ]
     }
   ],
-  "shapedAt": "2026-09-21T04:30:52.220Z",
+  "shapedAt": "2026-09-21T04:43:13.553Z",
   "source": "derived",
-  "writeToken": "7f22c258-a830-4034-893a-baed97870256"
+  "writeToken": "10cbe93d-2294-449e-8684-2edb038fa56f"
 }
 ```
 
@@ -311,12 +311,12 @@ Stored JSON after profile editing (also exactly equal after retirement):
 ```json
 {
   "examScope": "comprehensive",
-  "setAt": "2026-09-21T04:30:52.220Z",
+  "setAt": "2026-09-21T04:43:13.553Z",
   "profilesApplied": [
     {
       "profileKey": "glaucoma",
       "version": 1,
-      "versionId": null
+      "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
     }
   ],
   "sectionsOpen": [
@@ -361,9 +361,9 @@ Stored JSON after profile editing (also exactly equal after retirement):
       ]
     }
   ],
-  "shapedAt": "2026-09-21T04:30:52.220Z",
+  "shapedAt": "2026-09-21T04:43:13.553Z",
   "source": "derived",
-  "writeToken": "7f22c258-a830-4034-893a-baed97870256"
+  "writeToken": "10cbe93d-2294-449e-8684-2edb038fa56f"
 }
 ```
 
@@ -372,12 +372,12 @@ New visit after editing:
 ```json
 {
   "examScope": "comprehensive",
-  "setAt": "2026-09-21T04:30:52.266Z",
+  "setAt": "2026-09-21T04:43:13.596Z",
   "profilesApplied": [
     {
       "profileKey": "glaucoma",
       "version": 2,
-      "versionId": "b26dd4c5-cec6-48ac-8f92-a20a8bbe822b"
+      "versionId": "406219e6-423a-41e2-beaa-f7beda5031de"
     }
   ],
   "sectionsOpen": [
@@ -403,9 +403,9 @@ New visit after editing:
       ]
     }
   ],
-  "shapedAt": "2026-09-21T04:30:52.266Z",
+  "shapedAt": "2026-09-21T04:43:13.596Z",
   "source": "derived",
-  "writeToken": "226761bb-134a-477f-8517-87c0736f30a7"
+  "writeToken": "e86d0e9f-947c-4647-bf1d-fa37c3983ea4"
 }
 ```
 
@@ -417,7 +417,7 @@ S3b-era row parses to (no testsProposed property, no rewrite):
     {
       "profileKey": "glaucoma",
       "version": 1,
-      "versionId": null
+      "versionId": "21ab3030-5666-499b-9f4c-609c36c233c5"
     }
   ],
   "sectionsOpen": [
@@ -432,14 +432,14 @@ S3b-era row parses to (no testsProposed property, no rewrite):
     "imaging",
     "assessment"
   ],
-  "shapedAt": "2026-09-21T04:30:52.220Z",
+  "shapedAt": "2026-09-21T04:43:13.553Z",
   "source": "derived",
   "examScope": "comprehensive",
-  "versionId": "f31349ea-d9e8-4279-a250-18f79b4f237b",
+  "versionId": "f2303d29-5771-4bce-9024-165f5b63fd3f",
   "setBy": {
-    "reference": "Practitioner/ab109c51-cacd-47f4-836b-31849b1e8fde"
+    "reference": "Practitioner/9a62d53c-7dc5-47aa-9765-9e897328e110"
   },
-  "setAt": "2026-09-21T04:30:52.220Z"
+  "setAt": "2026-09-21T04:43:13.553Z"
 }
 ```
 
@@ -536,6 +536,12 @@ vf-prac1b-walk-db	Up 2 days
 ```
 
 No odos-s3c1- container remains running. Both task stack sets were stopped; volumes retained. The remaining container belongs to another task and was left alone.
+
+## Bot review fixback
+
+CodeRabbit identified three proof-tool defects: unquoted recorded shell arguments, profile retirement preventing retained-stack reruns, and source hashes missing from the reproducer output. All three were confirmed and corrected within this evidence directory; application and test sources are unchanged.
+
+The mutation reproducer was rerun: every requested red/green pair remained valid, and recorded commands now use shlex.join. The persistence script now generates both implementation hashes itself and restores the original profile in finally. Two consecutive real-stack runs passed (each: old 3, new 1, explicit 3, legacy 0), with the original active profile restored after each. Task containers were stopped again. The stored JSON above is from the second repeat run.
 
 ## Risks and follow-ups
 
