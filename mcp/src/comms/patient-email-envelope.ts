@@ -7,6 +7,27 @@ export interface PatientEmailSettings {
 
 export class PatientEmailConfigurationError extends Error {}
 
+export function patientEducationEmailBody(input: {
+  practiceName?: string;
+  phone?: string;
+  title: string;
+  url: string;
+}): string {
+  const practiceName = required(input.practiceName, "practice name");
+  const phone = required(input.phone, "practice phone");
+  const title = input.title.replace(/[\s\u0000-\u001f\u007f]+/g, " ").trim();
+  if (!title) throw new PatientEmailConfigurationError("Patient email is missing handout title in practice settings.");
+  return [
+    "Hello,",
+    "",
+    `${practiceName} is sending you this information: ${title}`,
+    "",
+    input.url,
+    "",
+    `If you have any questions, please call us at ${phone}.`,
+  ].join("\n");
+}
+
 export function patientEmailSubject(settings: Pick<PatientEmailSettings, "practiceName" | "subject">): string {
   const name = required(settings.practiceName, "practice name");
   const subject = required(settings.subject?.trim() || `Information from ${name}`, "neutral subject");
