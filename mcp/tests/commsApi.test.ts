@@ -2558,7 +2558,16 @@ async function startServer(options: {
         : options.channelRoutes[role],
       senderNumberFor: (role) => options.senderNumbers?.[role as keyof typeof options.senderNumbers],
       getAdapter: (providerName, callerFhir) => {
-        if (realEmail && providerName === "google-workspace") return realEmail.getAdapterForRole("email", callerFhir);
+        if (realEmail && providerName === "google-workspace") {
+          const adapter = realEmail.getAdapterForRole("email", callerFhir);
+          return {
+            ...adapter,
+            async sendEmail(request) {
+              providerCalls.push("sendEmail");
+              return adapter.sendEmail!(request);
+            },
+          };
+        }
         adapterProviders.push(providerName);
         adapterFhirs.push(callerFhir);
         const conversationListUnsupported = options.conversationUnsupported?.includes(providerName) === true;
@@ -2899,6 +2908,7 @@ test("E1b A composed education body reaches the transmitted MIME before the mand
   try {
     const response = await sendE1a(f, "email", "e1b-a-wire-body");
     assert.equal(response.status, 200);
+    assert.deepEqual(f.providerCalls, ["sendEmail"]);
     const transmittedBody = f.mime[0].split("\r\n\r\n").slice(1).join("\r\n\r\n");
     assert.equal(transmittedBody, [
       "Hello,",
@@ -2941,7 +2951,9 @@ test("E1b C missing route phone refuses manual and sequence sends even when the 
     const response = await sendE1a(f, "email", "e1b-c-missing-phone");
     assert.equal(response.status, 409);
     assert.match((await response.json() as { reason: string }).reason, /missing practice phone/i);
+    assert.equal(f.providerCalls.length, 0);
     assert.equal(f.emailVendorCalls.length, 0);
+    assert.equal(f.mime.length, 0);
     assert.equal(f.persistedCommunications.length, 0);
 
     const staff = await f.deps.authenticate("Bearer staff");
@@ -2955,6 +2967,10 @@ test("E1b C missing route phone refuses manual and sequence sends even when the 
       reason: "no-recipient-channel",
       detail: "Patient email is missing practice phone in practice settings.",
     });
+    assert.equal(f.providerCalls.length, 0);
+    assert.equal(f.emailVendorCalls.length, 0);
+    assert.equal(f.mime.length, 0);
+    assert.equal(f.persistedCommunications.length, 0);
   } finally { await f.close(); }
 });
 
