@@ -8668,6 +8668,22 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         }
       });
 
+      const { handleExamViewStateRequest } = await import("./clinical-graph/exam-view-state-endpoint.js");
+      for (const method of ["get", "put"] as const) {
+        app[method]("/clinical-graph/encounters/:encounterId/exam-view-state", async (req, res) => {
+          try {
+            await authenticateWithMedplum();
+            const result = await handleExamViewStateRequest(
+              { authenticate: authenticateStaffRouteForAction("chart.read"), serviceFhir: fhir },
+              { authHeader: req.header("authorization"), params: req.params, method: method === "put" ? "PUT" : "GET", body: req.body },
+            );
+            res.status(result.status).json(result.body);
+          } catch {
+            if (!res.headersSent) res.status(500).json({ error: "Exam view-state request failed." });
+          }
+        });
+      }
+
       await new Promise<void>((resolve, reject) => {
         const listener = app.listen(port, host, () => {
           void educationCatalog.refresh();

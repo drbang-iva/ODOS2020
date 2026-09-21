@@ -1,0 +1,292 @@
+[
+  {
+    "guard": "G1",
+    "mutationFile": "mcp/src/clinical-graph/exam-view-state-store.ts",
+    "command": "cd mcp && node --import tsx --test '--test-name-pattern=S3b3 G1' tests/examViewStateStore.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G1 independent clients share the encounter preference, other encounters stay open",
+        "  error: |-",
+        "  expected:",
+        "  actual:",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G1 independent clients share the encounter preference, other encounters stay open",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G2",
+    "mutationFile": "mcp/src/clinical-graph/exam-view-state-store.ts",
+    "command": "cd mcp && node --import tsx --test '--test-name-pattern=S3b3 G2' tests/examViewStateStore.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G2 collapse does not bump or change the shape record",
+        "  error: |-",
+        "  expected: '1'",
+        "  actual: '2'",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G2 collapse does not bump or change the shape record",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G3",
+    "mutationFile": "ui/src/components/charting/ExamOverviewBoard.tsx",
+    "command": "cd ui && node --import tsx --test '--test-name-pattern=S3b3 G3' tests/examViewState.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G3 S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope",
+        "  error: 'iop must draw despite persisted shelving'",
+        "  expected: true",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G3 S2b2a G6 persisted shelving loses to saved data and unknown evidence, even outside scope",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true,
+    "restoredDiff": ""
+  },
+  {
+    "guard": "G4",
+    "mutationFile": "ui/src/lib/exam-view-state.ts",
+    "command": "cd ui && node --import tsx --test '--test-name-pattern=S3b3 G4' tests/examViewState.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G4 S2b2a G10 unavailable server keeps the board open and collapse works in-session",
+        "  error: 'network denied'",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G4 S2b2a G10 unavailable server keeps the board open and collapse works in-session",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G5",
+    "mutationFile": "ui/src/scenes/EncounterCharting.tsx",
+    "command": "cd ui && node --import tsx --test '--test-name-pattern=S3b3 G5' tests/examViewStateServer.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G5 actual chart keeps a failed write in-session without changing its alert count",
+        "  error: |-",
+        "  expected: 0",
+        "  actual: 1",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G5 actual chart keeps a failed write in-session without changing its alert count",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G6",
+    "mutationFile": "ui/src/lib/exam-view-state.ts",
+    "command": "cd ui && node --import tsx --test '--test-name-pattern=S3b3 G6' tests/examViewStateServer.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G6 rapid toggles coalesce and slow writes retain the final state",
+        "  error: |-",
+        "  expected: 1",
+        "  actual: 7",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G6 rapid toggles coalesce and slow writes retain the final state",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G7",
+    "mutationFile": "mcp/src/clinical-graph/exam-view-state-store.ts",
+    "command": "cd mcp && node --import tsx --test '--test-name-pattern=S3b3 G7' tests/examViewStateStore.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G7 concurrent first writes leave one physical row, subsequent writes need no expectedVersion",
+        "  error: |-",
+        "  expected: 1",
+        "  actual: 2",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G7 concurrent first writes leave one physical row, subsequent writes need no expectedVersion",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G8",
+    "mutationFile": "ui/src/lib/exam-view-state.ts",
+    "command": "cd ui && node --import tsx --test '--test-name-pattern=S3b3 G8' tests/examViewStateServer.test.tsx",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "not ok 1 - S3b3 G8 server persistence never accesses browser localStorage",
+        "  error: |-",
+        "  expected: 0",
+        "  actual: 1",
+        "# tests 1",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b3 G8 server persistence never accesses browser localStorage",
+        "# tests 1",
+        "# pass 1",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true
+  },
+  {
+    "guard": "G9",
+    "mutationFile": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "cd ui && node --import tsx --test '--test-name-pattern=S3b1 G1|S3b2 G1|S3b1 G2 legacy|bookkeeping|unconfirmed shape' tests/examOverviewBoard.test.tsx ../mcp/tests/examShapeRecord.test.ts ../mcp/tests/examOverviewEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": [
+        "ok 1 - S3b1 G8 an unconfirmed shape create serves the unshaped overview and retries next open",
+        "ok 2 - S3b1 failed bookkeeping write serves the unchanged overview",
+        "ok 3 - S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes only the scope",
+        "not ok 4 - S3b1 G1 profile edit and retirement never reshape a stored visit, scope edits preserve shape",
+        "  error: 'Exam scope changed concurrently \u2014 reload and retry.'",
+        "not ok 5 - S3b2 G1 explicit shape survives automatic shaping at the store boundary",
+        "  error: 'Exam scope changed concurrently \u2014 reload and retry.'",
+        "not ok 6 - S3b1 G2 legacy row parses and keeps exactly the same drawn lines without retro-shaping",
+        "  error: 'this.fhir.create is not a function'",
+        "ok 7 - S3b1 G8 unconfirmed bookkeeping write still draws the unshaped board",
+        "# tests 7",
+        "# pass 4",
+        "# fail 3",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "summary": [
+        "ok 1 - S3b1 G8 an unconfirmed shape create serves the unshaped overview and retries next open",
+        "ok 2 - S3b1 failed bookkeeping write serves the unchanged overview",
+        "ok 3 - S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes only the scope",
+        "ok 4 - S3b1 G1 profile edit and retirement never reshape a stored visit, scope edits preserve shape",
+        "ok 5 - S3b2 G1 explicit shape survives automatic shaping at the store boundary",
+        "ok 6 - S3b1 G2 legacy row parses and keeps exactly the same drawn lines without retro-shaping",
+        "ok 7 - S3b1 G8 unconfirmed bookkeeping write still draws the unshaped board",
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ]
+    },
+    "byteRestored": true,
+    "restoredDiff": ""
+  }
+]

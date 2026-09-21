@@ -1,0 +1,6 @@
+{
+  "independentClients": 2,
+  "concurrentFirstWrites": 2,
+  "persistedRows": 1,
+  "subsequentWriteShared": true
+}

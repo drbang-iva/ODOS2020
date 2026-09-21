@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import type { Basic, Encounter } from '@medplum/fhirtypes';
+import { loadVerifiedOperatorFhirClient } from '../../../../scripts/operator-identity.js';
+import { FhirEncounterExamViewStateStore } from '../../../../mcp/src/clinical-graph/exam-view-state-store.js';
+const runtime = resolve('.odos/s3b3-proof');
+const read = (name: string) => JSON.parse(readFileSync(join(runtime, name), 'utf8'));
+const { project, ports } = read('manifest.json'); assert.equal(project, 'odos-s3b3-proof');
+const credentials = read('credentials.json'), fixture = read('fixture.json');
+const options = { baseUrl: `http://127.0.0.1:${ports.medplum}`, projectId: credentials.projectId,
+  postgresUrl: `postgresql://medplum:medplum@127.0.0.1:${ports.postgres}/medplum`, credentialPath: join(runtime, 'operator.env'), statePath: join(runtime, 'operator-state.json') };
+const a = await loadVerifiedOperatorFhirClient(options), b = await loadVerifiedOperatorFhirClient(options);
+const encounter = await a.fhir.create<Encounter>({ resourceType: 'Encounter', status: 'in-progress', class: { code: 'AMB' }, subject: { reference: fixture.patientReference } });
+const one = new FhirEncounterExamViewStateStore(a.fhir), two = new FhirEncounterExamViewStateStore(b.fhir);
+await Promise.all([one.set(encounter.id!, { collapsed: ['wearing'], shelved: [] }), two.set(encounter.id!, { collapsed: ['iop'], shelved: [] })]);
+const rows = await a.fhir.search<Basic>('Basic', { identifier: `urn:odos:encounter-exam-view-state|${encounter.id}`, _count: '100' });
+assert.equal(rows.entry?.length, 1);
+await two.set(encounter.id!, { collapsed: [], shelved: ['cover-test'] });
+assert.deepEqual(await one.get(encounter.id!), { collapsed: [], shelved: ['cover-test'] });
+writeFileSync('docs/build-log/followup-s3b3-view-state/concurrent-create.json', JSON.stringify({ independentClients: 2, concurrentFirstWrites: 2, persistedRows: rows.entry!.length, subsequentWriteShared: true }, null, 2)+'\n');
+console.log('Real Medplum: 2 concurrent first writes, 1 persisted row; subsequent preference shared.');

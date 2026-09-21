@@ -1,0 +1,23 @@
+{
+  "head": "35fa0eed2d78124c3905f5bdd96815fdd2e35d92",
+  "dirty": true,
+  "mcpHash": "359f1a5d086a2535dc94c263f0d2c383ffb03ef480d56d6391d18e5d535059ae",
+  "caddySourceHash": "027328e107732375e5fd97bf977f6d2d0a3ed04b82ab0ea221f848eb84e8b169",
+  "servedAssets": {
+    "/assets/index-baCdISqZ.js": "192b3d225e8099fcaba964befe7ff71966bc74a1e8cdb55ae8750e3aa354729b",
+    "/assets/index-DftPbZKI.css": "e2020e458bb5d389867e5a937032560b1bbe42b0a69c5b34033f484b16355726"
+  },
+  "medplumImageDigest": "[\"medplum/medplum-server@sha256:358ab425b29390067b6cb82bfbaeee48580a703f7cc5b730bed2b2ba7184c1de\"]",
+  "ports": {
+    "frontdoor": 33891,
+    "medplum": 33904,
+    "postgres": 29836,
+    "redis": 30782,
+    "mcp": 28844,
+    "proxy": 28845,
+    "control": 28846
+  },
+  "project": "odos-s3b3-proof",
+  "mcpPid": 56071,
+  "caddyPid": 56084
+}

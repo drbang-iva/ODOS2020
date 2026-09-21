@@ -1,0 +1,65 @@
+{
+  "base-ui": [
+    "# tests 1824",
+    "# pass 1824",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ],
+  "base-mcp": [
+    "# tests 6196",
+    "# pass 6141",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 55",
+    "# todo 0"
+  ],
+  "candidate-ui": [
+    "# tests 1828",
+    "# pass 1828",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ],
+  "candidate-mcp-initial": [
+    "not ok 85 - live FHIR read grant check covers all four chart resources through compiled role policies",
+    "not ok 86 - FHIR read grant CLI passes only with full coverage and always prints its limits",
+    "not ok 87 - an ungranted FHIR create in mcp source makes the CLI fail with its interaction and resource type",
+    "not ok 88 - an ungranted FHIR create in ui tsx makes the CLI fail with its interaction and resource type",
+    "not ok 89 - serviceFhir read of an ungranted non-plumbing resource makes the CLI fail with its name",
+    "not ok 90 - an ungranted FHIR read in ui/src makes the CLI fail with its name",
+    "# tests 6201",
+    "# pass 6140",
+    "# fail 6",
+    "# cancelled 0",
+    "# skipped 55",
+    "# todo 0"
+  ],
+  "candidate-mcp": [
+    "# tests 6201",
+    "# pass 6146",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 55",
+    "# todo 0"
+  ],
+  "G10": [
+    "ok 2 - clinical-graph requests share the literal Vite route and Medplum authorization helpers",
+    "# tests 8",
+    "# pass 8",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ],
+  "preserved-shape": [
+    "# tests 43",
+    "# pass 43",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ]
+}

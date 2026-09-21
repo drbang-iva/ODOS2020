@@ -1,0 +1,38 @@
+[
+  {
+    "width": 1440,
+    "independentBrowsers": 2,
+    "sharedCollapse": true,
+    "shapeVersionBefore": "0ab1519e-2de4-478b-9ea5-3152c70c33b9",
+    "shapeVersionAfter": "0ab1519e-2de4-478b-9ea5-3152c70c33b9",
+    "rapidToggles": 7,
+    "writes": 1,
+    "finalCollapsed": [],
+    "persistedShelfWithData": true,
+    "dataDrawnInBothBrowsers": true,
+    "readFailureOpen": true,
+    "writeFailureSessionOnly": true,
+    "reloadLosesOfflineToggle": true,
+    "chartAlertCount": 0,
+    "editorWorksDuringFailure": true,
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "independentBrowsers": 2,
+    "sharedCollapse": true,
+    "shapeVersionBefore": "a3522a28-3d5d-47ff-a916-67c7a156ee51",
+    "shapeVersionAfter": "a3522a28-3d5d-47ff-a916-67c7a156ee51",
+    "rapidToggles": 7,
+    "writes": 1,
+    "finalCollapsed": [],
+    "persistedShelfWithData": true,
+    "dataDrawnInBothBrowsers": true,
+    "readFailureOpen": true,
+    "writeFailureSessionOnly": true,
+    "reloadLosesOfflineToggle": true,
+    "chartAlertCount": 0,
+    "editorWorksDuringFailure": true,
+    "pageErrors": []
+  }
+]
