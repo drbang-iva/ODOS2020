@@ -33,7 +33,7 @@ function fixture() {
     },
   };
   const provider:any={name:"synthetic",capabilities:{email:true},preflightSuppression:async()=>undefined,sendEmail:async(request:any)=>{requests.push(request);return {outcome:"sent",providerMessageId:"receipt-1"};}};
-  const deps:any={practiceName:"Synthetic Practice",educationCatalog:{get:()=>item},dispatch:{providerFor:()=>"synthetic",senderNumberFor:()=>"+15555550100",getAdapterForRole:()=>provider},now:()=>"2026-09-10T15:00:00Z"};
+  const deps:any={practiceName:"Synthetic Practice",practicePhone:"+15555550100",educationCatalog:{get:()=>item},dispatch:{providerFor:()=>"synthetic",senderNumberFor:()=>"+15555550100",getAdapterForRole:()=>provider},now:()=>"2026-09-10T15:00:00Z"};
   const actor:any={kind:"system",reference:"Device/education-sequence-worker",onBehalfOf:"Practitioner/enroller",fhir};
   const body:any={patientReference:"Patient/synthetic",educationId:"education",version:1,channel:"email",lane:"clinical",alsoUpdateChart:false,idempotencyKey:"sequence-attempt-1"};
   return {resources,requests,patient,item,fhir,provider,deps,actor,body};

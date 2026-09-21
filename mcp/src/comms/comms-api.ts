@@ -1,5 +1,5 @@
 import { rateLimit } from "express-rate-limit";
-import { patientEmailSubject, PatientEmailConfigurationError } from "./patient-email-envelope.js";
+import { patientEducationEmailBody, patientEmailSubject, PatientEmailConfigurationError } from "./patient-email-envelope.js";
 import { seedEducationCatalogStatus, type EducationCatalogRuntime } from "./visionforge-education-catalog.js";
 import { COMMS_PREFERENCE_DEFAULTS, COMMS_PREFERENCE_DEFAULTS_VERSION } from "./suppression-gate.js";
 import type { PatientWriteVersion } from "./patient-version.js";
@@ -91,6 +91,7 @@ export interface CommsApiRouteDeps {
   trackedLinkStore: TrackedLinkStore;
   publicBaseUrl: string;
   practiceName: string;
+  practicePhone?: string;
   emailSubject?: string;
   chartDispatchLane?: "locked_clinical" | "staff_switchable";
   audit: FhirAuditRecorder;
@@ -1062,6 +1063,7 @@ export interface PreparedEducationSequenceDispatch {
   laneSelection: "default" | "overridden";
   campaignId: string;
   subject: string;
+  messageBody: string;
 }
 export type EducationSequencePreparation =
   | { kind: "ready"; prepared: PreparedEducationSequenceDispatch }
@@ -1096,8 +1098,17 @@ async function prepareEducationDispatch(
   const laneSelection = body.lane === defaultLane ? "default" : "overridden";
   const campaignId = `${item.id}@${item.version}`;
 
+  if (body.channel === "email" && !item.urls.email) {
+    throw new CommsApiCapabilityError("Education email artifact is not published.");
+  }
   const subject = body.channel === "email" ? patientEmailSubject({ practiceName: deps.practiceName, subject: deps.emailSubject }) : "";
-  return { item, recipient, laneSelection, campaignId, subject };
+  const messageBody = body.channel === "email" ? patientEducationEmailBody({
+    practiceName: deps.practiceName,
+    phone: deps.practicePhone,
+    title: item.title,
+    url: item.urls.email!,
+  }) : "";
+  return { item, recipient, laneSelection, campaignId, subject, messageBody };
 }
 
 function assertEducationOfferEnabled(item: EducationContentItem, channel: EducationDispatchBody["channel"]): void {
@@ -1144,7 +1155,7 @@ export async function prepareEducationSequenceDispatch(
   if (body.channel === "sms") assertEducationPublicBaseUrl(deps.publicBaseUrl);
   if (!provider.preflightSuppression) throw new CommsApiCapabilityError("Education sequence provider lacks a suppression preflight probe.");
   const result = await provider.preflightSuppression({
-    patientReference: body.patientReference, body: url, subject: prepared.subject,
+    patientReference: body.patientReference, body: body.channel === "email" ? prepared.messageBody : url, subject: prepared.subject,
     campaignType: "clinical-education", campaignId: prepared.campaignId, messageId: body.idempotencyKey,
     suppression: { consentClass: prepared.item.consentClass, ...(prepared.item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) },
   }, body.channel);
@@ -1263,7 +1274,7 @@ async function dispatchEducationInternal(
       throw new CommsApiNotFoundError("Education content not found.");
     }
   }
-  const { item, recipient, laneSelection, campaignId, subject } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body, mode);
+  const { item, recipient, laneSelection, campaignId, subject, messageBody } = options.prepared ?? await prepareEducationDispatch(deps, staff.fhir, patient, body, mode);
   if (options.prepared) assertEducationOfferEnabled(item, body.channel);
   const requiredConsent = { consentClass: item.consentClass,
     ...(actor.kind === "system" && item.consentClass === "marketing" ? { requiresMarketingConsent: true } : {}) };
@@ -1313,7 +1324,7 @@ async function dispatchEducationInternal(
       claimId: randomUUID(),
       patientReference: body.patientReference,
       senderReference,
-      body: url,
+      body: messageBody,
       requestFingerprint: JSON.stringify({
         patientReference: body.patientReference,
         recipient: recipient.value,
@@ -1371,7 +1382,7 @@ async function dispatchEducationInternal(
       patientReference: body.patientReference,
       toAddress: recipient.value,
       subject,
-      body: url,
+      body: messageBody,
       campaignType: "clinical-education",
       campaignId,
       messageId: body.idempotencyKey,

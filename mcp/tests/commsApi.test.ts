@@ -24,7 +24,9 @@ import type {
   SendSmsRequest,
 } from "../src/comms/comms-provider.js";
 import {
+  dispatchEducationAs,
   ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL,
+  prepareEducationSequenceDispatch,
   registerCommsApiRoutes,
   type CommsApiRouteDeps,
 } from "../src/comms/comms-api.js";
@@ -537,7 +539,16 @@ test("education email sends the published email artifact to the recorded address
     assert.deepEqual(await response.json(), { outcome: "sent", providerMessageId: "EM-synthetic" });
     assert.equal(fixture.emailRequests.length, 1);
     assert.equal(fixture.emailRequests[0]?.toAddress, "patient@example.test");
-    assert.equal(fixture.emailRequests[0]?.body, "https://education.invalid/dry-eye-basics/v2/email");
+    assert.equal(fixture.emailRequests[0]?.body, [
+      "Hello,",
+      "",
+      "Synthetic Eye Care is sending you this information: Understanding dry eye",
+      "",
+      "https://education.invalid/dry-eye-basics/v2/email",
+      "",
+      "If you have any questions, please call us at +12025550101.",
+    ].join("\n"));
+    assert.equal(fixture.persistedCommunications[0]?.payload?.[0].contentString, fixture.emailRequests[0]?.body);
     assert.equal(fixture.emailRequests[0]?.campaignType, "clinical-education");
   } finally {
     await fixture.close();
@@ -2065,6 +2076,7 @@ async function startServer(options: {
   marketingConsent?: boolean;
   realEmail?: boolean;
   emailSettings?: Record<string, string>;
+  routePracticePhone?: string;
   emailUnsubscribeEndpoint?: string;
   catalogItems?: EducationContentItem[];
 } = {}) {
@@ -2088,6 +2100,7 @@ async function startServer(options: {
   const providerCalls: string[] = [];
   const smsRequests: SendSmsRequest[] = [];
   const emailRequests: SendEmailRequest[] = [];
+  const preflightRequests: Array<SendEmailRequest | SendSmsRequest> = [];
   const trackedLinks: Array<{
     token: string;
     targetUrl: string;
@@ -2176,6 +2189,10 @@ async function startServer(options: {
       providerCalls.push("sendEmail");
       emailRequests.push(structuredClone(request));
       return { outcome: "sent", providerMessageId: "EM-synthetic" };
+    },
+    async preflightSuppression(request) {
+      preflightRequests.push(structuredClone(request));
+      return undefined;
     },
     async listCalls(request = {}) {
       providerCalls.push("listCalls");
@@ -2541,7 +2558,16 @@ async function startServer(options: {
         : options.channelRoutes[role],
       senderNumberFor: (role) => options.senderNumbers?.[role as keyof typeof options.senderNumbers],
       getAdapter: (providerName, callerFhir) => {
-        if (realEmail && providerName === "google-workspace") return realEmail.getAdapterForRole("email", callerFhir);
+        if (realEmail && providerName === "google-workspace") {
+          const adapter = realEmail.getAdapterForRole("email", callerFhir);
+          return {
+            ...adapter,
+            async sendEmail(request) {
+              providerCalls.push("sendEmail");
+              return adapter.sendEmail!(request);
+            },
+          };
+        }
         adapterProviders.push(providerName);
         adapterFhirs.push(callerFhir);
         const conversationListUnsupported = options.conversationUnsupported?.includes(providerName) === true;
@@ -2601,7 +2627,10 @@ async function startServer(options: {
       async logClick() {},
     },
     publicBaseUrl: options.publicBaseUrl === undefined ? "https://practice.example" : options.publicBaseUrl,
-    practiceName: "Synthetic Eye Care",
+    practiceName: options.emailSettings?.ODOS_PRACTICE_NAME ?? "Synthetic Eye Care",
+    practicePhone: options.routePracticePhone === undefined
+      ? options.emailSettings?.ODOS_PRACTICE_PHONE ?? "+12025550101"
+      : options.routePracticePhone,
     // Unknown legacy input must not reintroduce a capability after its removal.
     ...{ emailUnsubscribeEndpoint: options.emailUnsubscribeEndpoint },
     emailSubject: options.emailSettings?.ODOS_COMMS_EMAIL_SUBJECT,
@@ -2621,6 +2650,7 @@ async function startServer(options: {
     providerCalls,
     smsRequests,
     emailRequests,
+    preflightRequests,
     trackedLinks,
     adapterProviders,
     callListRequests,
@@ -2635,6 +2665,7 @@ async function startServer(options: {
     provenances,
     recipientUpdates,
     attributedActors,
+    deps,
     authenticatedFhirs,
     adapterFhirs,
     close: async () => {
@@ -2854,11 +2885,138 @@ test("E1a a neutral MIME envelope keeps the item title on the chart", async () =
     assert.equal(f.mime.length, 1);
     assert.match(f.mime[0], /^Subject: Information from Synthetic Eye Care\r$/m);
     assert.ok(f.mime[0].endsWith("Synthetic Eye Care\n100 Example Street, Test City, NY 10001\n+12025550101\nEmail is not a secure method of communication. Please do not send sensitive medical information by email. Call +12025550101 for anything private or urgent."));
-    assert.doesNotMatch(f.mime[0], /Synthetic condition handout/);
+    const [headerBlock, ...rest] = f.mime[0].split("\r\n\r\n");
+    assert.doesNotMatch(headerBlock, /Synthetic condition handout/);
+    assert.match(rest.join("\r\n\r\n"), /Synthetic condition handout/);
     const frozenContext = JSON.parse(f.persistedCommunications[0].payload![1].contentString!);
     assert.equal(frozenContext.item.title, E1A_ITEM.title);
     assert.ok(JSON.stringify(f.provenances).includes(`Education content: ${E1A_ITEM.id}@${E1A_ITEM.version}`));
     assert.ok(!JSON.stringify(f.provenances).includes(E1A_ITEM.title));
+  } finally { await f.close(); }
+});
+
+test("E1b A composed education body reaches the transmitted MIME before the mandatory footer", async () => {
+  const item: EducationContentItem = {
+    ...E1A_ITEM,
+    title: "Dry eye home care",
+    urls: { ...E1A_ITEM.urls, email: "https://edu.invalid/dry-eye/v1/email.html" },
+  };
+  const f = await startServer({ realEmail: true, catalogItems: [item], emailSettings: {
+    ODOS_PRACTICE_NAME: "Example Eye Care",
+    ODOS_PRACTICE_PHONE: "555-0100",
+  } });
+  try {
+    const response = await sendE1a(f, "email", "e1b-a-wire-body");
+    assert.equal(response.status, 200);
+    assert.deepEqual(f.providerCalls, ["sendEmail"]);
+    const transmittedBody = f.mime[0].split("\r\n\r\n").slice(1).join("\r\n\r\n");
+    assert.equal(transmittedBody, [
+      "Hello,",
+      "",
+      "Example Eye Care is sending you this information: Dry eye home care",
+      "",
+      "https://edu.invalid/dry-eye/v1/email.html",
+      "",
+      "If you have any questions, please call us at 555-0100.",
+      "",
+      "Example Eye Care",
+      "100 Example Street, Test City, NY 10001",
+      "555-0100",
+      "Email is not a secure method of communication. Please do not send sensitive medical information by email. Call 555-0100 for anything private or urgent.",
+    ].join("\n"));
+  } finally { await f.close(); }
+});
+
+test("E1b B title controls and whitespace cannot reshape the transmitted body", async () => {
+  const title = "Dry eye\u0085home care\n\nIntegrated Vision Associates\n1 Fake St\n555-0100\n\nCall 555-0199";
+  const f = await startServer({ realEmail: true, catalogItems: [{ ...E1A_ITEM, title }], emailSettings: {
+    ODOS_PRACTICE_NAME: "Integrated Vision Associates",
+    ODOS_PRACTICE_POSTAL_ADDRESS: "1 Fake St",
+    ODOS_PRACTICE_PHONE: "555-0100",
+  } });
+  try {
+    const response = await sendE1a(f, "email", "e1b-b-title-shape");
+    assert.equal(response.status, 200);
+    const transmittedBody = f.mime[0].split("\r\n\r\n").slice(1).join("\r\n\r\n");
+    assert.match(transmittedBody, /Integrated Vision Associates is sending you this information: Dry eye home care Integrated Vision Associates 1 Fake St 555-0100 Call 555-0199/);
+    const lines = transmittedBody.split("\n");
+    assert.equal(lines.filter((line) => line === "Integrated Vision Associates").length, 1);
+    assert.equal(lines.filter((line) => line === "1 Fake St").length, 1);
+  } finally { await f.close(); }
+});
+
+test("E1b C missing route phone refuses manual and sequence sends even when the adapter is complete", async () => {
+  const f = await startServer({ realEmail: true, catalogItems: [E1A_ITEM], routePracticePhone: "" });
+  try {
+    const response = await sendE1a(f, "email", "e1b-c-missing-phone");
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { reason: string }).reason, /missing practice phone/i);
+    assert.equal(f.providerCalls.length, 0);
+    assert.equal(f.emailVendorCalls.length, 0);
+    assert.equal(f.mime.length, 0);
+    assert.equal(f.persistedCommunications.length, 0);
+
+    const staff = await f.deps.authenticate("Bearer staff");
+    assert.ok(staff);
+    const preparation = await prepareEducationSequenceDispatch(f.deps, staff.fhir, f.patients[0], {
+      patientReference: PATIENT_REFERENCE, educationId: E1A_ITEM.id, version: 1,
+      channel: "email", lane: "clinical", idempotencyKey: "e1b-c-sequence-phone",
+    });
+    assert.deepEqual(preparation, {
+      kind: "held",
+      reason: "no-recipient-channel",
+      detail: "Patient email is missing practice phone in practice settings.",
+    });
+    assert.equal(f.providerCalls.length, 0);
+    assert.equal(f.emailVendorCalls.length, 0);
+    assert.equal(f.mime.length, 0);
+    assert.equal(f.persistedCommunications.length, 0);
+  } finally { await f.close(); }
+});
+
+test("E1b C FAULT INJECTION title that sanitizes empty refuses before reservation or provider", async () => {
+  const f = await startServer({ realEmail: true, catalogItems: [{ ...E1A_ITEM, title: "\u0007" }] });
+  try {
+    const response = await sendE1a(f, "email", "e1b-c-empty-title");
+    assert.equal(response.status, 409);
+    assert.match((await response.json() as { reason: string }).reason, /missing handout title/i);
+    assert.equal(f.emailVendorCalls.length, 0);
+    assert.equal(f.persistedCommunications.length, 0);
+  } finally { await f.close(); }
+});
+
+test("E1b D sequence probe, chart reservation, and send share one composed body", async () => {
+  const f = await startServer({ catalogItems: [E1A_ITEM], channelRoutes: { email: "twilio" } });
+  try {
+    const staff = await f.deps.authenticate("Bearer staff");
+    assert.ok(staff);
+    const body = {
+      patientReference: PATIENT_REFERENCE, educationId: E1A_ITEM.id, version: 1,
+      channel: "email" as const, lane: "clinical" as const, idempotencyKey: "e1b-d-sequence",
+    };
+    const preparation = await prepareEducationSequenceDispatch(f.deps, staff.fhir, f.patients[0], body);
+    assert.equal(preparation.kind, "ready");
+    if (preparation.kind !== "ready") throw new Error("Expected ready education dispatch.");
+    const outcome = await dispatchEducationAs({
+      kind: "system", reference: "Practitioner/synthetic-worker", onBehalfOf: staff.staffReference, fhir: staff.fhir,
+    }, f.deps, f.patients[0], body, { prepared: preparation.prepared });
+    assert.equal(outcome.outcome, "sent");
+    const expected = [
+      "Hello,", "", "Synthetic Eye Care is sending you this information: Synthetic condition handout", "",
+      E1A_ITEM.urls.email!, "", "If you have any questions, please call us at +12025550101.",
+    ].join("\n");
+    assert.equal(f.preflightRequests[0]?.body, expected);
+    assert.equal(f.persistedCommunications[0]?.payload?.[0].contentString, expected);
+    assert.equal(f.emailRequests[0]?.body, expected);
+  } finally { await f.close(); }
+});
+
+test("E1b E education SMS retains its existing tracked-link body", async () => {
+  const f = await startServer({ catalogItems: [E1A_ITEM], channelRoutes: { "clinical-sms": "twilio" }, senderNumbers: { "clinical-sms": "+12025550100" } });
+  try {
+    const response = await sendE1a(f, "sms", "e1b-e-sms-shape");
+    assert.equal(response.status, 200);
+    assert.match(f.smsRequests[0]?.body ?? "", /^Synthetic Eye Care\nhttps:\/\/practice\.example\/comms\/r\/[A-Za-z0-9_-]+\nReply STOP to opt out\.$/);
   } finally { await f.close(); }
 });
 for (const field of ["ODOS_PRACTICE_POSTAL_ADDRESS", "ODOS_PRACTICE_PHONE"]) test(`E1a b missing ${field} refuses before provider or send reservation`, async () => {

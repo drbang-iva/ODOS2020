@@ -1031,6 +1031,7 @@ async function startEnrollmentServer(options: {
     enrollmentStore,
     publicBaseUrl: "https://practice.example",
     practiceName: "Synthetic Eye Care",
+    practicePhone: "+12025550101",
     audit,
     now: () => "2026-09-01T14:00:00.000Z",
   };
