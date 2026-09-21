@@ -87,3 +87,68 @@ test("S3b1 G1 profile edit and retirement never reshape a stored visit, scope ed
   assert.deepEqual(edited.profilesApplied, first.profilesApplied);
   assert.equal(edited.shapedAt, first.shapedAt);
 });
+
+test("S3b2 G1 explicit shape survives automatic shaping at the store boundary", async () => {
+  const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
+  const seed = (await new FhirFollowUpProfileStore(fhir).list())[0];
+  const explicit = await store.pick("e1", "office-visit", actor, null, [seed]);
+  assert.equal(explicit.source, "explicit");
+  let resolved = false;
+  const next = await store.shapeIfAbsent("e1", actor, async () => { resolved = true; return []; });
+  assert.deepEqual(next, explicit);
+  assert.equal(resolved, false);
+});
+
+test("S3b2 G2 explicit replaces derived and explicit, with independent chooser and time", async () => {
+  const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
+  const seed = (await new FhirFollowUpProfileStore(fhir).list())[0];
+  const derived = await store.shapeIfAbsent("e1", actor, async () => [seed]);
+  assert.equal(derived.source, "derived");
+  const explicit = await store.pick("e1", "office-visit", actor, derived.versionId!, []);
+  assert.equal(explicit.source, "explicit");
+  assert.deepEqual(explicit.chosenBy, actor);
+  assert.ok(Number.isFinite(Date.parse(explicit.chosenAt!)));
+  assert.deepEqual(explicit.sectionsOpen, []);
+  const scopeOnly = await store.set("e1", "comprehensive", { reference: "Practitioner/other" }, explicit.versionId!);
+  assert.deepEqual(scopeOnly.chosenBy, actor);
+  assert.equal(scopeOnly.chosenAt, explicit.chosenAt);
+  const repicked = await store.pick("e1", "office-visit", actor, scopeOnly.versionId!, [seed]);
+  assert.equal(repicked.source, "explicit");
+  assert.deepEqual(repicked.sectionsOpen, seed.sectionsOpen.map(section => section.key));
+  await assert.rejects(store.pick("e1", "office-visit", actor, derived.versionId!, []), /concurrently/);
+});
+
+test("S3b2 G3 profile edits do not reshape either source", async () => {
+  const fhir = new ShapeFhir(); const profiles = new FhirFollowUpProfileStore(fhir);
+  const seed = (await profiles.list())[0]; const { versionId: _, ...profile } = seed;
+  const store = new FhirEncounterExamScopeStore(fhir);
+  await store.shapeIfAbsent("derived", actor, async () => [seed]);
+  await store.pick("explicit", "office-visit", actor, null, [seed]);
+  const before = await Promise.all([store.get("derived"), store.get("explicit")]);
+  await profiles.save({ ...profile, version: 2, sectionsOpen: [{ key: "hpi" }, { key: "assessment" }] }, null);
+  for (const [index, id] of ["derived", "explicit"].entries()) {
+    assert.deepEqual(await store.shapeIfAbsent(id, actor, () => profiles.list()), before[index]);
+    assert.deepEqual(await store.get(id), before[index]);
+  }
+});
+
+test("S3b2 G4 stored S3b1 shape without source reads derived without rewriting", async () => {
+  const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
+  const shaped = await store.shapeIfAbsent("e1", actor, async () => []);
+  const value = JSON.parse(fhir.rows[0].extension![0].valueString!);
+  delete value.source;
+  fhir.rows[0].extension![0].valueString = JSON.stringify(value);
+  const before = structuredClone(fhir.rows);
+  assert.deepEqual(await store.get("e1"), { ...shaped, source: "derived" });
+  assert.deepEqual(await store.shapeIfAbsent("e1", actor, async () => { throw new Error("must not resolve"); }), { ...shaped, source: "derived" });
+  assert.deepEqual(fhir.rows, before);
+});
+
+test("S3b2 explicit conditional create and token confirmation retain one winner", async () => {
+  const fhir = new ShapeFhir(); const store = new FhirEncounterExamScopeStore(fhir);
+  const results = await Promise.allSettled([store.pick("e1", "office-visit", actor, null, []), store.pick("e1", "comprehensive", actor, null, [])]);
+  assert.equal(results.filter(row => row.status === "fulfilled").length, 1);
+  assert.equal(fhir.rows.length, 1);
+  fhir.mismatch = true;
+  await assert.rejects(store.pick("e2", "office-visit", actor, null, []), /concurrently/);
+});

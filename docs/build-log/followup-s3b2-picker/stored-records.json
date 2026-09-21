@@ -1,0 +1,166 @@
+[
+  {
+    "width": 390,
+    "encounterId": "722e5a91-3126-412f-a188-67620fd543bc",
+    "rowCount": 1,
+    "versions": {
+      "before": {
+        "versionId": "b37b8cc6-a0bf-43cb-8740-06466021d64d",
+        "value": {
+          "examScope": "comprehensive",
+          "setAt": "2026-09-21T01:20:40.488Z",
+          "profilesApplied": [],
+          "sectionsOpen": [],
+          "shapedAt": "2026-09-21T01:20:40.488Z",
+          "writeToken": "cb0a4a75-68f2-42ff-82bc-5214254ccce8"
+        }
+      },
+      "after": {
+        "versionId": "bb4d1266-226e-4c0a-a07e-46c7386d4263",
+        "value": {
+          "examScope": "office-visit",
+          "setAt": "2026-09-21T01:32:53.850Z",
+          "profilesApplied": [
+            {
+              "profileKey": "glaucoma",
+              "version": 1,
+              "versionId": null
+            }
+          ],
+          "sectionsOpen": [
+            "hpi",
+            "va",
+            "pupils",
+            "cvf",
+            "iop",
+            "dilation",
+            "cup-disc",
+            "ocular-health:posterior:fundus",
+            "imaging",
+            "assessment"
+          ],
+          "shapedAt": "2026-09-21T01:32:53.850Z",
+          "source": "explicit",
+          "chosenBy": {
+            "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+            "display": "R10 Synthetic provider"
+          },
+          "chosenAt": "2026-09-21T01:32:53.850Z",
+          "writeToken": "ff124115-0543-4b9c-ba8d-d9974a71bb6c"
+        }
+      },
+      "afterNothing": {
+        "versionId": "35b9519f-15b2-4833-91d0-6de75eaa3f2b",
+        "value": {
+          "examScope": "office-visit",
+          "setAt": "2026-09-21T01:32:54.999Z",
+          "profilesApplied": [],
+          "sectionsOpen": [],
+          "shapedAt": "2026-09-21T01:32:54.999Z",
+          "source": "explicit",
+          "chosenBy": {
+            "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+            "display": "R10 Synthetic provider"
+          },
+          "chosenAt": "2026-09-21T01:32:54.999Z",
+          "writeToken": "877b2726-f141-42d5-8d93-8988b2948617"
+        }
+      }
+    },
+    "parsedS3b1WithoutSource": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:20:40.488Z",
+      "source": "derived",
+      "examScope": "comprehensive",
+      "versionId": "b37b8cc6-a0bf-43cb-8740-06466021d64d",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-21T01:20:40.488Z"
+    }
+  },
+  {
+    "width": 1440,
+    "encounterId": "9896d454-3020-4512-9d16-8f0a21f9e18b",
+    "rowCount": 1,
+    "versions": {
+      "before": {
+        "versionId": "36df1da4-29d1-421f-b2fd-4fde1dc20016",
+        "value": {
+          "examScope": "comprehensive",
+          "setAt": "2026-09-21T01:20:38.492Z",
+          "profilesApplied": [],
+          "sectionsOpen": [],
+          "shapedAt": "2026-09-21T01:20:38.492Z",
+          "writeToken": "e9ab79c7-9b2f-4dc4-8d0e-49f60ea46047"
+        }
+      },
+      "after": {
+        "versionId": "9a3f043c-da4b-4d85-861f-f1cf98d652a1",
+        "value": {
+          "examScope": "office-visit",
+          "setAt": "2026-09-21T01:32:49.537Z",
+          "profilesApplied": [
+            {
+              "profileKey": "glaucoma",
+              "version": 1,
+              "versionId": null
+            }
+          ],
+          "sectionsOpen": [
+            "hpi",
+            "va",
+            "pupils",
+            "cvf",
+            "iop",
+            "dilation",
+            "cup-disc",
+            "ocular-health:posterior:fundus",
+            "imaging",
+            "assessment"
+          ],
+          "shapedAt": "2026-09-21T01:32:49.537Z",
+          "source": "explicit",
+          "chosenBy": {
+            "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+            "display": "R10 Synthetic provider"
+          },
+          "chosenAt": "2026-09-21T01:32:49.537Z",
+          "writeToken": "d82e2af1-cf4d-47f4-b3c5-a317ac0b6213"
+        }
+      },
+      "afterNothing": {
+        "versionId": "8f2ee7cd-73db-4724-ad85-57afe0a03813",
+        "value": {
+          "examScope": "office-visit",
+          "setAt": "2026-09-21T01:32:50.818Z",
+          "profilesApplied": [],
+          "sectionsOpen": [],
+          "shapedAt": "2026-09-21T01:32:50.818Z",
+          "source": "explicit",
+          "chosenBy": {
+            "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+            "display": "R10 Synthetic provider"
+          },
+          "chosenAt": "2026-09-21T01:32:50.818Z",
+          "writeToken": "a4789299-b55d-4535-9e3c-7839b9b8d31d"
+        }
+      }
+    },
+    "parsedS3b1WithoutSource": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:20:38.492Z",
+      "source": "derived",
+      "examScope": "comprehensive",
+      "versionId": "36df1da4-29d1-421f-b2fd-4fde1dc20016",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-21T01:20:38.492Z"
+    }
+  }
+]

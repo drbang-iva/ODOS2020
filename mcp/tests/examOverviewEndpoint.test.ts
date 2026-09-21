@@ -1,3 +1,4 @@
+import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -957,4 +958,94 @@ test("S3b1 failed bookkeeping write serves the unchanged overview", async () => 
   const result = await handleExamOverviewRequest(deps(fhir, "provider"), request());
   assert.equal(result.status, 200, JSON.stringify(result.body));
   assert.equal((result.body as ExamOverviewProjection).sectionsOpen, undefined);
+});
+
+function pickerResources(): Resource[] {
+  const prior: Encounter = { ...encounter(), id: "prior", period: { start: "2026-08-01T12:00:00Z" }, diagnosis: [{ condition: { reference: "Condition/prior-dx" } }] };
+  const dx: Condition = { resourceType: "Condition", id: "prior-dx", subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/prior" },
+    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: "prior::ocular_hypertension::bilateral" }], code: { text: "Synthetic prior problem" } };
+  return [{ ...encounter(), period: { start: "2026-08-16T12:00:00Z" } }, prior, dx];
+}
+const followPrior = { sourceEncounterReference: "Encounter/prior", sourceConditionReference: "Condition/prior-dx" };
+
+test("S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes only the scope", async () => {
+  const { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } = await import("../src/clinical-graph/diagnosis-pick-endpoint.js");
+  const resources = pickerResources(); (resources[2] as Condition).identifier![0].system = DIAGNOSIS_KEY_IDENTIFIER_SYSTEM;
+  const fhir = new HistoryWorkflowFhir(resources);
+  assert.equal((await handleExamOverviewRequest(deps(fhir, "provider"), request())).status, 200);
+  const before = await handleExamScopeRequest(deps(fhir, "provider"), { ...request(), method: "GET" });
+  const mutations: Resource[] = [];
+  const create = fhir.create.bind(fhir), update = fhir.update.bind(fhir);
+  fhir.create = async resource => { mutations.push(resource); return create(resource); };
+  fhir.update = async (type, id, resource) => { mutations.push(resource); return update(type, id, resource); };
+  const result = await handleExamScopeRequest(deps(fhir, "provider"), { ...request(), method: "PUT", body: { examScope: "office-visit", expectedVersion: (before.body as { versionId: string }).versionId, following: followPrior } });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const scope = result.body as { source: string; chosenBy: { reference: string }; chosenAt: string; sectionsOpen: string[] };
+  assert.equal(scope.source, "explicit");
+  assert.ok(scope.chosenBy.reference.startsWith("Practitioner/"));
+  assert.ok(Number.isFinite(Date.parse(scope.chosenAt)));
+  assert.ok(scope.sectionsOpen.includes("iop"));
+  const overview = await handleExamOverviewRequest(deps(fhir, "provider"), request());
+  assert.equal(overview.status, 200);
+  assert.deepEqual((overview.body as ExamOverviewProjection).sectionsOpen, scope.sectionsOpen);
+  assert.deepEqual((await handleExamScopeRequest(deps(fhir, "provider"), { ...request(), method: "GET" })).body, result.body);
+  assert.equal(mutations.length, 1);
+  assert.equal(mutations[0].resourceType, "Basic");
+  assert.deepEqual(fhir.resources.filter(r => r.resourceType !== "Basic"), resources);
+});
+
+test("S3b2 Nothing to follow is explicit office scope without profiles", async () => {
+  const fhir = new HistoryWorkflowFhir(pickerResources());
+  const result = await handleExamScopeRequest(deps(fhir, "provider"), { ...request(), method: "PUT", body: { examScope: "office-visit", expectedVersion: null, following: null } });
+  assert.equal(result.status, 200);
+  assert.equal((result.body as any).source, "explicit");
+  assert.deepEqual((result.body as any).profilesApplied, []);
+  assert.deepEqual((result.body as any).sectionsOpen, []);
+});
+
+for (const scenario of ["foreign-patient", "wrong-encounter", "unlinked", "future", "refuted", "no-profile"] as const) {
+  test(`S3b2 invalid prior ${scenario} refuses without mutation`, async () => {
+    const { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } = await import("../src/clinical-graph/diagnosis-pick-endpoint.js");
+    const resources = pickerResources(); const prior = resources[1] as Encounter, dx = resources[2] as Condition;
+    dx.identifier![0].system = DIAGNOSIS_KEY_IDENTIFIER_SYSTEM;
+    if (scenario === "foreign-patient") dx.subject.reference = "Patient/foreign";
+    if (scenario === "wrong-encounter") dx.encounter = { reference: "Encounter/other" };
+    if (scenario === "unlinked") prior.diagnosis = [];
+    if (scenario === "future") prior.period = { start: "2026-08-20T12:00:00Z" };
+    if (scenario === "refuted") dx.verificationStatus = { coding: [{ code: "refuted" }] };
+    if (scenario === "no-profile") dx.identifier = [];
+    const fhir = new HistoryWorkflowFhir(resources);
+    const result = await handleExamScopeRequest(deps(fhir, "provider"), { ...request(), method: "PUT", body: { examScope: "office-visit", expectedVersion: null, following: followPrior } });
+    assert.equal(result.status, 409, JSON.stringify(result.body));
+    assert.equal(fhir.writeCount, 0);
+  });
+}
+
+test("S3b2 missing source reads return stale-selection conflict without mutation", async () => {
+  for (const missingId of ["prior", "prior-dx"]) for (const status of [404, 410]) {
+    const fhir = new HistoryWorkflowFhir(pickerResources());
+    const read = fhir.read.bind(fhir);
+    fhir.read = async (type, id) => {
+      if (id === missingId) throw Object.assign(new Error("source removed"), { status });
+      return read(type, id);
+    };
+    const result = await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior });
+    assert.equal(result.status, 409, `${missingId} ${status}: ${JSON.stringify(result.body)}`);
+    assert.match((result.body as { error: string }).error, /no longer an eligible prior visit diagnosis/);
+    assert.equal(fhir.writeCount, 0);
+  }
+});
+
+test("S3b2 source error mapping preserves authorization, outages and missing current encounter", async () => {
+  for (const [failedId, status, expected] of [["prior", 403, 403], ["prior-dx", 403, 403], ["prior", 503, 502], ["prior-dx", 503, 502], ["e1", 404, 404]] as const) {
+    const fhir = new HistoryWorkflowFhir(pickerResources());
+    const read = fhir.read.bind(fhir);
+    fhir.read = async (type, id) => {
+      if (id === failedId) throw Object.assign(new Error("read failed"), { status });
+      return read(type, id);
+    };
+    const result = await scopeRequest(fhir, "PUT", { examScope: "office-visit", expectedVersion: null, following: followPrior });
+    assert.equal(result.status, expected, `${failedId} ${status}: ${JSON.stringify(result.body)}`);
+    assert.equal(fhir.writeCount, 0);
+  }
 });

@@ -1,0 +1,162 @@
+[
+  {
+    "width": 1440,
+    "before": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:20:38.492Z",
+      "source": "derived",
+      "examScope": "comprehensive",
+      "versionId": "36df1da4-29d1-421f-b2fd-4fde1dc20016",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73"
+      },
+      "setAt": "2026-09-21T01:20:38.492Z",
+      "canWrite": true
+    },
+    "after": {
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": null
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment"
+      ],
+      "shapedAt": "2026-09-21T01:32:49.537Z",
+      "source": "explicit",
+      "chosenBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "chosenAt": "2026-09-21T01:32:49.537Z",
+      "examScope": "office-visit",
+      "versionId": "9a3f043c-da4b-4d85-861f-f1cf98d652a1",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-21T01:32:49.537Z",
+      "canWrite": true
+    },
+    "afterNothing": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:32:50.818Z",
+      "source": "explicit",
+      "chosenBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "chosenAt": "2026-09-21T01:32:50.818Z",
+      "examScope": "office-visit",
+      "versionId": "8f2ee7cd-73db-4724-ad85-57afe0a03813",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-21T01:32:50.818Z",
+      "canWrite": true
+    },
+    "reloadUnchanged": true,
+    "subsequentOverviewUnchanged": true,
+    "mutations": [
+      {
+        "method": "PUT",
+        "path": "/clinical-graph/encounters/9896d454-3020-4512-9d16-8f0a21f9e18b/exam-scope"
+      }
+    ],
+    "pageErrors": []
+  },
+  {
+    "width": 390,
+    "before": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:20:40.488Z",
+      "source": "derived",
+      "examScope": "comprehensive",
+      "versionId": "b37b8cc6-a0bf-43cb-8740-06466021d64d",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73"
+      },
+      "setAt": "2026-09-21T01:20:40.488Z",
+      "canWrite": true
+    },
+    "after": {
+      "profilesApplied": [
+        {
+          "profileKey": "glaucoma",
+          "version": 1,
+          "versionId": null
+        }
+      ],
+      "sectionsOpen": [
+        "hpi",
+        "va",
+        "pupils",
+        "cvf",
+        "iop",
+        "dilation",
+        "cup-disc",
+        "ocular-health:posterior:fundus",
+        "imaging",
+        "assessment"
+      ],
+      "shapedAt": "2026-09-21T01:32:53.850Z",
+      "source": "explicit",
+      "chosenBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "chosenAt": "2026-09-21T01:32:53.850Z",
+      "examScope": "office-visit",
+      "versionId": "bb4d1266-226e-4c0a-a07e-46c7386d4263",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-21T01:32:53.850Z",
+      "canWrite": true
+    },
+    "afterNothing": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:32:54.999Z",
+      "source": "explicit",
+      "chosenBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "chosenAt": "2026-09-21T01:32:54.999Z",
+      "examScope": "office-visit",
+      "versionId": "35b9519f-15b2-4833-91d0-6de75eaa3f2b",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73",
+        "display": "R10 Synthetic provider"
+      },
+      "setAt": "2026-09-21T01:32:54.999Z",
+      "canWrite": true
+    },
+    "reloadUnchanged": true,
+    "subsequentOverviewUnchanged": true,
+    "mutations": [
+      {
+        "method": "PUT",
+        "path": "/clinical-graph/encounters/722e5a91-3126-412f-a188-67620fd543bc/exam-scope"
+      }
+    ],
+    "pageErrors": []
+  }
+]

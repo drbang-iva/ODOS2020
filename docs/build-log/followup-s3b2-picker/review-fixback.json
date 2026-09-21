@@ -1,0 +1,18 @@
+{
+  "source-missing": {
+    "command": "node --import tsx --test --test-name-pattern=\"S3b2 missing source|S3b2 source error\" mcp/tests/examOverviewEndpoint.test.ts",
+    "red": "not ok 1 - S3b2 missing source reads return stale-selection conflict without mutation\nok 2 - S3b2 source error mapping preserves authorization, outages and missing current encounter\n# tests 2\n# pass 1\n# fail 1\n# skipped 0",
+    "green": "ok 1 - S3b2 missing source reads return stale-selection conflict without mutation\nok 2 - S3b2 source error mapping preserves authorization, outages and missing current encounter\n# tests 2\n# pass 2\n# fail 0\n# skipped 0"
+  },
+  "source-other-errors": {
+    "command": "node --import tsx --test --test-name-pattern='S3b2 source error' mcp/tests/examOverviewEndpoint.test.ts",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 source error mapping preserves authorization, outages and missing current encounter\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 source error mapping preserves authorization, outages and missing current encounter\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  }
+}

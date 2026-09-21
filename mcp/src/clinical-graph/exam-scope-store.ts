@@ -13,6 +13,13 @@ const shapeSchema = z.object({
   profilesApplied: z.array(z.object({ profileKey: z.string().min(1), version: z.number().int().positive(), versionId: z.string().min(1).nullable() })),
   sectionsOpen: z.array(z.string().min(1)),
   shapedAt: z.string().datetime(),
+  source: z.enum(["derived", "explicit"]).default("derived"),
+  chosenBy: z.object({ reference: z.string().regex(/^Practitioner\/[^/]+$/), display: z.string().optional() }).optional(),
+  chosenAt: z.string().datetime().optional(),
+}).superRefine((shape, ctx) => {
+  if (shape.source === "explicit" && (!shape.chosenBy || !shape.chosenAt)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "An explicit shape requires its chooser and time." });
+  }
 });
 type ExamShape = z.infer<typeof shapeSchema>;
 
@@ -50,11 +57,23 @@ export class FhirEncounterExamScopeStore {
     if (existing) return parseScope(existing);
     const profiles = await resolve();
     const shape: ExamShape = {
-      profilesApplied: profiles.map(({ profileKey, version, versionId }) => ({ profileKey, version, versionId })),
-      sectionsOpen: [...new Set(profiles.flatMap(profile => profile.sectionsOpen.map(section => section.key)))],
+      ...freezeProfiles(profiles),
       shapedAt: new Date().toISOString(),
+      source: "derived",
     };
     return this.write(encounterId, "comprehensive", setBy, null, undefined, shape);
+  }
+
+  async pick(encounterId: string, examScope: ExamScope, chosenBy: Reference<Practitioner>, expectedVersion: string | null, profiles: FollowUpProfileRecord[]): Promise<EncounterExamScope> {
+    const existing = await this.stored(encounterId);
+    if (existing) parseScope(existing);
+    if ((existing?.meta?.versionId ?? null) !== expectedVersion) throw concurrentEdit();
+    const chosenAt = new Date().toISOString();
+    const shape = shapeSchema.parse({
+      ...freezeProfiles(profiles),
+      shapedAt: chosenAt, source: "explicit", chosenBy, chosenAt,
+    });
+    return this.write(encounterId, examScope, chosenBy, expectedVersion, existing, shape);
   }
 
   async set(encounterId: string, examScope: ExamScope, setBy: Reference<Practitioner>, expectedVersion: string | null): Promise<EncounterExamScope> {
@@ -106,4 +125,11 @@ function parseScope(resource: Basic): EncounterExamScope {
 
 function concurrentEdit(): Error {
   return Object.assign(new Error("Exam scope changed concurrently — reload and retry."), { status: 409 });
+}
+
+function freezeProfiles(profiles: FollowUpProfileRecord[]) {
+  return {
+    profilesApplied: profiles.map(({ profileKey, version, versionId }) => ({ profileKey, version, versionId })),
+    sectionsOpen: [...new Set(profiles.flatMap(profile => profile.sectionsOpen.map(section => section.key)))],
+  };
 }

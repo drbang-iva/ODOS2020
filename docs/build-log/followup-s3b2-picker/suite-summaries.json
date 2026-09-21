@@ -1,0 +1,57 @@
+{
+  "base-ui": [
+    "# tests 1816",
+    "# suites 0",
+    "# pass 1816",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0"
+  ],
+  "base-mcp": [
+    "# tests 6175",
+    "# suites 0",
+    "# pass 6120",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 55"
+  ],
+  "candidate-mcp": [
+    "# tests 6190",
+    "# suites 0",
+    "# pass 6135",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 55",
+    "# todo 0"
+  ],
+  "rev1-candidate-ui": [
+    "not ok 876 - EncounterCharting fails open when the section-group catalog returns 500",
+    "not ok 881 - S1 G7 409 race refetches pins and preserves specific message",
+    "not ok 882 - S1 catalog freshness ignores older success after a newer save refresh",
+    "not ok 883 - S1 catalog freshness ignores older failure after a newer save refresh",
+    "# tests 1820",
+    "# suites 0",
+    "# pass 1816",
+    "# fail 4",
+    "# cancelled 0",
+    "# skipped 0"
+  ],
+  "candidate-ui": [
+    "# tests 1824",
+    "# suites 0",
+    "# pass 1824",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 0",
+    "# todo 0"
+  ],
+  "pre-fixback-candidate-mcp": [
+    "# tests 6188",
+    "# suites 0",
+    "# pass 6133",
+    "# fail 0",
+    "# cancelled 0",
+    "# skipped 55",
+    "# todo 0"
+  ]
+}

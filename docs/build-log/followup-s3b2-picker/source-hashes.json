@@ -1,0 +1,6 @@
+{
+  "mcp/src/clinical-graph/exam-scope-store.ts": "b600dedc18a5d8540ffc6f3e3d7a94395abcafcb17343984e14b0573e0b5f237",
+  "mcp/src/clinical-graph/exam-overview-endpoint.ts": "d91dbe136fc393f8ab8455bc176bb744e817cfe566bac1977e2bafb6663b807b",
+  "ui/src/components/charting/EncounterHeader.tsx": "597e65947376dcdaf18324274fac61d242ce9ad9821a61399dc0aa473e095bf9",
+  "ui/src/components/charting/FollowingPicker.tsx": "9731722108286c392a72f93d1c5c6e17369b677b943dc60216c0869930dacab3"
+}

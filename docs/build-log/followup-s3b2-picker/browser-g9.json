@@ -1,0 +1,42 @@
+[
+  {
+    "width": 1440,
+    "kind": "failed",
+    "baselineAlerts": 0,
+    "failedReadAlerts": 0,
+    "messageVisible": true,
+    "emptyCopyAbsent": true,
+    "comprehensiveSelectable": true,
+    "nothingApplied": true
+  },
+  {
+    "width": 1440,
+    "kind": "unrecognized",
+    "baselineAlerts": 0,
+    "failedReadAlerts": 0,
+    "messageVisible": true,
+    "emptyCopyAbsent": true,
+    "comprehensiveSelectable": true,
+    "nothingApplied": true
+  },
+  {
+    "width": 390,
+    "kind": "failed",
+    "baselineAlerts": 0,
+    "failedReadAlerts": 0,
+    "messageVisible": true,
+    "emptyCopyAbsent": true,
+    "comprehensiveSelectable": true,
+    "nothingApplied": true
+  },
+  {
+    "width": 390,
+    "kind": "unrecognized",
+    "baselineAlerts": 0,
+    "failedReadAlerts": 0,
+    "messageVisible": true,
+    "emptyCopyAbsent": true,
+    "comprehensiveSelectable": true,
+    "nothingApplied": true
+  }
+]

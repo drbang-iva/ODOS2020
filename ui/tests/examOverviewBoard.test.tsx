@@ -3992,6 +3992,8 @@ test("a diagnosis-led finding mutation refreshes permanent completeness", async 
 });
 
 interface RenderEncounterOptions {
+  previousExams?: unknown;
+  previousExamsStatus?: number;
   sectionGroupCatalog?: import("../src/lib/finding-section-groups").FindingSectionGroupCatalog;
   writeRequests?: Array<{ url: string; method: string; body: unknown }>;
   scopeRequests?: unknown[];
@@ -4254,7 +4256,7 @@ async function renderEncounter(projection: unknown, options: RenderEncounterOpti
       return jsonResponse({ canWrite: false, proposals: [], attachedProcedures: [] });
     }
     if (url.includes("/clinical-graph/encounters/exam-1/previous-exams")) {
-      return jsonResponse({ pageSize: 4, encounters: [] });
+      return new Response(JSON.stringify(options.previousExams ?? { pageSize: 4, encounters: [] }), { status: options.previousExamsStatus ?? 200, headers: { "Content-Type": "application/json" } });
     }
     if (url.includes("/clinical-graph/longitudinal-imaging?")) {
       return jsonResponse({ images: [{ mediaReference: "Media/photo", title: "Synthetic clinical photo", createdAt: "2026-09-09", contentType: "image/png", contentState: "missing", structure: "Lid margin" }] });
@@ -4676,3 +4678,42 @@ test("S3b1 G8 unconfirmed bookkeeping write still draws the unshaped board", asy
   };
   assert.deepEqual(draw(projection), draw(zeroFindingComprehensiveProjection()));
 });
+
+
+test("S3b2 G5 real chart picker writes only scope and refreshes the board", async () => {
+  const writes: Array<{url: string; method: string; body: unknown}> = [];
+  const h = await renderEncounter(zeroFindingComprehensiveProjection(), { writeRequests: writes, previousExams: { pageSize: 4, encounters: [{
+    encounterReference: "Encounter/prior", date: "2026-08-01T12:00:00Z", visitType: "Synthetic", diagnoses: [{
+      conditionReference: "Condition/prior", display: "Synthetic prior problem", identity: { coding: [], laterality: "OU" }, findings: [], checked: false,
+    }],
+  }] } });
+  try {
+    const before = h.overviewFetchCount();
+    const follow = h.renderer.root.findAllByType("button").find(button => textContent(button) === "Follow this");
+    assert.ok(follow);
+    writes.length = 0;
+    await act(async () => { await follow.props.onClick(); await flushEffects(); });
+    assert.deepEqual(writes, [{ url: "/clinical-graph/encounters/exam-1/exam-scope", method: "PUT", body: {
+      examScope: "office-visit", expectedVersion: "1", following: { sourceEncounterReference: "Encounter/prior", sourceConditionReference: "Condition/prior" },
+    } }]);
+    assert.ok(h.overviewFetchCount() > before);
+    assert.equal(h.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+  } finally { h.restore(); }
+});
+
+
+for (const kind of ["failed", "unrecognized"] as const) {
+  test(`S3b2 G9a ${kind} previous-exams read preserves the chart alert count`, async () => {
+    const base = await renderEncounter(zeroFindingComprehensiveProjection(), { canWriteScope: false });
+    const baseAlerts = base.renderer.root.findAllByProps({ role: "alert" }).length;
+    base.restore();
+    const h = await renderEncounter(zeroFindingComprehensiveProjection(), {
+      previousExams: kind === "failed" ? { error: "Synthetic history read failed" } : { resourceType: "Bundle", entry: [] },
+      previousExamsStatus: kind === "failed" ? 503 : 200,
+    });
+    try {
+      assert.equal(h.renderer.root.findAllByProps({ role: "alert" }).length, baseAlerts);
+      assert.equal(h.renderer.root.findAllByType(ExamOverviewBoard).length, 1);
+    } finally { h.restore(); }
+  });
+}
