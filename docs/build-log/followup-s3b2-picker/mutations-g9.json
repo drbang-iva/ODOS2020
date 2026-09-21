@@ -1,0 +1,28 @@
+[
+  {
+    "guard": "G9a",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G9a tests/examOverviewBoard.test.tsx",
+    "cwd": "ui",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G9a failed previous-exams read preserves the chart alert count\nnot ok 2 - S3b2 G9a unrecognized previous-exams read preserves the chart alert count\n# tests 2\n# pass 0\n# fail 2\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G9a failed previous-exams read preserves the chart alert count\nok 2 - S3b2 G9a unrecognized previous-exams read preserves the chart alert count\n# tests 2\n# pass 2\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G9b",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G9b tests/followingPicker.test.tsx",
+    "cwd": "ui",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G9b failed history visibly fails inside picker while template and Nothing to follow work\nnot ok 2 - S3b2 G9b unrecognized history visibly fails inside picker while template and Nothing to follow work\n# tests 2\n# pass 0\n# fail 2\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G9b failed history visibly fails inside picker while template and Nothing to follow work\nok 2 - S3b2 G9b unrecognized history visibly fails inside picker while template and Nothing to follow work\n# tests 2\n# pass 2\n# fail 0\n# skipped 0"
+    }
+  }
+]

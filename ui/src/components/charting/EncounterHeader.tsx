@@ -1,3 +1,4 @@
+import { FollowingPicker, type FollowingChoice } from "./FollowingPicker";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import type { Appointment, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
@@ -75,6 +76,7 @@ export function EncounterHeader({
   canWriteDiagnosis = false,
   onUndo,
 }: Props) {
+  const scopeSelection = useExamScopeSelection(encounterId, onExamScopeChanged, completeness);
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [appointmentError, setAppointmentError] = useState<string | null>(null);
@@ -276,7 +278,7 @@ export function EncounterHeader({
           migrated ? "Migrated" : encounter?.status ?? "loading",
         ].filter(Boolean).join(" · ")}
         completeness={completeness}
-        examScopeControl={<ExamScopePicker key={encounterId} encounterId={encounterId} onChanged={onExamScopeChanged} />}
+        examScopeControl={<ExamScopePicker {...scopeSelection} />}
         unassignedCount={unassignedCount}
         visitCharge={visitCharge}
         brokenDiagnosisDisplay={brokenDiagnosisDisplay}
@@ -314,6 +316,9 @@ export function EncounterHeader({
 
       <div className="px-5 pb-4">
         {appointment && <AppointmentContextBanner appointment={appointment} />}
+        {scopeSelection.scope?.canWrite && <FollowingPicker key={encounterId} encounterReference={`Encounter/${encounterId}`}
+          source={scopeSelection.scope.source} busy={scopeSelection.busy}
+          onPick={choice => scopeSelection.change(choice.examScope, choice.following)} />}
 
         {error && (
           <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
@@ -782,13 +787,14 @@ export function DiagnosisCompletenessDialogActions({
 
 interface ExamScopeSelection {
   examScope: string;
+  source?: "derived" | "explicit";
   versionId?: string;
   setBy?: { reference?: string; display?: string };
   setAt?: string;
   canWrite: boolean;
 }
 
-function ExamScopePicker({ encounterId, onChanged }: { encounterId: string; onChanged?: () => void }) {
+function useExamScopeSelection(encounterId: string, onChanged?: () => void, refreshKey?: ClinicalExamCompleteness) {
   const [scope, setScope] = useState<ExamScopeSelection>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -809,15 +815,15 @@ function ExamScopePicker({ encounterId, onChanged }: { encounterId: string; onCh
       if (mounted.current && !controller.signal.aborted) setError(err instanceof Error ? err.message : String(err));
     });
     return () => { mounted.current = false; controller.abort(); };
-  }, [encounterId]);
-  async function change(examScope: string) {
-    if (!scope?.canWrite || busy) return;
+  }, [encounterId, refreshKey]);
+  async function change(examScope: string, following?: FollowingChoice["following"]): Promise<boolean> {
+    if (!scope?.canWrite || busy) return false;
     setBusy(true);
     setError(undefined);
     try {
       const response = await fetch(endpoint, {
         method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ examScope, expectedVersion: scope.versionId ?? null }),
+        body: JSON.stringify({ examScope, expectedVersion: scope.versionId ?? null, ...(following !== undefined ? { following } : {}) }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -825,12 +831,20 @@ function ExamScopePicker({ encounterId, onChanged }: { encounterId: string; onCh
         throw new Error(body.error ?? "Exam scope could not be saved.");
       }
       if (mounted.current) { setScope(body); onChanged?.(); }
+      return true;
     } catch (err) {
       if (mounted.current) setError(err instanceof Error ? err.message : String(err));
+      return false;
     } finally {
       if (mounted.current) setBusy(false);
     }
   }
+  return { scope, busy, error, change, reload: () => {
+    setError(undefined); void readScope().catch(err => { if (mounted.current) setError(err.message); });
+  } };
+}
+
+function ExamScopePicker({ scope, busy, error, change, reload }: ReturnType<typeof useExamScopeSelection>) {
   return <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
     <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
       Exam scope
@@ -844,8 +858,6 @@ function ExamScopePicker({ encounterId, onChanged }: { encounterId: string; onCh
       </select>
     </label>
     {scope && <small style={{ maxWidth: 190, overflowWrap: "anywhere", fontSize: 10 }}>{scope.setBy ? `Set by ${scope.setBy.display ?? scope.setBy.reference}${scope.setAt ? ` · ${new Date(scope.setAt).toLocaleString()}` : ""}` : "Default · Comprehensive"}</small>}
-    {error && <span role="alert" style={{ fontSize: 12 }}>{error} <button type="button" onClick={() => {
-      setError(undefined); void readScope().catch(err => { if (mounted.current) setError(err.message); });
-    }}>Reload scope</button></span>}
+    {error && <span role="alert" style={{ fontSize: 12 }}>{error} <button type="button" onClick={reload}>Reload scope</button></span>}
   </div>;
 }

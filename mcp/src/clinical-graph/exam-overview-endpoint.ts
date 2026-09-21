@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import { isDeepStrictEqual } from "node:util";
 import { loadEncounterFindingState, projectCurrentFindings, type CurrentFindingProjection } from "./current-finding-reader.js";
@@ -107,21 +108,8 @@ export async function handleExamOverviewRequest(
     let scope = await scopeStore.get(encounterId);
     if (!scope.versionId) {
       try {
-        scope = await scopeStore.shapeIfAbsent(encounterId, { reference: staff.staffReference }, async () => {
-          const [profiles, catalog] = await Promise.all([
-            new FhirFollowUpProfileStore(serviceFhir).list(),
-            new FhirDiagnosisCatalogStore(serviceFhir).list(),
-          ]);
-          const normalizeFamily = (value: string) => value.trim().toLowerCase().replace(/[-_]+/g, " ");
-          const families = new Set(encounterConditions.flatMap(condition => {
-            if (condition.verificationStatus?.coding?.some(coding => ["entered-in-error", "refuted"].includes(coding.code ?? ""))) return [];
-            const identifier = condition.identifier?.find(row => row.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
-            const key = parseDiagnosisIdentifier(identifier, encounterId).diagnosisKey;
-            const diagnosis = catalog.find(row => row.stableKey === key);
-            return diagnosis ? [normalizeFamily(diagnosis.clinicalFamily)] : [];
-          }));
-          return profiles.filter(profile => profile.active && profile.matchesDiagnosisFamilies.some(family => families.has(normalizeFamily(family))));
-        });
+        scope = await scopeStore.shapeIfAbsent(encounterId, { reference: staff.staffReference },
+          () => resolveFollowUpProfiles(serviceFhir, encounterConditions, encounterId));
       } catch (error) {
         // Opening the board must not depend on bookkeeping persistence.
         const status = errorStatus(error);
@@ -543,6 +531,26 @@ export async function loadOverviewFindingEvidence(
   return {projection,observations:state.observations,carriedWithoutCurrentEvidence};
 }
 
+async function resolveFollowUpProfiles(fhir: ExamOverviewFhirClient, conditions: Condition[], encounterId: string) {
+  const [profiles, catalog] = await Promise.all([
+    new FhirFollowUpProfileStore(fhir).list(), new FhirDiagnosisCatalogStore(fhir).list(),
+  ]);
+  const normalizeFamily = (value: string) => value.trim().toLowerCase().replace(/[-_]+/g, " ");
+  const families = new Set(conditions.flatMap(condition => {
+    if (condition.verificationStatus?.coding?.some(coding => ["entered-in-error", "refuted"].includes(coding.code ?? ""))) return [];
+    const identifier = condition.identifier?.find(row => row.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
+    const key = parseDiagnosisIdentifier(identifier, encounterId).diagnosisKey;
+    const diagnosis = catalog.find(row => row.stableKey === key);
+    return diagnosis ? [normalizeFamily(diagnosis.clinicalFamily)] : [];
+  }));
+  return profiles.filter(profile => profile.active && profile.matchesDiagnosisFamilies.some(family => families.has(normalizeFamily(family))));
+}
+
+const followingSchema = z.object({
+  sourceEncounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]+$/),
+  sourceConditionReference: z.string().regex(/^Condition\/[A-Za-z0-9.-]+$/),
+}).strict().nullable();
+
 export async function handleExamScopeRequest(
   deps: ExamOverviewEndpointDeps,
   input: { authHeader: string | undefined; params: unknown; method: "GET" | "PUT"; body?: unknown },
@@ -555,10 +563,14 @@ export async function handleExamScopeRequest(
   }
   const encounterId = readEncounterId(input.params);
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
-  const body = input.body as { examScope?: unknown; expectedVersion?: unknown } | undefined;
+  const body = input.body as { examScope?: unknown; expectedVersion?: unknown; following?: unknown } | undefined;
   if (input.method === "PUT" && (!body || typeof body.examScope !== "string" || !["comprehensive", "office-visit"].includes(body.examScope) ||
     !(body.expectedVersion === null || (typeof body.expectedVersion === "string" && /^[A-Za-z0-9.-]+$/.test(body.expectedVersion))))) {
     return { status: 400, body: { error: "A valid exam scope and expected version are required." } };
+  }
+  const following = body?.following === undefined ? undefined : followingSchema.safeParse(body.following);
+  if (input.method === "PUT" && following && (!following.success || (following.data === null && body?.examScope !== "office-visit"))) {
+    return { status: 400, body: { error: "Choose a prior diagnosis, or Nothing to follow with Office visit." } };
   }
   try {
     const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
@@ -570,8 +582,30 @@ export async function handleExamScopeRequest(
     if (input.method === "PUT") {
       const names = await practitionerNamesByReference(staff.fhir, [{ reference: staff.staffReference }]);
       const display = names.get(staff.staffReference);
-      scope = await store.set(encounterId, body!.examScope as "comprehensive" | "office-visit",
-        { reference: staff.staffReference, ...(display ? { display } : {}) }, body!.expectedVersion as string | null);
+      const actor = { reference: staff.staffReference, ...(display ? { display } : {}) };
+      if (following?.success) {
+        let profiles: Awaited<ReturnType<typeof resolveFollowUpProfiles>> = [];
+        if (following.data) {
+          const { sourceEncounterReference, sourceConditionReference } = following.data;
+          const [prior, condition] = await Promise.all([
+            staff.fhir.read<Encounter>("Encounter", sourceEncounterReference.slice(10)),
+            staff.fhir.read<Condition>("Condition", sourceConditionReference.slice(10)),
+          ]);
+          const priorTime = Date.parse(prior.period?.start ?? ""), currentTime = Date.parse(encounter.period?.start ?? "");
+          if (prior.status === "entered-in-error" || prior.subject?.reference !== encounter.subject.reference ||
+            condition.subject.reference !== encounter.subject.reference || condition.encounter?.reference !== sourceEncounterReference ||
+            !prior.diagnosis?.some(row => row.condition.reference === sourceConditionReference) ||
+            !Number.isFinite(priorTime) || !Number.isFinite(currentTime) || priorTime >= currentTime ||
+            condition.verificationStatus?.coding?.some(row => ["refuted", "entered-in-error"].includes(row.code ?? ""))) {
+            return { status: 409, body: { error: "This diagnosis is no longer an eligible prior visit diagnosis. Reload and choose again." } };
+          }
+          profiles = await resolveFollowUpProfiles(deps.serviceFhir ?? staff.fhir, [condition], sourceEncounterReference.slice(10));
+          if (!profiles.length) return { status: 409, body: { error: "No active follow-up shape matches this diagnosis." } };
+        }
+        scope = await store.pick(encounterId, body!.examScope as "comprehensive" | "office-visit", actor, body!.expectedVersion as string | null, profiles);
+      } else {
+        scope = await store.set(encounterId, body!.examScope as "comprehensive" | "office-visit", actor, body!.expectedVersion as string | null);
+      }
     } else {
       scope = await store.get(encounterId);
     }

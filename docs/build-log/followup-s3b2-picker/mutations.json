@@ -1,0 +1,114 @@
+[
+  {
+    "guard": "G1",
+    "file": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G1 mcp/tests/examShapeRecord.test.ts",
+    "cwd": ".",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G1 explicit shape survives automatic shaping at the store boundary\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G1 explicit shape survives automatic shaping at the store boundary\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G2",
+    "file": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G2 mcp/tests/examShapeRecord.test.ts",
+    "cwd": ".",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G2 explicit replaces derived and explicit, with independent chooser and time\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G2 explicit replaces derived and explicit, with independent chooser and time\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G3",
+    "file": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G3 mcp/tests/examShapeRecord.test.ts",
+    "cwd": ".",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G3 profile edits do not reshape either source\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G3 profile edits do not reshape either source\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G4",
+    "file": "mcp/src/clinical-graph/exam-scope-store.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G4 mcp/tests/examShapeRecord.test.ts",
+    "cwd": ".",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G4 stored S3b1 shape without source reads derived without rewriting\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G4 stored S3b1 shape without source reads derived without rewriting\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G5",
+    "file": "mcp/src/clinical-graph/exam-overview-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G1 G2 G5 mcp/tests/examOverviewEndpoint.test.ts",
+    "cwd": ".",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes only the scope\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G1 G2 G5 explicit pick replaces derived, survives overview, writes only the scope\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G6",
+    "file": "ui/src/components/charting/FollowingPicker.tsx",
+    "command": "node --import tsx --test --test-name-pattern=S3b2 G6 tests/followingPicker.test.tsx",
+    "cwd": "ui",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b2 G6 picker and projection never infer scope from scheduling\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b2 G6 picker and projection never infer scope from scheduling\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G7",
+    "file": "mcp/src/clinical-graph/exam-overview-endpoint.ts",
+    "command": "node --import tsx --test --test-name-pattern=S3b1 G8 mcp/tests/examOverviewEndpoint.test.ts",
+    "cwd": ".",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - S3b1 G8 an unconfirmed shape create serves the unshaped overview and retries next open\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - S3b1 G8 an unconfirmed shape create serves the unshaped overview and retries next open\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  },
+  {
+    "guard": "G8",
+    "file": "ui/tests/clinicalGraphRouting.test.tsx",
+    "command": "node --import tsx --test --test-name-pattern=clinical-graph requests share tests/clinicalGraphRouting.test.tsx",
+    "cwd": "ui",
+    "red": {
+      "exit": 1,
+      "summary": "not ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers\n# tests 1\n# pass 0\n# fail 1\n# skipped 0"
+    },
+    "green": {
+      "exit": 0,
+      "summary": "ok 1 - clinical-graph requests share the literal Vite route and Medplum authorization helpers\n# tests 1\n# pass 1\n# fail 0\n# skipped 0"
+    }
+  }
+]

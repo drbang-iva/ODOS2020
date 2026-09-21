@@ -1,0 +1,34 @@
+[
+  {
+    "width": 1440,
+    "scope": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:20:38.492Z",
+      "examScope": "comprehensive",
+      "versionId": "36df1da4-29d1-421f-b2fd-4fde1dc20016",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73"
+      },
+      "setAt": "2026-09-21T01:20:38.492Z",
+      "canWrite": true
+    },
+    "pickerAbsent": true
+  },
+  {
+    "width": 390,
+    "scope": {
+      "profilesApplied": [],
+      "sectionsOpen": [],
+      "shapedAt": "2026-09-21T01:20:40.488Z",
+      "examScope": "comprehensive",
+      "versionId": "b37b8cc6-a0bf-43cb-8740-06466021d64d",
+      "setBy": {
+        "reference": "Practitioner/2c666ea8-26d8-4b2f-a03c-5cf77f6f6a73"
+      },
+      "setAt": "2026-09-21T01:20:40.488Z",
+      "canWrite": true
+    },
+    "pickerAbsent": true
+  }
+]
