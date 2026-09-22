@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "followUpRefusal": 403,
+  "draftCreate": 201,
+  "providerQueueStatus": "needs-interpretation",
+  "providerDraftPrefilled": true,
+  "imagingRefusal": 403,
+  "mediaCountUnchanged": true,
+  "callers": {
+    "uploads": "project-admin",
+    "refusals": "staff-role",
+    "draft": "staff-role",
+    "interpretation": "provider-role"
+  }
+}

@@ -43,6 +43,12 @@ export interface ImagingFhirClient {
     resource: T,
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
+  update<T extends DiagnosticReport>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<T>;
   search<T extends Media | QuestionnaireResponse>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
@@ -189,6 +195,10 @@ export async function handleImagingCaptureRequest(
   if (!staffHasBusinessAction(staff, "chart.write")) {
     return { status: 403, body: { error: "chart.write role required" } };
   }
+  const requestedInterpretation = (input.body as { interpretation?: unknown } | null)?.interpretation;
+  if (typeof requestedInterpretation === "string" && requestedInterpretation.trim() && !staffHasBusinessAction(staff, "clinical.sign")) {
+    return { status: 403, body: { code: "interpretation-requires-signer", error: "Only a doctor can save an interpretation." } };
+  }
 
   const parsed = imagingRequestSchema.safeParse(input.body);
   if (!parsed.success) {
@@ -279,6 +289,19 @@ export async function handleImagingCaptureRequest(
     resourceReferenceId(mediaReference),
     upload.binary.binaryId,
   );
+  if (report) {
+    if (!report.meta?.versionId) {
+      return { status: 502, body: { code: "interpretation-not-finalized", error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab." } };
+    }
+    try {
+      await staff.fhir.update<DiagnosticReport>("DiagnosticReport", report.id!, { ...report, status: "final" }, {
+        ...WRITE_HEADERS,
+        "If-Match": `W/"${report.meta.versionId}"`,
+      });
+    } catch {
+      return { status: 502, body: { code: "interpretation-not-finalized", error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab." } };
+    }
+  }
 
   return {
     status: 200,

@@ -204,7 +204,7 @@ test("S3c2c2a1 G9 report basedOn or media link interprets, except entered-in-err
   for (const linkKind of ["order", "media", "error"] as const) {
     const h = await resultFixture([retina], [retina]);
     h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
-    h.staff.resources.push({ resourceType: "DiagnosticReport", id: "report-1", status: linkKind === "error" ? "entered-in-error" : "preliminary",
+    h.staff.resources.push({ resourceType: "DiagnosticReport", id: "report-1", status: linkKind === "error" ? "entered-in-error" : "final",
       code: { text: "synthetic interpretation" }, subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" }, conclusion: "Reviewed",
       ...(linkKind === "order" ? { basedOn: [{ reference: "ServiceRequest/sr-1" }] } : { media: [{ link: { reference: "Media/photo-1" } }] }),
     } as DiagnosticReport);
@@ -255,7 +255,7 @@ test("S3c2c2a1 G15 report pagination includes page two and refuses cycles or exc
   const h = await resultFixture([retina], [retina]);
   h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
   const reports: DiagnosticReport[] = Array.from({ length: 51 }, (_, index) => ({
-    resourceType: "DiagnosticReport", id: `report-${index}`, status: "preliminary", code: { text: "Synthetic report" },
+    resourceType: "DiagnosticReport", id: `report-${index}`, status: "final", code: { text: "Synthetic report" },
     subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
     ...(index === 50 ? { conclusion: "Interpreted on page two", basedOn: [{ reference: "ServiceRequest/sr-1" }] } : {}),
   }));
@@ -375,4 +375,219 @@ test("S3c2c2a2 G5 optic nerve cannot unlink the retina row's photo", async () =>
   assert.equal((reply.body as any).code, "result-link-refused");
   assert.equal(h.staff.writes.length, 0);
   assert.deepEqual(await h.staff.read<Media>("Media", "photo-1"), before);
+});
+
+async function interpretationFixture(tests: ProposedExamTest[] = [optic, retina], ordered = tests) {
+  const h = await resultFixture(tests, ordered);
+  const transactions: Array<{ bundle: Bundle; headers?: Record<string, string> }> = [];
+  (h.staff as ResultsFhir & { executeTransaction: (bundle: Bundle, headers?: Record<string, string>) => Promise<Bundle> }).executeTransaction =
+    async (bundle, headers) => {
+      transactions.push({ bundle: structuredClone(bundle), headers });
+      if (transactions.length === 1) {
+        assert.equal(bundle.entry?.length, 1);
+        assert.equal(bundle.entry[0]?.request?.method, "POST");
+        const report = bundle.entry[0]?.resource as DiagnosticReport;
+        h.staff.resources.push({ ...structuredClone(report), id: "new-report", meta: { versionId: "1" } });
+        return { resourceType: "Bundle", type: "transaction-response", entry: [
+          { response: { status: "201 Created", location: "DiagnosticReport/new-report/_history/1" } },
+        ] };
+      }
+      assert.equal(transactions.length, 2);
+      const update = bundle.entry?.[0];
+      assert.equal(update?.request?.method, "PUT");
+      assert.equal(update?.request?.url, "DiagnosticReport/new-report");
+      const index = h.staff.resources.findIndex(row => row.resourceType === "DiagnosticReport" && row.id === "new-report");
+      h.staff.resources[index] = { ...structuredClone(update!.resource as DiagnosticReport), id: "new-report", meta: { versionId: "2" } };
+      const provenance = bundle.entry?.[1]?.resource;
+      assert.equal(provenance?.resourceType, "Provenance");
+      h.staff.resources.push({ ...structuredClone(provenance), id: "new-provenance" });
+      return { resourceType: "Bundle", type: "transaction-response", entry: [
+        { response: { status: "200 OK", location: "DiagnosticReport/new-report/_history/2" } },
+        { response: { status: "201 Created", location: "Provenance/new-provenance/_history/1" } },
+      ] };
+    };
+  const interpret = (orderable: string, focus: string | undefined, conclusion: unknown) =>
+    handleFollowUpResultRequest(h.deps, { authHeader: "Bearer synthetic", params: { encounterId: "e1" },
+      body: { action: "interpret", orderable, ...(focus ? { focus } : {}), conclusion } });
+  return { ...h, transactions, interpret };
+}
+
+test("S3c2c2b1 G1 staff cannot interpret a linked photo and writes nothing", async () => {
+  const h = await interpretationFixture();
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-2"));
+  h.deps.authenticate = async () => ({ staffReference: "Practitioner/staff1", actorRole: "staff", fhir: h.staff as any });
+  const reply = await h.interpret(optic.orderable, optic.focus, "Reviewed");
+  assert.equal(reply.status, 403);
+  assert.deepEqual(reply.body, { code: "interpretation-requires-signer", error: "Only a doctor can save an interpretation." });
+  assert.equal(h.transactions.length, 0);
+  assert.equal(h.staff.writes.length, 0);
+});
+
+test("S3c2c2b1 G2 provider creates preliminary then attests final with Provenance", async () => {
+  const h = await interpretationFixture();
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-2"));
+  const reply = await h.interpret(retina.orderable, retina.focus, "  Healthy retina  ");
+  assert.equal(reply.status, 200);
+  assert.equal(h.transactions.length, 2);
+  const { bundle: create, headers } = h.transactions[0]!;
+  assert.equal(create.type, "transaction");
+  assert.equal(headers?.["X-ODOS-Source"], "mcp/follow-up-interpretation");
+  assert.deepEqual(create.entry?.map(entry => entry.request), [{ method: "POST", url: "DiagnosticReport" }]);
+  const preliminary = create.entry?.[0]?.resource as DiagnosticReport;
+  assert.equal(preliminary.status, "preliminary");
+  const { bundle: attest } = h.transactions[1]!;
+  assert.deepEqual(attest.entry?.map(entry => entry.request), [
+    { method: "PUT", url: "DiagnosticReport/new-report", ifMatch: 'W/"1"' }, { method: "POST", url: "Provenance" },
+  ]);
+  const report = attest.entry?.[0]?.resource as DiagnosticReport;
+  assert.equal(report.status, "final");
+  assert.equal(report.conclusion, "Healthy retina");
+  assert.deepEqual(report.basedOn?.map(item => item.reference), ["ServiceRequest/sr-2"]);
+  assert.deepEqual(report.media?.map(item => item.link.reference), ["Media/photo-1"]);
+  assert.deepEqual(report.resultsInterpreter?.map(item => item.reference), ["Practitioner/synthetic"]);
+  assert.equal(attest.entry?.[1]?.resource?.resourceType, "Provenance");
+  assert.deepEqual((attest.entry?.[1]?.resource as { target: Array<{ reference?: string }> }).target.map(item => item.reference),
+    ["DiagnosticReport/new-report", "Patient/p1"]);
+  assert.deepEqual((attest.entry?.[1]?.resource as { agent: Array<{ who: { reference?: string } }> }).agent.map(item => item.who.reference),
+    ["Practitioner/synthetic"]);
+  assert.deepEqual(resultRows(reply).map(row => row.result?.status), ["interpreted", "interpreted"]);
+});
+
+test("S3c2c2b1 G3 optic-row API interpretation covers both photo rows but not visual field", async () => {
+  const h = await interpretationFixture([optic, retina, field]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-2"));
+  h.staff.resources.push(image("field-1", "visual-field", "e1", "ServiceRequest/sr-3"));
+  const before = resultRows(await h.get());
+  assert.deepEqual(before.map(row => row.result?.status), ["none", "needs-interpretation", "needs-interpretation"]);
+  const reply = await h.interpret(optic.orderable, optic.focus, "Review complete");
+  assert.equal(reply.status, 200);
+  assert.deepEqual(resultRows(reply).map(row => row.result?.status), ["interpreted", "interpreted", "needs-interpretation"]);
+});
+
+test("S3c2c2b1 G4 only final amended corrected reports interpret; preliminary becomes draft", async () => {
+  for (const status of ["preliminary", "final", "amended", "corrected", "entered-in-error", "cancelled"] as const) {
+    const h = await interpretationFixture([retina]);
+    h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+    h.staff.resources.push({ resourceType: "DiagnosticReport", id: "report-1", status, code: { text: "Synthetic" },
+      subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+      basedOn: [{ reference: "ServiceRequest/sr-1" }], conclusion: "  Readable  ", issued: at } as DiagnosticReport);
+    const row = (await h.get()).body as { rows: Array<{ result: { status: string; draftConclusion?: string } }> };
+    assert.equal(row.rows[0]!.result.status, ["final", "amended", "corrected"].includes(status) ? "interpreted" : "needs-interpretation", status);
+    assert.equal(row.rows[0]!.result.draftConclusion, status === "preliminary" ? "Readable" : undefined, status);
+  }
+});
+
+test("S3c2c2b1 G5 invalid, finished, absent-result, non-image and repeated interpretations write nothing", async () => {
+  for (const conclusion of ["", "  ", "x".repeat(5001)]) {
+    const h = await interpretationFixture([retina]);
+    h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+    assert.equal((await h.interpret(retina.orderable, retina.focus, conclusion)).status, 400);
+    assert.equal(h.transactions.length, 0);
+  }
+  const finished = await interpretationFixture([retina]);
+  (finished.staff.resources[0] as { status: string }).status = "finished";
+  assert.equal((await finished.interpret(retina.orderable, retina.focus, "Read")).status, 409);
+  assert.equal(finished.transactions.length, 0);
+  const absent = await interpretationFixture([retina]);
+  const absentReply = await absent.interpret(retina.orderable, retina.focus, "Read");
+  assert.equal(absentReply.status, 409);
+  assert.equal((absentReply.body as { code: string }).code, "interpretation-refused");
+  assert.equal(absent.transactions.length, 0);
+  absent.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  (absent.staff.resources.find(row => row.resourceType === "ServiceRequest") as ServiceRequest).status = "revoked";
+  assert.equal((await absent.interpret(retina.orderable, retina.focus, "Read")).status, 409);
+  assert.equal(absent.transactions.length, 0);
+  const nonImage = await interpretationFixture([gonio]);
+  assert.equal((await nonImage.interpret(gonio.orderable, gonio.focus, "Read")).status, 409);
+  assert.equal(nonImage.transactions.length, 0);
+  const repeated = await interpretationFixture([retina]);
+  repeated.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  assert.equal((await repeated.interpret(retina.orderable, retina.focus, "Read")).status, 200);
+  const again = await repeated.interpret(retina.orderable, retina.focus, "Read again");
+  assert.equal(again.status, 409);
+  assert.equal((again.body as { code: string }).code, "already-interpreted");
+  assert.equal(repeated.transactions.length, 2);
+});
+
+test("S3c2c2b1 G5 transaction conflicts map to concurrent-edit and other failures do not become success", async () => {
+  for (const status of [409, 412, 500]) {
+    const h = await interpretationFixture([retina]);
+    h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+    (h.staff as ResultsFhir & { executeTransaction: (bundle: Bundle) => Promise<Bundle> }).executeTransaction =
+      async () => { throw Object.assign(new Error("Synthetic transaction refusal"), { status }); };
+    const reply = await h.interpret(retina.orderable, retina.focus, "Read");
+    assert.equal(reply.status, status === 500 ? 502 : 409);
+    if (status !== 500) assert.equal((reply.body as { code?: string }).code, "concurrent-edit");
+    assert.equal(h.staff.writes.length, 0);
+  }
+});
+
+test("S3c2c2b1 G11 an entry-level 403 inside HTTP 200 cannot claim interpretation success", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  const fhir = h.staff as ResultsFhir & { executeTransaction: (bundle: Bundle) => Promise<Bundle> };
+  const original = fhir.executeTransaction.bind(fhir);
+  let calls = 0;
+  fhir.executeTransaction = async bundle => {
+    calls++;
+    if (calls === 1) return original(bundle);
+    return { resourceType: "Bundle", type: "transaction-response", entry: [
+      { response: { status: "403 Forbidden", location: "DiagnosticReport/new-report/_history/2" } },
+      { response: { status: "201 Created", location: "Provenance/new-provenance/_history/1" } },
+    ] };
+  };
+  const reply = await h.interpret(retina.orderable, retina.focus, "Review complete");
+  assert.equal(reply.status, 502);
+  assert.equal((h.staff.resources.find(row => row.resourceType === "DiagnosticReport") as DiagnosticReport).status, "preliminary");
+  assert.equal(calls, 2);
+});
+
+test("S3c2c2b1 G15 foreign-patient linked Media cannot be interpreted", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push({ ...image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"), subject: { reference: "Patient/other" } });
+
+  const reply = await h.interpret(retina.orderable, retina.focus, "Review complete");
+
+  assert.equal(reply.status, 409);
+  assert.equal((reply.body as { code?: string }).code, "interpretation-refused");
+  assert.equal(h.transactions.length, 0);
+  assert.equal(h.staff.writes.length, 0);
+});
+
+test("S3c2c2b1 G16 a non-preliminary report readback is never attested", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  const fhir = h.staff as ResultsFhir & { executeTransaction: (bundle: Bundle) => Promise<Bundle> };
+  const original = fhir.executeTransaction.bind(fhir);
+  fhir.executeTransaction = async bundle => {
+    const response = await original(bundle);
+    if (h.transactions.length === 1) {
+      const created = h.staff.resources.find(row => row.resourceType === "DiagnosticReport" && row.id === "new-report") as DiagnosticReport;
+      created.status = "final";
+    }
+    return response;
+  };
+
+  const reply = await h.interpret(retina.orderable, retina.focus, "Review complete");
+
+  assert.equal(reply.status, 502);
+  assert.equal(h.transactions.length, 1);
+  assert.equal(h.transactions[0]?.bundle.entry?.[0]?.request?.method, "POST");
+  assert.equal(h.staff.resources.some(row => row.resourceType === "Provenance"), false);
+});
+
+test("S3c2c2b1 G17 the newest preliminary report prefills the interpretation", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  for (const [id, issued, conclusion] of [
+    ["older", "2026-09-21T15:00:00.000Z", "Older draft"],
+    ["newer", "2026-09-21T16:00:00.000Z", "Newer draft"],
+  ]) {
+    h.staff.resources.push({ resourceType: "DiagnosticReport", id, status: "preliminary", code: { text: "Synthetic report" },
+      subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+      basedOn: [{ reference: "ServiceRequest/sr-1" }], issued, conclusion } as DiagnosticReport);
+  }
+
+  const row = resultRows(await h.get())[0]!.result as { draftConclusion?: string };
+  assert.equal(row.draftConclusion, "Newer draft");
 });

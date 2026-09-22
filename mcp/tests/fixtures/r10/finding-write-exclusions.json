@@ -535,6 +535,14 @@
       "ordinal": 1,
       "reason": "Test-only transport: MemoryFhir.createWithOutcome delegates to its in-memory generic create within visit-billing-codes.test.ts for fee schedule, visit-charge, and protocol billing tests; it is not an application or MCP writer.",
       "sourceLine": 84
+    },
+    {
+      "file": "mcp/src/clinical-graph/follow-up-queue-endpoint.ts",
+      "function": "handleFollowUpResultRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Non-Observation transaction: the Follow-up interpret action creates one DiagnosticReport (status final) and its Provenance; no entry targets Observation.",
+      "sourceLine": 395
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "caller": "project-admin",
+  "captureHttp": 200,
+  "mediaPersisted": true,
+  "report": {
+    "status": "final",
+    "versionPresent": true,
+    "mediaLinked": true
+  },
+  "provenanceTargetsReportAndMedia": true,
+  "providerRoleBinaryGapStillOpen": true
+}

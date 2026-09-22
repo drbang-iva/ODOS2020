@@ -415,3 +415,80 @@ test("S3c2c2a2 upload refusal is visible only in its row and saving blocks that 
     assert.equal(h.renderer.root.findByType("input").props.disabled, false);
   } finally { await h.close(); }
 });
+
+test("S3c2c2b1 G7 interpretation control stays on result row, prefills, validates, saves and shows row error", async () => {
+  const opticRow = { orderable: "fundus-photography", focus: "optic nerve", label: "Optic nerve photos",
+    sources: [], state: "already-ordered", actionIds: ["optic"], result: { ...imagingResult, status: "none", items: [], candidates: [] } };
+  const retinaRow = { orderable: "fundus-photography", focus: "retina", label: "Retina photos",
+    sources: [], state: "already-ordered", actionIds: ["retina"],
+    result: { ...imagingResult, category: "fundus-photo", draftConclusion: "Draft read" } };
+  const fieldRow = { ...imagingPayload.rows[0], result: { ...imagingResult, status: "interpreted" } };
+  const initial = { recorded: true, canDecide: true, canAccept: true, rows: [opticRow, retinaRow, fieldRow] };
+  const after = { ...initial, rows: [
+    { ...opticRow, result: { ...opticRow.result, status: "interpreted" } },
+    { ...retinaRow, result: { ...retinaRow.result, status: "interpreted" } }, fieldRow,
+  ] };
+  let refused = true;
+  const posted: unknown[] = [];
+  const h = await resultMounted(async (_input, init) => {
+    if (init?.method === "POST") {
+      posted.push(JSON.parse(String(init.body)));
+      return refused
+        ? Response.json({ code: "interpretation-requires-signer", error: "Only a doctor can save an interpretation." }, { status: 403 })
+        : Response.json(after);
+    }
+    return Response.json(initial);
+  });
+  try {
+    const rows = h.renderer.root.findAllByType("li");
+    assert.equal(rows[0].findAllByType("button").some(button => button.children.join("") === "Add interpretation"), false);
+    assert.equal(rows[1].findAllByType("button").some(button => button.children.join("") === "Add interpretation"), true);
+    assert.equal(rows[2].findAllByType("button").some(button => button.children.join("") === "Add interpretation"), false);
+    await act(async () => resultButton(h.renderer, "Add interpretation").props.onClick());
+    const textarea = h.renderer.root.findByProps({ "aria-label": "Interpretation" });
+    assert.equal(textarea.props.value, "Draft read");
+    assert.equal(textarea.props.maxLength, 5000);
+    await act(async () => textarea.props.onChange({ target: { value: "   " } }));
+    assert.equal(resultButton(h.renderer, "Save").props.disabled, true);
+    await act(async () => h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.onChange({ target: { value: "  Reviewed  " } }));
+    assert.equal(resultButton(h.renderer, "Save").props.disabled, false);
+    await act(async () => resultButton(h.renderer, "Save").props.onClick());
+    assert.deepEqual(posted[0], { action: "interpret", orderable: "fundus-photography", focus: "retina", conclusion: "Reviewed" });
+    assert.match(rows[1].findByProps({ role: "status" }).children.join(""), /Only a doctor can save an interpretation/);
+    assert.equal(rows[0].findAllByProps({ role: "status" }).length, 0);
+    refused = false;
+    await act(async () => resultButton(h.renderer, "Save").props.onClick());
+    assert.equal(h.renderer.root.findAllByType("button").some(button => button.children.join("") === "Add interpretation"), false);
+    assert.match(text(h.renderer.toJSON()), /Interpreted/);
+  } finally { await h.close(); }
+  const readOnly = await resultMounted(async () => Response.json({ ...initial, canAccept: false }));
+  try { assert.equal(resultButton(readOnly.renderer, "Add interpretation"), undefined); }
+  finally { await readOnly.close(); }
+});
+
+test("S3c2c2b1 G8 non-string draft conclusion fails the queue load closed", async () => {
+  const malformed = { ...imagingPayload, rows: [{ ...imagingPayload.rows[0], result: { ...imagingResult, draftConclusion: 42 } }] };
+  const h = await resultMounted(async () => Response.json(malformed));
+  try { assert.match(text(h.renderer.toJSON()), /The tests for this visit could not be loaded/); }
+  finally { await h.close(); }
+});
+
+test("S3c2c2b1 G14 an old encounter's completed save cannot clear the new encounter's draft", async () => {
+  let resolveSave!: (response: Response) => void;
+  const h = await resultMounted(async (_input, init) => init?.method === "POST"
+    ? new Promise<Response>(resolve => { resolveSave = resolve; })
+    : Response.json(imagingPayload));
+  try {
+    await act(async () => resultButton(h.renderer, "Add interpretation").props.onClick());
+    await act(async () => h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.onChange({ target: { value: "Old encounter draft" } }));
+    let oldSave!: Promise<void>;
+    await act(async () => { oldSave = resultButton(h.renderer, "Save").props.onClick(); });
+
+    await act(async () => h.renderer.update(<FollowUpQueue encounterId="e2" active patientReference="Patient/p1" onOpenImaging={() => undefined} />));
+    await act(async () => resultButton(h.renderer, "Add interpretation").props.onClick());
+    await act(async () => h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.onChange({ target: { value: "New encounter draft" } }));
+
+    await act(async () => { resolveSave(Response.json(imagingPayload)); await oldSave; });
+    assert.equal(h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.value, "New encounter draft");
+  } finally { await h.close(); }
+});

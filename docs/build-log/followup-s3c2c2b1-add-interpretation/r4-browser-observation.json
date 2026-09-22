@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "route": "/clinic",
+  "before": {
+    "opticStatusLine": false,
+    "opticButton": false,
+    "retina": "needs-interpretation",
+    "visualField": "needs-interpretation"
+  },
+  "after": {
+    "optic": "interpreted",
+    "retina": "interpreted",
+    "visualField": "needs-interpretation"
+  },
+  "uploadCaller": "project-admin",
+  "interpretationCaller": "provider",
+  "report": {
+    "status": "final",
+    "resultsInterpreterMatchesProvider": true,
+    "basedOnMatchesRetina": true,
+    "mediaMatchesRetina": true,
+    "provenanceTargetsReportAndPatient": true
+  }
+}

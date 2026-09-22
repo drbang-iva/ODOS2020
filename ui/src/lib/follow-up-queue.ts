@@ -20,6 +20,7 @@ export interface FollowUpImagingResult {
   status: "none" | "needs-interpretation" | "interpreted";
   orderReference?: string;
   category?: ImagingCategory;
+  draftConclusion?: string;
   items: FollowUpResultItem[];
   candidates: FollowUpResultItem[];
 }
@@ -77,6 +78,17 @@ export async function linkFollowUpResult(encounterId: string, command: { orderab
   return parseQueue(body);
 }
 
+export async function interpretFollowUpResult(encounterId: string, command: { orderable: string; focus?: string; conclusion: string }): Promise<FollowUpQueueResult> {
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/follow-up-queue/results`, {
+    method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "interpret", ...command }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw clinicalGraphResponseError(response, body ?? {}, "The interpretation could not be saved.");
+  if (body?.committed === true && body.reloadRequired === true) return loadFollowUpQueue(encounterId);
+  return parseQueue(body);
+}
+
 function parseQueue(input: unknown): FollowUpQueueResult {
   const value = input as Partial<FollowUpQueueResult> | null;
   if (value?.recorded === false) return { recorded: false };
@@ -118,6 +130,7 @@ function validResult(value: unknown): value is FollowUpImagingResult {
   if (!value || typeof value !== "object") return false;
   const result = value as Partial<FollowUpImagingResult>;
   return ["none", "needs-interpretation", "interpreted"].includes(result.status ?? "") &&
+    (result.draftConclusion === undefined || typeof result.draftConclusion === "string") &&
     (result.orderReference === undefined || (typeof result.orderReference === "string" && /^ServiceRequest\/[A-Za-z0-9.-]+$/.test(result.orderReference))) &&
     (result.category === undefined || ["visual-field", "fundus-photo", "anterior-segment-photo", "oct", "biometry", "referral-scan", "outside-record", "other"].includes(result.category)) &&
     Array.isArray(result.items) && result.items.every(validResultItem) && Array.isArray(result.candidates) && result.candidates.every(validResultItem);
