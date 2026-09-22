@@ -1314,7 +1314,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
             labelledBy="follow-up-panel-follow-up-tab"
             tabs={rightPanelTabs("follow-up-panel")}
           >
-            <FollowUpQueue encounterId={encounterId} active={rightPanelState.activeTab === "follow-up"} />
+            <FollowUpQueue encounterId={encounterId} active={rightPanelState.activeTab === "follow-up"} patientReference={patientReference} onOpenImaging={() => setRightPanelState((current) => selectExamRightPanelTab(current, "imaging"))} />
           </ExamRightPanelSurface>
         )}
       </div>

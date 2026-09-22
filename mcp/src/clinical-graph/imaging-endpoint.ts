@@ -226,14 +226,23 @@ export async function handleImagingCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const upload = await uploadTrackedBinary(
-    deps.binaryAttempts,
-    parsed.data.patientReference,
-    parsed.data.file.name,
-    bytes,
-    parsed.data.file.contentType,
-    staff.binaryAuth,
-  );
+  let upload;
+  try {
+    upload = await uploadTrackedBinary(
+      deps.binaryAttempts,
+      parsed.data.patientReference,
+      parsed.data.file.name,
+      bytes,
+      parsed.data.file.contentType,
+      staff.binaryAuth,
+    );
+  } catch (error) {
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 401 || status === 403) {
+      return { status: 403, body: { code: "upload-not-permitted", error: "This account is not permitted to upload images." } };
+    }
+    throw error;
+  }
   const media = await staff.fhir.create<Media>(
     buildMedia(parsed.data, staff.staffReference, recordedAt, bytes, upload.binary.url),
     WRITE_HEADERS,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { acceptFollowUpTest, loadFollowUpQueue, decideFollowUpTest, type FollowUpQueueRow, type FollowUpQueueResult } from "../../lib/follow-up-queue";
+import { acceptFollowUpTest, loadFollowUpQueue, decideFollowUpTest, recordFollowUpResult, linkFollowUpResult, type FollowUpQueueRow, type FollowUpQueueResult } from "../../lib/follow-up-queue";
 import { procedureChargeApi } from "../../lib/clinical-graph-client";
 
 type LoadState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; value: FollowUpQueueResult };
@@ -8,7 +8,7 @@ function selectedVisitDiagnosis(pointer: string | undefined, diagnoses: readonly
   return pointer && diagnoses.some(diagnosis => diagnosis.reference === pointer) ? pointer : undefined;
 }
 
-export function FollowUpQueue({ encounterId, active }: { encounterId: string; active: boolean }) {
+export function FollowUpQueue({ encounterId, active, patientReference, onOpenImaging }: { encounterId: string; active: boolean; patientReference: string; onOpenImaging: () => void }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [retry, setRetry] = useState(0);
   const [rowState, setRowState] = useState<Record<string, { saving: boolean; error?: string }>>({});
@@ -54,6 +54,17 @@ export function FollowUpQueue({ encounterId, active }: { encounterId: string; ac
   function accept(row: FollowUpQueueRow) {
     return mutate(row, () => acceptFollowUpTest(encounterId, { orderable: row.orderable, ...(row.focus !== undefined ? { focus: row.focus } : {}) }));
   }
+  function record(row: FollowUpQueueRow, files: File[]) {
+    const orderReference = row.result?.orderReference, category = row.result?.category;
+    if (!files.length || !orderReference || !category) return;
+    return mutate(row, async () => {
+      for (const file of files) await recordFollowUpResult(encounterId, { patientReference, orderReference, category, file });
+      return loadFollowUpQueue(encounterId);
+    });
+  }
+  function link(row: FollowUpQueueRow, mediaReference: string, action: "link" | "unlink") {
+    return mutate(row, () => linkFollowUpResult(encounterId, { orderable: row.orderable, ...(row.focus !== undefined ? { focus: row.focus } : {}), mediaReference, action }));
+  }
   function changeCharge(row: FollowUpQueueRow, change: { state?: "removed" | "accepted"; dxPointer?: string }) {
     if (!row.charge || (row.charge.status !== "billed" && row.charge.status !== "removed")) return;
     const proposalId = row.charge.proposalId;
@@ -89,6 +100,28 @@ export function FollowUpQueue({ encounterId, active }: { encounterId: string; ac
           row.charge.status === "protocol-pending" ? "Protocol charge not yet billed" :
           row.charge.status === "charged-elsewhere" ? "Charged on this visit" : "Billed"
         }</p>}
+        {row.state === "for-review" && row.unreviewedResult && <p className="odos-follow-up-result-status">Done — not reviewed</p>}
+        {row.state === "already-ordered" && row.result && <div className="odos-follow-up-results">
+          {row.result.status !== "none" && <p className="odos-follow-up-result-status">{row.result.status === "interpreted" ? "Interpreted" : "Completed — needs interpretation"}</p>}
+          {row.result.items.map(item => <div className="odos-follow-up-result-item" key={item.mediaReference}>
+            <span>{item.title} · <time dateTime={item.date}>{item.date ? new Date(item.date).toLocaleDateString() : "Date not recorded"}</time></span>
+            {canAccept && <>
+              <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={onOpenImaging}>View in Imaging</button>
+              <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={() => link(row, item.mediaReference, "unlink")}>Unlink</button>
+            </>}
+          </div>)}
+          {canAccept && <>
+            {row.result.candidates.map(item => <div className="odos-follow-up-result-item" key={item.mediaReference}>
+              <span>{item.title} is on this visit</span>
+              <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={() => link(row, item.mediaReference, "link")}>Link</button>
+            </div>)}
+            <label className="odos-follow-up-record">Record result
+              <input type="file" aria-label={`Record result for ${row.label}`} multiple accept=".jpg,.jpeg,.png,.webp,.pdf"
+                disabled={(rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false) || !row.result.orderReference || !row.result.category}
+                onChange={event => { const files = Array.from(event.currentTarget.files ?? []); event.currentTarget.value = ""; return record(row, files); }} />
+            </label>
+          </>}
+        </div>}
         {canDecide && (row.state === "for-review" || row.state === "not-today") &&
           <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={() => decide(row)}>{row.state === "not-today" ? "Put back" : "Not today"}</button>}
         {canAccept && row.state === "for-review" && <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false} onClick={() => accept(row)}>Accept</button>}

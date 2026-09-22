@@ -735,3 +735,25 @@ test("S3c2c2a1 G4 signed encounter refuses an ordered capture before upload", as
   assert.equal(h.binaryBodies.length, 0);
   assert.equal(h.created.length, 0);
 });
+
+test("S3c2c2a2 G13 per-visit upload permission refusal writes no clinical resources and other errors propagate", async () => {
+  for (const status of [401, 403, 500]) {
+    const fixture = deps();
+    const staff = await fixture.deps.authenticate(AUTH);
+    assert.ok(staff);
+    const failure = { status };
+    const rejectingStaff = { ...staff, binaryAuth: { ...staff.binaryAuth, fetch: async () => { throw failure; } } };
+    fixture.deps.authenticate = async () => rejectingStaff;
+    const capture = () => handleImagingCaptureRequest(fixture.deps, { authHeader: AUTH, body: { ...BODY, interpretation: "Synthetic interpretation" } });
+    if (status === 500) {
+      await assert.rejects(capture, (error) => error === failure);
+    } else {
+      assert.deepEqual(await capture(), {
+        status: 403,
+        body: { code: "upload-not-permitted", error: "This account is not permitted to upload images." },
+      });
+    }
+    assert.equal(fixture.created.length, 0);
+    assert.equal(fixture.transactions.length, 0);
+  }
+});

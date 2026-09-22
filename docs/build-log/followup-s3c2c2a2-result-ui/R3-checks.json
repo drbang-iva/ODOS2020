@@ -1,0 +1,178 @@
+{
+  "g13-red": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "g13-green": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "g13-mutation-red": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "g13-restored-green": {
+    "tests": 1,
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "mcp-r3": {
+    "tests": 6290,
+    "pass": 6225,
+    "fail": 10,
+    "cancelled": 0,
+    "skipped": 55
+  },
+  "ui-r3": {
+    "tests": 1852,
+    "pass": 1852,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "test": "Bulk Data export job IDs are opaque and contain no PHI-shaped substrings",
+      "location": "tests/bulk-data/boundary.test.ts:1:661",
+      "cause": "random identifier matched forbidden-word assertion"
+    },
+    {
+      "test": "the migration CLI scopes both reads to the resolved project and stays dry-run",
+      "location": "tests/setup-wizard/migrate-three-role-model.test.ts:1:12580",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "the migration CLI refuses a mismatched access-token project before any write",
+      "location": "tests/setup-wizard/migrate-three-role-model.test.ts:1:13156",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "the migration CLI accepts only admin email and password through the shared PKCE login",
+      "location": "tests/setup-wizard/migrate-three-role-model.test.ts:1:13777",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "demo seed CLI requires the exact project and loads only the dedicated operator identity",
+      "location": "tests/setup-wizard/seed-demo.test.ts:1:6489",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "SMART registration refuses a session project mismatch before POSTing a client",
+      "location": "tests/setup-wizard/smart-app-registry-adapter.test.ts:1:549",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "SMART registration checks auth/me before creating a client in the configured project",
+      "location": "tests/setup-wizard/smart-app-registry-adapter.test.ts:1:1336",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read",
+      "location": "tests/setup-wizard/sync-practice-role-policy-rules.test.ts:1:18297",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "bootstrap service identity refuses a foreign-project policy before composing or sending a patch",
+      "location": "tests/setup-wizard/sync-practice-role-policy-rules.test.ts:1:19358",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    },
+    {
+      "test": "bootstrap service identity still refuses a non-local Medplum URL before login",
+      "location": "tests/setup-wizard/sync-practice-role-policy-rules.test.ts:1:19935",
+      "cause": "local .odos/operator.env project differs from fixture practice-1"
+    }
+  ],
+  "mcp-isolated-rerun": {
+    "tests": 6290,
+    "pass": 6226,
+    "fail": 9,
+    "skipped": 55,
+    "exit": 1,
+    "cause": "Disposable .odos/operator-identity.json names a different project than the nine practice-1 fixtures; .odos/operator.env was moved out for the single authorized rerun. Bulk Data assertion passed."
+  },
+  "mcp-operator-pair-rerun": {
+    "tests": 6290,
+    "pass": 6235,
+    "fail": 0,
+    "skipped": 55,
+    "exit": 0,
+    "isolation": [
+      ".odos/operator.env",
+      ".odos/operator-identity.json"
+    ]
+  },
+  "ui-post-r3": {
+    "tests": 1852,
+    "pass": 1852,
+    "fail": 0,
+    "skipped": 0,
+    "exit": 0
+  },
+  "live-integration-post-r3": {
+    "smokeTests": 12,
+    "pass": 0,
+    "fail": 12,
+    "skipped": 0,
+    "exit": 1,
+    "firstTest": "Medplum 5.1.8 accepts ChargeItem occurrence range with sort search",
+    "testFile": "mcp/tests/searchParamMedplumSmoke.test.ts",
+    "cause": "FHIR POST /fhir/R4/Patient [Patient] 403 Forbidden: Forbidden in seedSmokeFixture before integration phase"
+  },
+  "typechecks": {
+    "root": 0,
+    "mcp": 0,
+    "ui": 0
+  },
+  "preflight": {
+    "warnings": 0,
+    "hardBlocks": 0,
+    "exit": 0
+  },
+  "live-integration-clean8103": {
+    "port": 8103,
+    "smoke": {
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0
+    },
+    "integration": {
+      "tests": 218,
+      "pass": 165,
+      "fail": 53,
+      "skipped": 0
+    },
+    "exit": 1,
+    "firstFailure": "X-ODOS-Source header visibility in Medplum AuditEvent",
+    "firstFailureFile": "mcp/tests/audit-header.test.ts",
+    "cause": "Disposable Postgres password mismatch for test tools; Patient-create 403 did not recur."
+  },
+  "live-authz-clean8103": {
+    "port": 8103,
+    "tests": 29,
+    "pass": 21,
+    "fail": 8,
+    "skipped": 0,
+    "exit": 1,
+    "cause": "Privileged live authorization fixture seeder lacked ODOS_OPERATOR_PROJECT_ID while preserved operator files remained outside the worktree."
+  },
+  "fresh-shell-variable-sources": {
+    "MEDPLUM_BASE_URL": "../.env (port 8103)",
+    "MEDPLUM_PROJECT_ID": "absent from fresh shell and ../.env; bootstrap-generated for integration child",
+    "MEDPLUM_ADMIN_EMAIL": "../.env",
+    "MEDPLUM_ADMIN_PASSWORD": "../.env",
+    "GITHUB_ACTIONS": "unset before each command",
+    "GITHUB_ENV": "unset before each command; test runner used its own temporary path"
+  }
+}

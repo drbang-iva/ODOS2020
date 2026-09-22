@@ -2615,7 +2615,15 @@
 .odos-follow-up-queue-state[data-state="not-today"] { color: #625445; background: #f1ece5; }
 .odos-follow-up-queue-decision { margin: .5rem 0 0; color: var(--muted, #626b75); font-size: .85rem; }
 .odos-follow-up-queue li > button { margin-top: .75rem; min-height: 44px; padding: .5rem .85rem; }
-.odos-follow-up-queue-error { margin: .5rem 0 0; color: var(--text, #29323c); }
+.odos-follow-up-queue-error { margin: .5rem 0 0; color: var(--odos-text); }
 .odos-follow-up-queue-charge { margin: .6rem 0 0; font-size: .9rem; font-weight: 600; }
 .odos-follow-up-queue li > button + button { margin-left: .5rem; }
 .odos-follow-up-queue li > select { display: block; margin-top: .6rem; max-width: 100%; min-height: 44px; }
+
+.odos-follow-up-results { margin-top: .75rem; }
+.odos-follow-up-result-status { margin: .5rem 0; font-weight: 600; }
+.odos-follow-up-result-item { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .5rem 0; }
+.odos-follow-up-result-item > span { flex: 1 1 12rem; overflow-wrap: anywhere; }
+.odos-follow-up-result-item button { min-height: 44px; padding: .5rem .75rem; }
+.odos-follow-up-record { display: flex; flex-direction: column; gap: .4rem; margin-top: .75rem; font-weight: 600; }
+.odos-follow-up-record input { max-width: 100%; min-height: 44px; font-weight: normal; }

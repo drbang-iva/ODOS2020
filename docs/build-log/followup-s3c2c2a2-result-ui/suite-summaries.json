@@ -1,0 +1,66 @@
+{
+  "base-ui": [
+    "# tests 1845",
+    "# pass 1845",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "base-mcp": [
+    "# tests 6284",
+    "# pass 6229",
+    "# fail 0",
+    "# skipped 55"
+  ],
+  "head-ui": [
+    "# tests 1852",
+    "# pass 1852",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "head-mcp": [
+    "# tests 6290",
+    "# pass 6235",
+    "# fail 0",
+    "# skipped 55"
+  ],
+  "live-integration": [
+    "# tests 12",
+    "# pass 12",
+    "# fail 0",
+    "# skipped 0",
+    "# tests 218",
+    "# pass 218",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "live-authz": [
+    "# tests 78",
+    "# pass 78",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "server-tdd-red": [
+    "# tests 16",
+    "# pass 14",
+    "# fail 2",
+    "# skipped 0"
+  ],
+  "server-tdd-green": [
+    "# tests 16",
+    "# pass 16",
+    "# fail 0",
+    "# skipped 0"
+  ],
+  "ui-tdd-red": [
+    "# tests 22",
+    "# pass 14",
+    "# fail 8",
+    "# skipped 0"
+  ],
+  "ui-tdd-green": [
+    "# tests 22",
+    "# pass 22",
+    "# fail 0",
+    "# skipped 0"
+  ]
+}

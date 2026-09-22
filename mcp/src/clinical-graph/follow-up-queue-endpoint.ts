@@ -27,7 +27,7 @@ export interface FollowUpQueueRow {
   actionIds?: string[];
   reason?: string;
   charge?: FollowUpRowCharge;
-  result?: { status: "none" | "needs-interpretation" | "interpreted"; items: FollowUpResultItem[]; candidates: FollowUpResultItem[] };
+  result?: { orderReference?: string; category: string; status: "none" | "needs-interpretation" | "interpreted"; items: FollowUpResultItem[]; candidates: FollowUpResultItem[] };
   unreviewedResult?: true;
 }
 type FollowUpResultItem = { mediaReference: string; title: string; date: string };
@@ -212,6 +212,12 @@ function orderReferences(row: FollowUpQueueRow, actions: readonly PlanActionInst
     .flatMap(action => action.materializedFhirRef?.match(/^ServiceRequest\/[A-Za-z0-9.-]+$/) ? [action.materializedFhirRef] : []))];
 }
 
+function liveOrderReferences(actions: readonly PlanActionInstance[], encounterId: string): Set<string> {
+  return new Set(actions.filter(action => action.encounterId === encounterId && action.actionType === "order" &&
+    !["removed", "cancelled"].includes(action.state))
+    .flatMap(action => action.materializedFhirRef?.match(/^ServiceRequest\/[A-Za-z0-9.-]+$/) ? [action.materializedFhirRef] : []));
+}
+
 async function withImagingResults(
   staffFhir: ExamOverviewFhirClient,
   queue: FollowUpQueue,
@@ -240,10 +246,11 @@ async function withImagingResults(
     title: media.content.title ?? "Imaging result",
     date: media.createdDateTime ?? media.issued ?? media.meta?.lastUpdated ?? "",
   });
+  const liveReferences = liveOrderReferences(actions, encounterId);
   const rows = queue.rows.map(row => {
     const kind = resultKind(row.orderable, row.focus);
     if (kind.kind !== "image") return row;
-    const candidates = mediaRows.filter(media => !media.basedOn?.length && imagingCategory(media) === kind.category);
+    const candidates = mediaRows.filter(media => !media.basedOn?.some(link => link.reference && liveReferences.has(link.reference)) && imagingCategory(media) === kind.category);
     if (row.state === "for-review") return candidates.length ? { ...row, unreviewedResult: true as const } : row;
     if (row.state !== "already-ordered") return row;
     const references = new Set(orderReferences(row, actions));
@@ -254,6 +261,7 @@ async function withImagingResults(
       (report.basedOn?.some(link => link.reference && references.has(link.reference)) ||
         report.media?.some(link => link.link.reference && itemReferences.has(link.link.reference))));
     return { ...row, result: {
+      orderReference: [...references][0], category: kind.category,
       status: interpreted ? "interpreted" as const : items.length ? "needs-interpretation" as const : "none" as const,
       items: items.map(summary), candidates: candidates.map(summary),
     } };
@@ -306,7 +314,7 @@ export async function handleFollowUpResultRequest(deps: Deps, input: { authHeade
   const sameTestMedia = media.status === "completed" && media.encounter?.reference === `Encounter/${encounterId}` &&
     media.subject?.reference === encounter.subject.reference && isImagingReadSurfaceMedia(media) && imagingCategory(media) === kind.category;
   const allowed = sameTestMedia && (action === "link"
-    ? !media.basedOn?.length
+    ? !media.basedOn?.some(link => link.reference && liveOrderReferences(loaded.actions, encounterId).has(link.reference))
     : media.basedOn?.length === 1 && live.includes(media.basedOn[0]?.reference ?? ""));
   if (!allowed) return { status: 409, body: { code: "result-link-refused", error: "This image cannot be linked to that test." } };
   if (!media.id || !media.meta?.versionId) return loadFailure();
