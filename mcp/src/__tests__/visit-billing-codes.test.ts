@@ -574,6 +574,7 @@ test("visit charge handlers enforce chart access and create one stable manual pr
     evidenceRefs: [],
     coverageEvaluations: [],
     state: "accepted",
+    interpretation: { answer: "not-required", feeVersion: "1", at: NOW },
     provenance: {
       source: "clinician-entered",
       actor: "Practitioner/doc",

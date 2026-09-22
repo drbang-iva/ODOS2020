@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "caller": "project-admin",
+  "addWithoutAnswerDisabled": true,
+  "customAnswer": "oct",
+  "customFeeVersion": "1",
+  "builtInFundusAnswerVisible": true,
+  "createHttpStatus": 201
+}

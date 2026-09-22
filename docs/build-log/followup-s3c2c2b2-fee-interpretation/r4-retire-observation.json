@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "caller": "project-admin",
+  "customRetireHttpStatus": 200,
+  "customChargeSnapshotUnchanged": true,
+  "fundusRetireHttpStatus": 200,
+  "postRetirementFeeList": {
+    "procedureConceptKey": "fundus-photography",
+    "active": false,
+    "billingCode": "SYNTHFUNDUSR3",
+    "version": "3"
+  },
+  "fundusPreAcceptFeeVersion": "2",
+  "fundusChargeSnapshotAfterRetire": {
+    "answer": "fundus-photo",
+    "feeVersion": "2",
+    "at": "2026-09-22T20:17:16.986Z"
+  },
+  "fundusSnapshotUnchanged": true
+}

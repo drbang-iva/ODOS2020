@@ -1,0 +1,25 @@
+{
+  "synthetic": true,
+  "caller": "provider-role",
+  "recoveredFrom": "preserved asserted session after observation-write TypeError",
+  "preAcceptCodedFee": {
+    "procedureConceptKey": "fundus-photography",
+    "billingCode": "SYNTHFUNDUSR3",
+    "version": "2"
+  },
+  "followUpAcceptHttpStatus": 200,
+  "retinaChargeStatus": "billed",
+  "rawBasicReadback": true,
+  "fundusSnapshot": {
+    "answer": "fundus-photo",
+    "feeVersion": "2",
+    "at": "2026-09-22T20:17:16.986Z"
+  },
+  "customChargeHttpStatus": 201,
+  "customPreAcceptFeeVersion": "1",
+  "customSnapshot": {
+    "answer": "oct",
+    "feeVersion": "1",
+    "at": "2026-09-22T20:17:17.160Z"
+  }
+}

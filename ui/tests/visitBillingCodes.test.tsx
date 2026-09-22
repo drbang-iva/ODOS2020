@@ -60,9 +60,22 @@ test("fee settings round-trip the optional billing code while allowing practice 
         { value: "self-pay", label: "Self-pay" },
       ],
     },
+    {
+      type: "select",
+      key: "interpretation",
+      label: "Needs an interpretation?",
+      options: [
+        { value: "not-required", label: "No" },
+        { value: "visual-field", label: "Yes — visual field" },
+        { value: "fundus-photo", label: "Yes — fundus photo" },
+        { value: "anterior-segment-photo", label: "Yes — anterior segment photo" },
+        { value: "oct", label: "Yes — OCT" },
+        { value: "biometry", label: "Yes — biometry" },
+      ],
+    },
     { type: "currency", key: "priceCents", label: "Fee", min: 0 },
   ]);
-  assert.deepEqual(descriptor.facts?.(ROUTINE_ITEM), ["S0620", "Unpriced", "Version 1"]);
+  assert.deepEqual(descriptor.facts?.(ROUTINE_ITEM), ["S0620", "Interpretation: not answered", "Unpriced", "Version 1"]);
   assert.match(descriptor.listGrammar?.searchText?.(ROUTINE_ITEM) ?? "", /S0620/);
   const uncoded = { ...ROUTINE_ITEM, procedureConceptKey: "refraction", display: "Refraction" };
   delete uncoded.billingCode;

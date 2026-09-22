@@ -10,6 +10,7 @@ export interface ProcedureFeeScheduleItem {
   category?: "exam" | "refraction" | "cl-fitting" | "procedure";
   modifier?: string;
   routing?: "insurance-billable" | "self-pay";
+  interpretation?: "not-required" | "visual-field" | "fundus-photo" | "anterior-segment-photo" | "oct" | "biometry";
   priceCents?: number;
   version: string;
 }
@@ -36,6 +37,7 @@ export function procedureFeeScheduleAdapter(
         ...(Object.hasOwn(item, "billingCode") ? { billingCode: item.billingCode?.trim() || null } : {}),
         ...(Object.hasOwn(item, "modifier") ? { modifier: item.modifier?.trim() || null } : {}),
         ...(Object.hasOwn(item, "routing") ? { routing: item.routing } : {}),
+        ...(Object.hasOwn(item, "interpretation") ? { interpretation: item.interpretation } : {}),
         priceCents: item.priceCents ?? null,
         active: item.active,
       }, fetchImpl);
@@ -60,6 +62,7 @@ async function createItem(
       ...(item.billingCode?.trim() ? { billingCode: item.billingCode.trim() } : {}),
       ...(item.modifier?.trim() ? { modifier: item.modifier.trim() } : {}),
       ...(item.routing ? { routing: item.routing } : {}),
+      ...(item.interpretation ? { interpretation: item.interpretation } : {}),
       priceCents: item.priceCents ?? null,
       active: item.active,
     }),
@@ -78,6 +81,7 @@ async function mutate(
     billingCode?: string | null;
     modifier?: string | null;
     routing?: "insurance-billable" | "self-pay";
+    interpretation?: ProcedureFeeScheduleItem["interpretation"];
     priceCents: number | null;
     active: boolean;
   } | { action: "deactivate" },

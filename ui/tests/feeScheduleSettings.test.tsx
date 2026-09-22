@@ -109,6 +109,42 @@ test("fee worksheet adapter saves routing as recorded-only metadata", async () =
   assert.equal(descriptor.fields.some((field) => field.key === "routing" && /recorded only/i.test(field.label)), true);
 });
 
+test("S3c2c2b2 G8 Add requires a six-answer interpretation select and active legacy fees show not answered", () => {
+  const descriptor = feeScheduleDescriptor(procedureFeeScheduleAdapter(async () => Response.json({ items: [] })));
+  const create = descriptor.createFields?.find(field => field.key === "interpretation");
+  const edit = descriptor.fields.find(field => field.key === "interpretation");
+  assert.deepEqual(create, {
+    type: "select", key: "interpretation", label: "Needs an interpretation?", required: true,
+    options: [
+      { value: "not-required", label: "No" },
+      { value: "visual-field", label: "Yes — visual field" },
+      { value: "fundus-photo", label: "Yes — fundus photo" },
+      { value: "anterior-segment-photo", label: "Yes — anterior segment photo" },
+      { value: "oct", label: "Yes — OCT" },
+      { value: "biometry", label: "Yes — biometry" },
+    ],
+  });
+  assert.equal(edit?.required, undefined);
+  assert.equal(descriptor.facts?.(item({ interpretation: "oct" })).includes("Interpretation: OCT"), true);
+  assert.equal(descriptor.facts?.(item({})).includes("Interpretation: not answered"), true);
+  assert.equal(descriptor.facts?.(item({ active: false })).includes("Interpretation: not answered"), false);
+});
+
+test("S3c2c2b2 G9 adapter sends an answer on save and create only when present", async () => {
+  const bodies: unknown[] = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({ item: item({ interpretation: "oct" }) });
+  };
+  const adapter = procedureFeeScheduleAdapter(fetchImpl);
+  await adapter.save(item({ interpretation: "oct" }));
+  await adapter.save(item({ id: "", procedureConceptKey: "", display: "Custom OCT", category: "procedure", interpretation: "oct" }));
+  assert.deepEqual(bodies, [
+    { action: "save", interpretation: "oct", priceCents: null, active: true },
+    { action: "create", display: "Custom OCT", category: "procedure", interpretation: "oct", priceCents: null, active: true },
+  ]);
+});
+
 test("Fee Schedule uses CatalogEditor and visibly flags uncoded concepts as not chartable", () => {
   const descriptor = feeScheduleDescriptor({
     capabilities: { reorder: false, deactivate: true, presetSeed: false },
