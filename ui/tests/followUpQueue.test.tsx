@@ -242,7 +242,7 @@ test("S3c2c1b G12 stale charge diagnosis shows no selected visit diagnosis", asy
   } finally { await h.close(); }
 });
 
-test("S3c2c2a1 G14 current Follow-up UI renders additive result fields unchanged", async () => {
+test("S3c2c2a1 G14 read-only result facts render without mutation buttons (amended S3c2c2a2 R2)", async () => {
   const baseline = { ...decisionPayload, rows: [
     { ...decisionPayload.rows[0] },
     { ...decisionPayload.rows[2] },
@@ -258,8 +258,160 @@ test("S3c2c2a1 G14 current Follow-up UI renders additive result fields unchanged
   try { expected = text(plain.renderer.toJSON()); } finally { await plain.close(); }
   const linked = await mounted(async () => Response.json(augmented));
   try {
-    assert.equal(text(linked.renderer.toJSON()), expected);
+    assert.doesNotMatch(String(expected), /Completed — needs interpretation|Done — not reviewed/);
+    assert.match(text(linked.renderer.toJSON()), /Completed — needs interpretation/);
+    assert.match(text(linked.renderer.toJSON()), /Done — not reviewed/);
+    assert.equal(linked.renderer.root.findAllByType("input").length, 0);
     assert.equal(linked.renderer.root.findAllByType("li").length, 2);
     assert.deepEqual(linked.renderer.root.findAllByType("li").map(row => row.findAllByType("button").map(button => button.children.join(""))), [["Not today"], []]);
   } finally { await linked.close(); }
+});
+
+const imagingResult = { status: "needs-interpretation", orderReference: "ServiceRequest/vf-1", category: "visual-field",
+  items: [{ mediaReference: "Media/vf-1", title: "field.jpg", date: "2026-09-21T15:00:00Z" }],
+  candidates: [{ mediaReference: "Media/candidate", title: "candidate.pdf", date: "2026-09-21T15:01:00Z" }] };
+const imagingPayload = { recorded: true, canDecide: true, canAccept: true, rows: [
+  { orderable: "visual-field-threshold", label: "Visual field", sources: [], state: "already-ordered", actionIds: ["vf-1"], result: imagingResult },
+  { orderable: "fundus-photography", focus: "optic nerve", label: "Optic nerve photos", sources: [], state: "for-review", unreviewedResult: true },
+] };
+async function resultMounted(reply: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>, element?: React.ReactElement) {
+  const previous = globalThis.fetch;
+  globalThis.fetch = reply;
+  let renderer!: ReactTestRenderer;
+  await act(async () => { renderer = create(element ?? <FollowUpQueue encounterId="e1" active patientReference="Patient/p1" onOpenImaging={() => undefined} />); });
+  return { renderer, async close() { await act(async () => renderer.unmount()); globalThis.fetch = previous; } };
+}
+function resultButton(renderer: ReactTestRenderer, label: string) {
+  return renderer.root.findAllByType("button").find(button => button.children.join("") === label)!;
+}
+
+test("S3c2c2a2 G6 two chosen files capture the row's order and category then refresh once", async () => {
+  const calls: Array<{ url: string; method: string; body?: any; headers?: HeadersInit }> = [];
+  const h = await resultMounted(async (input, init) => {
+    calls.push({ url: String(input), method: init?.method ?? "GET", headers: init?.headers, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    return Response.json(init?.method === "POST" ? { mediaReference: "Media/created" } : imagingPayload);
+  });
+  try {
+    const input = h.renderer.root.findByType("input");
+    assert.equal(input.props.multiple, true);
+    assert.equal(input.props.accept, ".jpg,.jpeg,.png,.webp,.pdf");
+    await act(async () => input.props.onChange({ currentTarget: { files: [new File(["jpeg-data"], "field.jpg", { type: "image/jpeg" }), new File(["pdf-data"], "field.pdf", { type: "application/pdf" })], value: "selected" } }));
+    assert.deepEqual(calls.map(call => call.method), ["GET", "POST", "POST", "GET"]);
+    for (const [index, call] of calls.slice(1, 3).entries()) {
+      assert.equal(call.url, "/clinical-graph/imaging");
+      assert.equal(new Headers(call.headers).get("Content-Type"), "application/vnd.odos.manual-imaging+json");
+      assert.deepEqual(call.body, { patientReference: "Patient/p1", encounterReference: "Encounter/e1", basedOnReference: "ServiceRequest/vf-1", category: "visual-field",
+        file: { name: index ? "field.pdf" : "field.jpg", contentType: index ? "application/pdf" : "image/jpeg", data: Buffer.from(index ? "pdf-data" : "jpeg-data").toString("base64") } });
+    }
+  } finally { await h.close(); }
+});
+
+test("S3c2c2a2 G7 completion labels preserve the unreviewed row's working Accept", async () => {
+  for (const status of ["needs-interpretation", "interpreted"]) {
+    const initial = { ...imagingPayload, rows: [{ ...imagingPayload.rows[0], result: { ...imagingResult, status } }, imagingPayload.rows[1]] };
+    let accepted = false;
+    const h = await resultMounted(async (input, init) => {
+      if (init?.method === "POST") {
+        assert.equal(String(input), "/clinical-graph/encounters/e1/follow-up-queue/accept");
+        assert.deepEqual(JSON.parse(String(init.body)), { orderable: "fundus-photography", focus: "optic nerve" });
+        accepted = true;
+        return Response.json({ ...initial, rows: [initial.rows[0], { ...initial.rows[1], state: "already-ordered", actionIds: ["new-order"] }] });
+      }
+      return Response.json(initial);
+    });
+    try {
+      const view = text(h.renderer.toJSON());
+      assert.ok(view.includes(status === "interpreted" ? "Interpreted" : "Completed — needs interpretation"));
+      assert.ok(view.includes("Done — not reviewed"));
+      assert.ok(resultButton(h.renderer, "Accept"));
+      await act(async () => resultButton(h.renderer, "Accept").props.onClick());
+      assert.equal(accepted, true);
+      assert.equal(resultButton(h.renderer, "Accept"), undefined);
+    } finally { await h.close(); }
+  }
+});
+
+test("S3c2c2a2 G8 committed link acknowledgement reloads successfully; unlink sends its row", async () => {
+  for (const action of ["link", "unlink"]) {
+    let gets = 0;
+    const h = await resultMounted(async (input, init) => {
+      if (init?.method === "POST") {
+        assert.equal(String(input), "/clinical-graph/encounters/e1/follow-up-queue/results");
+        assert.deepEqual(JSON.parse(String(init.body)), { orderable: "visual-field-threshold", mediaReference: action === "link" ? "Media/candidate" : "Media/vf-1", action });
+        return Response.json({ committed: true, reloadRequired: true });
+      }
+      gets++;
+      return Response.json(imagingPayload);
+    });
+    try {
+      await act(async () => resultButton(h.renderer, action === "link" ? "Link" : "Unlink").props.onClick());
+      assert.equal(gets, 2);
+      assert.equal(h.renderer.root.findAllByProps({ role: "status" }).length, 0);
+    } finally { await h.close(); }
+  }
+});
+
+test("S3c2c2a2 G9 read-only rows retain facts without Record Link Unlink or View controls", async () => {
+  for (const canAccept of [false, undefined]) {
+    const h = await resultMounted(async () => Response.json({ ...imagingPayload, canAccept }));
+    try {
+      const view = text(h.renderer.toJSON());
+      assert.match(view, /Completed — needs interpretation/);
+      assert.match(view, /Done — not reviewed/);
+      assert.equal(h.renderer.root.findAllByType("input").length, 0);
+      for (const label of ["Record result", "Link", "Unlink", "View in Imaging"]) assert.equal(resultButton(h.renderer, label), undefined);
+      assert.ok(resultButton(h.renderer, "Not today"));
+    } finally { await h.close(); }
+  }
+});
+
+test("S3c2c2a2 G10 the production EncounterCharting callback selects the Imaging tab", async () => {
+  const { readFileSync } = await import("node:fs");
+  const ts = await import("typescript");
+  const { selectExamRightPanelTab } = await import("../src/components/charting/ExamRightPanel");
+  const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
+  const jsx = source.match(/<FollowUpQueue\b[\s\S]*?\/>/)?.[0];
+  assert.ok(jsx);
+  const compiled = ts.transpileModule(`const element = ${jsx};`, { compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 } }).outputText;
+  let panel = { activeTab: "follow-up", returnTab: "images", summoned: false };
+  const element = new Function("React", "FollowUpQueue", "encounterId", "patientReference", "rightPanelState", "setRightPanelState", "selectExamRightPanelTab", `${compiled}; return element;`)(
+    React, FollowUpQueue, "e1", "Patient/p1", panel, (change: any) => { panel = change(panel); }, selectExamRightPanelTab);
+  const h = await resultMounted(async () => Response.json(imagingPayload), element);
+  try {
+    assert.equal(h.renderer.root.findByType(FollowUpQueue).props.patientReference, "Patient/p1");
+    await act(async () => resultButton(h.renderer, "View in Imaging").props.onClick());
+    assert.equal(panel.activeTab, "imaging");
+    assert.equal(panel.summoned, true);
+  } finally { await h.close(); }
+});
+
+test("S3c2c2a2 G11 malformed result and review hint fail the load closed", async () => {
+  for (const row of [
+    { ...imagingPayload.rows[0], result: { ...imagingResult, status: "complete" } },
+    { ...imagingPayload.rows[0], result: { ...imagingResult, items: [{ ...imagingResult.items[0], mediaReference: 42 }] } },
+    { ...imagingPayload.rows[0], result: { ...imagingResult, category: 42 } },
+    { ...imagingPayload.rows[0], result: { ...imagingResult, orderReference: "Patient/wrong" } },
+    { ...imagingPayload.rows[1], unreviewedResult: "true" },
+  ]) {
+    const h = await resultMounted(async () => Response.json({ ...imagingPayload, rows: [row] }));
+    try { assert.match(text(h.renderer.toJSON()), /The tests for this visit could not be loaded/); }
+    finally { await h.close(); }
+  }
+});
+
+test("S3c2c2a2 upload refusal is visible only in its row and saving blocks that row", async () => {
+  let refuse!: (response: Response) => void;
+  const h = await resultMounted(async (_input, init) => init?.method === "POST" ? new Promise(resolve => { refuse = resolve; }) : Response.json(imagingPayload));
+  try {
+    let saved!: Promise<void>;
+    await act(async () => { saved = h.renderer.root.findByType("input").props.onChange({ currentTarget: { files: [new File(["jpeg"], "field.jpg", { type: "image/jpeg" })], value: "selected" } }); });
+    assert.equal(h.renderer.root.findByType("input").props.disabled, true);
+    assert.equal(resultButton(h.renderer, "Link").props.disabled, true);
+    assert.equal(resultButton(h.renderer, "Accept").props.disabled, false);
+    await act(async () => { refuse(Response.json({ error: "Binary create is forbidden for this caller." }, { status: 403 })); await saved; });
+    const rows = h.renderer.root.findAllByType("li");
+    assert.equal(rows[0].findByProps({ role: "status" }).children.join(""), "Binary create is forbidden for this caller.");
+    assert.equal(rows[1].findAllByProps({ role: "status" }).length, 0);
+    assert.equal(h.renderer.root.findByType("input").props.disabled, false);
+  } finally { await h.close(); }
 });

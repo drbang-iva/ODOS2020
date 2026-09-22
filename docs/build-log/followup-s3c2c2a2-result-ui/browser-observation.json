@@ -1,0 +1,45 @@
+{
+  "route": "/clinic",
+  "synthetic": true,
+  "uploads": [
+    {
+      "caller": "project-admin",
+      "status": 200,
+      "file": "visual-field JPEG"
+    },
+    {
+      "caller": "project-admin",
+      "status": 200,
+      "file": "visual-field PDF"
+    },
+    {
+      "caller": "canonical-provider",
+      "status": 403,
+      "message": "This account is not permitted to upload images."
+    },
+    {
+      "caller": "project-admin",
+      "status": 200,
+      "file": "visual-field JPEG with interpretation via Manual imaging"
+    },
+    {
+      "caller": "project-admin",
+      "status": 200,
+      "file": "fundus JPEG via Manual imaging"
+    }
+  ],
+  "completedTwoItems": true,
+  "interpretationFollowupLinkVerified": true,
+  "interpretedLabelVisible": true,
+  "fundusCandidateVisibleOnRetina": true,
+  "fundusLinkedToRetina": true,
+  "opticUnreviewedLabelAndAcceptVisible": true,
+  "opticAccepted": true,
+  "strandedReference": "ServiceRequest/other",
+  "strandedMediaCandidateVisible": true,
+  "strandedRelinked": true,
+  "viewInImagingSelected": true,
+  "alreadyMountedImagingHistoryRefreshed": false,
+  "uploadPolicy": "Separate disposable unrestricted upload-proof policy with clinical role tag; canonical provider policy unchanged",
+  "manualImagingWait": "Waited for imaging POST response; the editor closes after onSaved, so waiting for its button is invalid."
+}

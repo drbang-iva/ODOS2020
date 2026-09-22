@@ -147,7 +147,7 @@ test("S3c2c2a1 G7 link refuses mismatched resources and maps store errors precis
   for (const media of [
     image("photo-1", "fundus-photo", "old"),
     image("photo-1", "oct"),
-    image("photo-1", "fundus-photo", "e1", "ServiceRequest/other"),
+    image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"),
     { ...image(), bodySite: { text: "retina" }, note: [{ text: "Procedure definition: synthetic" }] },
   ]) {
     const h = await resultFixture();
@@ -311,4 +311,68 @@ test("S3c2c2a1 G16 committed link and unlink acknowledge failed refresh and reta
       assert.equal(h.staff.writes.length, 1);
     }
   }
+});
+
+
+test("S3c2c2a2 G1 dead links recover as candidates, review hints and relinkable results", async () => {
+  for (const state of ["removed", "cancelled", "unknown"] as const) {
+    const h = await resultFixture();
+    h.staff.resources.push(image("photo-1", "fundus-photo", "e1", state === "unknown" ? "ServiceRequest/other" : "ServiceRequest/sr-2"));
+    const old = buildProtocolBasic(planAction(retina, "sr-2"), PROTOCOL_BASIC_CODES.planActionInstance);
+    const index = h.staff.resources.findIndex(resource => resource.resourceType === "Basic" && resource.identifier?.[0]?.value === old.identifier?.[0]?.value);
+    h.staff.resources[index] = buildProtocolBasic({ ...planAction(retina, "sr-2"), state: "removed" }, PROTOCOL_BASIC_CODES.planActionInstance);
+    (h.staff.resources.find(resource => resource.resourceType === "ServiceRequest" && resource.id === "sr-2") as ServiceRequest).status = "revoked";
+    assert.equal(resultRows(await h.get())[1]!.unreviewedResult, true);
+    if (state !== "unknown") h.staff.resources[index] = buildProtocolBasic({ ...planAction(retina, "sr-2"), state }, PROTOCOL_BASIC_CODES.planActionInstance);
+    h.staff.resources.push(buildProtocolBasic(planAction(retina, "sr-new"), PROTOCOL_BASIC_CODES.planActionInstance), serviceRequest(retina, "sr-new"));
+    const before = resultRows(await h.get());
+    assert.equal(before[1]!.result?.candidates.length, 1);
+    assert.equal(before[1]!.result?.items.length, 0);
+    const after = resultRows(await h.mutate(retina.orderable, retina.focus, "Media/photo-1", "link"));
+    assert.equal(after[1]!.result?.status, "needs-interpretation");
+    assert.deepEqual((await h.staff.read<Media>("Media", "photo-1")).basedOn, [{ reference: "ServiceRequest/sr-new" }]);
+  }
+});
+
+test("S3c2c2a2 G2 results carry each row's order reference and registry category", async () => {
+  const h = await resultFixture([optic, retina, field]);
+  const reply = await h.get();
+  assert.equal(reply.status, 200);
+  const rows = (reply.body as any).rows;
+  assert.deepEqual(rows.map((row: any) => [row.result.orderReference, row.result.category]), [
+    ["ServiceRequest/sr-1", "fundus-photo"], ["ServiceRequest/sr-2", "fundus-photo"], ["ServiceRequest/sr-3", "visual-field"],
+  ]);
+});
+
+test("S3c2c2a2 G3 empty and whitespace report conclusions do not interpret a result", async () => {
+  for (const conclusion of [undefined, "", "   \n\t"]) {
+    const h = await resultFixture([retina]);
+    h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+    h.staff.resources.push({ resourceType: "DiagnosticReport", id: "blank-report", status: "final", code: { text: "Synthetic report" },
+      subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" }, basedOn: [{ reference: "ServiceRequest/sr-1" }], conclusion });
+    assert.equal(resultRows(await h.get())[0]!.result?.status, "needs-interpretation");
+  }
+});
+
+test("S3c2c2a2 G4 revoked ServiceRequest refuses linking without writes", async () => {
+  const h = await resultFixture([retina]);
+  (h.staff.resources.find(resource => resource.resourceType === "ServiceRequest") as ServiceRequest).status = "revoked";
+  h.staff.resources.push(image());
+  const before = structuredClone(h.staff.resources);
+  const reply = await h.mutate(retina.orderable, retina.focus, "Media/photo-1", "link");
+  assert.equal(reply.status, 409);
+  assert.equal((reply.body as any).code, "result-link-refused");
+  assert.equal(h.staff.writes.length, 0);
+  assert.deepEqual(h.staff.resources, before);
+});
+
+test("S3c2c2a2 G5 optic nerve cannot unlink the retina row's photo", async () => {
+  const h = await resultFixture();
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-2"));
+  const before = await h.staff.read<Media>("Media", "photo-1");
+  const reply = await h.mutate(optic.orderable, optic.focus, "Media/photo-1", "unlink");
+  assert.equal(reply.status, 409);
+  assert.equal((reply.body as any).code, "result-link-refused");
+  assert.equal(h.staff.writes.length, 0);
+  assert.deepEqual(await h.staff.read<Media>("Media", "photo-1"), before);
 });

@@ -611,7 +611,7 @@ function contentTypeFromName(name: string): string | undefined {
     : undefined;
 }
 
-async function fileBase64(file: File): Promise<string> {
+export async function fileBase64(file: File): Promise<string> {
   const buffer = new Uint8Array(await file.arrayBuffer());
   let binary = "";
   for (let offset = 0; offset < buffer.length; offset += 8192) {

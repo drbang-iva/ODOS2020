@@ -1,0 +1,58 @@
+{
+  "a-base-present": {
+    "tests": 6284,
+    "pass": 6220,
+    "fail": 9,
+    "cancelled": 0,
+    "skipped": 55,
+    "exit": 1,
+    "failingTests": [
+      "the migration CLI scopes both reads to the resolved project and stays dry-run",
+      "the migration CLI refuses a mismatched access-token project before any write",
+      "the migration CLI accepts only admin email and password through the shared PKCE login",
+      "demo seed CLI requires the exact project and loads only the dedicated operator identity",
+      "SMART registration refuses a session project mismatch before POSTing a client",
+      "SMART registration checks auth/me before creating a client in the configured project",
+      "bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read",
+      "bootstrap service identity refuses a foreign-project policy before composing or sending a patch",
+      "bootstrap service identity still refuses a non-local Medplum URL before login"
+    ]
+  },
+  "b-base-aside": {
+    "tests": 6284,
+    "pass": 6229,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 55,
+    "exit": 0,
+    "failingTests": []
+  },
+  "c-head-present": {
+    "tests": 6290,
+    "pass": 6226,
+    "fail": 9,
+    "cancelled": 0,
+    "skipped": 55,
+    "exit": 1,
+    "failingTests": [
+      "the migration CLI scopes both reads to the resolved project and stays dry-run",
+      "the migration CLI refuses a mismatched access-token project before any write",
+      "the migration CLI accepts only admin email and password through the shared PKCE login",
+      "demo seed CLI requires the exact project and loads only the dedicated operator identity",
+      "SMART registration refuses a session project mismatch before POSTing a client",
+      "SMART registration checks auth/me before creating a client in the configured project",
+      "bootstrap service identity completes dry-run after the ordinary operator path is denied AccessPolicy read",
+      "bootstrap service identity refuses a foreign-project policy before composing or sending a patch",
+      "bootstrap service identity still refuses a non-local Medplum URL before login"
+    ]
+  },
+  "d-head-aside": {
+    "tests": 6290,
+    "pass": 6235,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 55,
+    "exit": 0,
+    "failingTests": []
+  }
+}
