@@ -20,6 +20,7 @@ const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const FEE_CATEGORY_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-category`;
 const FEE_MODIFIER_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-modifier`;
 export const FEE_ROUTING_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-routing`;
+export const FEE_INTERPRETATION_EXTENSION_URL = `${BASE}/StructureDefinition/odos-procedure-fee-interpretation`;
 const DISALLOWED_CONCEPT_LATERALITY_MODIFIERS = new Set(["RT", "LT", "50"]);
 const PROCEDURE_LATERALITY_MODIFIER_EXTENSION_URL =
   `${BASE}/StructureDefinition/odos-procedure-laterality-modifier`;
@@ -44,15 +45,18 @@ export const PROCEDURE_FEE_CATEGORIES = ["exam", "refraction", "cl-fitting", "pr
 export type ProcedureFeeCategory = (typeof PROCEDURE_FEE_CATEGORIES)[number];
 export const PROCEDURE_FEE_ROUTINGS = ["insurance-billable", "self-pay"] as const;
 export type ProcedureFeeRouting = (typeof PROCEDURE_FEE_ROUTINGS)[number];
+export const FEE_INTERPRETATION_ANSWERS = ["not-required", "visual-field", "fundus-photo", "anterior-segment-photo", "oct", "biometry"] as const;
+export type ProcedureFeeInterpretation = (typeof FEE_INTERPRETATION_ANSWERS)[number];
 
 interface ProcedureFeeSeed {
   procedureConceptKey: string;
   display: string;
   category: ProcedureFeeCategory;
   billingCode?: string;
+  interpretation: ProcedureFeeInterpretation;
 }
 
-export const PROCEDURE_FEE_SEEDS: readonly ProcedureFeeSeed[] = [
+export const PROCEDURE_FEE_SEEDS: readonly ProcedureFeeSeed[] = ([
   { procedureConceptKey: "gonioscopy", display: "Gonioscopy", category: "procedure" },
   { procedureConceptKey: "corneal-pachymetry", display: "Corneal pachymetry", category: "procedure" },
   { procedureConceptKey: "scodi-optic-nerve", display: "SCODI optic nerve", category: "procedure" },
@@ -71,7 +75,12 @@ export const PROCEDURE_FEE_SEEDS: readonly ProcedureFeeSeed[] = [
   { procedureConceptKey: "routine-vision-exam-new", display: "Routine vision exam — new patient", category: "exam", billingCode: "S0620" },
   { procedureConceptKey: "routine-vision-exam-established", display: "Routine vision exam — established", category: "exam", billingCode: "S0621" },
   { procedureConceptKey: "refraction", display: "Refraction", category: "refraction" },
-];
+] satisfies Array<Omit<ProcedureFeeSeed, "interpretation">>).map((seed) => ({
+  ...seed,
+  interpretation: seed.procedureConceptKey === "fundus-photography" ? "fundus-photo" as const
+    : seed.procedureConceptKey === "scodi-optic-nerve" ? "oct" as const
+      : seed.procedureConceptKey === "visual-field-threshold" ? "visual-field" as const : "not-required" as const,
+}));
 
 export const VISIT_PROCEDURE_CONCEPT_KEYS = [
   "comprehensive-exam-new",
@@ -142,6 +151,7 @@ export interface ProcedureFeeScheduleItem {
   category?: ProcedureFeeCategory;
   modifier?: string;
   routing?: ProcedureFeeRouting;
+  interpretation?: ProcedureFeeInterpretation;
   priceCents?: number;
   version: string;
 }
@@ -168,7 +178,7 @@ export async function ensureProcedureFeeSchedule(
     byKey.set(key, definition);
   }
   const seedByKey = new Map(PROCEDURE_FEE_SEEDS.map((seed) => [seed.procedureConceptKey, seed]));
-  const concepts = new Map<string, ProcedureFeeSeed>(PROCEDURE_FEE_SEEDS
+  const concepts = new Map<string, Omit<ProcedureFeeSeed, "interpretation">>(PROCEDURE_FEE_SEEDS
     .filter((seed) => INITIAL_DEFINITION_KEYS.has(seed.procedureConceptKey))
     .map((seed) => [seed.procedureConceptKey, seed]));
   for (const key of additionalConceptKeys) {
@@ -212,6 +222,15 @@ export async function listProcedureFeeScheduleSnapshot(
   return mergeProcedureFeeSchedule(await listProcedureFeeDefinitions(fhir));
 }
 
+export async function interpretationSnapshot(
+  fhir: Pick<ProcedureFeeScheduleFhir, "baseUrl" | "search" | "searchUrl">,
+  procedureConceptKey: string,
+  at: string,
+): Promise<NonNullable<ChargeProposal["interpretation"]>> {
+  const fee = (await listProcedureFeeScheduleSnapshot(fhir)).find(item => item.procedureConceptKey === procedureConceptKey);
+  return { answer: fee?.interpretation ?? "unanswered", feeVersion: fee?.version ?? "none", at };
+}
+
 function mergeProcedureFeeSchedule(
   definitions: ChargeItemDefinition[],
 ): ProcedureFeeScheduleItem[] {
@@ -225,6 +244,7 @@ function mergeProcedureFeeSchedule(
       display: seed.display,
       active: true,
       category: seed.category,
+      interpretation: seed.interpretation,
       ...(seed.billingCode ? { billingCode: seed.billingCode } : {}),
       version: "1",
     }));
@@ -256,6 +276,7 @@ export async function listActiveVisitProcedureFees(
       display: seed.display,
       active: true,
       category: seed.category,
+      interpretation: seed.interpretation,
       ...(seed.billingCode ? { billingCode: seed.billingCode } : {}),
       version: "1",
     }];
@@ -305,6 +326,7 @@ export async function createProcedureFeeScheduleItem(
     billingCode?: string | null;
     modifier?: string | null;
     routing?: ProcedureFeeRouting;
+    interpretation?: ProcedureFeeInterpretation;
     priceCents?: number | null;
     active: boolean;
     knownOccupiedKeys?: ReadonlySet<string>;
@@ -333,6 +355,7 @@ export async function createProcedureFeeScheduleItem(
     billingCode: normalizeBillingCode(input.billingCode),
     modifier: normalizeModifier(input.modifier),
     routing: input.routing,
+    interpretation: input.interpretation,
     priceCents: input.priceCents ?? undefined,
     active: input.active,
   }), {
@@ -352,11 +375,16 @@ export async function saveProcedureFeeScheduleItem(
     billingCode?: string | null;
     modifier?: string | null;
     routing?: ProcedureFeeRouting;
+    interpretation?: ProcedureFeeInterpretation;
     priceCents?: number | null;
     active: boolean;
   },
 ): Promise<ProcedureFeeScheduleItem> {
   if (isSeededProcedureFeeConceptKey(input.procedureConceptKey)) {
+    const seed = PROCEDURE_FEE_SEEDS.find((candidate) => candidate.procedureConceptKey === input.procedureConceptKey)!;
+    if (input.interpretation !== undefined && input.interpretation !== seed.interpretation) {
+      throw new ProcedureFeeScheduleInputError("Interpretation cannot be changed for an ODOS-seeded fee concept.");
+    }
     if (Object.hasOwn(input, "display")) {
       throw new ProcedureFeeScheduleInputError(
         "Display cannot be changed for an ODOS-seeded fee concept.",
@@ -398,6 +426,9 @@ export async function saveProcedureFeeScheduleItem(
   const routing = input.routing === undefined
     ? definitionRouting(existing)
     : input.routing;
+  const interpretation = seed ? undefined : input.interpretation === undefined
+    ? definitionInterpretation(existing)
+    : input.interpretation;
   const saved = await fhir.update(
     "ChargeItemDefinition",
     existing.id,
@@ -408,6 +439,7 @@ export async function saveProcedureFeeScheduleItem(
       billingCode,
       modifier,
       routing,
+      interpretation,
       priceCents,
       active: input.active,
       existing,
@@ -520,6 +552,7 @@ export function buildProcedureFeeDefinition(input: {
   billingCode?: string;
   modifier?: string;
   routing?: ProcedureFeeRouting;
+  interpretation?: ProcedureFeeInterpretation;
   priceCents?: number;
   active?: boolean;
   existing?: ChargeItemDefinition;
@@ -532,16 +565,19 @@ export function buildProcedureFeeDefinition(input: {
   const modifier = normalizeModifier(input.modifier);
   assertCategory(input.category);
   assertRouting(input.routing);
+  assertInterpretation(input.interpretation);
   const version = input.existing ? nextVersion(input.existing.version) : "1";
   const retainedExtensions = input.existing?.extension?.filter((extension) =>
     extension.url !== FEE_CATEGORY_EXTENSION_URL && extension.url !== FEE_MODIFIER_EXTENSION_URL &&
-    extension.url !== FEE_ROUTING_EXTENSION_URL
+    extension.url !== FEE_ROUTING_EXTENSION_URL && extension.url !== FEE_INTERPRETATION_EXTENSION_URL
   ) ?? [];
   const extensions = [
     ...retainedExtensions,
     ...(input.category ? [{ url: FEE_CATEGORY_EXTENSION_URL, valueCode: input.category }] : []),
     ...(modifier ? [{ url: FEE_MODIFIER_EXTENSION_URL, valueString: modifier }] : []),
     ...(input.routing ? [{ url: FEE_ROUTING_EXTENSION_URL, valueCode: input.routing }] : []),
+    ...(!isSeededProcedureFeeConceptKey(input.procedureConceptKey) && input.interpretation
+      ? [{ url: FEE_INTERPRETATION_EXTENSION_URL, valueCode: input.interpretation }] : []),
   ];
   return {
     resourceType: "ChargeItemDefinition",
@@ -656,6 +692,8 @@ function procedureFeeScheduleItem(definition: ChargeItemDefinition): ProcedureFe
     category: definitionCategory(definition) ?? seed?.category,
     modifier: definitionModifier(definition),
     routing: definitionRouting(definition),
+    ...(seed ? { interpretation: seed.interpretation }
+      : definitionInterpretation(definition) ? { interpretation: definitionInterpretation(definition) } : {}),
     priceCents: definitionPriceCents(definition),
     version: definition.version ?? "1",
   };
@@ -713,6 +751,12 @@ function definitionRouting(definition: ChargeItemDefinition): ProcedureFeeRoutin
     : undefined;
 }
 
+function definitionInterpretation(definition: ChargeItemDefinition): ProcedureFeeInterpretation | undefined {
+  const value = definition.extension?.find((extension) => extension.url === FEE_INTERPRETATION_EXTENSION_URL)?.valueCode;
+  return typeof value === "string" && FEE_INTERPRETATION_ANSWERS.includes(value as ProcedureFeeInterpretation)
+    ? value as ProcedureFeeInterpretation : undefined;
+}
+
 function normalizeBillingCode(value: string | null | undefined): string | undefined {
   if (value === undefined || value === null) return undefined;
   const normalized = value.trim().toUpperCase();
@@ -748,6 +792,12 @@ function assertCategory(value: ProcedureFeeCategory | undefined): void {
 function assertRouting(value: ProcedureFeeRouting | undefined): void {
   if (value !== undefined && !PROCEDURE_FEE_ROUTINGS.includes(value)) {
     throw new Error("Procedure fee routing is invalid.");
+  }
+}
+
+function assertInterpretation(value: ProcedureFeeInterpretation | undefined): void {
+  if (value !== undefined && !FEE_INTERPRETATION_ANSWERS.includes(value)) {
+    throw new Error("Procedure fee interpretation is invalid.");
   }
 }
 

@@ -117,6 +117,14 @@ test("S3c2c1b G1 Accept creates one ServiceRequest and one accepted manual charg
   assert.equal((reply.body as any).rows[0].charge.status, "billed");
 });
 
+test("S3c2c2b2 G4a Follow-up Accept snapshots the service fee on the caller-written charge", async () => {
+  const h = await acceptFixture();
+  assert.equal((await h.accept()).status, 200);
+  assert.deepEqual((await h.charges())[0]?.interpretation,
+    { answer: "fundus-photo", feeVersion: "1", at: AT });
+  assert.equal(h.staff.resources.some(row => row.resourceType === "ChargeItemDefinition"), false);
+});
+
 test("S3c2c1b G2 concurrent Accept clicks leave one live order and one live charge", async () => {
   const h = await acceptFixture();
   const replies = await Promise.all([h.accept(), h.accept()]);

@@ -59,6 +59,7 @@ import {
 } from "./annual-recall.js";
 import {
   isVisitProcedureConceptKey,
+  interpretationSnapshot,
   listActiveVisitProcedureFees,
   materializeAcceptedChargeProposals,
   visitProcedureFamily,
@@ -436,7 +437,11 @@ export async function handleProtocolApplyRequest(
     for (const charge of (await service.charges.list()).filter((candidate) =>
       candidate.protocolApplicationId === opened.application.id &&
       candidate.state === "staged"
-    )) await service.charges.save({ ...charge, state: "accepted" });
+    )) {
+      const at = deps.now?.() ?? new Date().toISOString();
+      await service.charges.save({ ...charge, state: "accepted",
+        interpretation: await interpretationSnapshot(staff.fhir, charge.procedureConceptKey, at) });
+    }
   }
   return {
     status: 200,
@@ -741,6 +746,10 @@ export async function handleVisitChargeMutationRequest(
         state: "accepted",
         provenance: { source: "clinician-entered", actor: staff.staffReference, at },
       };
+  if (proposal.state === "accepted" && (!resolution.proposal || resolution.proposal.state !== "accepted" ||
+    proposal.procedureConceptKey !== resolution.proposal.procedureConceptKey)) {
+    proposal.interpretation = await interpretationSnapshot(staff.fhir, proposal.procedureConceptKey, at);
+  }
   const saved = await service.charges.save(proposal);
   return {
     status: 200,
@@ -1281,7 +1290,7 @@ export async function handleFollowUpAcceptRequest(
       let manual = live && isManualProcedureProposal(live, encounterId) ? live : undefined;
       if (coded && !live) {
         chargeStarted = true;
-        const written = await createAcceptedManualProcedureCharge({ fhir: staff.fhir as unknown as Parameters<typeof createAcceptedManualProcedureCharge>[0]["fhir"], encounterId, procedureConceptKey: orderable,
+        const written = await createAcceptedManualProcedureCharge({ fhir: staff.fhir as unknown as Parameters<typeof createAcceptedManualProcedureCharge>[0]["fhir"], feeFhir: serviceFhir, encounterId, procedureConceptKey: orderable,
           dxPointers: diagnosis ? [diagnosis.reference] : [], actor: staff.staffReference, now: deps.now });
         if (written.status !== 201 || !("proposal" in written.body)) return loadFailure;
         manual = written.body.proposal;

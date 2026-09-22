@@ -1,6 +1,7 @@
 import type { DiagnosisVisitStatus } from "./diagnosis-visit-status-store.js";
 import type { CodeableConcept } from "@medplum/fhirtypes";
 import type { ChargeLaterality } from "../fhir/charge-item-laterality.js";
+import type { ProcedureFeeInterpretation } from "./procedure-fee-schedule.js";
 
 export type LateralityMode = "inherit-dx" | "OU-always" | { fixed: "OD" | "OS" | "OU" };
 export type { DiagnosisVisitStatus } from "./diagnosis-visit-status-store.js";
@@ -148,6 +149,7 @@ export interface ChargeProposal {
     detectedIssueRef?: string;
   }>;
   state: "staged" | "accepted" | "overridden" | "removed" | "finalized";
+  interpretation?: { answer: ProcedureFeeInterpretation | "unanswered"; feeVersion: string; at: string };
   protocolDefaultPayload?: Record<string, unknown>;
   modifiedFields?: string[];
   override?: { reason: string; actor: string; at: string; abnFlag: boolean };

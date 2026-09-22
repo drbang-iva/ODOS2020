@@ -1,0 +1,31 @@
+{
+  "synthetic": true,
+  "caller": "project-admin",
+  "endpoint": "/clinical-graph/fee-schedule/fundus-photography",
+  "method": "POST",
+  "request": {
+    "action": "save",
+    "billingCode": "SYNTHFUNDUSR3",
+    "interpretation": "fundus-photo",
+    "priceCents": 10000,
+    "active": true
+  },
+  "status": 200,
+  "returned": {
+    "procedureConceptKey": "fundus-photography",
+    "active": true,
+    "billingCode": "SYNTHFUNDUSR3",
+    "priceCents": 10000,
+    "interpretation": "fundus-photo",
+    "version": "2"
+  },
+  "activeCodedFeeList": [
+    {
+      "procedureConceptKey": "fundus-photography",
+      "billingCode": "SYNTHFUNDUSR3",
+      "priceCents": 10000,
+      "interpretation": "fundus-photo",
+      "version": "2"
+    }
+  ]
+}

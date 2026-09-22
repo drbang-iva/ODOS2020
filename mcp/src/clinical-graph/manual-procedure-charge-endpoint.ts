@@ -5,6 +5,7 @@ import { z } from "zod";
 import { assertBusinessActionAllowed, staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import {
   isVisitProcedureConceptKey,
+  interpretationSnapshot,
   listActiveCodedNonVisitProcedureFees,
   listProcedureFeeScheduleSnapshot,
   type ProcedureFeeScheduleFhir,
@@ -178,6 +179,7 @@ export async function handleProcedureChargeCreateRequest(
 
 export async function createAcceptedManualProcedureCharge(input: {
   fhir: ManualProcedureChargeFhir;
+  feeFhir?: Pick<ProcedureFeeScheduleFhir, "baseUrl" | "search" | "searchUrl">;
   encounterId: string;
   procedureConceptKey: string;
   dxPointers: string[];
@@ -190,6 +192,7 @@ export async function createAcceptedManualProcedureCharge(input: {
   const proposal: ChargeProposal = {
     id, encounterId: input.encounterId, planActionRef: id, procedureConceptKey: input.procedureConceptKey,
     units: 1, dxPointers: [...input.dxPointers], evidenceRefs: [], coverageEvaluations: [], state: "accepted",
+    interpretation: await interpretationSnapshot(input.feeFhir ?? input.fhir, input.procedureConceptKey, at),
     provenance: { source: "clinician-entered", actor: input.actor, at },
   };
   return { status: 201, body: { proposal: await chargeStore(input.fhir).save(proposal) } };
@@ -255,6 +258,9 @@ export async function handleProcedureChargePatchRequest(
       updated = withoutLaterality;
     } else if (body.data.laterality !== undefined) {
       updated = { ...updated, laterality: body.data.laterality };
+    }
+    if (updated.state === "accepted" && proposal.state !== "accepted") {
+      updated = { ...updated, interpretation: await interpretationSnapshot(staff.fhir, updated.procedureConceptKey, at) };
     }
     return { status: 200, body: { proposal: await store.save(updated) } };
   });

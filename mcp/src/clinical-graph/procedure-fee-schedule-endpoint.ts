@@ -3,6 +3,7 @@ import type { PracticeRoleId } from "../authz/roles.js";
 import {
   PROCEDURE_FEE_CATEGORIES,
   PROCEDURE_FEE_ROUTINGS,
+  FEE_INTERPRETATION_ANSWERS,
   ProcedureFeeConceptConflictError,
   ProcedureFeeScheduleInputError,
   createProcedureFeeScheduleItem,
@@ -30,6 +31,7 @@ const mutationSchema = z.discriminatedUnion("action", [
     billingCode: z.string().nullable().optional(),
     modifier: z.string().nullable().optional(),
     routing: z.enum(PROCEDURE_FEE_ROUTINGS).optional(),
+    interpretation: z.enum(FEE_INTERPRETATION_ANSWERS).optional(),
     priceCents: z.number().int().nonnegative().nullable(),
     active: z.boolean(),
   }).strict(),
@@ -50,6 +52,7 @@ const createSchema = z.object({
   billingCode: z.string().nullable().optional(),
   modifier: z.string().nullable().optional(),
   routing: z.enum(PROCEDURE_FEE_ROUTINGS).optional(),
+  interpretation: z.enum(FEE_INTERPRETATION_ANSWERS).optional(),
   priceCents: z.number().int().nonnegative().nullable(),
   active: z.boolean(),
 }).strict();
@@ -92,6 +95,7 @@ export async function handleProcedureFeeScheduleMutationRequest(
         billingCode: mutation.data.billingCode,
         modifier: mutation.data.modifier,
         routing: mutation.data.routing,
+        interpretation: mutation.data.interpretation,
         priceCents: mutation.data.priceCents,
       } : {}),
       active: mutation.data.action === "save" ? mutation.data.active : false,
@@ -125,6 +129,7 @@ export async function handleProcedureFeeScheduleCreateRequest(
       billingCode: parsed.data.billingCode,
       modifier: parsed.data.modifier,
       routing: parsed.data.routing,
+      interpretation: parsed.data.interpretation,
       priceCents: parsed.data.priceCents,
       active: parsed.data.active,
     });

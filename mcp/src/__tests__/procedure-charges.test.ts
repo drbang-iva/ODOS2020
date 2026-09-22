@@ -527,6 +527,7 @@ test("procedure create uses stable manual identity and the sole principal diagno
     evidenceRefs: [],
     coverageEvaluations: [],
     state: "accepted",
+    interpretation: { answer: "not-required", feeVersion: "1", at: NOW },
     provenance: {
       source: "clinician-entered",
       actor: "Practitioner/clinician",
@@ -606,7 +607,7 @@ test("procedure patch edits, clears, removes, and revives only mutable fields", 
   assert.equal((await patch({ state: "removed" })).status, 200);
   assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "removed", lastAmendment }));
   assert.equal((await patch({ state: "accepted" })).status, 200);
-  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "accepted", lastAmendment }));
+  assert.deepEqual(await store.get(id), manualProcedure({ id, dxPointers: [], state: "accepted", interpretation: { answer: "not-required", feeVersion: "1", at: NOW }, lastAmendment }));
 });
 
 test("procedure patch preserves creation attribution and records the last amendment", async () => {

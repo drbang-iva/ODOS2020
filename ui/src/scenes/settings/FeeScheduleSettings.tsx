@@ -15,6 +15,14 @@ const CATEGORY_LABELS = {
   procedure: "Procedures",
 } as const;
 const CATEGORY_ORDER: readonly string[] = Object.values(CATEGORY_LABELS);
+const INTERPRETATION_OPTIONS = [
+  { value: "not-required", label: "No" },
+  { value: "visual-field", label: "Yes — visual field" },
+  { value: "fundus-photo", label: "Yes — fundus photo" },
+  { value: "anterior-segment-photo", label: "Yes — anterior segment photo" },
+  { value: "oct", label: "Yes — OCT" },
+  { value: "biometry", label: "Yes — biometry" },
+];
 
 export function FeeScheduleSettings({ canWrite }: { canWrite: boolean }) {
   const adapter = useMemo(() => procedureFeeScheduleAdapter(), []);
@@ -56,6 +64,7 @@ export function feeScheduleDescriptor(
           { value: "self-pay", label: "Self-pay" },
         ],
       },
+      { type: "select", key: "interpretation", label: "Needs an interpretation?", options: INTERPRETATION_OPTIONS },
       { type: "currency", key: "priceCents", label: "Fee", min: 0 },
     ],
     createFields: [
@@ -78,6 +87,7 @@ export function feeScheduleDescriptor(
           { value: "self-pay", label: "Self-pay" },
         ],
       },
+      { type: "select", key: "interpretation", label: "Needs an interpretation?", required: true, options: INTERPRETATION_OPTIONS },
       { type: "currency", key: "priceCents", label: "Fee", min: 0 },
     ],
     createItem: () => ({
@@ -93,6 +103,9 @@ export function feeScheduleDescriptor(
       ...(!context?.inFamily && item.billingCode ? [item.billingCode] : []),
       ...(item.modifier ? [`Modifier ${item.modifier}`] : []),
       ...(item.routing ? [`Routing ${item.routing} — recorded only`] : []),
+      ...(item.interpretation === "not-required" ? ["Interpretation: not needed"]
+        : item.interpretation ? [`Interpretation: ${INTERPRETATION_OPTIONS.find(option => option.value === item.interpretation)?.label.replace(/^Yes — /, "")}`]
+          : item.active ? ["Interpretation: not answered"] : []),
       item.priceCents === undefined ? "Unpriced" : money(item.priceCents),
       `Version ${item.version}`,
     ],
