@@ -8,6 +8,8 @@ import type {
   ChargeItemDefinition,
   Condition,
   Encounter,
+  Media,
+  DiagnosticReport,
   Resource,
 } from "@medplum/fhirtypes";
 import express from "express";
@@ -31,6 +33,7 @@ import {
 import { PROTOCOL_BASIC_CODES, ProtocolBasicStore } from "../clinical-graph/protocol-store.js";
 import type { ChargeProposal } from "../clinical-graph/protocol-types.js";
 import { buildProfessionalClaim } from "../claims/claimmd-fhir.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 
 const NOW = "2026-08-11T20:00:00.000Z";
 const EDITED_AT = "2026-08-11T20:05:00.000Z";
@@ -1065,6 +1068,17 @@ test("behavioral acceptance: one visit and three procedure charges stay isolated
   }));
 
   const beforeChargeCount = fhir.resources.filter((resource) => resource.resourceType === "ChargeItem").length;
+  fhir.resources.push({
+    resourceType: "Media", id: "acceptance-fundus-photo", status: "completed",
+    subject: { reference: "Patient/patient-1" }, encounter: { reference: "Encounter/enc-1" },
+    modality: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: "fundus-photo" }] },
+    content: { contentType: "image/jpeg", url: "Binary/acceptance-fundus-photo" },
+  } satisfies Media, {
+    resourceType: "DiagnosticReport", id: "acceptance-fundus-report", status: "final",
+    code: { text: "Synthetic interpretation" }, subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/enc-1" }, conclusion: "Synthetic interpretation",
+    media: [{ link: { reference: "Media/acceptance-fundus-photo" } }],
+  } satisfies DiagnosticReport);
   const signed = await handleProtocolSignCleanupRequest({
     authenticate: deps.authenticate,
     feeScheduleFhir: fhir,

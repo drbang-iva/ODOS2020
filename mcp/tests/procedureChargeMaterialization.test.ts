@@ -5,6 +5,8 @@ import type {
   ChargeItem,
   ChargeItemDefinition,
   Encounter,
+  Media,
+  DiagnosticReport,
   Resource,
 } from "@medplum/fhirtypes";
 import { loadDayClose } from "../src/desk/day-close.js";
@@ -25,6 +27,7 @@ import { ProtocolService } from "../src/clinical-graph/protocol-service.js";
 import type { ChargeProposal, ProtocolApplication } from "../src/clinical-graph/protocol-types.js";
 import { handleOpenChargesRequest } from "../src/payments/payment-collection-handler.js";
 import type { FhirSearchParams } from "../src/fhir-client.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 
 const NOW = "2026-07-21T15:30:00.000Z";
 
@@ -157,6 +160,26 @@ test("sign cleanup materializes five accepted proposals once and existing money 
     priceCents: 12_345,
     active: true,
   });
+  const imagingActions = await service.actions.list();
+  for (const [key, category] of [
+    ["scodi-optic-nerve", "oct"],
+    ["visual-field-threshold", "visual-field"],
+    ["fundus-photography", "fundus-photo"],
+  ] as const) {
+    const orderReference = imagingActions.find(action => action.actionType === "order" && action.payload.orderableKey === key)?.materializedFhirRef;
+    assert.ok(orderReference);
+    const mediaId = `interpreted-${key}`;
+    fhir.resources.push({
+      resourceType: "Media", id: mediaId, status: "completed", subject: { reference: "Patient/patient-1" },
+      encounter: { reference: "Encounter/enc-1" }, basedOn: [{ reference: orderReference }],
+      modality: { coding: [{ system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM, code: category }] },
+      content: { contentType: "image/jpeg", url: `Binary/${mediaId}` },
+    } satisfies Media, {
+      resourceType: "DiagnosticReport", id: `report-${key}`, status: "final", code: { text: "Synthetic interpretation" },
+      subject: { reference: "Patient/patient-1" }, encounter: { reference: "Encounter/enc-1" },
+      conclusion: "Synthetic interpretation", media: [{ link: { reference: `Media/${mediaId}` } }],
+    } satisfies DiagnosticReport);
+  }
   const deps = {
     authenticate: async () => ({
       staffReference: "Practitioner/clinician-1",

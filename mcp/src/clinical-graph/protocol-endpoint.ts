@@ -66,6 +66,7 @@ import {
   type ProcedureChargeFhir,
   type ProcedureFeeScheduleFhir,
 } from "./procedure-fee-schedule.js";
+import { InterpretationRequiredError, loadInterpretationBlocks } from "./interpretation-gate.js";
 
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
 export const PROTOCOL_FOLLOW_UP_IDENTIFIER_SYSTEM =
@@ -434,14 +435,10 @@ export async function handleProtocolApplyRequest(
     throw error;
   }
   if (parsed.data.acceptCharges) {
-    for (const charge of (await service.charges.list()).filter((candidate) =>
-      candidate.protocolApplicationId === opened.application.id &&
-      candidate.state === "staged"
-    )) {
+    await service.acceptStagedCharges(opened.application.id, async charge => {
       const at = deps.now?.() ?? new Date().toISOString();
-      await service.charges.save({ ...charge, state: "accepted",
-        interpretation: await interpretationSnapshot(staff.fhir, charge.procedureConceptKey, at) });
-    }
+      return interpretationSnapshot(staff.fhir, charge.procedureConceptKey, at);
+    });
   }
   return {
     status: 200,
@@ -881,16 +878,37 @@ export async function handleProtocolSignCleanupRequest(
   const parsed = z.object({ encounterId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now, undefined, deps.educationCatalog);
-  const abandoned = await service.abandonOpenForSignedEncounter(parsed.data.encounterId);
-  const charges = await materializeAcceptedChargeProposals({
-    fhir: staff.fhir as unknown as ProcedureChargeFhir,
-    feeScheduleFhir: deps.feeScheduleFhir,
-    encounterId: parsed.data.encounterId,
-    actorReference: staff.staffReference,
-    charges: service.charges,
-    applications: service.applications,
-    now: deps.now,
-  });
+  const gate = async (proposals: readonly ChargeProposal[]) => {
+    const blocks = await loadInterpretationBlocks({
+      encounterId: parsed.data.encounterId,
+      proposals,
+      actions: service.actions,
+      fhir: staff.fhir as unknown as Parameters<typeof loadInterpretationBlocks>[0]["fhir"],
+      feeScheduleFhir: deps.feeScheduleFhir,
+    });
+    if (blocks.length) throw new InterpretationRequiredError(blocks);
+  };
+  let abandoned: number, charges: Awaited<ReturnType<typeof materializeAcceptedChargeProposals>>;
+  try {
+    ({ abandoned, charges } = await service.signCleanup(parsed.data.encounterId, {
+      gate: async () => gate(await service.charges.list()),
+      materialize: () => materializeAcceptedChargeProposals({
+        fhir: staff.fhir as unknown as ProcedureChargeFhir,
+        feeScheduleFhir: deps.feeScheduleFhir,
+        encounterId: parsed.data.encounterId,
+        actorReference: staff.staffReference,
+        charges: service.charges,
+        applications: service.applications,
+        now: deps.now,
+        beforeWrite: gate,
+      }),
+    }));
+  } catch (error) {
+    if (error instanceof InterpretationRequiredError) {
+      return { status: 409, body: { code: "interpretation-required", error: error.message, tests: error.tests } };
+    }
+    throw error;
+  }
   let annualRecall;
   try {
     annualRecall = await materializeAnnualRecallOnSign(
