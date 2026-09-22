@@ -37,7 +37,7 @@ test("imaging section renders chart/visit scope, native capture, and all support
   assert.match(html, /Referral scan/);
   assert.match(html, /Outside record/);
   assert.match(html, /Interpretation \(optional\)/);
-  assert.match(html, /Creates a preliminary DiagnosticReport linked to the uploaded Media/);
+  assert.match(html, /Doctors only\. Saves the interpretation and report for this image\./);
   assert.match(html, /Upload to chart/);
   assert.match(html, /disabled=""/);
 });

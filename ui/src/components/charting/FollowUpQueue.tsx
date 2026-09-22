@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { acceptFollowUpTest, loadFollowUpQueue, decideFollowUpTest, recordFollowUpResult, linkFollowUpResult, type FollowUpQueueRow, type FollowUpQueueResult } from "../../lib/follow-up-queue";
+import { acceptFollowUpTest, loadFollowUpQueue, decideFollowUpTest, recordFollowUpResult, linkFollowUpResult, interpretFollowUpResult, type FollowUpQueueRow, type FollowUpQueueResult } from "../../lib/follow-up-queue";
 import { procedureChargeApi } from "../../lib/clinical-graph-client";
 
 type LoadState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; value: FollowUpQueueResult };
@@ -13,6 +13,7 @@ export function FollowUpQueue({ encounterId, active, patientReference, onOpenIma
   const [retry, setRetry] = useState(0);
   const [rowState, setRowState] = useState<Record<string, { saving: boolean; error?: string }>>({});
   const [diagnosisOpen, setDiagnosisOpen] = useState<Record<string, boolean>>({});
+  const [interpretDraft, setInterpretDraft] = useState<Record<string, string>>({});
   const generation = useRef(0);
   const pending = useRef(new Set<string>());
   useEffect(() => {
@@ -20,6 +21,7 @@ export function FollowUpQueue({ encounterId, active, patientReference, onOpenIma
     pending.current.clear();
     setRowState({});
     setDiagnosisOpen({});
+    setInterpretDraft({});
     if (!active) return;
     const controller = new AbortController();
     let current = true;
@@ -65,6 +67,16 @@ export function FollowUpQueue({ encounterId, active, patientReference, onOpenIma
   function link(row: FollowUpQueueRow, mediaReference: string, action: "link" | "unlink") {
     return mutate(row, () => linkFollowUpResult(encounterId, { orderable: row.orderable, ...(row.focus !== undefined ? { focus: row.focus } : {}), mediaReference, action }));
   }
+  function saveInterpretation(row: FollowUpQueueRow) {
+    const key = `${row.orderable}|${row.focus ?? ""}`;
+    const conclusion = interpretDraft[key]?.trim();
+    if (!conclusion) return;
+    return mutate(row, async () => {
+      const value = await interpretFollowUpResult(encounterId, { orderable: row.orderable, ...(row.focus !== undefined ? { focus: row.focus } : {}), conclusion });
+      setInterpretDraft(previous => { const next = { ...previous }; delete next[key]; return next; });
+      return value;
+    });
+  }
   function changeCharge(row: FollowUpQueueRow, change: { state?: "removed" | "accepted"; dxPointer?: string }) {
     if (!row.charge || (row.charge.status !== "billed" && row.charge.status !== "removed")) return;
     const proposalId = row.charge.proposalId;
@@ -103,6 +115,24 @@ export function FollowUpQueue({ encounterId, active, patientReference, onOpenIma
         {row.state === "for-review" && row.unreviewedResult && <p className="odos-follow-up-result-status">Done — not reviewed</p>}
         {row.state === "already-ordered" && row.result && <div className="odos-follow-up-results">
           {row.result.status !== "none" && <p className="odos-follow-up-result-status">{row.result.status === "interpreted" ? "Interpreted" : "Completed — needs interpretation"}</p>}
+          {canAccept && row.result.status === "needs-interpretation" && (
+            Object.hasOwn(interpretDraft, `${row.orderable}|${row.focus ?? ""}`) ?
+              <div className="odos-follow-up-interpret">
+                <label>Interpretation
+                  <textarea aria-label="Interpretation" maxLength={5000} value={interpretDraft[`${row.orderable}|${row.focus ?? ""}`]}
+                    disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false}
+                    onChange={event => setInterpretDraft(previous => ({ ...previous, [`${row.orderable}|${row.focus ?? ""}`]: event.target.value }))} />
+                </label>
+                <div>
+                  <button type="button" disabled={!interpretDraft[`${row.orderable}|${row.focus ?? ""}`]?.trim() || (rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false)}
+                    onClick={() => saveInterpretation(row)}>Save</button>
+                  <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false}
+                    onClick={() => setInterpretDraft(previous => { const next = { ...previous }; delete next[`${row.orderable}|${row.focus ?? ""}`]; return next; })}>Cancel</button>
+                </div>
+              </div> :
+              <button type="button" disabled={rowState[`${row.orderable}|${row.focus ?? ""}`]?.saving ?? false}
+                onClick={() => setInterpretDraft(previous => ({ ...previous, [`${row.orderable}|${row.focus ?? ""}`]: row.result?.draftConclusion ?? "" }))}>Add interpretation</button>
+          )}
           {row.result.items.map(item => <div className="odos-follow-up-result-item" key={item.mediaReference}>
             <span>{item.title} · <time dateTime={item.date}>{item.date ? new Date(item.date).toLocaleDateString() : "Date not recorded"}</time></span>
             {canAccept && <>

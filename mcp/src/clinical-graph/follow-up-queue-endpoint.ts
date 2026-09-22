@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { collectBoundedSearch } from "../fhir-search.js";
-import type { Condition, DiagnosticReport, Encounter, Media, ServiceRequest } from "@medplum/fhirtypes";
+import { randomUUID } from "node:crypto";
+import type { Bundle, Condition, DiagnosticReport, Encounter, Media, Provenance, ServiceRequest } from "@medplum/fhirtypes";
 import { staffHasBusinessAction } from "../authz/roles.js";
 import { conditionClinicalFamily, normalizeClinicalFamily, practitionerNamesByReference, type ExamOverviewEndpointDeps, type ExamOverviewFhirClient } from "./exam-overview-endpoint.js";
 import { FhirEncounterExamScopeStore, type ProposedExamTest } from "./exam-scope-store.js";
@@ -15,6 +16,7 @@ import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirFollowUpProfileStore } from "./follow-up-profile-store.js";
 import { imagingCategory, isImagingReadSurfaceMedia, searchImagingMedia, type ImagingFhirClient } from "./imaging-endpoint.js";
 import { resultKind } from "./follow-up-result-kinds.js";
+import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
 
 export interface FollowUpQueueRow {
   orderable: string;
@@ -27,7 +29,7 @@ export interface FollowUpQueueRow {
   actionIds?: string[];
   reason?: string;
   charge?: FollowUpRowCharge;
-  result?: { orderReference?: string; category: string; status: "none" | "needs-interpretation" | "interpreted"; items: FollowUpResultItem[]; candidates: FollowUpResultItem[] };
+  result?: { orderReference?: string; category: string; status: "none" | "needs-interpretation" | "interpreted"; items: FollowUpResultItem[]; candidates: FollowUpResultItem[]; draftConclusion?: string };
   unreviewedResult?: true;
 }
 type FollowUpResultItem = { mediaReference: string; title: string; date: string };
@@ -199,12 +201,19 @@ export async function handleFollowUpDecisionRequest(deps: Deps, input: { authHea
   }
 }
 
-const resultCommandSchema = z.object({
+const linkResultCommandSchema = z.object({
   orderable: z.string().min(1),
   focus: z.string().min(1).optional(),
   mediaReference: z.string().regex(/^Media\/[A-Za-z0-9.-]+$/),
   action: z.enum(["link", "unlink"]),
 }).strict();
+const interpretResultCommandSchema = z.object({
+  action: z.literal("interpret"),
+  orderable: z.string().min(1),
+  focus: z.string().min(1).optional(),
+  conclusion: z.string().trim().min(1).max(5000),
+}).strict();
+const resultCommandSchema = z.union([linkResultCommandSchema, interpretResultCommandSchema]);
 
 function orderReferences(row: FollowUpQueueRow, actions: readonly PlanActionInstance[]): string[] {
   const ids = new Set(row.actionIds ?? []);
@@ -218,13 +227,30 @@ function liveOrderReferences(actions: readonly PlanActionInstance[], encounterId
     .flatMap(action => action.materializedFhirRef?.match(/^ServiceRequest\/[A-Za-z0-9.-]+$/) ? [action.materializedFhirRef] : []));
 }
 
-async function withImagingResults(
-  staffFhir: ExamOverviewFhirClient,
-  queue: FollowUpQueue,
-  actions: readonly PlanActionInstance[],
-  encounterId: string,
-): Promise<FollowUpQueue> {
-  if (!queue.recorded) return queue;
+function conceptOrderReferences(row: FollowUpQueueRow, rows: readonly FollowUpQueueRow[], actions: readonly PlanActionInstance[], encounterId: string): string[] {
+  const live = liveOrderReferences(actions, encounterId);
+  return [...new Set(rows.filter(candidate => candidate.state === "already-ordered" && candidate.orderable === row.orderable)
+    .flatMap(candidate => orderReferences(candidate, actions)).filter(reference => live.has(reference)))];
+}
+
+function reportAttached(report: DiagnosticReport, orders: ReadonlySet<string>, mediaReferences: ReadonlySet<string>): boolean {
+  return Boolean(report.basedOn?.some(link => link.reference && orders.has(link.reference)) ||
+    report.media?.some(link => link.link.reference && mediaReferences.has(link.link.reference)));
+}
+
+function assertInterpretationTransaction(request: Bundle, response: Bundle): void {
+  if (response.type !== "transaction-response" || response.entry?.length !== request.entry?.length) {
+    throw new Error("Interpretation transaction did not return a complete response.");
+  }
+  for (const entry of response.entry ?? []) {
+    const status = Number.parseInt(entry.response?.status ?? "", 10);
+    if (!Number.isInteger(status) || status < 200 || status >= 300) {
+      throw Object.assign(new Error("Interpretation transaction entry failed."), { status });
+    }
+  }
+}
+
+async function readImagingResources(staffFhir: ExamOverviewFhirClient, encounterId: string) {
   const encounterReference = `Encounter/${encounterId}`;
   const mediaRows = (await searchImagingMedia(staffFhir as unknown as ImagingFhirClient, {
     encounter: encounterReference, status: "completed", _sort: "-created", _count: "50",
@@ -241,6 +267,17 @@ async function withImagingResults(
     } : undefined,
   }, "DiagnosticReport", reportBundle, { maxPages: 100, maxRows: 5_000 }))
     .filter(report => report.encounter?.reference === encounterReference);
+  return { mediaRows, reports };
+}
+
+async function withImagingResults(
+  staffFhir: ExamOverviewFhirClient,
+  queue: FollowUpQueue,
+  actions: readonly PlanActionInstance[],
+  encounterId: string,
+): Promise<FollowUpQueue> {
+  if (!queue.recorded) return queue;
+  const { mediaRows, reports } = await readImagingResources(staffFhir, encounterId);
   const summary = (media: Media): FollowUpResultItem => ({
     mediaReference: `Media/${media.id}`,
     title: media.content.title ?? "Imaging result",
@@ -255,15 +292,18 @@ async function withImagingResults(
     if (row.state !== "already-ordered") return row;
     const references = new Set(orderReferences(row, actions));
     const items = mediaRows.filter(media => media.basedOn?.some(link => link.reference && references.has(link.reference)));
-    const itemReferences = new Set(items.map(media => `Media/${media.id}`));
-    const interpreted = reports.some(report => report.status !== "entered-in-error" && report.status !== "cancelled" &&
-      Boolean(report.conclusion?.trim()) &&
-      (report.basedOn?.some(link => link.reference && references.has(link.reference)) ||
-        report.media?.some(link => link.link.reference && itemReferences.has(link.link.reference))));
+    const conceptOrders = new Set(conceptOrderReferences(row, queue.rows, actions, encounterId));
+    const conceptMediaReferences = new Set(mediaRows.filter(media => media.basedOn?.some(link => link.reference && conceptOrders.has(link.reference)))
+      .map(media => `Media/${media.id}`));
+    const attached = (report: DiagnosticReport) => Boolean(report.conclusion?.trim()) && reportAttached(report, conceptOrders, conceptMediaReferences);
+    const interpreted = reports.some(report => ["final", "amended", "corrected"].includes(report.status) && attached(report));
+    const draft = interpreted ? undefined : reports.filter(report => report.status === "preliminary" && attached(report))
+      .sort((a, b) => (b.issued ?? "").localeCompare(a.issued ?? "") || (b.meta?.lastUpdated ?? "").localeCompare(a.meta?.lastUpdated ?? ""))[0]?.conclusion?.trim();
     return { ...row, result: {
       orderReference: [...references][0], category: kind.category,
       status: interpreted ? "interpreted" as const : items.length ? "needs-interpretation" as const : "none" as const,
       items: items.map(summary), candidates: candidates.map(summary),
+      ...(draft ? { draftConclusion: draft } : {}),
     } };
   });
   return { ...queue, rows };
@@ -273,6 +313,9 @@ export async function handleFollowUpResultRequest(deps: Deps, input: { authHeade
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required." } };
   if (!staffHasBusinessAction(staff, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
+  if ((input.body as { action?: unknown } | null)?.action === "interpret" && !staffHasBusinessAction(staff, "clinical.sign")) {
+    return { status: 403, body: { code: "interpretation-requires-signer", error: "Only a doctor can save an interpretation." } };
+  }
   const params = paramsSchema.safeParse(input.params), command = resultCommandSchema.safeParse(input.body);
   if (!params.success || !command.success) return { status: 400, body: { error: "A valid encounter and result link are required." } };
   const { encounterId } = params.data;
@@ -284,9 +327,94 @@ export async function handleFollowUpResultRequest(deps: Deps, input: { authHeade
   let loaded: Awaited<ReturnType<typeof readQueue>>;
   try { loaded = await readQueue(serviceFhir, staff.fhir, encounter, encounterId, encounter.subject.reference.slice(8), true); }
   catch { return loadFailure(); }
-  const { orderable, focus, mediaReference, action } = command.data;
+  const { orderable, focus, action } = command.data;
   const row = loaded.queue.recorded ? loaded.queue.rows.find(item => item.orderable === orderable && (item.focus ?? "") === (focus ?? "")) : undefined;
   const kind = resultKind(orderable, focus);
+  if (action === "interpret") {
+    if (row?.state !== "already-ordered" || kind.kind !== "image") {
+      return { status: 409, body: { code: "interpretation-refused", error: "This test has no result to interpret." } };
+    }
+    const conceptRows = loaded.queue.recorded ? loaded.queue.rows.filter(candidate => candidate.state === "already-ordered" && candidate.orderable === orderable) : [];
+    const liveActions = liveOrderReferences(loaded.actions, encounterId);
+    const conceptOrders = new Map<string, FollowUpQueueRow>();
+    for (const candidate of conceptRows) {
+      for (const orderReference of orderReferences(candidate, loaded.actions)) {
+        if (liveActions.has(orderReference)) conceptOrders.set(orderReference, candidate);
+      }
+    }
+    let requests: ServiceRequest[];
+    try { requests = await Promise.all([...conceptOrders.keys()].map(orderReference => staff.fhir.read<ServiceRequest>("ServiceRequest", orderReference.slice(15)))); }
+    catch (error) {
+      const status = (error as { status?: number; statusCode?: number })?.status ?? (error as { statusCode?: number })?.statusCode;
+      if (status === 401 || status === 403) return { status: 403, body: { error: "ServiceRequest is outside the caller's patient compartment." } };
+      if (status === 404 || status === 410) return { status: 404, body: { error: "ServiceRequest was not found." } };
+      return loadFailure();
+    }
+    const verified = new Set([...conceptOrders.keys()].filter((orderReference, index) => {
+      const request = requests[index]!, ownRow = conceptOrders.get(orderReference)!;
+      return request.status === "active" && request.subject?.reference === encounter.subject?.reference &&
+        request.encounter?.reference === `Encounter/${encounterId}` && request.code?.text === ownRow.orderable &&
+        (request.bodySite?.[0]?.text ?? "") === (ownRow.focus ?? "");
+    }));
+    if (!verified.size) return { status: 409, body: { code: "interpretation-refused", error: "Record the result before interpreting it." } };
+    let resources: Awaited<ReturnType<typeof readImagingResources>>;
+    try { resources = await readImagingResources(staff.fhir, encounterId); }
+    catch { return loadFailure(); }
+    const linkedMedia = resources.mediaRows.filter(media => media.subject?.reference === encounter.subject?.reference &&
+      media.basedOn?.some(link => link.reference && verified.has(link.reference)));
+    if (!linkedMedia.length) return { status: 409, body: { code: "interpretation-refused", error: "Record the result before interpreting it." } };
+    const mediaReferences = new Set(linkedMedia.map(media => `Media/${media.id}`));
+    if (resources.reports.some(report => ["final", "amended", "corrected"].includes(report.status) &&
+      Boolean(report.conclusion?.trim()) && reportAttached(report, verified, mediaReferences))) {
+      return { status: 409, body: { code: "already-interpreted", error: "This test is already interpreted." } };
+    }
+    const recordedAt = new Date().toISOString();
+    const linkedOrders = [...verified].filter(orderReference => linkedMedia.some(media => media.basedOn?.some(link => link.reference === orderReference)));
+    const report: DiagnosticReport = {
+      resourceType: "DiagnosticReport", status: "preliminary",
+      code: odosConcept("manual-imaging-interpretation", "Manual imaging interpretation"),
+      subject: reference(encounter.subject.reference), encounter: reference(`Encounter/${encounterId}`),
+      basedOn: linkedOrders.map(orderReference => ({ reference: orderReference })), effectiveDateTime: recordedAt, issued: recordedAt,
+      resultsInterpreter: [reference(staff.staffReference)],
+      media: linkedMedia.map(media => ({ link: reference(`Media/${media.id}`) })),
+      conclusion: command.data.conclusion,
+    };
+    try {
+      let createdReport: DiagnosticReport | undefined;
+      for (const phase of ["create", "attest"] as const) {
+        const provenance: Provenance | undefined = createdReport?.id ? {
+          resourceType: "Provenance", target: [reference(`DiagnosticReport/${createdReport.id}`), reference(encounter.subject.reference)],
+          recorded: recordedAt, agent: [{ who: reference(staff.staffReference) }],
+        } : undefined;
+        const request: Bundle = { resourceType: "Bundle", type: "transaction", entry: phase === "create"
+          ? [{ fullUrl: `urn:uuid:${randomUUID()}`, resource: report, request: { method: "POST", url: "DiagnosticReport" } }]
+          : [
+            { resource: { ...createdReport!, status: "final" }, request: { method: "PUT", url: `DiagnosticReport/${createdReport!.id}`, ifMatch: `W/"${createdReport!.meta!.versionId}"` } },
+            { resource: provenance!, request: { method: "POST", url: "Provenance" } },
+          ] };
+        const response = await (staff.fhir as ExamOverviewFhirClient & { executeTransaction(bundle: Bundle, headers?: Record<string, string>): Promise<Bundle> })
+          .executeTransaction(request, { "X-ODOS-Source": "mcp/follow-up-interpretation" });
+        assertInterpretationTransaction(request, response);
+        if (phase === "create") {
+          const createdId = response.entry?.[0]?.response?.location?.match(/^DiagnosticReport\/([A-Za-z0-9.-]+)(?:\/_history\/[A-Za-z0-9.-]+)?$/)?.[1];
+          if (!createdId) throw new Error("Interpretation transaction did not identify the created report.");
+          createdReport = await staff.fhir.read<DiagnosticReport>("DiagnosticReport", createdId);
+          if (createdReport.status !== "preliminary" || !createdReport.meta?.versionId) {
+            throw new Error("Interpretation report could not be attested.");
+          }
+        }
+      }
+    } catch (error) {
+      const status = (error as { status?: number; statusCode?: number })?.status ?? (error as { statusCode?: number })?.statusCode;
+      if (status === 409 || status === 412) return { status: 409, body: { code: "concurrent-edit", error: "The imaging result changed concurrently. Reload and retry." } };
+      return loadFailure();
+    }
+    try {
+      const fresh = await readQueue(serviceFhir, staff.fhir, encounter, encounterId, encounter.subject.reference.slice(8), true);
+      return { status: 200, body: await withImagingResults(staff.fhir, fresh.queue, fresh.actions, encounterId) };
+    } catch { return { status: 200, body: { committed: true, reloadRequired: true } }; }
+  }
+  const { mediaReference } = command.data;
   if (row?.state !== "already-ordered" || kind.kind !== "image") {
     return { status: 409, body: { code: "result-link-refused", error: "This test has no result to link." } };
   }

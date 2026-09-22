@@ -45,11 +45,14 @@ function deps(
   options: {
     authToken?: string;
     failCreateResourceType?: string;
+    failReportUpdate?: boolean;
     failTransaction?: boolean;
     staffReference?: string;
   } = {},
 ) {
   const created: Array<{ resource: Media | DiagnosticReport | Provenance; headers?: Record<string, string> }> = [];
+  const updatedReports: Array<{ resource: DiagnosticReport; headers?: Record<string, string> }> = [];
+  const writeSequence: string[] = [];
   const searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
   const binaryBodies: Uint8Array[] = [];
   const transactions: Bundle[] = [];
@@ -72,7 +75,15 @@ function deps(
         throw new Error(`Synthetic ${resource.resourceType} create failure`);
       }
       created.push({ resource, headers });
-      return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}` };
+      writeSequence.push(`create:${resource.resourceType}`);
+      return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}`, meta: { versionId: "1" } };
+    },
+    update: async <T extends DiagnosticReport>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> => {
+      assert.equal(resourceType, "DiagnosticReport");
+      writeSequence.push("update:DiagnosticReport");
+      if (options.failReportUpdate) throw new Error("Synthetic DiagnosticReport update failure");
+      updatedReports.push({ resource: structuredClone(resource), headers });
+      return { ...resource, id, meta: { versionId: "2" } };
     },
     search: async <T extends Media | QuestionnaireResponse>(
       resourceType: T["resourceType"],
@@ -163,7 +174,7 @@ function deps(
     storageBaseUrls: ["https://storage.test/"],
     now: () => "2026-07-13T18:00:00.000Z",
   };
-  return { attempts, binaryBodies, created, deps: value, media, pageReads, searches, transactions };
+  return { attempts, binaryBodies, created, deps: value, media, pageReads, searches, transactions, updatedReports, writeSequence };
 }
 
 test("manual imaging upload persists Media, preliminary interpretation report, and patient-scoped Provenance", async () => {
@@ -210,6 +221,36 @@ test("manual imaging upload omits DiagnosticReport when no interpretation was en
   assert.equal(result.status, 200);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Media", "Provenance"]);
   assert.equal("diagnosticReportReference" in (result.body as object), false);
+});
+
+test("S3c2c2b1 G12 provider capture attests a preliminary report before Provenance", async () => {
+  const h = deps("provider");
+  const result = await handleImagingCaptureRequest(h.deps, {
+    authHeader: AUTH,
+    body: { ...BODY, interpretation: "Visual field reviewed." },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal((h.created[1]?.resource as DiagnosticReport).status, "preliminary");
+  assert.deepEqual(h.writeSequence, ["create:Media", "create:DiagnosticReport", "update:DiagnosticReport", "create:Provenance"]);
+  assert.equal(h.updatedReports[0]?.resource.status, "final");
+  assert.equal(h.updatedReports[0]?.headers?.["If-Match"], 'W/"1"');
+  assert.equal(h.updatedReports[0]?.headers?.["X-ODOS-Source"], "mcp/manual_imaging_upload");
+
+  const failed = deps("provider", [], [], { failReportUpdate: true });
+  const refusal = await handleImagingCaptureRequest(failed.deps, {
+    authHeader: AUTH,
+    body: { ...BODY, interpretation: "Visual field reviewed." },
+  });
+  assert.deepEqual(refusal, {
+    status: 502,
+    body: {
+      code: "interpretation-not-finalized",
+      error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab.",
+    },
+  });
+  assert.deepEqual(failed.writeSequence, ["create:Media", "create:DiagnosticReport", "update:DiagnosticReport"]);
+  assert.equal((failed.created[1]?.resource as DiagnosticReport).status, "preliminary");
 });
 
 test("manual imaging raw Binary transport accepts files above 1 MB and restores the 15 MB ceiling", async () => {
@@ -756,4 +797,24 @@ test("S3c2c2a2 G13 per-visit upload permission refusal writes no clinical resour
     assert.equal(fixture.created.length, 0);
     assert.equal(fixture.transactions.length, 0);
   }
+});
+
+test("S3c2c2b1 G6 staff interpretation capture is refused before upload; plain capture remains available", async () => {
+  const denied = deps("staff");
+  const refusal = await handleImagingCaptureRequest(denied.deps, {
+    authHeader: AUTH, body: { ...BODY, interpretation: "  Read  " },
+  });
+  assert.deepEqual(refusal, {
+    status: 403, body: { code: "interpretation-requires-signer", error: "Only a doctor can save an interpretation." },
+  });
+  assert.equal(denied.binaryBodies.length, 0);
+  assert.equal(denied.created.length, 0);
+  assert.equal(denied.transactions.length, 0);
+  assert.equal((await handleImagingCaptureRequest(denied.deps, { authHeader: AUTH, body: BODY })).status, 200);
+  const provider = deps("provider");
+  assert.equal((await handleImagingCaptureRequest(provider.deps, {
+    authHeader: AUTH, body: { ...BODY, interpretation: "Read" },
+  })).status, 200);
+  assert.equal((provider.created.find(entry => entry.resource.resourceType === "DiagnosticReport")?.resource as DiagnosticReport).status, "preliminary");
+  assert.equal(provider.updatedReports[0]?.resource.status, "final");
 });

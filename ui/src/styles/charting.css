@@ -2622,6 +2622,11 @@
 
 .odos-follow-up-results { margin-top: .75rem; }
 .odos-follow-up-result-status { margin: .5rem 0; font-weight: 600; }
+.odos-follow-up-interpret { display: grid; gap: .5rem; margin: .75rem 0; }
+.odos-follow-up-interpret label { display: grid; gap: .4rem; font-weight: 600; }
+.odos-follow-up-interpret textarea { width: 100%; min-height: 6rem; padding: .5rem; resize: vertical; }
+.odos-follow-up-interpret > div { display: flex; gap: .5rem; }
+.odos-follow-up-interpret button { min-height: 44px; padding: .5rem .75rem; }
 .odos-follow-up-result-item { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .5rem 0; }
 .odos-follow-up-result-item > span { flex: 1 1 12rem; overflow-wrap: anywhere; }
 .odos-follow-up-result-item button { min-height: 44px; padding: .5rem .75rem; }

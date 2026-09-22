@@ -456,7 +456,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
               <label className="text-sm text-[color:var(--odos-muted)] lg:row-span-2">
                 Interpretation (optional)
                 <textarea aria-label="Interpretation (optional)" className="sidebar-input mt-2 min-h-32 resize-y" value={interpretation} maxLength={5000} onChange={(event) => setInterpretation(event.target.value)} placeholder="Enter findings only when this artifact is being interpreted now." />
-                <span className="mt-1 block text-xs text-[color:var(--odos-faint)]">Creates a preliminary DiagnosticReport linked to the uploaded Media.</span>
+                <span className="mt-1 block text-xs text-[color:var(--odos-faint)]">Doctors only. Saves the interpretation and report for this image.</span>
               </label>
             </div>
 
