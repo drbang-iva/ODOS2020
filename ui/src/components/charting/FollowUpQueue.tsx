@@ -71,9 +71,10 @@ export function FollowUpQueue({ encounterId, active, patientReference, onOpenIma
     const key = `${row.orderable}|${row.focus ?? ""}`;
     const conclusion = interpretDraft[key]?.trim();
     if (!conclusion) return;
+    const currentGeneration = generation.current;
     return mutate(row, async () => {
       const value = await interpretFollowUpResult(encounterId, { orderable: row.orderable, ...(row.focus !== undefined ? { focus: row.focus } : {}), conclusion });
-      setInterpretDraft(previous => { const next = { ...previous }; delete next[key]; return next; });
+      if (generation.current === currentGeneration) setInterpretDraft(previous => { const next = { ...previous }; delete next[key]; return next; });
       return value;
     });
   }

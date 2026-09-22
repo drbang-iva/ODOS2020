@@ -46,6 +46,7 @@ function deps(
     authToken?: string;
     failCreateResourceType?: string;
     failReportUpdate?: boolean;
+    missingReportVersion?: boolean;
     failTransaction?: boolean;
     staffReference?: string;
   } = {},
@@ -56,7 +57,7 @@ function deps(
   const searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
   const binaryBodies: Uint8Array[] = [];
   const transactions: Bundle[] = [];
-  const attempts = new TestBinaryAttemptStore();
+  const attempts = new TestBinaryAttemptStore(() => writeSequence.push("resolveAttached"));
   const firstPageMedia = seededMedia.map((row) => structuredClone(row));
   const followingPages = pagedMedia.map((page) => page.map((row) => structuredClone(row)));
   const media = [...firstPageMedia, ...followingPages.flat()];
@@ -76,7 +77,8 @@ function deps(
       }
       created.push({ resource, headers });
       writeSequence.push(`create:${resource.resourceType}`);
-      return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}`, meta: { versionId: "1" } };
+      return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}`,
+        ...(resource.resourceType === "DiagnosticReport" && options.missingReportVersion ? {} : { meta: { versionId: "1" } }) };
     },
     update: async <T extends DiagnosticReport>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> => {
       assert.equal(resourceType, "DiagnosticReport");
@@ -223,7 +225,7 @@ test("manual imaging upload omits DiagnosticReport when no interpretation was en
   assert.equal("diagnosticReportReference" in (result.body as object), false);
 });
 
-test("S3c2c2b1 G12 provider capture attests a preliminary report before Provenance", async () => {
+test("S3c2c2b1 G12 provider capture records Provenance and resolves the Binary before attestation", async () => {
   const h = deps("provider");
   const result = await handleImagingCaptureRequest(h.deps, {
     authHeader: AUTH,
@@ -232,7 +234,7 @@ test("S3c2c2b1 G12 provider capture attests a preliminary report before Provenan
 
   assert.equal(result.status, 200);
   assert.equal((h.created[1]?.resource as DiagnosticReport).status, "preliminary");
-  assert.deepEqual(h.writeSequence, ["create:Media", "create:DiagnosticReport", "update:DiagnosticReport", "create:Provenance"]);
+  assert.deepEqual(h.writeSequence, ["create:Media", "create:DiagnosticReport", "create:Provenance", "resolveAttached", "update:DiagnosticReport"]);
   assert.equal(h.updatedReports[0]?.resource.status, "final");
   assert.equal(h.updatedReports[0]?.headers?.["If-Match"], 'W/"1"');
   assert.equal(h.updatedReports[0]?.headers?.["X-ODOS-Source"], "mcp/manual_imaging_upload");
@@ -249,8 +251,28 @@ test("S3c2c2b1 G12 provider capture attests a preliminary report before Provenan
       error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab.",
     },
   });
-  assert.deepEqual(failed.writeSequence, ["create:Media", "create:DiagnosticReport", "update:DiagnosticReport"]);
+  assert.deepEqual(failed.writeSequence, ["create:Media", "create:DiagnosticReport", "create:Provenance", "resolveAttached", "update:DiagnosticReport"]);
   assert.equal((failed.created[1]?.resource as DiagnosticReport).status, "preliminary");
+});
+
+test("S3c2c2b1 G13 failed capture attestation keeps Provenance and resolves the Binary attempt", async () => {
+  for (const failure of [{ failReportUpdate: true }, { missingReportVersion: true }]) {
+    const h = deps("provider", [], [], failure);
+    const reply = await handleImagingCaptureRequest(h.deps, {
+      authHeader: AUTH,
+      body: { ...BODY, interpretation: "Visual field reviewed." },
+    });
+
+    assert.equal(reply.status, 502);
+    assert.equal((reply.body as { code?: string }).code, "interpretation-not-finalized");
+    assert.deepEqual(h.created.map(entry => entry.resource.resourceType), ["Media", "DiagnosticReport", "Provenance"]);
+    assert.deepEqual((h.created[2]?.resource as Provenance).target.map(target => target.reference),
+      ["Media/media-1", "DiagnosticReport/diagnosticreport-2", BODY.patientReference]);
+    assert.deepEqual(h.writeSequence, ["create:Media", "create:DiagnosticReport", "create:Provenance", "resolveAttached",
+      ...(failure.failReportUpdate ? ["update:DiagnosticReport"] : [])]);
+    assert.equal(h.attempts.rows[0]?.status, "resolved-attached");
+    assert.equal((h.created[1]?.resource as DiagnosticReport).status, "preliminary");
+  }
 });
 
 test("manual imaging raw Binary transport accepts files above 1 MB and restores the 15 MB ceiling", async () => {
@@ -639,6 +661,8 @@ function image(
 class TestBinaryAttemptStore implements BinaryAttemptStore {
   readonly rows: BinaryAttempt[] = [];
 
+  constructor(private readonly onResolveAttached?: () => void) {}
+
   async open(input: {
     sourceFilename: string;
     patientReference: string;
@@ -661,6 +685,7 @@ class TestBinaryAttemptStore implements BinaryAttemptStore {
   }
 
   async resolveAttached(attemptId: string, mediaId: string, binaryId: string): Promise<BinaryAttempt> {
+    this.onResolveAttached?.();
     return this.replace(attemptId, {
       mediaId,
       binaryId,

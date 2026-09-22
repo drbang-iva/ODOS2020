@@ -541,3 +541,53 @@ test("S3c2c2b1 G11 an entry-level 403 inside HTTP 200 cannot claim interpretatio
   assert.equal((h.staff.resources.find(row => row.resourceType === "DiagnosticReport") as DiagnosticReport).status, "preliminary");
   assert.equal(calls, 2);
 });
+
+test("S3c2c2b1 G15 foreign-patient linked Media cannot be interpreted", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push({ ...image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"), subject: { reference: "Patient/other" } });
+
+  const reply = await h.interpret(retina.orderable, retina.focus, "Review complete");
+
+  assert.equal(reply.status, 409);
+  assert.equal((reply.body as { code?: string }).code, "interpretation-refused");
+  assert.equal(h.transactions.length, 0);
+  assert.equal(h.staff.writes.length, 0);
+});
+
+test("S3c2c2b1 G16 a non-preliminary report readback is never attested", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  const fhir = h.staff as ResultsFhir & { executeTransaction: (bundle: Bundle) => Promise<Bundle> };
+  const original = fhir.executeTransaction.bind(fhir);
+  fhir.executeTransaction = async bundle => {
+    const response = await original(bundle);
+    if (h.transactions.length === 1) {
+      const created = h.staff.resources.find(row => row.resourceType === "DiagnosticReport" && row.id === "new-report") as DiagnosticReport;
+      created.status = "final";
+    }
+    return response;
+  };
+
+  const reply = await h.interpret(retina.orderable, retina.focus, "Review complete");
+
+  assert.equal(reply.status, 502);
+  assert.equal(h.transactions.length, 1);
+  assert.equal(h.transactions[0]?.bundle.entry?.[0]?.request?.method, "POST");
+  assert.equal(h.staff.resources.some(row => row.resourceType === "Provenance"), false);
+});
+
+test("S3c2c2b1 G17 the newest preliminary report prefills the interpretation", async () => {
+  const h = await interpretationFixture([retina]);
+  h.staff.resources.push(image("photo-1", "fundus-photo", "e1", "ServiceRequest/sr-1"));
+  for (const [id, issued, conclusion] of [
+    ["older", "2026-09-21T15:00:00.000Z", "Older draft"],
+    ["newer", "2026-09-21T16:00:00.000Z", "Newer draft"],
+  ]) {
+    h.staff.resources.push({ resourceType: "DiagnosticReport", id, status: "preliminary", code: { text: "Synthetic report" },
+      subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+      basedOn: [{ reference: "ServiceRequest/sr-1" }], issued, conclusion } as DiagnosticReport);
+  }
+
+  const row = resultRows(await h.get())[0]!.result as { draftConclusion?: string };
+  assert.equal(row.draftConclusion, "Newer draft");
+});

@@ -472,3 +472,23 @@ test("S3c2c2b1 G8 non-string draft conclusion fails the queue load closed", asyn
   try { assert.match(text(h.renderer.toJSON()), /The tests for this visit could not be loaded/); }
   finally { await h.close(); }
 });
+
+test("S3c2c2b1 G14 an old encounter's completed save cannot clear the new encounter's draft", async () => {
+  let resolveSave!: (response: Response) => void;
+  const h = await resultMounted(async (_input, init) => init?.method === "POST"
+    ? new Promise<Response>(resolve => { resolveSave = resolve; })
+    : Response.json(imagingPayload));
+  try {
+    await act(async () => resultButton(h.renderer, "Add interpretation").props.onClick());
+    await act(async () => h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.onChange({ target: { value: "Old encounter draft" } }));
+    let oldSave!: Promise<void>;
+    await act(async () => { oldSave = resultButton(h.renderer, "Save").props.onClick(); });
+
+    await act(async () => h.renderer.update(<FollowUpQueue encounterId="e2" active patientReference="Patient/p1" onOpenImaging={() => undefined} />));
+    await act(async () => resultButton(h.renderer, "Add interpretation").props.onClick());
+    await act(async () => h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.onChange({ target: { value: "New encounter draft" } }));
+
+    await act(async () => { resolveSave(Response.json(imagingPayload)); await oldSave; });
+    assert.equal(h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.value, "New encounter draft");
+  } finally { await h.close(); }
+});

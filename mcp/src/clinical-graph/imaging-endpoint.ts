@@ -274,19 +274,6 @@ export async function handleImagingCaptureRequest(
       )
     : undefined;
   const reportReference = report ? resourceReference("DiagnosticReport", report.id) : undefined;
-  if (report) {
-    if (!report.meta?.versionId) {
-      return { status: 502, body: { code: "interpretation-not-finalized", error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab." } };
-    }
-    try {
-      await staff.fhir.update<DiagnosticReport>("DiagnosticReport", report.id!, { ...report, status: "final" }, {
-        ...WRITE_HEADERS,
-        "If-Match": `W/"${report.meta.versionId}"`,
-      });
-    } catch {
-      return { status: 502, body: { code: "interpretation-not-finalized", error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab." } };
-    }
-  }
   const provenance = await staff.fhir.create<Provenance>({
     resourceType: "Provenance",
     target: [
@@ -302,6 +289,19 @@ export async function handleImagingCaptureRequest(
     resourceReferenceId(mediaReference),
     upload.binary.binaryId,
   );
+  if (report) {
+    if (!report.meta?.versionId) {
+      return { status: 502, body: { code: "interpretation-not-finalized", error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab." } };
+    }
+    try {
+      await staff.fhir.update<DiagnosticReport>("DiagnosticReport", report.id!, { ...report, status: "final" }, {
+        ...WRITE_HEADERS,
+        "If-Match": `W/"${report.meta.versionId}"`,
+      });
+    } catch {
+      return { status: 502, body: { code: "interpretation-not-finalized", error: "The image was saved, but the interpretation is only a draft. Add it from the Follow-up tab." } };
+    }
+  }
 
   return {
     status: 200,
