@@ -727,6 +727,11 @@ export function ClaimSubmissionResult({ result, onAnother }: { result: SubmitCla
     <section className="rounded-lg border border-emerald-400/30 bg-emerald-950/20 p-6">
       <p className="text-xs font-bold uppercase tracking-wide text-emerald-300">Submitted</p>
       <h2 className="mt-1 text-xl font-semibold">Claim accepted for clearinghouse submission</h2>
+      {result.heldLines?.length ? (
+        <ul className="mt-4 list-disc space-y-2 pl-5 text-amber-200">
+          {result.heldLines.map(line => <li key={line.index}>{line.message}</li>)}
+        </ul>
+      ) : null}
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
         <Detail label="FHIR Claim ID" value={result.claimId ?? "Not returned"} />
         <Detail label="Clearinghouse" value={result.clearinghouse === "stedi" ? "Stedi" : "Claim.MD"} />

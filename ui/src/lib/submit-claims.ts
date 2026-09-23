@@ -164,6 +164,13 @@ export interface ClaimsApiOptions {
 }
 
 export interface SubmitClaimResult {
+  heldLines?: Array<{
+    index: number;
+    reference?: string;
+    label: string;
+    reason: "needs-interpretation" | "unclassified";
+    message: string;
+  }>;
   claimId?: string;
   claimReference?: string;
   clearinghouse?: "claimmd" | "stedi";
@@ -691,8 +698,11 @@ export async function submitProfessionalClaim(
     body: JSON.stringify({ claim, ...(options.clearinghouse ? { clearinghouse: options.clearinghouse } : {}) }),
   });
   const text = await response.text();
-  const body = parseJsonBody<SubmitClaimResult & { error?: string }>(text);
+  const body = parseJsonBody<SubmitClaimResult & { error?: string; code?: string }>(text);
   if (!response.ok) {
+    if (response.status === 409 && body?.code === "all-lines-held" && body.heldLines?.length) {
+      throw new Error(body.heldLines.map(line => line.message).join(" "));
+    }
     throw new Error(body?.error ?? `Claim submission failed with HTTP ${response.status}.`);
   }
   if (!body) throw new Error("Claim submission response was not valid JSON.");
