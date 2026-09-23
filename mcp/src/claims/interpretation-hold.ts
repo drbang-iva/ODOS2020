@@ -3,7 +3,7 @@ import { searchBounded, type FhirSearchClient } from "../fhir-search.js";
 import { chargeImageType, type ImageType } from "../clinical-graph/interpretation-gate.js";
 import { imagingCategory } from "../clinical-graph/imaging-endpoint.js";
 import { serviceDay } from "../clinical-graph/same-day-pairs.js";
-import { listProcedureFeeScheduleSnapshot, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeScheduleItem } from "../clinical-graph/procedure-fee-schedule.js";
+import { HCPCS_CODE_SYSTEM, listProcedureFeeScheduleSnapshot, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeScheduleItem } from "../clinical-graph/procedure-fee-schedule.js";
 import { parseProtocolBasic, PROTOCOL_BASIC_CODES } from "../clinical-graph/protocol-store.js";
 import type { ChargeProposal } from "../clinical-graph/protocol-types.js";
 
@@ -13,6 +13,7 @@ const bounds = { maxPages: 100, maxRows: 5_000 };
 export interface ClaimHoldContext {
   proposals: readonly ChargeProposal[];
   fees: readonly ProcedureFeeScheduleItem[];
+  proposalSearchFailed: boolean;
 }
 
 export interface HeldClaimLine {
@@ -28,9 +29,14 @@ export function claimProposalId(line: ChargeItem): string | undefined {
 }
 
 export function claimLineRequirement(line: ChargeItem, ctx: ClaimHoldContext):
-  { kind: "none" } | { kind: "type"; types: ImageType[] } | { kind: "unclassified"; label: string } {
+  { kind: "none" } | { kind: "type"; types: ImageType[] } | { kind: "unclassified"; label: string; message?: string } {
   const proposalId = claimProposalId(line);
   if (proposalId) {
+    if (ctx.proposalSearchFailed) {
+      const label = lineLabel(line, ctx);
+      return { kind: "unclassified", label,
+        message: `${label} was held: its interpretation requirement could not be classified because charge proposals could not be loaded.` };
+    }
     const proposal = ctx.proposals.find(candidate => candidate.id === proposalId);
     if (proposal) {
       const type = chargeImageType(proposal, ctx.fees);
@@ -39,8 +45,12 @@ export function claimLineRequirement(line: ChargeItem, ctx: ClaimHoldContext):
   }
   const concept = line.code.coding?.find(coding => coding.system === PROCEDURE_CONCEPT_SYSTEM)?.code;
   const conceptFees = concept ? ctx.fees.filter(fee => fee.procedureConceptKey === concept) : [];
-  const fees = conceptFees.length ? conceptFees
-    : ctx.fees.filter(fee => fee.billingCode && line.code.coding?.some(coding => coding.code === fee.billingCode));
+  const fees = conceptFees.length ? conceptFees : ctx.fees.filter(fee => {
+    const code = fee.billingCode;
+    if (!code) return false;
+    return line.code.coding?.some(coding => coding.code === code &&
+      (coding.system === HCPCS_CODE_SYSTEM || coding.system === "urn:ama:cpt"));
+  });
   if (fees.some(fee => !fee.interpretation)) {
     return { kind: "unclassified", label: fees[0]?.display ?? lineLabel(line, ctx) };
   }
@@ -78,14 +88,15 @@ export async function loadClaimProposals(fhir: FhirSearchClient): Promise<Charge
 export async function loadClaimHoldContext(fhir: FhirSearchClient, lines: readonly ChargeItem[]): Promise<ClaimHoldContext> {
   const fees = await listProcedureFeeScheduleSnapshot(fhir);
   let proposals: ChargeProposal[] = [];
+  let proposalSearchFailed = false;
   if (lines.some(line => claimProposalId(line))) {
     try {
       proposals = await loadClaimProposals(fhir);
     } catch {
-      proposals = [];
+      proposalSearchFailed = true;
     }
   }
-  return { fees, proposals };
+  return { fees, proposals, proposalSearchFailed };
 }
 
 export async function claimServiceEncounters(fhir: FhirSearchClient, patientReference: string, day: string): Promise<Encounter[]> {
@@ -130,7 +141,7 @@ export function holdLines<T extends ChargeItem>(lines: readonly T[], evidence: R
     held.push({ index, ...(line.id ? { reference: `ChargeItem/${line.id}` } : {}), label,
       reason: requirement.kind === "unclassified" ? "unclassified" : "needs-interpretation",
       message: requirement.kind === "unclassified"
-        ? `${label} was held: classify it in the fee schedule (does it need an interpretation?).`
+        ? requirement.message ?? `${label} was held: classify it in the fee schedule (does it need an interpretation?).`
         : `${label} was held: it needs an interpretation and report on this visit.`,
     });
   });

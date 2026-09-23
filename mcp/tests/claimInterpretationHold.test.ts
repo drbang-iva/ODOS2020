@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle, ChargeItem, DiagnosticReport, Encounter, Media, Resource } from "@medplum/fhirtypes";
 import { buildClaimDraft } from "../src/claims/claim-draft.js";
-import { buildProcedureFeeDefinition, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeInterpretation } from "../src/clinical-graph/procedure-fee-schedule.js";
+import { holdLines, loadClaimHoldContext } from "../src/claims/interpretation-hold.js";
+import { buildProcedureFeeDefinition, HCPCS_CODE_SYSTEM, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeInterpretation } from "../src/clinical-graph/procedure-fee-schedule.js";
 import { buildProtocolBasic, PROTOCOL_BASIC_CODES } from "../src/clinical-graph/protocol-store.js";
 import type { ChargeProposal } from "../src/clinical-graph/protocol-types.js";
 
@@ -31,7 +32,7 @@ function fixture(options: {
   };
   const photo: ChargeItem = {
     resourceType: "ChargeItem", id: "photo", status: "billable", subject: encounter.subject!, context: { reference: "Encounter/visit" },
-    code: { coding: [{ system: "urn:synthetic:billing", code: "PHOTO1", display: "Synthetic photograph" },
+    code: { coding: [{ system: HCPCS_CODE_SYSTEM, code: "PHOTO1", display: "Synthetic photograph" },
       ...(!options.billingOnly ? [{ system: PROCEDURE_CONCEPT_SYSTEM, code: "synthetic-photo" }] : [])] },
     supportingInformation: [{ reference: "Condition/dx" }], priceOverride: { value: 30, currency: "USD" },
     ...(!options.raw && !options.billingOnly ? { identifier: [{ system: proposalSystem, value: proposal.id }] } : {}),
@@ -118,20 +119,47 @@ test("H14 missing named proposal and no matching fee leaves the charge ungated",
   assert.equal(draft.warnings, undefined);
 });
 
-test("H14 unreadable proposal search falls through to the ChargeItem concept fee", async () => {
-  const { fhir } = fixture();
-  const sourceSearch = fhir.search;
-  fhir.search = async (resourceType, params = {}) => {
-    if (resourceType === "Basic") throw Object.assign(new Error("Synthetic Basic read denied"), { status: 403 });
-    return sourceSearch(resourceType, params);
-  };
+test("H14 absent named proposal falls through to the ChargeItem concept fee", async () => {
+  const { fhir, resources } = fixture();
+  resources.splice(0, resources.length, ...resources.filter(row => row.resourceType !== "Basic"));
   const draft = await buildClaimDraft(fhir, "visit");
   assert.deepEqual(draft.charges.map(row => row.id), ["visit-charge"]);
   assert.deepEqual(draft.warnings, [heldPhoto]);
 });
 
+test("H16 failed proposal search holds an otherwise ungated line as unclassified", async () => {
+  const { fhir, resources, photo } = fixture();
+  resources.splice(0, resources.length, ...resources.filter(row => row.resourceType !== "ChargeItemDefinition"));
+  const sourceSearch = fhir.search;
+  fhir.search = async (resourceType, params = {}) => {
+    if (resourceType === "Basic") throw new Error("Synthetic proposal search failure");
+    return sourceSearch(resourceType, params);
+  };
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), ["visit-charge"]);
+  assert.deepEqual(draft.warnings, ["Synthetic photograph was held: its interpretation requirement could not be classified because charge proposals could not be loaded."]);
+  const context = await loadClaimHoldContext(fhir, [photo]);
+  assert.deepEqual(holdLines([photo], new Set(), context).held.map(line => line.reason), ["unclassified"]);
+});
+
 test("H13 billing-code matching needs the fee schedule read to hold an imaging line", async () => {
   const { fhir } = fixture({ billingOnly: true });
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), ["visit-charge"]);
+  assert.deepEqual(draft.warnings, [heldPhoto]);
+});
+
+test("H17 identical billing code in another system does not match the imaging fee", async () => {
+  const { fhir, photo } = fixture({ billingOnly: true });
+  photo.code.coding![0].system = "urn:synthetic:other";
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), ["photo", "visit-charge"]);
+  assert.equal(draft.warnings, undefined);
+});
+
+test("H18 fee code typed under the other billing system still holds the imaging line", async () => {
+  const { fhir, photo } = fixture({ billingOnly: true });
+  photo.code.coding![0].system = "urn:ama:cpt";
   const draft = await buildClaimDraft(fhir, "visit");
   assert.deepEqual(draft.charges.map(row => row.id), ["visit-charge"]);
   assert.deepEqual(draft.warnings, [heldPhoto]);

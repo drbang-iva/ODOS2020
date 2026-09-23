@@ -32,7 +32,7 @@ import { handleSubmitClaimRequest, type ClaimsHandlerDeps } from "../src/claims/
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import type { ProfessionalClaimInput as ServerClaimInput } from "../src/claims/claimmd-fhir.js";
 import type { ClearinghouseAdapter } from "../src/claims/clearinghouse-adapter.js";
-import { buildProcedureFeeDefinition } from "../src/clinical-graph/procedure-fee-schedule.js";
+import { buildProcedureFeeDefinition, HCPCS_CODE_SYSTEM } from "../src/clinical-graph/procedure-fee-schedule.js";
 import { readFileSync, writeFileSync } from "node:fs";
 
 function holdSubmitFixture(clearinghouse: "claimmd" | "stedi" = "claimmd") {
@@ -42,7 +42,8 @@ function holdSubmitFixture(clearinghouse: "claimmd" | "stedi" = "claimmd") {
   const stored: Resource[] = [buildProcedureFeeDefinition({ procedureConceptKey: "synthetic-photo", display: "Synthetic photograph", billingCode: "PHOTO1", interpretation: "fundus-photo" })];
   const charge = (code: string): ChargeItem & { diagnosisSequence: number[] } => ({
     resourceType: "ChargeItem", status: "billable", subject: { reference: "Patient/synthetic" },
-    code: { coding: [{ system: "urn:synthetic:billing", code, display: code === "PHOTO1" ? "Synthetic photograph" : "Synthetic visit" }] },
+    code: { coding: [{ system: code === "PHOTO1" ? HCPCS_CODE_SYSTEM : "urn:synthetic:billing", code,
+      display: code === "PHOTO1" ? "Synthetic photograph" : "Synthetic visit" }] },
     quantity: { value: 1 }, priceOverride: { value: 30, currency: "USD" }, diagnosisSequence: [2],
   });
   const input: ServerClaimInput = {
