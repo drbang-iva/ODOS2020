@@ -804,6 +804,17 @@ const AGE_OF_MAJORITY_CONFIG_WRITE_RULE: OdosResourceRule = {
   scope: { kind: "practice-search", criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/age-of-majority-config|odos-age-of-majority-config" },
 };
 
+const PRACTICE_TIME_ZONE_CONFIG_READ_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: READ_INTERACTIONS,
+  scope: { kind: "practice-search", criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/practice-time-zone-config|odos-practice-time-zone-config" },
+};
+const PRACTICE_TIME_ZONE_CONFIG_WRITE_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: CREATE_UPDATE_INTERACTIONS,
+  scope: { kind: "practice-search", criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/practice-time-zone-config|odos-practice-time-zone-config" },
+};
+
 const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   AGE_OF_MAJORITY_CONFIG_READ_RULE,
   { resourceType: "Appointment", interactions: CREATE_UPDATE_INTERACTIONS, scope: { kind: "practice" } },
@@ -1133,6 +1144,8 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       BILLING_IDENTITY_CONFIG_READ_RULE,
       BILLING_IDENTITY_CONFIG_WRITE_RULE,
       AGE_OF_MAJORITY_CONFIG_WRITE_RULE,
+      PRACTICE_TIME_ZONE_CONFIG_READ_RULE,
+      PRACTICE_TIME_ZONE_CONFIG_WRITE_RULE,
       DIAGNOSIS_PICK_TALLY_READ_RULE,
       ...FINDING_CONFIGURATION_BASIC_READ_RESOURCE_RULES,
       ...FINDING_CONFIGURATION_BASIC_WRITE_RESOURCE_RULES,

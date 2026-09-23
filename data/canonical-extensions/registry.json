@@ -15,6 +15,12 @@
       "sliceConsumer": "registration-guarantor"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-practice-time-zone-config",
+      "namespace": "clinic",
+      "status": "active",
+      "sliceConsumer": "open-charts-sa"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/claim-touch-count",
       "namespace": "claims-follow-up",
       "status": "active",

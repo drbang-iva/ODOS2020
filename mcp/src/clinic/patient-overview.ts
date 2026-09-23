@@ -1,3 +1,4 @@
+import { signedEncounterIds as findSignedEncounterIds } from "./encounter-sign-off.js";
 import type {
   Bundle,
   CarePlan,
@@ -500,7 +501,7 @@ function projectOverview(input: {
     })),
   ].filter((medication) => medication.name);
   const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterCondition);
-  const signedEncounterIds = signedEncounters(input.encounters, input.provenances ?? []);
+  const signedEncounterIds = findSignedEncounterIds(input.encounters, input.provenances ?? []);
   const programTitles = new Map<string, string>(input.episodesOfCare.flatMap((episode) =>
     episode.id ? [[`EpisodeOfCare/${episode.id}`, conceptText(episode.type?.[0]) || "Program"] as const] : []
   ));
@@ -1064,27 +1065,6 @@ function isOphthalmicRoute(
   return codedRoute
     ? /ophthalm|\beye\b/i.test(codedRoute)
     : /ophthalm|\beye\b|\bgtt\b|\bdrop/i.test([route?.text, dosageText].filter(Boolean).join(" "));
-}
-
-function signedEncounters(encounters: Encounter[], provenances: Provenance[]): Set<string> {
-  const checkoutTimes = new Map(encounters.flatMap((encounter) =>
-    encounter.id && encounter.status === "finished" && encounter.period?.end
-      ? [[encounter.id, encounter.period.end] as const]
-      : [],
-  ));
-  return new Set(provenances.flatMap((provenance) =>
-    (provenance.target ?? []).flatMap((target) => {
-      const encounterId = referenceId(target.reference, "Encounter");
-      const checkoutAt = encounterId ? checkoutTimes.get(encounterId) : undefined;
-      return encounterId && checkoutAt && sameInstant(provenance.recorded, checkoutAt) ? [encounterId] : [];
-    }),
-  ));
-}
-
-function sameInstant(left: string | undefined, right: string): boolean {
-  const leftMs = Date.parse(left ?? "");
-  const rightMs = Date.parse(right);
-  return Number.isFinite(leftMs) && leftMs === rightMs;
 }
 
 export function isMigratedEncounter(encounter: Encounter): boolean {

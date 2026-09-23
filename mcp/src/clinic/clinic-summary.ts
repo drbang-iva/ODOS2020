@@ -1,3 +1,4 @@
+import { signedEncounterIds as findSignedEncounterIds } from "./encounter-sign-off.js";
 import type {
   Appointment,
   Encounter,
@@ -106,21 +107,7 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
     }
   }
 
-  const checkoutTimes = new Map(input.encounters.flatMap((encounter) =>
-    encounter.id && encounter.status === "finished" && encounter.period?.end
-      ? [[encounter.id, encounter.period.end] as const]
-      : [],
-  ));
-  // EncounterHeader passes one instant to both Encounter.period.end and the transaction's
-  // Provenance.recorded. Exact equality is the persisted sign-off contract; a nearby audit
-  // event must not silently sign a chart.
-  const signedEncounterIds = new Set(input.provenances.flatMap((provenance) =>
-    (provenance.target ?? []).flatMap((target) => {
-      const encounterId = target.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
-      const checkoutAt = encounterId ? checkoutTimes.get(encounterId) : undefined;
-      return encounterId && checkoutAt && sameInstant(provenance.recorded, checkoutAt) ? [encounterId] : [];
-    }),
-  ));
+  const signedEncounterIds = findSignedEncounterIds(input.encounters, input.provenances);
 
   const flow = currentAppointments.map((appointment) => {
     const patientReference = patientReferenceOf(appointment);
@@ -438,11 +425,7 @@ function minutesBetween(startMs: number, endMs: number): number {
   return Math.max(0, Math.floor((endMs - startMs) / 60_000));
 }
 
-function sameInstant(left: string | undefined, right: string): boolean {
-  const leftMs = Date.parse(left ?? "");
-  const rightMs = Date.parse(right);
-  return Number.isFinite(leftMs) && leftMs === rightMs;
-}
+
 
 export function practiceDate(now: string, timeZone?: string): string {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(now));

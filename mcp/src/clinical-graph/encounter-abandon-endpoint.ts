@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { Bundle, Encounter, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Encounter } from "@medplum/fhirtypes";
 import { staffHasBusinessAction } from "../authz/roles.js";
 import { isMigratedEncounter } from "../clinic/patient-overview.js";
-import { searchAll } from "../fhir-search.js";
+import { encounterContentByEncounter } from "./encounter-content.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { isClosedEncounter } from "./encounter-sign-gate.js";
 import { assertSuccessfulTransaction, readId } from "./encounter-void-endpoint.js";
-import { ProtocolBasicStore, PROTOCOL_BASIC_CODES } from "./protocol-store.js";
-import type { ChargeProposal, PlanActionInstance } from "./protocol-types.js";
 import type { MedplumClient } from "../fhir-client.js";
 import type { BusinessAction, PracticeRoleId } from "../authz/roles.js";
 
@@ -22,38 +20,8 @@ export interface EncounterAbandonEndpointDeps {
   } | null>;
   now?: () => string;
 }
-const RESOURCE_QUERIES: ReadonlyArray<readonly [Resource["resourceType"], string]> = [
-  ["Observation", "encounter"],
-  ["Condition", "encounter"],
-  ["Procedure", "encounter"],
-  ["DiagnosticReport", "encounter"],
-  ["DocumentReference", "encounter"],
-  ["Media", "encounter"],
-  ["QuestionnaireResponse", "encounter"],
-  ["ServiceRequest", "encounter"],
-  ["MedicationRequest", "encounter"],
-  ["MedicationStatement", "context"],
-  ["MedicationAdministration", "context"],
-  ["DeviceRequest", "encounter"],
-  ["CarePlan", "encounter"],
-  ["ChargeItem", "context"],
-];
-
 export async function encounterAbandonContent(fhir: EncounterAbandonFhirClient, encounterId: string): Promise<Array<{ kind: string; count: number }>> {
-  const content: Array<{ kind: string; count: number }> = [];
-  const count = (kind: string, rows: unknown[]) => { if (rows.length) content.push({ kind, count: rows.length }); };
-  for (const [kind, parameter] of RESOURCE_QUERIES) {
-    const rows = await searchAll(fhir, kind, { [parameter]: `Encounter/${encounterId}` });
-    count(kind, rows.filter(resource => {
-      if (resource.resourceType === "Condition") return !resource.verificationStatus?.coding?.some(coding => coding.code === "entered-in-error");
-      return !["entered-in-error", "cancelled", "revoked"].includes((resource as { status?: string }).status ?? "");
-    }));
-  }
-  const proposals = await new ProtocolBasicStore<ChargeProposal>(fhir, PROTOCOL_BASIC_CODES.chargeProposal).list();
-  count("ChargeProposal", proposals.filter(row => row.encounterId === encounterId && ["staged", "accepted", "overridden", "finalized"].includes(row.state)));
-  const actions = await new ProtocolBasicStore<PlanActionInstance>(fhir, PROTOCOL_BASIC_CODES.planActionInstance).list();
-  count("PlanActionInstance", actions.filter(row => row.encounterId === encounterId && !["removed", "cancelled"].includes(row.state)));
-  return content;
+  return (await encounterContentByEncounter(fhir, [encounterId])).contentByEncounter.get(encounterId)!;
 }
 
 export async function handleEncounterAbandonRequest(

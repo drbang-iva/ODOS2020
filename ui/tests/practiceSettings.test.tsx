@@ -8,6 +8,7 @@ import { SettingsIndex } from "../src/scenes/settings/SettingsIndex";
 const ALL_SETTINGS_HREFS = [
   "/settings/staff",
   "/settings/age-of-majority",
+  "/settings/practice-time-zone",
   "/settings/visit-types",
   "/settings/floor-config",
   "/settings/vision-plan-templates",
@@ -36,7 +37,7 @@ test("Practice landing groups existing settings and the owner-only plan-profile 
     assert.match(html, new RegExp(`>${group}<`));
   }
   assert.match(html, /practice-settings-tone-gold/);
-  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 18);
+  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 19);
 });
 
 test("Find a setting filters static Manage links and Cmd-K focuses the search", async () => {
