@@ -11,6 +11,7 @@ import type {
   SendSmsRequest,
 } from "./comms-provider.js";
 import type { InboundMessageEvent, InboundOptOutType } from "./inbound-receiver.js";
+import type { EmailAddressSuppressionReader } from "./email-unsubscribe.js";
 
 export const ODOS_COMMS_MARKETING_CONSENT_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-comms-marketing-consent";
@@ -55,7 +56,7 @@ export function communicationPurpose(campaignType: string, consentClass?: "trans
 }
 
 export const ODOS_COMMS_PREFERENCE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-comms-preference";
-export const COMMS_PREFERENCE_SURFACES = ["staff-demographics", "staff-registration", "staff-manual-send", "inbound-start"] as const;
+export const COMMS_PREFERENCE_SURFACES = ["staff-demographics", "staff-registration", "staff-manual-send", "inbound-start", "email-unsubscribe"] as const;
 export type CommsPreferenceSurface = typeof COMMS_PREFERENCE_SURFACES[number];
 export interface CommsPreferenceInput {
   purpose: CommsPurpose;
@@ -172,6 +173,7 @@ export interface InboundSuppressionResult {
 }
 
 export interface SuppressionGateDeps {
+  isEmailAddressSuppressed?: EmailAddressSuppressionReader;
   fhir: SuppressionFhir;
   practiceTimeZone: string;
   smsSenderNumber?: string;
@@ -581,6 +583,12 @@ export async function checkMessageSuppression(
   if (purpose && !effectiveCommsPreferences(patient, deps)[purpose][channel].value
     && !(request.suppression.staffEducationOverride && channel === "email" && purpose === "education")) {
     return { patient, now, result: { outcome: "suppressed", reason: "preference-withheld" } };
+  }
+  if (channel === "email" && purpose === "marketing-promo") {
+    if (!deps.isEmailAddressSuppressed) throw new Error("Email address suppression reader is required.");
+    if (await deps.isEmailAddressSuppressed((request as SendEmailRequest).toAddress ?? patientEmail(patient, now), purpose)) {
+      return { patient, now, result: { outcome: "suppressed", reason: "patient-opt-out" } };
+    }
   }
   if (
     request.suppression.frequencyCapDays !== undefined

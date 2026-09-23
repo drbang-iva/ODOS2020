@@ -1057,6 +1057,12 @@
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "r10-a3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-email-unsubscribe",
+      "namespace": "comms",
+      "status": "active",
+      "sliceConsumer": "email-e1c1-unsubscribe"
     }
   ]
 }

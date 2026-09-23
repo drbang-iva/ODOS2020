@@ -132,6 +132,7 @@ import { createEducationCatalogFromEnv } from "./comms/visionforge-education-cat
 import {
   createFhirTrackedLinkStore, registerTrackedLinkRoutes,
 } from "./comms/tracked-links.js";
+import { createEmailAddressSuppressionReader, createFhirEmailUnsubscribeStore, registerEmailUnsubscribeRoutes } from "./comms/email-unsubscribe.js";
 import {
   appointmentReminderCampaignsFromEnv,
   createReminderEngine,
@@ -713,7 +714,12 @@ const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
 const procedureDefinitionStore = new FhirProcedureDefinitionStore(fhir);
 const protocolDefinitionStore = new ProtocolDefinitionStore(fhir);
 const commsRegistrations = commsAdapterRegistrationsFromEnv(process.env);
+const isEmailAddressSuppressed = createEmailAddressSuppressionReader(fhir);
 const commsDispatch = createCommsDispatch(commsRegistrations, {
+  isEmailAddressSuppressed: async (address, scope) => {
+    await authenticateWithMedplum();
+    return isEmailAddressSuppressed(address, scope);
+  },
   channelRouting: commsChannelRoutingFromEnv(process.env),
   practiceTimeZone: process.env.ODOS_TIMEZONE ?? "UTC",
 });
@@ -7825,6 +7831,11 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
+      });
+      registerEmailUnsubscribeRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        fhir,
+        store: createFhirEmailUnsubscribeStore(fhir),
       });
       registerTrackedLinkRoutes(app, {
         authenticateService: authenticateWithMedplum,

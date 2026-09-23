@@ -1231,7 +1231,7 @@ for (const allowed of [true, false]) test(`E1a e email wrapper retains envelope 
       setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics", recordedAt: "2026-08-01T15:00:00Z",
     });
     const provider = createSuppressedCommsProvider({ ...fakeProvider(sent), validateEmailConfiguration: () => { validations++; } }, {
-      fhir: fhirFor(subject), practiceTimeZone: "UTC", now: () => new Date("2026-08-02T15:00:00Z"),
+      fhir: fhirFor(subject), isEmailAddressSuppressed: async () => false, practiceTimeZone: "UTC", now: () => new Date("2026-08-02T15:00:00Z"),
     });
     provider.validateEmailConfiguration!();
     assert.equal(validations, 1);

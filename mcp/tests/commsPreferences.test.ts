@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Patient } from "@medplum/fhirtypes";
 import * as gate from "../src/comms/suppression-gate.js";
 const metadata = { recordedAt: "2026-09-11T15:00:00Z", setBy: { reference: "Practitioner/staff" }, surface: "staff-demographics" as const };
-const patient: Patient = { resourceType: "Patient", id: "synthetic" };
+const patient: Patient = { resourceType: "Patient", id: "synthetic", telecom: [{ system: "email", value: "synthetic@example.invalid" }] };
 test("preference defaults remain implicit and explicit cells retain attribution", () => {
   assert.equal(gate.effectiveCommsPreferences(patient, {}).education.sms.value, true);
   assert.equal(gate.effectiveCommsPreferences(patient, {})["marketing-promo"].sms.value, false);
@@ -18,7 +18,7 @@ test("malformed and duplicate preference extensions refuse resolution", () => {
   updated.extension![0].extension = updated.extension![0].extension!.filter(e => e.url !== "allowed");
   assert.throws(() => gate.effectiveCommsPreferences(updated, {}), /preference/);
 });
-const deps = (p: Patient) => ({ fhir: { read: async () => p } as any, practiceTimeZone: "UTC", now: () => new Date("2026-09-11T15:00:00Z") });
+const deps = (p: Patient) => ({ fhir: { read: async () => p, search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }) } as any, isEmailAddressSuppressed: async () => false, practiceTimeZone: "UTC", now: () => new Date("2026-09-11T15:00:00Z") });
 const request = (suppression = {}) => ({ patientReference: "Patient/synthetic", campaignType: "clinical-education", body: "Education", suppression });
 test("G4 and manual campaign types fail closed", async () => {
   for (const campaignType of ["manual", "unknown", "toString", "__proto__"]) await assert.rejects(gate.checkMessageSuppression(deps(patient), { ...request(), campaignType }, "sms"), /has no communication purpose/);
