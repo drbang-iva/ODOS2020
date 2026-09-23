@@ -12,13 +12,15 @@ import { buildPracticeTimeZoneConfigResource } from "../src/clinic/practice-time
 const fixturePath = process.env.ODOS_SA_FIXTURE;
 test("O19 open-chart routes rate-limit excess requests", async()=>{
  const app=express();
- registerClinicRoutes(app,{authenticateService:async()=>{},authenticate:async()=>null} as any);
+ const fhir={baseUrl:"http://localhost:18103/",search:async()=>({resourceType:"Bundle",type:"searchset",entry:[]})};
+ registerClinicRoutes(app,{authenticateService:async()=>{},serviceFhir:fhir,authenticate:async header=>header?{staffReference:"Practitioner/staff",actorRole:"staff",roles:["staff"],fhir}:null,timeZone:"America/New_York",now:()=>"2026-09-23T16:00:00Z"} as any);
  const server=app.listen(0,"127.0.0.1");await new Promise<void>(resolve=>server.once("listening",resolve));
  const address=server.address();assert.ok(address&&typeof address!=="string");
  const url=`http://127.0.0.1:${address.port}`;
  try {
   for(let i=0;i<120;i++)assert.equal((await fetch(`${url}/clinic/open-charts`)).status,401);
   assert.equal((await fetch(`${url}/clinic/open-charts/desk`)).status,429);
+  assert.equal((await fetch(`${url}/clinic/open-charts/desk`,{headers:{Authorization:"Bearer valid"}})).status,200);
  } finally {await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}
 });
 test("O19 O26 live caller gates and service-owned setting resolution", { skip: !fixturePath }, async()=>{

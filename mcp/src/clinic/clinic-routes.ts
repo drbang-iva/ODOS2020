@@ -2,7 +2,7 @@ import { loadOpenCharts } from "./open-charts.js";
 import { resolvePracticeTimeZone, PracticeTimeZoneError } from "./practice-time-zone-config.js";
 import type { Bundle, Patient, Project, Reference } from "@medplum/fhirtypes";
 import type { Application, Request, Response } from "express";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import { loadClinicSummary } from "./clinic-summary.js";
@@ -44,6 +44,12 @@ export interface ClinicRouteDeps {
 
 export function registerClinicRoutes(app: Pick<Application, "get" | "post">, deps: ClinicRouteDeps): void {
   const openChartsLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false,
+    keyGenerator: async (req, res) => {
+      await deps.authenticateService();
+      const staff = await deps.authenticate(req.header("authorization"));
+      res.locals.openChartsStaff = staff;
+      return staff ? `staff:${staff.staffReference}` : `ip:${ipKeyGenerator(req.ip ?? "", 56)}`;
+    },
     message: { error: "Too many open-chart requests. Try again shortly." } });
   app.get("/clinic/open-charts", openChartsLimit, async (req, res) => handleOpenCharts(req, res, deps, "doctor"));
   app.get("/clinic/open-charts/desk", openChartsLimit, async (req, res) => handleOpenCharts(req, res, deps, "desk"));
@@ -419,7 +425,7 @@ async function handleOpenCharts(req: Request, res: Response, deps: ClinicRouteDe
   const route = shape === "doctor" ? "/clinic/open-charts" : "/clinic/open-charts/desk";
   try {
     await deps.authenticateService();
-    const staff = await deps.authenticate(req.header("authorization"));
+    const staff = res.locals?.openChartsStaff !== undefined ? res.locals.openChartsStaff as ClinicStaff | null : await deps.authenticate(req.header("authorization"));
     if (!staff) { res.status(401).json({ error: "Authentication required." }); return; }
     const action = shape === "doctor" ? "clinical.sign" : "chart.read";
     if (!staffHasBusinessAction(staff, action)) { res.status(403).json({ error: `${action} action required.` }); return; }
