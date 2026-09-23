@@ -10,6 +10,17 @@ import { cleanupReferences } from "./liveRoleClient.js";
 import { buildPracticeTimeZoneConfigResource } from "../src/clinic/practice-time-zone-config.js";
 
 const fixturePath = process.env.ODOS_SA_FIXTURE;
+test("O19 open-chart routes rate-limit excess requests", async()=>{
+ const app=express();
+ registerClinicRoutes(app,{authenticateService:async()=>{},authenticate:async()=>null} as any);
+ const server=app.listen(0,"127.0.0.1");await new Promise<void>(resolve=>server.once("listening",resolve));
+ const address=server.address();assert.ok(address&&typeof address!=="string");
+ const url=`http://127.0.0.1:${address.port}`;
+ try {
+  for(let i=0;i<120;i++)assert.equal((await fetch(`${url}/clinic/open-charts`)).status,401);
+  assert.equal((await fetch(`${url}/clinic/open-charts/desk`)).status,429);
+ } finally {await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}
+});
 test("O19 O26 live caller gates and service-owned setting resolution", { skip: !fixturePath }, async()=>{
  const baseUrl=process.env.MEDPLUM_BASE_URL!;assert.equal(baseUrl,"http://localhost:18103/");
  const fixture=JSON.parse(readFileSync(fixturePath!,"utf8"));

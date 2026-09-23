@@ -1,5 +1,5 @@
 import type { Appointment, Bundle, Encounter, Patient, Practitioner, Provenance, Resource } from "@medplum/fhirtypes";
-import { searchAll, searchBounded, FhirSearchLimitError, FhirSearchPageLimitError, type FhirSearchClient } from "../fhir-search.js";
+import { searchAll, searchBounded, validateLocalFhirSearchNextPath, FhirSearchLimitError, FhirSearchPageLimitError, type FhirSearchClient } from "../fhir-search.js";
 import { encounterContentByEncounter, readEncounterProtocolContent } from "../clinical-graph/encounter-content.js";
 import { interpretationBlocks } from "../clinical-graph/interpretation-gate.js";
 import { readImagingResources } from "../clinical-graph/follow-up-queue-endpoint.js";
@@ -140,6 +140,18 @@ async function boundedRead<R extends Resource>(fhir: FhirSearchClient, resourceT
     return observed.slice(0, 1000) as R[];
   }
 }
+async function newestClinicDay(fhir: FhirSearchClient, before: string, incomplete: string[]): Promise<Encounter[]> {
+  let page = await fhir.search<Encounter>("Encounter", { _count: "100", _sort: "-date", date: `lt${before}` });
+  for (let pageCount = 1; ; pageCount++) {
+    const hit = (page.entry ?? []).flatMap(entry => entry.resource ? [entry.resource] : [])
+      .find(encounter => !isMigratedEncounter(encounter) && !["cancelled", "entered-in-error"].includes(encounter.status) && encounter.period?.start);
+    if (hit) return [hit];
+    const next = page.link?.find(link => link.relation === "next")?.url;
+    if (!next) return [];
+    if (!fhir.searchUrl || pageCount >= 10) { incomplete.push("last-clinic-day"); return []; }
+    page = await fhir.searchUrl<Encounter>(validateLocalFhirSearchNextPath(next, fhir.baseUrl, "Encounter"), "Encounter");
+  }
+}
 async function referenced<T extends Resource>(fhir: FhirSearchClient, type: T["resourceType"], references: (string | undefined)[]): Promise<T[]> {
   const ids = [...new Set(references.flatMap(ref => ref?.startsWith(`${type}/`) ? [ref.slice(type.length + 1)] : []))];
   const rows: T[] = [];
@@ -152,7 +164,7 @@ export async function loadOpenCharts(fhir: OverviewFhir, serviceFhir: FhirSearch
     boundedRead<Encounter>(fhir, "Encounter", fhir.search<Encounter>("Encounter", { _count: "100", ...{ _sort: "-date", status: "arrived,triaged,in-progress" } }), "unfinished", incomplete),
     boundedRead<Encounter>(fhir, "Encounter", fhir.search<Encounter>("Encounter", { _count: "100", ...{ _sort: "-date", status: "planned,onleave,unknown" } }), "needs-review", incomplete),
     boundedRead<Encounter>(fhir, "Encounter", fhir.search<Encounter>("Encounter", { _count: "100", ...{ _sort: "-date", status: "finished", date: `ge${startOfDate(shiftDate(today, -6), options.zone.timeZone)}` } }), "finished", incomplete),
-    boundedRead<Encounter>(fhir, "Encounter", fhir.search<Encounter>("Encounter", { _count: "100", ...{ _sort: "-date", date: `lt${startOfDate(today, options.zone.timeZone)}` } }), "last-clinic-day", incomplete),
+    newestClinicDay(fhir, startOfDate(today, options.zone.timeZone), incomplete),
   ]);
   const encounters = [...new Map([...open, ...review, ...finished].filter(e => !isMigratedEncounter(e)).map(e => [e.id, e])).values()];
   const provenances: Provenance[] = [];

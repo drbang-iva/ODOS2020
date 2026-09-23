@@ -2,6 +2,8 @@
 
 The practice time-zone setting is admin-only. Both Open Charts endpoints resolve it through the service identity, then project native Encounters into Today, last clinic day, Older and needs review. A finished Encounter without exact-instant sign-off is shown for seven local calendar days; the desk response contains only the allowed nonclinical fields. Older expansion adds rows but does not change counts. The existing sign-off and abandonment readers use shared helpers with no intended behavior change. The canonical extension registry contains the single R3 entry after age-of-majority.
 
+The two new chart routes share a 120-request/minute limiter. Service authentication precedes staff-role resolution, matching the other clinic routes. The historical clinic-day search stops at the newest eligible visit while retaining the ten-page incomplete bound when none is found.
+
 Branch: `drbang-iva/open-charts-sa-projection`. Base: `0703ab17155dde01b5afa4582bdf7f96c4fb7794`. The PR URL and exact head SHA are in the handoff response. Coder status: **needs-review**. No merge or Iris policy sync occurred.
 
 ## Files and scope
@@ -35,16 +37,16 @@ P1–P13 stand from the verified base. P11 live comma-joined searches returned b
 
 ## Checks
 
-Every MCP suite used `ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:15432/medplum` against the isolated `odos-sa-*` Postgres container. Both `.odos/operator.env` and `.odos/operator-identity.json` were moved aside for unit suites. The 59 skips in the full MCP suite include the two new live tests and the existing credentialed lane; `ODOS_ALLOW_UNGATED_MCP=1` acknowledged that scope. Live results below are separate.
+Every MCP suite used `ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:15432/medplum` against the isolated `odos-sa-*` Postgres container. Both `.odos/operator.env` and `.odos/operator-identity.json` were moved aside for the clean final unit suite. The 59 skips in the full MCP suite include the two new credentialed live tests and the existing credentialed lane; `ODOS_ALLOW_UNGATED_MCP=1` acknowledged that scope. Live results below are separate.
 
 | Check | Command | Real output |
 |---|---|---|
 | Base MCP | `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 6419 tests, 6362 pass, 0 fail, 57 skipped |
-| Final-tree MCP | same | tests 6464, pass 6405, fail 0, skipped 59 ; exit 0 |
+| Final-tree MCP | same | tests 6467, pass 6408, fail 0, skipped 59 ; exit 0 |
 | Base UI | `npm --prefix ui test` | 1869 pass |
 | Final-tree UI | same | tests 1871, pass 1871, fail 0, skipped 0 ; exit 0 |
 | R2 unchanged summary/overview/abandon | `node --import tsx --test` on the three existing suites | 84 tests, 84 pass, 0 fail |
-| Added O12/O18 tests | `node --import tsx --test --test-name-pattern='^(O12|O18)' mcp/tests/openCharts.test.ts` | tests 4, pass 4, fail 0, skipped 0 ; exit 0 |
+| Added O12/O18 tests | `node --import tsx --test --test-name-pattern='^(O12\|O18)' mcp/tests/openCharts.test.ts` | tests 4, pass 4, fail 0, skipped 0 ; exit 0 |
 | MCP typecheck | `tsc -p mcp/tsconfig.json --noEmit` | exit 0 |
 | UI typecheck | `tsc -p ui/tsconfig.json --noEmit --skipLibCheck` | exit 0 |
 | Scripts typecheck | `npm run typecheck:scripts` | exit 0 |
@@ -52,7 +54,7 @@ Every MCP suite used `ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:1
 | Fresh live smoke | included in `npm --prefix mcp run test:live-integration` | tests 12, pass 12, fail 0, skipped 0 |
 | Fresh live integration total | same command | tests 218, pass 218, fail 0, skipped 0 ; exit 0 |
 | Fresh live authorization | `MEDPLUM_CONTRACT_BOOTSTRAP=1 npm --prefix mcp run test:live-authz` | tests 78, pass 78, fail 0, skipped 0 ; exit 0 |
-| New O19/O21/O23/O26 live controls | `node --import tsx --test --test-concurrency=1` on the two new live suites | tests 2, pass 2, fail 0, skipped 0 ; exit 0 |
+| Final-head O19/O21/O23/O26 live controls and limiter | `node --import tsx --test` on the two new live suites | tests 3, pass 3, fail 0, skipped 0 ; exit 0 |
 
 Preflight NOT SCOPE-VERIFIED: **244 base → 245 final**. Basic changed from 121 total / 8 scope-verified / 113 unverified to 123 / 9 / 114. The single added unverified read is the admin settings page's Basic search. The service singleton search is marked and scope-verified.
 
@@ -101,6 +103,8 @@ For each row, the specified production source or new-test harness was broken, it
 | O21-no-admin-write | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
 | O21-staff-read | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
 | O23-no-admin-read | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O19-rate-limit | 1 tests / 0 pass / 1 fail; exit 1 (expected 429, actual 401) | 1 tests / 1 pass / 0 fail; exit 0 |
+| historical clinic-day early stop | 1 tests / 0 pass / 1 fail; exit 1 (expected complete true, actual false) | 1 tests / 1 pass / 0 fail; exit 0 |
 
 O26 red showed **both** provider doctor and staff desk returning `timeZoneSource: environment` when the resolver was changed to caller scope. O21's new readback mutant replaced the refused caller's PUT with a seeder PUT; the assertion failed on a changed `meta.versionId`, then passed after restoration. Removing admin read gave admin GET 404 against expected 200; granting staff read made the 0-entry staff search fail. Removing admin write made the create assertion fail. O23's unit pin independently went red on deletion of admin read.
 
@@ -231,6 +235,8 @@ R2 existing overview regressions: the new local `signedEncounterIds` declaration
 Three existing `searchParamContract.test.ts` assertions failed because the first bounded-reader draft forwarded unresolved search parameters. Product code now names its Encounter/Provenance searches explicitly and passes the first page to the bounded collector. No test or search registry changed, and the 42-test audit/projection focus and final full MCP suite returned green.
 
 Harness corrections did not change product code or accepted outputs: the first authorization invocation omitted CI's `MEDPLUM_CONTRACT_BOOTSTRAP=1` and failed two synthetic cleanup assertions (76/78); the corrected fresh lane returned 78/78. A private policy-sync script initially used an unprivileged bootstrap caller and got 403; using the privileged seeder allowed actual policy red/green checks. The first staff-read mutation matched both provider and staff source anchors and stopped before editing; a staff-only anchor then ran successfully. The first private readback script import could not resolve Express from `.odos`; its path was corrected and the same requests then completed. No production request failure was waived. The initial 403-only O21 assertion was the coder's unsupported exact-status assumption; R5 authorized 403 or 404 plus the seeder version/zone readback. The current test passed live.
+
+The first post-PR full MCP replay had nine unrelated CLI fixture failures because the disposable stack's `.odos/operator.env` and identity file were present. They were moved aside for the final unit replay, as in the prior green run, then restored. The first post-screenshot live replay saw the screenshot's saved time-zone setting and failed the expected absent-setting assertion; that synthetic setting was deleted before the same live tests returned green. CodeRabbit's route authentication-order and historical-day findings were fixed in product code; its Markdown table finding was fixed in this bundle. CodeQL's new-route missing-rate-limit findings prompted the shared limiter and its mutation proof. PR-Agent could not produce a review at the first head because its 32,000-token diff limit was exceeded; its final-head state is reported in the handoff.
 
 ## Deployment and follow-ups
 

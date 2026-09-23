@@ -2,6 +2,7 @@ import { loadOpenCharts } from "./open-charts.js";
 import { resolvePracticeTimeZone, PracticeTimeZoneError } from "./practice-time-zone-config.js";
 import type { Bundle, Patient, Project, Reference } from "@medplum/fhirtypes";
 import type { Application, Request, Response } from "express";
+import { rateLimit } from "express-rate-limit";
 import { staffHasBusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import { loadClinicSummary } from "./clinic-summary.js";
@@ -42,8 +43,10 @@ export interface ClinicRouteDeps {
 }
 
 export function registerClinicRoutes(app: Pick<Application, "get" | "post">, deps: ClinicRouteDeps): void {
-  app.get("/clinic/open-charts", async (req, res) => handleOpenCharts(req, res, deps, "doctor"));
-  app.get("/clinic/open-charts/desk", async (req, res) => handleOpenCharts(req, res, deps, "desk"));
+  const openChartsLimit = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false,
+    message: { error: "Too many open-chart requests. Try again shortly." } });
+  app.get("/clinic/open-charts", openChartsLimit, async (req, res) => handleOpenCharts(req, res, deps, "doctor"));
+  app.get("/clinic/open-charts/desk", openChartsLimit, async (req, res) => handleOpenCharts(req, res, deps, "desk"));
   app.get("/clinic/summary", async (req, res) => handleClinicSummary(req, res, deps));
   app.post("/clinic/patients", async (req, res) => handlePatientRegistration(req, res, deps));
   app.post("/clinic/patients/:patientId/inactivate", async (req, res) => handlePatientInactivation(req, res, deps));
@@ -415,12 +418,12 @@ function isFhirId(value: string): boolean {
 async function handleOpenCharts(req: Request, res: Response, deps: ClinicRouteDeps, shape: "doctor" | "desk"): Promise<void> {
   const route = shape === "doctor" ? "/clinic/open-charts" : "/clinic/open-charts/desk";
   try {
+    await deps.authenticateService();
     const staff = await deps.authenticate(req.header("authorization"));
     if (!staff) { res.status(401).json({ error: "Authentication required." }); return; }
     const action = shape === "doctor" ? "clinical.sign" : "chart.read";
     if (!staffHasBusinessAction(staff, action)) { res.status(403).json({ error: `${action} action required.` }); return; }
     if (!deps.serviceFhir) throw new PracticeTimeZoneError("practice-time-zone-unreadable");
-    await deps.authenticateService();
     const zone = await resolvePracticeTimeZone(deps.serviceFhir, deps.timeZone);
     if (shape === "desk" && zone.warnings) res.setHeader("Warning", zone.warnings.join(" "));
     res.json(await loadOpenCharts(staff.fhir, deps.serviceFhir, { now: deps.now?.() ?? new Date().toISOString(), zone, shape, expandOlder: req.query.expand === "older", ...(staff.staffReference.startsWith("Practitioner/") ? { practitioner: staff.staffReference } : {}) }));
