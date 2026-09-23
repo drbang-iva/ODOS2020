@@ -1,16 +1,17 @@
 # S3c-2c-2b-3 — interpretation billing gate
 
-Status: **needs-review** under R2. **NOT EVALUATED.**
+Status: **needs-review** after R4 fixback. Claude Opus 5.5's evaluation at `f6ab14a9c9a2984ab4941f336653f5cb544be683` was **NEEDS-WORK (tests only)**; the fixback head requires independent re-evaluation.
 
 ## Summary
 
-The gate refuses an accepted imaging charge before any sign-cleanup write unless a counting interpretation/report exists. R1 is honored: virtual seeded fees supply their seed answer; only an undefined non-seeded concept is missing. The gate, locked abandonment, and billing re-check run in one encounter lock; the protocol accept flip uses its own acquisition. The UI shows the 409 sentence. G1–G13 each went red under a mutation and green when restored. Unit, typecheck, preflight, release census, and clean credentialed live integration/authorization runs passed. Chromium showed both ordered-fundus and unordered-custom-OCT refusals. A final synthetic fundus report released the gate and wrote one ChargeItem, but the Encounter finish transaction returned `entry 0: 403 Forbidden`. R2's fresh-stack no-charge control used the same multi-role staff-profile identity: cleanup passed 200, then its finish transaction also returned entry 0:403. That distinguishes the finish refusal from the gate path and authorizes PR handoff with the stated live limits. Provider-only browser signing and a finished Encounter after release remain unproven. No merge was attempted.
+The first gate refuses an accepted imaging charge before any sign-cleanup write unless a counting interpretation/report exists. R1 is honored: virtual seeded fees supply their seed answer; only an undefined non-seeded concept is missing. The gate, locked abandonment, and billing re-check run in one encounter lock; the protocol accept flip uses its own acquisition. Under R3, a race-only refusal at the billing re-check may follow abandonment, but writes no ChargeItem or recall. The UI shows the 409 sentence. G1–G13 went red under their specified mutations and green when restored; R4 adds G14–G17 after the first independent evaluation found five surviving mutations. The fixback changes tests only. Earlier clean credentialed live lanes and R2's no-charge control remain the live evidence; no live lane was rerun for the test-only fixback. Provider-only browser signing and a finished Encounter after release remain unproven. No merge was attempted.
 
 ## Branch and files
 
-- Branch: `drbang-iva/followup-s3c2c2b3-interpretation-gate`; refreshed base `origin/main` `b817b123a667a9fd782c78a48865029f4709922a`. PR URL and final head SHA are reported in the handoff.
+- Branch: `drbang-iva/followup-s3c2c2b3-interpretation-gate`; base `origin/main` `b817b123a667a9fd782c78a48865029f4709922a`; [PR #659](https://github.com/drbang-iva/ODOS2020/pull/659). Final fixback head SHA is reported in the handoff.
 - Product: `mcp/src/clinical-graph/interpretation-gate.ts`, `follow-up-queue-endpoint.ts`, `protocol-endpoint.ts`, `protocol-service.ts`, `procedure-fee-schedule.ts`, `ui/src/components/charting/EncounterHeader.tsx`.
 - Tests: `mcp/tests/interpretationGate.test.ts`, `followUpResults.test.ts`, `procedureChargeMaterialization.test.ts`, `mcp/src/__tests__/procedure-charges.test.ts`, `ui/tests/encounterSignRefusal.test.tsx`.
+- R4 fixback changed only `mcp/tests/interpretationGate.test.ts` and this bundle; no product file changed.
 - Evidence: this bundle and four synthetic Chromium screenshots in `evidence/`. No `.odos/` file is tracked.
 - No terminology, billing code, fee seed, orderable, or concept changed in source; Mandate 14 ledger rows: none. No companion decision/INDEX edit; `performance-od` read only. Open PRs #647/#626 had no allowed-file overlap.
 - No `mcp/src/index.ts`, authz/policy, imaging endpoint, route, script, CI, or `executeTransaction` edit. `ui/tests/clinicalGraphRouting.test.tsx` stays at 8 tests and its 59-caller assertion.
@@ -54,6 +55,20 @@ Each line quotes the mutation-run summary: named guard test failed after the tem
 
 G13 green explicitly proves virtual gonioscopy passes as `not-required`, virtual fundus photography refuses for missing interpretation rather than `unclassified-fee`, and a missing non-seeded key refuses `unclassified-fee`. G8 green compares unchanged non-imaging ChargeItems field for field to the base fixture.
 
+## R4 G14–G17 fixback mutation proof
+
+The independent evaluation at `f6ab14a9` found five surviving mutations. Each new test now fails under its exact temporary product break and passes after byte-for-byte restoration; no product break is delivered.
+
+| Guard / temporary break | Red output | Green output |
+| --- | --- | --- |
+| G14 remove `beforeWrite: gate` from the real sign handler | `200 !== 409`; tests=1 pass=0 fail=1 | tests=1 pass=1 fail=0 |
+| G15 drop concept-key filter from order selection | actual `[]` vs expected `needs-interpretation`; tests=1 pass=0 fail=1 | tests=1 pass=1 fail=0 |
+| G16a count `preliminary` in the gate's unordered report filter | actual `[]` vs expected `no-interpreted-result`; tests=1 pass=0 fail=1 | tests=1 pass=1 fail=0 |
+| G16b ignore the gate's nonblank-conclusion check | actual `[]` vs expected `no-interpreted-result`; tests=1 pass=0 fail=1 | tests=1 pass=1 fail=0 |
+| G17 count removed orders | actual `[]` vs expected `needs-interpretation`; tests=1 pass=0 fail=1 | tests=1 pass=1 fail=0 |
+
+G14 calls `handleProtocolSignCleanupRequest` with a charge list that reveals an accepted uninterpreted fundus proposal only when the materializer reads its own list. The handler returns `409 interpretation-required` with the fundus proposal in `tests`; no ChargeItem or annual-recall ServiceRequest is created. G15–G17 use literal fixtures against the production gate. Focused run after restoration: **85/85 passed, 0 failed, 0 skipped**.
+
 ## Grant-1 instances, before and after
 
 1. `mcp/tests/procedureChargeMaterialization.test.ts` five-proposal glaucoma sign fixture: before, accepted fundus/visual-field charges had no interpreted result; after, completed order-linked Media and final nonblank DiagnosticReports were added before sign. Assertions unchanged.
@@ -63,6 +78,8 @@ G13 green explicitly proves virtual gonioscopy passes as `not-required`, virtual
 ## Checks and live lanes
 
 - `node --import tsx --test tests/interpretationGate.test.ts`: 8/8. Four focused MCP files: 200/200, including `ok 198`. Follow-up results: 27/27. UI sign refusal: 2/2.
+- R4 restored focused MCP run (`interpretationGate`, `procedureChargeMaterialization`, `procedure-charges`, `followUpResults`): **85/85 passed, 0 failed, 0 skipped**. Focused UI sign refusal: **2/2**. Three typechecks (`npm run typecheck:scripts`, MCP/UI `npx tsc --noEmit`) exited 0; `npm run preflight` exited 0 with **0 warnings, 0 hard blocks**. Dedicated Postgres container `odos-s3c2c2b3-fixback-pg` was healthy; `.odos/operator.env` and `.odos/operator-identity.json` were moved aside before every MCP suite run.
+- R4 full MCP run selected **441 test files** with `rg --files` over the CI roots and ran `node --import tsx --test --test-concurrency=1`: **6329 tests, 6274 pass, 0 fail, 55 skipped**, exit 0. The 55 credentialed live skips are not called live proof; R4 required no live rerun. An initial macOS `/bin/bash` attempt could not enable the Linux CI `globstar` option and selected only a partial set (**6011 tests, 5956 pass, 55 skipped**); it was excluded from the full-suite claim and replaced by the explicit 441-file run. Full UI `npm test`: **1859 tests, 1859 pass, 0 fail, 0 skipped**, exit 0. `git diff --check`: exit 0. All task-owned fixback Postgres resources were stopped; ignored operator files were restored.
 - Full MCP CI glob with `ODOS_POSTGRES_URL` pointed at dedicated `odos-s3c2c2b3-pg`: **6324 tests, 6269 pass, 0 fail, 55 skipped**. Base count 6315, +9 (eight new tests, one appended matrix). Live-dependent skips were exercised separately. `.odos/operator.env` and `.odos/operator-identity.json` were absent for unit/full suites and generated afterward.
 - Full UI `npm test`: **1859 tests, 1859 pass, 0 fail, 0 skipped**; base 1857, +2. Root `npm run typecheck:scripts`, MCP/UI `npx tsc --noEmit`, and `npm run preflight` all exited 0. Preflight: `FHIR read grant check PASS`, 48 marked/literal resource types, 951 operations. `node mcp/scripts/check-r10-a3-release.mjs`: T1–T22 pass. `git diff --check`: exit 0.
 - First fresh 18103 stack healthcheck: ready attempt 10 of 2 s loop (90 maximum); `MEDPLUM_BASE_URL=http://localhost:18103/` matched server config byte-for-byte. Credentialed bootstrap **12/12**, integration **218/218**, no skips; then operator identity, role repair (`GITHUB_ACTIONS=true` only there), policy sync (`Policies updated: 0; Memberships updated: 0`), authorization **78/78**, no skips.
@@ -82,11 +99,11 @@ The provider-only browser journey and a finished Encounter after release remain 
 
 ## Risks, follow-ups, and boundary
 
-Under R2, open the PR with the live limits above. Code remains **NOT EVALUATED**; exact-head Claude Opus 5.5 independent evaluation is required before merge. Post-deploy proof belongs to the operator: the first real Sign on Iris of a visit with an interpreted imaging charge must finish and produce one ChargeItem, recorded later.
+R3 adjudicated CodeRabbit's late-refusal finding: only the first refusal is zero-write; a changed report or image outside the lock can make the billing re-check refuse after abandonment, but before ChargeItem or recall writes. This race-only limit is accepted and is not a product-code fixback. The evaluator will adjudicate the CodeRabbit thread; the coder has not replied to or resolved it. Claude Opus 5.5's first verdict was **NEEDS-WORK (tests only)**; the final fixback head needs independent re-evaluation before merge. Post-deploy proof belongs to the operator: the first real Sign on Iris of a visit with an interpreted imaging charge must finish and produce one ChargeItem, recorded later.
 
 Outside this slice and not done: R-d same-day warning (slice 3b); Q7 claim path (raw ChargeItems, hand-added claim lines, report retraction after signing); TC / 26 and modifiers; report retraction or image unlink between gate read and ChargeItem write; staged protocol charges; step-2 failure after successful cleanup.
 
-All task-owned MCP/UI/proxy processes and `odos-s3c2c2b3-*` Docker stacks, including R2, were stopped; task-owned disposable containers/volumes were removed. Port listeners 3333, 15120, and 8103: none. Final `docker ps --format '{{.Names}}\t{{.Status}}'`:
+All task-owned MCP/UI/proxy processes and `odos-s3c2c2b3-*` Docker stacks, including R2 and fixback Postgres, were stopped; task-owned disposable containers/volumes were removed. Port listeners 3333, 15120, and 8103: none. Final `docker ps --format '{{.Names}}\t{{.Status}}'`:
 
 ```text
 vf-prac1b-walk-db    Up 3 days

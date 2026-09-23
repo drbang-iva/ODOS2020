@@ -58,6 +58,32 @@ test("G4 unordered imaging requires an interpreted result of the same type on th
   assert.deepEqual(interpretationBlocks(input({ mediaRows: [media("photo", "fundus-photo")], reports: [report("r", "final", "photo")] })), []);
 });
 
+test("G15 an interpreted order of another concept cannot release an uninterpreted fundus order", () => {
+  const actions = [order("fundus", "fundus-photography"), order("field", "visual-field-threshold")];
+  const mediaRows = [media("field-photo", "visual-field", "ServiceRequest/field")];
+  const reports = [report("field-report", "final", "field-photo")];
+  assert.deepEqual(interpretationBlocks(input({ actions, mediaRows, reports })).map(x => x.reason), ["needs-interpretation"]);
+});
+
+test("G16a an unordered fundus charge rejects a preliminary report with a conclusion", () => {
+  const mediaRows = [media("photo", "fundus-photo")];
+  const reports = [report("draft", "preliminary", "photo")];
+  assert.deepEqual(interpretationBlocks(input({ mediaRows, reports })).map(x => x.reason), ["no-interpreted-result"]);
+});
+
+test("G16b an unordered fundus charge rejects a final report with a blank conclusion", () => {
+  const mediaRows = [media("photo", "fundus-photo")];
+  const reports = [report("blank", "final", "photo", "  ")];
+  assert.deepEqual(interpretationBlocks(input({ mediaRows, reports })).map(x => x.reason), ["no-interpreted-result"]);
+});
+
+test("G17 a removed fundus order cannot release a live uninterpreted fundus order", () => {
+  const actions = [order("removed", "fundus-photography", "removed"), order("live", "fundus-photography")];
+  const mediaRows = [media("old-photo", "fundus-photo", "ServiceRequest/removed")];
+  const reports = [report("old-report", "final", "old-photo")];
+  assert.deepEqual(interpretationBlocks(input({ actions, mediaRows, reports })).map(x => x.reason), ["needs-interpretation"]);
+});
+
 test("G5/G6 snapshot or live imaging gates; unanswered non-imaging refuses", () => {
   for (const [snapshot, live] of [["oct", "not-required"], [undefined, "fundus-photo"], ["not-required", "oct"]] as const) {
     const key = "custom";
@@ -110,6 +136,60 @@ test("G9 materializer checks the exact second list before any fee definition or 
   }), (error: unknown) => error instanceof InterpretationRequiredError && error.tests[0]?.proposalId === accepted.id);
   assert.equal(lists, 2);
   assert.equal(writes, 0);
+});
+
+test("G14 sign handler re-checks the materializer's charge list before ChargeItem or recall writes", async () => {
+  const resources: Resource[] = [{
+    resourceType: "Encounter", id: "e1", status: "in-progress", class: { code: "AMB" },
+    subject: { reference: "Patient/p1" },
+  } satisfies Encounter];
+  let chargeLists = 0;
+  const fhir = {
+    baseUrl: "http://localhost:18103/",
+    read: async <T extends Resource>(type: T["resourceType"], id: string): Promise<T> => {
+      const row = resources.find(x => x.resourceType === type && x.id === id);
+      if (!row) throw new Error(`${type}/${id} missing`);
+      return structuredClone(row) as T;
+    },
+    search: async <T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+      let matches = resources.filter(row => row.resourceType === type &&
+        (!params.code || (row as Basic).code?.coding?.some(code => `${code.system}|${code.code}` === params.code)) &&
+        (!params.identifier || (row as Basic).identifier?.some(id => `${id.system}|${id.value}` === params.identifier)) &&
+        (!params.encounter || (row as Media | DiagnosticReport).encounter?.reference === params.encounter) &&
+        (!params.status || (row as Media).status === params.status));
+      if (type === "Basic" && params.code?.endsWith("|odos-charge-proposal") && !params.identifier && ++chargeLists === 1) {
+        matches = matches.filter(row => !(row as Basic).identifier?.some(id => id.value === "p-fundus-photography"));
+      }
+      return { resourceType: "Bundle", type: "searchset", entry: matches.map(resource => ({ resource: structuredClone(resource) as T })) };
+    },
+    create: async <T extends Resource>(row: T): Promise<T> => {
+      const saved = { ...structuredClone(row), id: row.id ?? `r-${resources.length + 1}`, meta: { versionId: "1" } } as T;
+      resources.push(saved);
+      return saved;
+    },
+    update: async <T extends Resource>(type: T["resourceType"], id: string, row: T): Promise<T> => {
+      const index = resources.findIndex(x => x.resourceType === type && x.id === id);
+      if (index < 0) throw new Error(`${type}/${id} missing`);
+      const saved = { ...structuredClone(row), id, meta: { versionId: "2" } } as T;
+      resources[index] = saved;
+      return saved;
+    },
+  };
+  const service = new ProtocolService(fhir as never, { commitFinding: async () => undefined, materializeAction: async () => undefined });
+  await service.charges.save(proposal("gonioscopy"));
+  await service.charges.save(proposal("fundus-photography"));
+  const reply = await handleProtocolSignCleanupRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/synthetic", actorRole: "provider" as const, fhir: fhir as never }),
+    feeScheduleFhir: fhir as never, now: () => at,
+  }, { authHeader: "Bearer synthetic", params: { encounterId: "e1" } });
+  assert.equal(reply.status, 409);
+  assert.equal((reply.body as { code?: string }).code, "interpretation-required");
+  assert.deepEqual((reply.body as { tests: { proposalId: string; reason: string }[] }).tests.map(x => [x.proposalId, x.reason]), [
+    ["p-fundus-photography", "no-interpreted-result"],
+  ]);
+  assert.equal(chargeLists, 2);
+  assert.equal(resources.some(row => row.resourceType === "ChargeItem"), false);
+  assert.equal(resources.some(row => row.resourceType === "ServiceRequest"), false);
 });
 
 test("G10 sign cleanup takes one lock and waits for a staged-charge accept flip", async () => {
