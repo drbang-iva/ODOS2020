@@ -492,3 +492,26 @@ test("S3c2c2b1 G14 an old encounter's completed save cannot clear the new encoun
     assert.equal(h.renderer.root.findByProps({ "aria-label": "Interpretation" }).props.value, "New encounter draft");
   } finally { await h.close(); }
 });
+
+test("S3c2c2b3b G10 Follow-up warning appears under its billed row only when supplied", async () => {
+  const message = "Usually not billed together on the same day — document why both were needed.";
+  for (const warning of [message, undefined]) {
+    const h = await mounted(async () => Response.json({ ...chargePayload, rows: chargePayload.rows.map(row => row.charge ? { ...row, charge: { ...row.charge, ...(warning ? { sameDayWarning: warning } : {}) } } : row) }));
+    try {
+      const row = h.renderer.root.findAllByType("li")[1];
+      assert.equal(row.findAllByType("p").filter(p => p.children.join("") === message).length, warning ? 1 : 0);
+      assert.equal(h.renderer.root.findAllByType("li")[0].findAllByType("p").filter(p => p.children.join("") === message).length, 0);
+      assert.equal(row.findByProps({ children: "Remove charge" }).props.disabled, false);
+    } finally { await h.close(); }
+  }
+});
+
+test("S3c2c2b3b G11 non-string same-day warning fails the Follow-up load closed", async () => {
+  for (const sameDayWarning of [7, null, {}, true]) {
+    const h = await mounted(async () => Response.json({ ...chargePayload, rows: [{ ...chargePayload.rows[1], charge: { ...chargePayload.rows[1].charge, sameDayWarning } }] }));
+    try {
+      assert.match(text(h.renderer.toJSON()), /The tests for this visit could not be loaded/);
+      assert.equal(h.renderer.root.findAllByType("li").length, 0);
+    } finally { await h.close(); }
+  }
+});
