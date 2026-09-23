@@ -154,7 +154,7 @@ test("H9 signed OCT and photograph charges are kept with one advisory pair warni
   assert.deepEqual(draft.warnings, ["Synthetic photograph and Synthetic OCT: usually not billed together on the same day — document why both were needed."]);
 });
 
-test("H9 same-day signed charge on another encounter appears in the advisory", async () => {
+test("H9/H15 same-day signed charge on another encounter survives an unrelated malformed proposal", async () => {
   const { fhir, resources, photo, proposal } = fixture({ reportStatus: "final" });
   const otherEncounter: Encounter = {
     resourceType: "Encounter", id: "other-visit", status: "finished", class: {},
@@ -176,6 +176,8 @@ test("H9 same-day signed charge on another encounter appears in the advisory", a
     { resourceType: "DiagnosticReport", id: "other-oct-report", status: "final", code: {},
       encounter: { reference: "Encounter/other-visit" }, conclusion: "Synthetic OCT interpretation",
       media: [{ link: { reference: "Media/other-oct-image" } }] },
+    { ...buildProtocolBasic({ id: "unrelated-malformed" }, PROTOCOL_BASIC_CODES.chargeProposal),
+      id: "malformed-basic", extension: [] } as Basic,
   );
   const draft = await buildClaimDraft(fhir, "visit");
   assert.deepEqual(draft.charges.map(row => row.id), ["photo", "visit-charge"]);

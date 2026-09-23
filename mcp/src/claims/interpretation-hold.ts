@@ -64,7 +64,15 @@ export async function loadClaimProposals(fhir: FhirSearchClient): Promise<Charge
     code: `https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${PROTOCOL_BASIC_CODES.chargeProposal}`,
     _count: "100",
   }, bounds);
-  return rows.map(row => parseProtocolBasic<ChargeProposal>(row, PROTOCOL_BASIC_CODES.chargeProposal));
+  const proposals: ChargeProposal[] = [];
+  for (const row of rows) {
+    try {
+      proposals.push(parseProtocolBasic<ChargeProposal>(row, PROTOCOL_BASIC_CODES.chargeProposal));
+    } catch {
+      continue;
+    }
+  }
+  return proposals;
 }
 
 export async function loadClaimHoldContext(fhir: FhirSearchClient, lines: readonly ChargeItem[]): Promise<ClaimHoldContext> {
