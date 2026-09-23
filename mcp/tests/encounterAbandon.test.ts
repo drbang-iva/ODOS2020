@@ -123,3 +123,23 @@ for (const kind of ["ChargeItem", "ChargeProposal"] as const) test(`money guard 
     assert.equal(f.transactions.length, 0);
   } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
 });
+
+test("abandon route limits repeated requests before authentication", async () => {
+  const f = fixture();
+  let authenticateCalls = 0;
+  f.deps.authenticate = async () => { authenticateCalls++; return null; };
+  const app = express(); registerEncounterAbandonRoutes(app, async () => {}, async () => f.deps);
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>(resolve => server.once("listening", resolve));
+  try {
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/clinical-graph/encounters/e1/abandon`;
+    for (let attempt = 0; attempt < 120; attempt++) {
+      const response = await fetch(url, { method: "POST" });
+      assert.equal(response.status, 401);
+      await response.body?.cancel();
+    }
+    const refused = await fetch(url, { method: "POST" });
+    assert.equal(refused.status, 429);
+    assert.equal(authenticateCalls, 120);
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+});

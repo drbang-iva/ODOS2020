@@ -49,3 +49,7 @@ The authorized edits were each deliberately broken, the affected existing test w
 |---|---|---|
 | A13 counter changes after confirmation opens; restore silent return | `# tests 1; # pass 0; # fail 1; # skipped 0` | `# tests 1; # pass 1; # fail 0; # skipped 0` |
 | A13 visit id changes during confirmation; remove navigation check | `# tests 1; # pass 0; # fail 1; # skipped 0` | `# tests 1; # pass 1; # fail 0; # skipped 0` |
+
+## Review finding: abandon route limit
+
+CodeQL flagged the new write route for missing rate limiting at `e41dfb87`. With the newly added middleware removed, the 121st request returned 401 rather than the required 429: `# tests 1; # pass 0; # fail 1; # skipped 0`. Restored, the test reported `# tests 1; # pass 1; # fail 0; # skipped 0`; the first 120 requests reached authentication and the 121st did not.

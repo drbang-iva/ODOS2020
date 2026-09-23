@@ -21,13 +21,13 @@ P1: the former client-side cancelled writer was identified; Start-exam and finis
 | Command | Base `18932ecd` | Final patch |
 |---|---|---|
 | `cd ui && npm test` | 1865 tests; 1865 pass; 0 fail; 0 skipped | 1869 tests; 1869 pass; 0 fail; 0 skipped |
-| CI direct MCP Node runner with dedicated S0 Postgres and `ODOS_POSTGRES_URL` | 6369 tests; 6314 pass; 0 fail; 55 skipped | 6417 tests; 6360 pass; 0 fail; 57 skipped |
+| CI direct MCP Node runner with dedicated S0 Postgres and `ODOS_POSTGRES_URL` | 6369 tests; 6314 pass; 0 fail; 55 skipped | 6418 tests; 6361 pass; 0 fail; 57 skipped |
 | Root, MCP, UI `npx tsc --noEmit` (UI `--skipLibCheck`) | each exit 0 | each exit 0 |
 | `npm run preflight` | 0 warnings; 0 hard blocks; exit 0 | 0 warnings; 0 hard blocks; exit 0 |
 | `cd ui && npm run build` | not run | exit 0; 341 modules transformed |
 | `git diff --check` | — | exit 0 |
 
-The direct MCP command is recorded in `preflight-blocked.md`. Both live authorization tests are skipped in the full unit run and explicitly enabled below. The operator env and identity files were absent during all unit suites. Preflight initially overlapped the scanner test's temporary injected source mutation and saw a provisional `RiskAssessment`; after the MCP suite restored its source, preflight was rerun alone and passed. No product code was changed for that overlap.
+The direct MCP command is recorded in `preflight-blocked.md`. Both live authorization tests are skipped in the full unit run and explicitly enabled below. The operator env and identity files were absent during all unit suites. Preflight initially overlapped the scanner test's temporary injected source mutation and saw a provisional `RiskAssessment`; after the MCP suite restored its source, preflight was rerun alone and passed. No product code was changed for that overlap. After opening PR #662, CodeQL flagged the new abandon write route for missing rate limiting. The route now uses the same 120-per-minute `express-rate-limit` pattern as nearby clinical writes. The new HTTP guard failed with the middleware removed (121st request 401 instead of 429) and passed after restoration (1 red, 1 green). The table's final MCP and UI counts, typechecks, build and preflight are from this amended source.
 
 ## A1–A13 and live proof
 
@@ -41,10 +41,10 @@ Controlled browser on the actual chart route, Provider-only synthetic session: c
 
 R2 supplied valid synthetic Appointment start/end and corrected the UI Start-exam adapter/source and FHIR search keys. R3 supplied the baseline synthetic admin credentials to the A8 runner, then switched its route-auth service client after a same-query control showed seeder 403 and caller 200; no A8 product request ran in those failed setup attempts. R4 moved stale prior-project operator state aside before the fresh R4b lane. The browser readiness check now waits for the loaded Encounter header; the failed full-chart attempts occurred before an S0 request under Medplum's 429 limit. The final 409 proof used one page after reset. The R5 wrapper's postcheck expected generic assertion text, while the captured test correctly reported `AssertionError: 200 !== 403`; no second mutant request was needed.
 
-The dependency check and transaction are not atomic against another writer. This slice does not add role-specific reasons, a second audit event beyond Provenance, reopening, board entry points, raw unsigned FHIR cancellation blocking, or PR #661 claim-evidence work. A merged Provider constraint needs a separate break-glass Iris policy sync before it is live there. No Iris sync or merge was performed.
+The dependency check and transaction are not atomic against another writer. CodeRabbit flagged this possible race and the practice-wide Basic scan as major findings; fixing either requires a broader writer/Basic-store contract outside the authorized S0 files. It also suggested logging the generic 502 error. These comments remain for independent review. This slice does not add role-specific reasons, a second audit event beyond Provenance, reopening, board entry points, raw unsigned FHIR cancellation blocking, or PR #661 claim-evidence work. A merged Provider constraint needs a separate break-glass Iris policy sync before it is live there. No Iris sync or merge was performed. PR-Agent's initial review job failed while parsing linked tickets and posted no findings; do not count it as a review.
 
 Open PR #647 also updates `mcp/src/index.ts` and the grant scanner's line-reference entries. Its additions are separate from S0's route lines, but the second PR to rebase must keep both additions and recompute scanner references on the combined index. Neither #647 branch nor its files were changed here.
 
 ## Cleanup
 
-After stopping R6, `docker ps --format '{{.Names}}'` listed only `vf-prac1b-walk-db`, which this task did not touch. No listeners remained on this slice's ports 8103, 15121, 15122, 18103, 15432 or 16379. The root checkout and PR #647's branch were untouched. Local R4b, R5 and R6 volumes were retained; no destructive cleanup was run.
+After stopping R6, `docker ps --format '{{.Names}}'` listed only `vf-prac1b-walk-db`, which this task did not touch. For the amended full MCP run, the R6 dedicated Postgres was started alone and the operator files were moved aside; afterward Postgres was stopped and those files restored. No listeners remained on this slice's ports 8103, 15121, 15122, 18103, 15432 or 16379. The root checkout and PR #647's branch were untouched. Local R4b, R5 and R6 volumes were retained; no destructive cleanup was run.
