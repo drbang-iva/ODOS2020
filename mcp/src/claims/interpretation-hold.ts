@@ -1,10 +1,10 @@
-import type { Basic, ChargeItem, DiagnosticReport, Encounter, Media } from "@medplum/fhirtypes";
+import type { ChargeItem, DiagnosticReport, Encounter, Media } from "@medplum/fhirtypes";
 import { searchBounded, type FhirSearchClient } from "../fhir-search.js";
 import { chargeImageType, type ImageType } from "../clinical-graph/interpretation-gate.js";
 import { imagingCategory } from "../clinical-graph/imaging-endpoint.js";
 import { serviceDay } from "../clinical-graph/same-day-pairs.js";
 import { HCPCS_CODE_SYSTEM, listProcedureFeeScheduleSnapshot, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeScheduleItem } from "../clinical-graph/procedure-fee-schedule.js";
-import { parseProtocolBasic, PROTOCOL_BASIC_CODES } from "../clinical-graph/protocol-store.js";
+import { ProtocolBasicStore, PROTOCOL_BASIC_CODES, type ProtocolFhirClient } from "../clinical-graph/protocol-store.js";
 import type { ChargeProposal } from "../clinical-graph/protocol-types.js";
 
 const proposalIdentifierSystem = "https://odos2020.com/fhir/NamingSystem/charge-proposal-charge-item";
@@ -13,7 +13,7 @@ const bounds = { maxPages: 100, maxRows: 5_000 };
 export interface ClaimHoldContext {
   proposals: readonly ChargeProposal[];
   fees: readonly ProcedureFeeScheduleItem[];
-  proposalSearchFailed: boolean;
+  failedProposalIds: ReadonlySet<string>;
 }
 
 export interface HeldClaimLine {
@@ -32,7 +32,7 @@ export function claimLineRequirement(line: ChargeItem, ctx: ClaimHoldContext):
   { kind: "none" } | { kind: "type"; types: ImageType[] } | { kind: "unclassified"; label: string; message?: string } {
   const proposalId = claimProposalId(line);
   if (proposalId) {
-    if (ctx.proposalSearchFailed) {
+    if (ctx.failedProposalIds.has(proposalId)) {
       const label = lineLabel(line, ctx);
       return { kind: "unclassified", label,
         message: `${label} was held: its interpretation requirement could not be classified because charge proposals could not be loaded.` };
@@ -48,7 +48,7 @@ export function claimLineRequirement(line: ChargeItem, ctx: ClaimHoldContext):
   const fees = conceptFees.length ? conceptFees : ctx.fees.filter(fee => {
     const code = fee.billingCode;
     if (!code) return false;
-    return line.code.coding?.some(coding => coding.code === code &&
+    return line.code.coding?.some(coding => coding.code?.trim().toUpperCase() === code &&
       (coding.system === HCPCS_CODE_SYSTEM || coding.system === "urn:ama:cpt"));
   });
   if (fees.some(fee => !fee.interpretation)) {
@@ -69,34 +69,25 @@ function lineLabel(line: ChargeItem, ctx: ClaimHoldContext): string {
     ?? line.code.coding?.find(coding => coding.code)?.code ?? "Charge";
 }
 
-export async function loadClaimProposals(fhir: FhirSearchClient): Promise<ChargeProposal[]> {
-  const rows = await searchBounded<Basic>(fhir, "Basic", {
-    code: `https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${PROTOCOL_BASIC_CODES.chargeProposal}`,
-    _count: "100",
-  }, bounds);
-  const proposals: ChargeProposal[] = [];
-  for (const row of rows) {
-    try {
-      proposals.push(parseProtocolBasic<ChargeProposal>(row, PROTOCOL_BASIC_CODES.chargeProposal));
-    } catch {
-      continue;
-    }
-  }
-  return proposals;
-}
-
 export async function loadClaimHoldContext(fhir: FhirSearchClient, lines: readonly ChargeItem[]): Promise<ClaimHoldContext> {
   const fees = await listProcedureFeeScheduleSnapshot(fhir);
-  let proposals: ChargeProposal[] = [];
-  let proposalSearchFailed = false;
-  if (lines.some(line => claimProposalId(line))) {
+  const ids = [...new Set(lines.map(claimProposalId).filter((id): id is string => Boolean(id)))];
+  const store = new ProtocolBasicStore<ChargeProposal>(fhir as unknown as ProtocolFhirClient, PROTOCOL_BASIC_CODES.chargeProposal);
+  const proposals: ChargeProposal[] = [];
+  const failedProposalIds = new Set<string>();
+  await Promise.all(ids.map(async id => {
     try {
-      proposals = await loadClaimProposals(fhir);
+      const proposal = await store.get(id);
+      if (proposal) proposals.push(proposal);
     } catch {
-      proposalSearchFailed = true;
+      failedProposalIds.add(id);
     }
-  }
-  return { fees, proposals, proposalSearchFailed };
+  }));
+  return { fees, proposals, failedProposalIds };
+}
+
+export async function loadClaimAdvisoryProposals(fhir: FhirSearchClient): Promise<ChargeProposal[]> {
+  return new ProtocolBasicStore<ChargeProposal>(fhir as unknown as ProtocolFhirClient, PROTOCOL_BASIC_CODES.chargeProposal).list();
 }
 
 export async function claimServiceEncounters(fhir: FhirSearchClient, patientReference: string, day: string): Promise<Encounter[]> {

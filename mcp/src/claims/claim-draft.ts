@@ -9,7 +9,7 @@ import type {
 import { isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
 import { chargeItemLaterality } from "../fhir/charge-item-laterality.js";
 import { searchAll } from "../fhir-search.js";
-import { claimLineRequirement, claimProposalId, claimServiceEncounters, holdLines, loadClaimEvidence, loadClaimHoldContext } from "./interpretation-hold.js";
+import { claimLineRequirement, claimProposalId, claimServiceEncounters, holdLines, loadClaimAdvisoryProposals, loadClaimEvidence, loadClaimHoldContext } from "./interpretation-hold.js";
 import { SAME_DAY_EXCLUSIVE_PAIRS, sameDayWarnings, serviceDay } from "../clinical-graph/same-day-pairs.js";
 import { chargeImageType } from "../clinical-graph/interpretation-gate.js";
 import { buildDiagnosisCatalogSeeds } from "../clinical-graph/diagnosis-catalog-seeds.js";
@@ -187,14 +187,19 @@ export async function buildClaimDraft(
       SAME_DAY_EXCLUSIVE_PAIRS.some(pair => pair.types.includes(type));
   });
   if (hasPairCandidate) {
-    const sameDayIds = new Set((await claimServiceEncounters(fhir, patientReference!, serviceDay(encounter) ?? "")).map(row => row.id));
-    const heldProposalIds = new Set(heldResult.held.map(line => claimProposalId(diagnosedCharges[line.index]!)));
-    const proposals = holdContext.proposals.filter(proposal => sameDayIds.has(proposal.encounterId) && !heldProposalIds.has(proposal.id));
-    const paired = sameDayWarnings({ proposals, fees: holdContext.fees });
-    if (proposals.some(proposal => keptProposalIds.has(proposal.id) && paired.has(proposal.id))) {
-      const labels = [...new Set(proposals.filter(proposal => paired.has(proposal.id)).map(proposal =>
-        holdContext.fees.find(fee => fee.procedureConceptKey === proposal.procedureConceptKey)?.display ?? proposal.procedureConceptKey))];
-      if (labels.length > 1) warnings.push(`${labels.join(" and ")}: usually not billed together on the same day — document why both were needed.`);
+    try {
+      const sameDayIds = new Set((await claimServiceEncounters(fhir, patientReference!, serviceDay(encounter) ?? "")).map(row => row.id));
+      const heldProposalIds = new Set(heldResult.held.map(line => claimProposalId(diagnosedCharges[line.index]!)));
+      const proposals = (await loadClaimAdvisoryProposals(fhir))
+        .filter(proposal => sameDayIds.has(proposal.encounterId) && !heldProposalIds.has(proposal.id));
+      const paired = sameDayWarnings({ proposals, fees: holdContext.fees });
+      if (proposals.some(proposal => keptProposalIds.has(proposal.id) && paired.has(proposal.id))) {
+        const labels = [...new Set(proposals.filter(proposal => paired.has(proposal.id)).map(proposal =>
+          holdContext.fees.find(fee => fee.procedureConceptKey === proposal.procedureConceptKey)?.display ?? proposal.procedureConceptKey))];
+        if (labels.length > 1) warnings.push(`${labels.join(" and ")}: usually not billed together on the same day — document why both were needed.`);
+      }
+    } catch {
+      // An unavailable advisory read never gates claim lines.
     }
   }
 

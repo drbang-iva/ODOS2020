@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle, ChargeItem, DiagnosticReport, Encounter, Media, Resource } from "@medplum/fhirtypes";
 import { buildClaimDraft } from "../src/claims/claim-draft.js";
+import { FhirSearchLimitError } from "../src/fhir-search.js";
 import { holdLines, loadClaimHoldContext } from "../src/claims/interpretation-hold.js";
 import { buildProcedureFeeDefinition, HCPCS_CODE_SYSTEM, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeInterpretation } from "../src/clinical-graph/procedure-fee-schedule.js";
 import { buildProtocolBasic, PROTOCOL_BASIC_CODES } from "../src/clinical-graph/protocol-store.js";
@@ -61,12 +62,15 @@ function fixture(options: {
     },
     async search<T extends Resource>(type: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
       const rows = resources.filter(resource => resource.resourceType === type)
+        .filter(resource => !params.identifier || ("identifier" in resource &&
+          (resource.identifier as { system?: string; value?: string }[] | undefined)?.some(identifier =>
+            `${identifier.system}|${identifier.value}` === params.identifier)))
         .filter(resource => !params.encounter || ("encounter" in resource && (resource.encounter as { reference?: string })?.reference === params.encounter))
         .filter(resource => !params.context || ("context" in resource && (resource.context as { reference?: string })?.reference === params.context));
       return { resourceType: "Bundle", type: "searchset", entry: rows.map(resource => ({ resource: structuredClone(resource) as T })) };
     },
   };
-  return { fhir, resources, photo, report, media, proposal };
+  return { fhir, resources, photo, visit, report, media, proposal };
 }
 
 test("H1 retracted report holds the materialized photograph but keeps the visit", async () => {
@@ -182,8 +186,11 @@ test("H9 signed OCT and photograph charges are kept with one advisory pair warni
   assert.deepEqual(draft.warnings, ["Synthetic photograph and Synthetic OCT: usually not billed together on the same day — document why both were needed."]);
 });
 
-test("H9/H15 same-day signed charge on another encounter survives an unrelated malformed proposal", async () => {
-  const { fhir, resources, photo, proposal } = fixture({ reportStatus: "final" });
+test("H15 unrelated malformed proposal does not affect named claim lines", async () => {
+  const { fhir, resources, photo, visit, proposal } = fixture({ reportStatus: "final" });
+  const visitProposal: ChargeProposal = { ...proposal, id: "visit-proposal", procedureConceptKey: "synthetic-visit",
+    interpretation: { answer: "not-required", feeVersion: "1", at: "2026-09-23T10:00:00-04:00" } };
+  visit.identifier = [{ system: proposalSystem, value: visitProposal.id }];
   const otherEncounter: Encounter = {
     resourceType: "Encounter", id: "other-visit", status: "finished", class: {},
     subject: { reference: "Patient/synthetic" }, period: { start: "2026-09-23T15:00:00-04:00" },
@@ -192,6 +199,7 @@ test("H9/H15 same-day signed charge on another encounter survives an unrelated m
     procedureConceptKey: "synthetic-oct", state: "finalized",
     interpretation: { answer: "oct", feeVersion: "1", at: "2026-09-23T15:00:00-04:00" } };
   resources.push(
+    { ...buildProtocolBasic(visitProposal, PROTOCOL_BASIC_CODES.chargeProposal), id: "visit-proposal-basic" } as Basic,
     otherEncounter,
     { ...photo, id: "other-oct", context: { reference: "Encounter/other-visit" },
       identifier: [{ system: proposalSystem, value: octProposal.id }],
@@ -204,10 +212,76 @@ test("H9/H15 same-day signed charge on another encounter survives an unrelated m
     { resourceType: "DiagnosticReport", id: "other-oct-report", status: "final", code: {},
       encounter: { reference: "Encounter/other-visit" }, conclusion: "Synthetic OCT interpretation",
       media: [{ link: { reference: "Media/other-oct-image" } }] },
-    { ...buildProtocolBasic({ id: "unrelated-malformed" }, PROTOCOL_BASIC_CODES.chargeProposal),
-      id: "malformed-basic", extension: [] } as Basic,
   );
+  const beforeCorruption = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(beforeCorruption.warnings, ["Synthetic photograph and Synthetic OCT: usually not billed together on the same day — document why both were needed."]);
+  resources.push({ ...buildProtocolBasic({ id: "unrelated-malformed" }, PROTOCOL_BASIC_CODES.chargeProposal),
+    id: "malformed-basic", extension: [] } as Basic);
   const draft = await buildClaimDraft(fhir, "visit");
   assert.deepEqual(draft.charges.map(row => row.id), ["photo", "visit-charge"]);
-  assert.deepEqual(draft.warnings, ["Synthetic photograph and Synthetic OCT: usually not billed together on the same day — document why both were needed."]);
+  assert.equal(draft.warnings, undefined);
+});
+
+test("H19 scoped proposal reads keep named visit and evidenced imaging when practice-wide list exceeds its limit", async () => {
+  const { fhir, resources, visit, photo, proposal } = fixture({ reportStatus: "final" });
+  const visitProposal: ChargeProposal = { ...proposal, id: "visit-proposal", procedureConceptKey: "synthetic-visit",
+    interpretation: { answer: "not-required", feeVersion: "1", at: "2026-09-23T10:00:00-04:00" } };
+  visit.identifier = [{ system: proposalSystem, value: visitProposal.id }];
+  resources.push({ ...buildProtocolBasic(visitProposal, PROTOCOL_BASIC_CODES.chargeProposal), id: "visit-proposal-basic" } as Basic);
+  const sourceSearch = fhir.search;
+  fhir.search = async (resourceType, params = {}) => {
+    if (resourceType === "Basic" && !params.identifier) throw new FhirSearchLimitError("Basic", 5_000, 5_001, 51);
+    return sourceSearch(resourceType, params);
+  };
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), [photo.id, visit.id]);
+  assert.equal(draft.warnings, undefined);
+});
+
+test("H20 lowercase typed HCPCS code matches an uppercase imaging fee", async () => {
+  const { fhir, resources, photo } = fixture({ billingOnly: true, liveAnswer: "oct" });
+  resources.splice(resources.findIndex(row => row.resourceType === "ChargeItemDefinition"), 1,
+    buildProcedureFeeDefinition({ procedureConceptKey: "synthetic-photo", display: "Synthetic photograph", billingCode: "OCTR1", interpretation: "oct" }));
+  photo.code.coding![0].code = "octr1";
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), ["visit-charge"]);
+  assert.deepEqual(draft.warnings, [heldPhoto]);
+});
+
+test("H21 present but unparseable named proposal holds unclassified despite a live not-required fee", async () => {
+  const { fhir, resources } = fixture({ liveAnswer: "not-required" });
+  const basic = resources.find(row => row.resourceType === "Basic") as Basic;
+  basic.extension![0].valueString = "{corrupted";
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), ["visit-charge"]);
+  assert.deepEqual(draft.warnings, ["Synthetic photograph was held: its interpretation requirement could not be classified because charge proposals could not be loaded."]);
+});
+
+test("H22 failed same-day advisory list does not hold or warn on an evidenced named charge", async () => {
+  const { fhir, resources, photo, proposal } = fixture({ reportStatus: "final" });
+  const octProposal: ChargeProposal = { ...proposal, id: "oct-proposal", procedureConceptKey: "synthetic-oct",
+    interpretation: { answer: "oct", feeVersion: "1", at: "2026-09-23T10:00:00-04:00" } };
+  resources.push(
+    { ...photo, id: "oct", identifier: [{ system: proposalSystem, value: octProposal.id }],
+      code: { coding: [{ system: HCPCS_CODE_SYSTEM, code: "OCTR1" },
+        { system: PROCEDURE_CONCEPT_SYSTEM, code: "synthetic-oct" }] } },
+    { ...buildProtocolBasic(octProposal, PROTOCOL_BASIC_CODES.chargeProposal), id: "oct-basic" } as Basic,
+    buildProcedureFeeDefinition({ procedureConceptKey: "synthetic-oct", display: "Synthetic OCT", billingCode: "OCTR1", interpretation: "oct" }),
+    { resourceType: "Media", id: "oct-image", status: "completed", content: {}, encounter: { reference: "Encounter/visit" },
+      modality: { coding: [{ code: "oct" }] } },
+    { resourceType: "DiagnosticReport", id: "oct-report", status: "final", code: {}, encounter: { reference: "Encounter/visit" },
+      conclusion: "Synthetic OCT interpretation", media: [{ link: { reference: "Media/oct-image" } }] },
+  );
+  const sourceSearch = fhir.search;
+  let failList = false;
+  fhir.search = async (resourceType, params = {}) => {
+    if (failList && resourceType === "Basic" && !params.identifier) throw new Error("Synthetic advisory list failure");
+    return sourceSearch(resourceType, params);
+  };
+  const withAdvisory = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(withAdvisory.warnings, ["Synthetic photograph and Synthetic OCT: usually not billed together on the same day — document why both were needed."]);
+  failList = true;
+  const draft = await buildClaimDraft(fhir, "visit");
+  assert.deepEqual(draft.charges.map(row => row.id), ["photo", "visit-charge", "oct"]);
+  assert.equal(draft.warnings, undefined);
 });
