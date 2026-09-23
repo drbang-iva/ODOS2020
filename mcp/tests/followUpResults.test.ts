@@ -10,6 +10,7 @@ import { buildProtocolBasic, PROTOCOL_BASIC_CODES } from "../src/clinical-graph/
 import type { PlanActionInstance } from "../src/clinical-graph/protocol-types.js";
 import { handleFollowUpQueueRequest, handleFollowUpResultRequest } from "../src/clinical-graph/follow-up-queue-endpoint.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { interpretationBlocks } from "../src/clinical-graph/interpretation-gate.js";
 
 test("S3c2c2a1 G1 registry covers exactly the currently proposable orderable-focus keys", () => {
   const proposed = new Set([
@@ -210,6 +211,35 @@ test("S3c2c2a1 G9 report basedOn or media link interprets, except entered-in-err
     } as DiagnosticReport);
     const rows = resultRows(await h.get());
     assert.equal(rows[0]!.result?.status, linkKind === "error" ? "needs-interpretation" : "interpreted");
+  }
+});
+
+test("S3c2c2b3 G11 Follow-up display and billing gate agree on report state and either photo order", async () => {
+  for (const [linkedOrder, status] of [
+    ["retina", undefined], ["retina", "preliminary"], ["retina", "final"],
+    ["optic", "final"], ["retina", "entered-in-error"],
+  ] as const) {
+    const h = await resultFixture([optic, retina], [optic, retina]);
+    const orderRef = linkedOrder === "retina" ? "ServiceRequest/sr-2" : "ServiceRequest/sr-1";
+    h.staff.resources.push(image("matrix-photo", "fundus-photo", "e1", orderRef));
+    if (status) h.staff.resources.push({
+      resourceType: "DiagnosticReport", id: "matrix-report", status, code: { text: "Synthetic report" },
+      subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
+      conclusion: "Synthetic interpretation", media: [{ link: { reference: "Media/matrix-photo" } }],
+    } satisfies DiagnosticReport);
+    const rows = resultRows(await h.get());
+    const actions = [planAction(optic, "sr-1"), planAction(retina, "sr-2")];
+    const blocks = interpretationBlocks({
+      encounterId: "e1", proposals: [{
+        id: "matrix-charge", encounterId: "e1", planActionRef: "synthetic", procedureConceptKey: "fundus-photography",
+        units: 1, dxPointers: [], evidenceRefs: [], coverageEvaluations: [], state: "accepted",
+        provenance: { source: "clinician-entered", actor: "Practitioner/synthetic", at },
+      }], actions, fees: [{ id: "fundus-photography", procedureConceptKey: "fundus-photography", display: "Fundus photography", active: true, version: "1", interpretation: "fundus-photo" }],
+      mediaRows: h.staff.resources.filter((row): row is Media => row.resourceType === "Media"),
+      reports: h.staff.resources.filter((row): row is DiagnosticReport => row.resourceType === "DiagnosticReport"),
+    });
+    assert.equal(rows[0]!.result?.status === "interpreted", blocks.length === 0, `${linkedOrder}:${status ?? "none"}`);
+    assert.equal(rows[1]!.result?.status === "interpreted", blocks.length === 0, `${linkedOrder}:${status ?? "none"}`);
   }
 });
 

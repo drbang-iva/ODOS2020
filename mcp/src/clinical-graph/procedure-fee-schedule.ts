@@ -461,6 +461,7 @@ export async function materializeAcceptedChargeProposals(input: {
   applications: RowStore<ProtocolApplication>;
   now?: () => string;
   modifierEligibleProcedureConceptKeys?: ReadonlySet<string>;
+  beforeWrite?: (proposals: readonly ChargeProposal[]) => Promise<void>;
 }): Promise<{ materialized: number; finalized: number }> {
   const proposals = (await input.charges.list()).filter((proposal) =>
     proposal.encounterId === input.encounterId && proposal.state === "accepted"
@@ -492,6 +493,7 @@ export async function materializeAcceptedChargeProposals(input: {
       throw new Error(`Charge proposal ${proposal.id} has an invalid diagnosis pointer.`);
     }
   }
+  await input.beforeWrite?.(proposals);
   const definitions = await ensureProcedureFeeSchedule(
     input.feeScheduleFhir,
     proposals.map((proposal) => proposal.procedureConceptKey),

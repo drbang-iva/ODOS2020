@@ -176,7 +176,13 @@ export function EncounterHeader({
         method: "POST",
         headers: authHeaders(),
       });
-      if (!cleanup.ok) throw new Error(`Protocol sign cleanup failed: ${cleanup.status}`);
+      if (!cleanup.ok) {
+        if (cleanup.status === 409) {
+          const body = await cleanup.json().catch(() => null) as { code?: string; error?: string } | null;
+          if (body?.code === "interpretation-required" && typeof body.error === "string") throw new Error(body.error);
+        }
+        throw new Error(`Protocol sign cleanup failed: ${cleanup.status}`);
+      }
       const now = new Date().toISOString();
       const response = await fhir.executeTransaction(
         buildEncounterStatusPatchBundle({

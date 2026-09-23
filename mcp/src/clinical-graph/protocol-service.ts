@@ -909,6 +909,27 @@ export class ProtocolService {
     return this.encounterLock.run(encounterId, () => this.abandonOpenForSignedEncounterLocked(encounterId));
   }
 
+  async signCleanup<T>(encounterId: string, steps: { gate: () => Promise<void>; materialize: () => Promise<T> }): Promise<{ abandoned: number; charges: T }> {
+    return this.encounterLock.run(encounterId, async () => {
+      await steps.gate();
+      const abandoned = await this.abandonOpenForSignedEncounterLocked(encounterId);
+      return { abandoned, charges: await steps.materialize() };
+    });
+  }
+
+  async acceptStagedCharges(
+    applicationId: string,
+    snapshot: (charge: ChargeProposal) => Promise<NonNullable<ChargeProposal["interpretation"]>>,
+  ): Promise<void> {
+    const encounterId = (await this.requireApplication(applicationId)).encounterId;
+    await this.encounterLock.run(encounterId, async () => {
+      for (const charge of (await this.charges.list()).filter(candidate =>
+        candidate.protocolApplicationId === applicationId && candidate.state === "staged")) {
+        await this.charges.save({ ...charge, state: "accepted", interpretation: await snapshot(charge) });
+      }
+    });
+  }
+
   private async abandonOpenForSignedEncounterLocked(encounterId: string): Promise<number> {
     const open = (await this.applications.list()).filter((row) =>
       row.encounterId === encounterId && !row.confirmed && row.undoState === "active"

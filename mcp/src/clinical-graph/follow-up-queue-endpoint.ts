@@ -250,7 +250,7 @@ function assertInterpretationTransaction(request: Bundle, response: Bundle): voi
   }
 }
 
-async function readImagingResources(staffFhir: ExamOverviewFhirClient, encounterId: string) {
+export async function readImagingResources(staffFhir: ExamOverviewFhirClient, encounterId: string) {
   const encounterReference = `Encounter/${encounterId}`;
   const mediaRows = (await searchImagingMedia(staffFhir as unknown as ImagingFhirClient, {
     encounter: encounterReference, status: "completed", _sort: "-created", _count: "50",
@@ -268,6 +268,13 @@ async function readImagingResources(staffFhir: ExamOverviewFhirClient, encounter
   }, "DiagnosticReport", reportBundle, { maxPages: 100, maxRows: 5_000 }))
     .filter(report => report.encounter?.reference === encounterReference);
   return { mediaRows, reports };
+}
+
+export function conceptInterpreted(orders: ReadonlySet<string>, mediaRows: readonly Media[], reports: readonly DiagnosticReport[]): boolean {
+  const mediaReferences = new Set(mediaRows.filter(media => media.basedOn?.some(link => link.reference && orders.has(link.reference)))
+    .map(media => `Media/${media.id}`));
+  return reports.some(report => ["final", "amended", "corrected"].includes(report.status) &&
+    Boolean(report.conclusion?.trim()) && reportAttached(report, orders, mediaReferences));
 }
 
 async function withImagingResults(
@@ -296,7 +303,7 @@ async function withImagingResults(
     const conceptMediaReferences = new Set(mediaRows.filter(media => media.basedOn?.some(link => link.reference && conceptOrders.has(link.reference)))
       .map(media => `Media/${media.id}`));
     const attached = (report: DiagnosticReport) => Boolean(report.conclusion?.trim()) && reportAttached(report, conceptOrders, conceptMediaReferences);
-    const interpreted = reports.some(report => ["final", "amended", "corrected"].includes(report.status) && attached(report));
+    const interpreted = conceptInterpreted(conceptOrders, mediaRows, reports);
     const draft = interpreted ? undefined : reports.filter(report => report.status === "preliminary" && attached(report))
       .sort((a, b) => (b.issued ?? "").localeCompare(a.issued ?? "") || (b.meta?.lastUpdated ?? "").localeCompare(a.meta?.lastUpdated ?? ""))[0]?.conclusion?.trim();
     return { ...row, result: {
