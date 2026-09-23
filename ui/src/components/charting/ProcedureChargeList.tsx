@@ -22,6 +22,7 @@ export function ProcedureChargeList({
   const [options, setOptions] = useState<ProcedureChargeOption[]>([]);
   const [diagnoses, setDiagnoses] = useState<ProcedureChargeDiagnosis[]>([]);
   const [proposals, setProposals] = useState<ManualProcedureCharge[]>([]);
+  const [sameDayWarnings, setSameDayWarnings] = useState<Array<{ proposalId: string; message: string }>>([]);
   const [selectedConcept, setSelectedConcept] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -38,6 +39,7 @@ export function ProcedureChargeList({
         setOptions(response.options);
         setDiagnoses(response.diagnoses);
         setProposals(response.proposals);
+        setSameDayWarnings(response.sameDayWarnings ?? []);
       })
       .catch((reason: unknown) => {
         if (!cancelled) setError(errorMessage(reason));
@@ -60,6 +62,7 @@ export function ProcedureChargeList({
     try {
       const response = await api.create(encounterId, selectedConcept);
       setProposals((current) => replaceProposal(current, response.proposal));
+      setSameDayWarnings((await api.read(encounterId)).sameDayWarnings ?? []);
       setSelectedConcept("");
     } catch (reason) {
       setError(errorMessage(reason));
@@ -74,6 +77,7 @@ export function ProcedureChargeList({
     try {
       const response = await api.patch(encounterId, proposalId, change);
       setProposals((current) => replaceProposal(current, response.proposal));
+      setSameDayWarnings((await api.read(encounterId)).sameDayWarnings ?? []);
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -123,6 +127,7 @@ export function ProcedureChargeList({
         const option = optionByKey.get(proposal.procedureConceptKey);
         const display = option?.display ?? proposal.procedureConceptKey;
         const saving = savingIds.has(proposal.id);
+        const sameDayWarning = sameDayWarnings.find(warning => warning.proposalId === proposal.id)?.message;
         return (
           <div
             key={proposal.id}
@@ -171,6 +176,7 @@ export function ProcedureChargeList({
             >
               Remove
             </button>
+            {sameDayWarning && <p className="odos-same-day-warning w-full">{sameDayWarning}</p>}
           </div>
         );
       })}

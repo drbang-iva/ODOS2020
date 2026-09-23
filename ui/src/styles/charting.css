@@ -2632,3 +2632,9 @@
 .odos-follow-up-result-item button { min-height: 44px; padding: .5rem .75rem; }
 .odos-follow-up-record { display: flex; flex-direction: column; gap: .4rem; margin-top: .75rem; font-weight: 600; }
 .odos-follow-up-record input { max-width: 100%; min-height: 44px; font-weight: normal; }
+
+.odos-same-day-warning {
+  color: var(--odos-muted);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}

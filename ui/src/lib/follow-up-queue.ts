@@ -25,7 +25,7 @@ export interface FollowUpImagingResult {
   candidates: FollowUpResultItem[];
 }
 export type FollowUpCharge =
-  | { status: "billed"; proposalId: string; dxPointer?: string; dxDisplay?: string }
+  | { status: "billed"; proposalId: string; dxPointer?: string; dxDisplay?: string; sameDayWarning?: string }
   | { status: "removed"; proposalId: string; removedBy: string }
   | { status: "none" | "uncoded" | "protocol-pending" | "charged-elsewhere" | "finalized" };
 export interface FollowUpDiagnosis { reference: string; display: string; rank?: number; matches: boolean }
@@ -114,7 +114,8 @@ function validCharge(value: unknown): value is FollowUpCharge {
   const charge = value as Partial<FollowUpCharge>;
   if (charge.status === "billed") return typeof charge.proposalId === "string" &&
     (charge.dxPointer === undefined || /^Condition\/[A-Za-z0-9.-]+$/.test(charge.dxPointer)) &&
-    (charge.dxDisplay === undefined || typeof charge.dxDisplay === "string");
+    (charge.dxDisplay === undefined || typeof charge.dxDisplay === "string") &&
+    (charge.sameDayWarning === undefined || typeof charge.sameDayWarning === "string");
   if (charge.status === "removed") return typeof charge.proposalId === "string" && typeof charge.removedBy === "string";
   return ["none", "uncoded", "protocol-pending", "charged-elsewhere", "finalized"].includes(charge.status ?? "");
 }

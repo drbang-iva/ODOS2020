@@ -227,3 +227,44 @@ test("G6 duplicate charge sentence reaches the doctor and leaves the list unchan
     act(() => renderer.unmount());
   }
 });
+
+test("S3c2c2b3b G10 Visit charges warning appears beneath only the matching proposal", async () => {
+  const message = "Usually not billed together on the same day — document why both were needed.";
+  const other = { ...PROPOSAL, id: "manual-procedure-charge:other" };
+  for (const warned of [true, false]) {
+    const api: ProcedureChargeApi = {
+      async read() { return { ...RESPONSE, proposals: [PROPOSAL, other], ...(warned ? { sameDayWarnings: [{ proposalId: PROPOSAL.id, message }] } : {}) }; },
+      async create() { throw new Error("Unexpected create"); },
+      async patch() { throw new Error("Unexpected patch"); },
+    };
+    let renderer!: ReactTestRenderer;
+    await act(async () => { renderer = create(<ProcedureChargeList encounterId="enc-1" api={api} />); });
+    try {
+      const rows = renderer.root.findAllByProps({ "data-testid": "procedure-charge-row" });
+      assert.equal(rows[0].findAllByType("p").filter(p => p.children.join("") === message).length, warned ? 1 : 0);
+      assert.equal(rows[1].findAllByType("p").filter(p => p.children.join("") === message).length, 0);
+      assert.equal(rows[0].findByProps({ children: "Remove" }).props.disabled, false);
+    } finally { act(() => renderer.unmount()); }
+  }
+});
+
+test("S3c2c2b3b G10 Visit charges refreshes warnings after adding and removing a paired charge", async () => {
+  const message = "Usually not billed together on the same day — document why both were needed.";
+  const added = { ...PROPOSAL, id: "manual-procedure-charge:paired" };
+  let paired = false;
+  const api: ProcedureChargeApi = {
+    async read() { return { ...RESPONSE, proposals: [PROPOSAL], ...(paired ? { sameDayWarnings: [PROPOSAL, added].map(p => ({ proposalId: p.id, message })) } : {}) }; },
+    async create() { paired = true; return { proposal: added }; },
+    async patch() { paired = false; return { proposal: { ...added, state: "removed" } }; },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => { renderer = create(<ProcedureChargeList encounterId="enc-1" api={api} />); });
+  try {
+    await act(async () => { renderer.root.findByProps({ "aria-label": "Procedure to add" }).props.onChange({ target: { value: "gonioscopy" } }); });
+    await act(async () => { await renderer.root.findByProps({ children: "Add procedure" }).props.onClick(); });
+    assert.equal(renderer.root.findAllByType("p").filter(p => p.children.join("") === message).length, 2);
+    await act(async () => { await renderer.root.findAllByProps({ "data-testid": "procedure-charge-row" })[1].findByProps({ children: "Remove" }).props.onClick(); });
+    assert.equal(renderer.root.findAllByType("p").filter(p => p.children.join("") === message).length, 0);
+    assert.equal(renderer.root.findAllByProps({ "data-testid": "procedure-charge-row" }).length, 1);
+  } finally { act(() => renderer.unmount()); }
+});

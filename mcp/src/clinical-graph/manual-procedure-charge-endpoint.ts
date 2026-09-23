@@ -1,3 +1,4 @@
+import { loadSameDayWarnings } from "./same-day-pairs.js";
 import { randomUUID } from "node:crypto";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import type { Express } from "express";
@@ -118,12 +119,18 @@ export async function handleProcedureChargesRequest(
     store.list(),
     listProcedureFeeScheduleSnapshot(staff.fhir),
   ]);
+  const warnings = encounter.subject?.reference?.match(/^Patient\/[^/]+$/)
+    ? await loadSameDayWarnings({ fhir: staff.fhir, encounter, patientId: encounter.subject.reference.slice(8), fees: feeSchedule })
+    : new Map<string, string>();
+  const sameDayWarnings = [...warnings].filter(([proposalId]) => proposals.some(proposal => proposal.id === proposalId && proposal.encounterId === params.data.encounterId))
+    .map(([proposalId, message]) => ({ proposalId, message }));
   const displayByConcept = new Map(feeSchedule.map((item) => [item.procedureConceptKey, item.display]));
   return {
     status: 200,
     body: {
       options,
       diagnoses,
+      ...(sameDayWarnings.length ? { sameDayWarnings } : {}),
       proposals: proposals.filter((proposal) =>
         isManualProcedureProposal(proposal, params.data.encounterId)
       ),

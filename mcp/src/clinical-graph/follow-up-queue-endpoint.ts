@@ -1,3 +1,4 @@
+import { loadSameDayWarnings } from "./same-day-pairs.js";
 import { z } from "zod";
 import { collectBoundedSearch } from "../fhir-search.js";
 import { randomUUID } from "node:crypto";
@@ -34,7 +35,7 @@ export interface FollowUpQueueRow {
 }
 type FollowUpResultItem = { mediaReference: string; title: string; date: string };
 export type FollowUpRowCharge =
-  | { status: "billed"; proposalId: string; dxPointer?: string; dxDisplay?: string }
+  | { status: "billed"; proposalId: string; dxPointer?: string; dxDisplay?: string; sameDayWarning?: string }
   | { status: "removed"; proposalId: string; removedBy: string }
   | { status: "none" | "uncoded" | "protocol-pending" | "charged-elsewhere" | "finalized" };
 export type FollowUpQueue = { recorded: false } | { recorded: true; rows: FollowUpQueueRow[]; canDecide?: boolean; canAccept?: boolean; diagnoses?: Array<{ reference: string; display: string; rank?: number; matches: boolean }> };
@@ -97,6 +98,7 @@ export async function readQueue(serviceFhir: ExamOverviewFhirClient, staffFhir: 
   const proposals = scope.testsProposed === undefined ? [] :
     (await new ProtocolBasicStore<ChargeProposal>(staffFhir, PROTOCOL_BASIC_CODES.chargeProposal).list())
       .filter(proposal => proposal.encounterId === encounterId);
+  const sameDayWarnings = await loadSameDayWarnings({ fhir: staffFhir, encounter, patientId, fees });
   const diagnoses = scope.testsProposed === undefined ? [] : await encounterDiagnoses(staffFhir, encounter);
   const profileKeys = new Set(scope.testsProposed?.flatMap(test => test.sources.flatMap(source => source.kind === "profile" ? [source.profileKey] : [])) ?? []);
   const [catalog, profiles] = diagnoses.length ? await Promise.all([
@@ -117,7 +119,7 @@ export async function readQueue(serviceFhir: ExamOverviewFhirClient, staffFhir: 
     const queue = deriveFollowUpQueue(scope.testsProposed, fees, actions, encounterId, patientId, currentDecisions);
     if (!queue.recorded) return queue;
     const rows = queue.rows.map(row => row.state === "already-ordered"
-      ? { ...row, charge: rowCharge(row, actions, proposals, fees, encounterId, diagnosed, actorNames) }
+      ? { ...row, charge: rowCharge(row, actions, proposals, fees, encounterId, diagnosed, actorNames, sameDayWarnings) }
       : row);
     return { ...queue, rows, canDecide, canAccept: canDecide && encounter.status !== "finished", diagnoses: diagnosed };
   };
@@ -132,6 +134,7 @@ function rowCharge(
   encounterId: string,
   diagnoses: readonly { reference: string; display: string }[],
   actorNames: ReadonlyMap<string, string>,
+  sameDayWarnings: ReadonlyMap<string, string>,
 ): FollowUpRowCharge {
   const matching = proposals.filter(proposal => proposal.encounterId === encounterId && proposal.procedureConceptKey === row.orderable);
   const live = matching.find(proposal => proposal.state !== "removed");
@@ -140,7 +143,8 @@ function rowCharge(
   if (live?.state === "accepted" && isManualProcedureProposal(live, encounterId)) {
     const dxPointer = live.dxPointers[0];
     const dxDisplay = diagnoses.find(diagnosis => diagnosis.reference === dxPointer)?.display;
-    return { status: "billed", proposalId: live.id, ...(dxPointer ? { dxPointer } : {}), ...(dxDisplay ? { dxDisplay } : {}) };
+    const sameDayWarning = sameDayWarnings.get(live.id);
+    return { status: "billed", ...(sameDayWarning ? { sameDayWarning } : {}), proposalId: live.id, ...(dxPointer ? { dxPointer } : {}), ...(dxDisplay ? { dxDisplay } : {}) };
   }
   if (live) return { status: "charged-elsewhere" };
   const linked = new Set(actions.filter(action => row.actionIds?.includes(action.id)).map(action => action.chargeProposalRef));

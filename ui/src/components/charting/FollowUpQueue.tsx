@@ -113,6 +113,7 @@ export function FollowUpQueue({ encounterId, active, patientReference, onOpenIma
           row.charge.status === "protocol-pending" ? "Protocol charge not yet billed" :
           row.charge.status === "charged-elsewhere" ? "Charged on this visit" : "Billed"
         }</p>}
+        {row.charge?.status === "billed" && row.charge.sameDayWarning && <p className="odos-same-day-warning">{row.charge.sameDayWarning}</p>}
         {row.state === "for-review" && row.unreviewedResult && <p className="odos-follow-up-result-status">Done — not reviewed</p>}
         {row.state === "already-ordered" && row.result && <div className="odos-follow-up-results">
           {row.result.status !== "none" && <p className="odos-follow-up-result-status">{row.result.status === "interpreted" ? "Interpreted" : "Completed — needs interpretation"}</p>}

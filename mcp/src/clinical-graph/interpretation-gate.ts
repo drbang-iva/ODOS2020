@@ -5,6 +5,15 @@ import { listProcedureFeeScheduleSnapshot, type ProcedureFeeScheduleFhir, type P
 import type { ChargeProposal, PlanActionInstance } from "./protocol-types.js";
 import type { ExamOverviewFhirClient } from "./exam-overview-endpoint.js";
 
+export type ImageType = "visual-field" | "fundus-photo" | "anterior-segment-photo" | "oct" | "biometry";
+
+export function chargeImageType(proposal: ChargeProposal, fees: readonly ProcedureFeeScheduleItem[]): ImageType | undefined {
+  const imageTypes = new Set(["visual-field", "fundus-photo", "anterior-segment-photo", "oct", "biometry"]);
+  const snap = proposal.interpretation?.answer;
+  const live = fees.find(fee => fee.procedureConceptKey === proposal.procedureConceptKey)?.interpretation ?? "unanswered";
+  return (imageTypes.has(snap ?? "") ? snap : imageTypes.has(live) ? live : undefined) as ImageType | undefined;
+}
+
 export type InterpretationBlockReason = "duplicate-fee" | "unclassified-fee" | "needs-interpretation" | "no-interpreted-result";
 export interface InterpretationBlock {
   proposalId: string;
@@ -38,8 +47,7 @@ export function interpretationBlocks(input: {
     if (definitions.length > 1) {
       reason = "duplicate-fee";
     } else {
-      const imageTypes = new Set(["visual-field", "fundus-photo", "anterior-segment-photo", "oct", "biometry"]);
-      const imageType = imageTypes.has(snap ?? "") ? snap : imageTypes.has(live) ? live : undefined;
+      const imageType = chargeImageType(proposal, input.fees);
       if (!imageType) {
         if (snap === "unanswered" || live === "unanswered") reason = "unclassified-fee";
       } else {

@@ -140,6 +140,7 @@ export interface ProcedureChargesResponse {
   diagnoses: ProcedureChargeDiagnosis[];
   proposals: ManualProcedureCharge[];
   attachedProcedures: AttachedProcedure[];
+  sameDayWarnings?: Array<{ proposalId: string; message: string }>;
 }
 
 export interface AttachedProcedure {
