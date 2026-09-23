@@ -1,6 +1,6 @@
 # S3c-2c-2b-4 author bundle
 
-The claim draft and submit path hold fee-classified imaging lines when no same-service-day interpretation exists. Named proposals are read by identifier, so a practice-wide proposal count cannot hold unrelated lines. A failed scoped read or malformed named Basic holds only affected lines as unclassified; an absent named proposal still falls through. Typed billing codes are trimmed and uppercased before matching a fee in the CPT/HCPCS billing space. A failed practice-wide advisory list, including an unrelated malformed Basic, skips the same-day OCT/photo warning without holding a line. Partial submissions name held lines; all-held submissions return 409 without writes or an adapter call. This is Codex-authored, **NOT EVALUATED at the final head**, and must receive independent Claude Opus/Fable evaluation before merge.
+The claim draft and submit path hold fee-classified imaging lines when no same-service-day interpretation exists. Named proposals are read by identifier, so a practice-wide proposal count cannot hold unrelated lines. A failed scoped read or malformed named Basic holds only affected lines as unclassified; an absent named proposal still falls through. Typed billing codes are trimmed and uppercased before matching a fee in the CPT/HCPCS billing space. A failed practice-wide advisory list, including an unrelated malformed Basic, skips the same-day OCT/photo warning without holding a line. Partial submissions name held lines; all-held submissions return 409 without clinical-resource writes or an adapter call, while the required failure audit is recorded. This is Codex-authored, **NOT EVALUATED at the final head**, and must receive independent Claude Opus/Fable evaluation before merge.
 
 Branch: `drbang-iva/followup-s3c2c2b4-claim-hold`, based on `origin/main c61c58832ef12bec46c628d8c9dfe6e40c28c1d9`. The PR URL and final head are in the handoff. No merge or deployment was performed.
 Prior independent evaluations were NEEDS-WORK at `51d38494a5320693cd8edb018e8ff960f4124bf3` and `1d079d8a4ec2b38f4ce0e2202569c1bd3560e792`. Neither is a PASS on the new head.
@@ -55,7 +55,7 @@ The final full MCP run and H16–H18 mutation reruns used a new dedicated `odos-
 | H3 snapshot beats later answer | `1/0/1/1` | `1/1/0/0` |
 | H4 raw ChargeItem concept match | `1/0/1/1` | `1/1/0/0` |
 | H5 typed hold before persistence | `2/0/2/1` | `2/2/0/0` |
-| H6 all-held 409, zero writes/calls | `2/0/2/1` | `2/2/0/0` |
+| H6 all-held 409, zero clinical-resource writes or adapter calls | `2/0/2/1` | `2/2/0/0` |
 | H7 unmatched code not gated | `2/0/2/1` | `2/2/0/0` |
 | H8 unanswered fee classified/held | `1/0/1/1` | `1/1/0/0` |
 | H9 advisory only | `1/0/1/1` | `1/1/0/0` |
