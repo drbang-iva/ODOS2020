@@ -9,6 +9,9 @@ import type {
 import { isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
 import { chargeItemLaterality } from "../fhir/charge-item-laterality.js";
 import { searchAll } from "../fhir-search.js";
+import { claimLineRequirement, claimProposalId, claimServiceEncounters, holdLines, loadClaimAdvisoryProposals, loadClaimEvidence, loadClaimHoldContext } from "./interpretation-hold.js";
+import { SAME_DAY_EXCLUSIVE_PAIRS, sameDayWarnings, serviceDay } from "../clinical-graph/same-day-pairs.js";
+import { chargeImageType } from "../clinical-graph/interpretation-gate.js";
 import { buildDiagnosisCatalogSeeds } from "../clinical-graph/diagnosis-catalog-seeds.js";
 import { resolveConditionCodes } from "../clinical-graph/diagnosis-code-resolution.js";
 import { ICD10_CM_CODE_SYSTEM, type DiagnosisCatalogRow } from "../clinical-graph/glaucoma-suspect.js";
@@ -131,7 +134,7 @@ export async function buildClaimDraft(
     }),
   ]);
   const warnings: string[] = [];
-  const charges = chargeItems.filter((chargeItem) => chargeItem.status === "billable").flatMap((chargeItem): EncounterClaimDraftCharge[] => {
+  let charges = chargeItems.filter((chargeItem) => chargeItem.status === "billable").flatMap((chargeItem): EncounterClaimDraftCharge[] => {
     if (!chargeItem.id) throw new ClaimDraftAssemblyError("A billable ChargeItem is missing its persisted id.");
     const coding = chargeItem.code.coding?.find((candidate) => candidate.system && candidate.code);
     if (!coding?.system || !coding.code) {
@@ -169,6 +172,36 @@ export async function buildClaimDraft(
       ...(chargeLaterality.laterality ? { laterality: chargeLaterality.laterality } : {}),
     }];
   });
+
+  const diagnosedCharges = chargeItems.filter(item => charges.some(charge => charge.id === item.id));
+  const holdContext = await loadClaimHoldContext(fhir, diagnosedCharges);
+  const evidence = diagnosedCharges.some(item => claimLineRequirement(item, holdContext).kind === "type")
+    ? await loadClaimEvidence(fhir, patientReference!, serviceDay(encounter) ?? "") : new Set<never>();
+  const heldResult = holdLines(diagnosedCharges, evidence, holdContext);
+  charges = charges.filter(charge => heldResult.kept.some(item => item.id === charge.id));
+  warnings.push(...heldResult.held.map(line => line.message));
+  const keptProposalIds = new Set(heldResult.kept.map(claimProposalId));
+  const hasPairCandidate = holdContext.proposals.some(proposal => {
+    const type = chargeImageType(proposal, holdContext.fees);
+    return keptProposalIds.has(proposal.id) && type &&
+      SAME_DAY_EXCLUSIVE_PAIRS.some(pair => pair.types.includes(type));
+  });
+  if (hasPairCandidate) {
+    try {
+      const sameDayIds = new Set((await claimServiceEncounters(fhir, patientReference!, serviceDay(encounter) ?? "")).map(row => row.id));
+      const heldProposalIds = new Set(heldResult.held.map(line => claimProposalId(diagnosedCharges[line.index]!)));
+      const proposals = (await loadClaimAdvisoryProposals(fhir))
+        .filter(proposal => sameDayIds.has(proposal.encounterId) && !heldProposalIds.has(proposal.id));
+      const paired = sameDayWarnings({ proposals, fees: holdContext.fees });
+      if (proposals.some(proposal => keptProposalIds.has(proposal.id) && paired.has(proposal.id))) {
+        const labels = [...new Set(proposals.filter(proposal => paired.has(proposal.id)).map(proposal =>
+          holdContext.fees.find(fee => fee.procedureConceptKey === proposal.procedureConceptKey)?.display ?? proposal.procedureConceptKey))];
+        if (labels.length > 1) warnings.push(`${labels.join(" and ")}: usually not billed together on the same day — document why both were needed.`);
+      }
+    } catch {
+      // An unavailable advisory read never gates claim lines.
+    }
+  }
 
   const activeCoverages = coverages.filter((coverage) => coverage.status === "active");
   const intendedCoverageReferences = new Set(

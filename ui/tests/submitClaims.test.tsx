@@ -1014,3 +1014,33 @@ async function waitForObservable(predicate: () => boolean, description: string):
   }
   assert.fail(`Timed out waiting for ${description}`);
 }
+
+test("H12 result panel lists held lines and clean results show none", () => {
+  const message = "Synthetic photograph was held: it needs an interpretation and report on this visit.";
+  const result = { claimId: "synthetic-claim", heldLines: [{ index: 0, label: "Synthetic photograph", reason: "needs-interpretation" as const, message }] };
+  const markup = renderToStaticMarkup(<ClaimSubmissionResult result={result} onAnother={() => {}} />);
+  assert.match(markup, /Synthetic photograph was held: it needs an interpretation and report on this visit\./);
+  assert.match(markup, /<li/);
+  const clean = renderToStaticMarkup(<ClaimSubmissionResult result={{ claimId: "synthetic-claim" }} onAnother={() => {}} />);
+  assert.doesNotMatch(clean, /held|<li/);
+});
+
+test("H12 all-lines-held 409 displays each hold message as the submit error", async () => {
+  const messages = [
+    "Synthetic photograph was held: it needs an interpretation and report on this visit.",
+    "Synthetic fee was held: classify it in the fee schedule (does it need an interpretation?).",
+  ];
+  let error = "";
+  try {
+    await submitProfessionalClaim(buildProfessionalClaimInput(validDraft()), {
+      fetchImpl: (async () => new Response(JSON.stringify({ code: "all-lines-held", heldLines: messages.map(message => ({ message })) }), { status: 409 })) as typeof fetch,
+    });
+    assert.fail("All-held submission must reject");
+  } catch (cause) {
+    error = (cause as Error).message;
+  }
+  assert.equal(error, messages.join(" "));
+  const markup = renderToStaticMarkup(<ClaimReview claim={buildProfessionalClaimInput(validDraft())} error={error} submitting={false} onEdit={() => {}} onSubmit={() => {}} />);
+  assert.match(markup, /Synthetic photograph was held/);
+  assert.match(markup, /Synthetic fee was held/);
+});

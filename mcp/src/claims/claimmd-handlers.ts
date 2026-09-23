@@ -188,6 +188,40 @@ export async function handleSubmitClaimRequest(
         throw new ClaimSubmissionValidationError(`ChargeItem ${index + 1}: ${messageOf(error)}`);
       }
     }
+    const { claimLineRequirement, holdLines, loadClaimEvidence, loadClaimHoldContext } = await import("./interpretation-hold.js");
+    const storedLines: ProfessionalClaimChargeItemInput[] = [];
+    for (const line of body.claim.chargeItems) {
+      if (!line.id) {
+        assertChargeItemPatient(line, body.claim.patientReference);
+        storedLines.push(line);
+        continue;
+      }
+      if (!/^[A-Za-z0-9.-]+$/.test(line.id)) {
+        throw new ClaimSubmissionValidationError(`ChargeItem id ${line.id} is not a valid local FHIR id.`);
+      }
+      let stored: ChargeItem;
+      try {
+        stored = await auth.fhir.read<ChargeItem>("ChargeItem", line.id);
+      } catch {
+        throw new ClaimSubmissionValidationError(`ChargeItem/${line.id} could not be loaded for this Claim.`);
+      }
+      assertChargeItemPatient(stored, body.claim.patientReference);
+      storedLines.push({ ...stored, ...(line.diagnosisSequence ? { diagnosisSequence: line.diagnosisSequence } : {}) });
+    }
+    const holdContext = await loadClaimHoldContext(auth.fhir, storedLines);
+    const evidence = storedLines.some(line => claimLineRequirement(line, holdContext).kind === "type")
+      ? await loadClaimEvidence(auth.fhir, body.claim.patientReference, body.claim.serviceDate) : new Set<never>();
+    const { held: heldLines } = holdLines(storedLines, evidence, holdContext);
+    if (heldLines.length) {
+      const heldIndices = new Set(heldLines.map(line => line.index));
+      const kept = body.claim.chargeItems.filter((_line, index) => !heldIndices.has(index));
+      if (!kept.length) {
+        await audit(deps, auth, "claim.submit.failed", "failure", "Claim/uncreated", body.claim.patientReference,
+          `all-lines-held: ${heldLines.length} lines`, selection.id);
+        return { status: 409, body: { code: "all-lines-held", heldLines } };
+      }
+      body.claim = { ...body.claim, chargeItems: kept };
+    }
     const persistedChargeItems = await persistClaimChargeItems(
       auth,
       body.claim.chargeItems,
@@ -214,13 +248,15 @@ export async function handleSubmitClaimRequest(
           (selection.adapter as StediAdapter).submitterId,
         ),
       });
-    await audit(deps, auth, "claim.submit.completed", "success", ref(createdClaim), body.claim.patientReference, undefined, selection.id);
+    await audit(deps, auth, "claim.submit.completed", "success", ref(createdClaim), body.claim.patientReference,
+      heldLines.length ? heldLines.map(line => line.message).join(" ") : undefined, selection.id);
     const claimMdResult = selection.id === "claimmd" ? result as Awaited<ReturnType<ClaimMdAdapter["submitProfessionalClaim"]>> : undefined;
     const stediResult = selection.id === "stedi" ? result as Awaited<ReturnType<StediAdapter["submitProfessionalClaim"]>> : undefined;
     return {
       status: 200,
       body: {
         claimId: createdClaim.id,
+        ...(heldLines.length ? { heldLines } : {}),
         ...(claimMdResult ? {
           claimMdClaimId: claimMdResult.claims[0]?.claimMdClaimId,
           claimMdTrackingNumber: claimMdResult.claims[0]?.claimMdId,

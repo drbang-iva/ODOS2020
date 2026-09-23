@@ -91,6 +91,7 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
   assert.deepEqual(searches, [
     { resourceType: "ChargeItem", params: { context: "Encounter/enc-1", _count: "100" } },
     { resourceType: "Coverage", params: { beneficiary: "Patient/pat-1", _count: "100" } },
+    { resourceType: "ChargeItemDefinition", params: { _count: "100" } },
   ]);
 });
 
