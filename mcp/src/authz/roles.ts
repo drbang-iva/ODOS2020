@@ -734,9 +734,11 @@ const PROVIDER_CLINICAL_WRITE_RESOURCE_RULES: OdosResourceRule[] = [
     interactions: CREATE_UPDATE_INTERACTIONS,
     scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
     writeConstraint:
-      resourceType === "Observation" || resourceType === "DiagnosticReport"
-        ? CLINICAL_WRITE_CONSTRAINTS
-        : undefined,
+      resourceType === "Encounter"
+        ? [{ description: "A signed visit must remain finished.", expression: "%before.exists() implies (%before.status != 'finished' or status = 'finished')" }]
+        : resourceType === "Observation" || resourceType === "DiagnosticReport"
+          ? CLINICAL_WRITE_CONSTRAINTS
+          : undefined,
   })),
   ...(["AllergyIntolerance", "CareTeam", "BodyStructure", "AdverseEvent"] as const).map(
     (resourceType): OdosResourceRule => ({

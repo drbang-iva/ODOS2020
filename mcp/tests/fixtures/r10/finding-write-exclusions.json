@@ -543,6 +543,14 @@
       "ordinal": 1,
       "reason": "Non-Observation transaction: the Follow-up interpret action creates one DiagnosticReport (status final) and its Provenance; no entry targets Observation.",
       "sourceLine": 395
+    },
+    {
+      "file": "mcp/src/clinical-graph/encounter-abandon-endpoint.ts",
+      "function": "handleEncounterAbandonRequest",
+      "kind": "transaction-submit",
+      "ordinal": 1,
+      "reason": "Encounter abandonment submits only the version-guarded Encounter status/reason patch and caller Provenance after the dependency guard; it never writes an Observation.",
+      "sourceLine": 96
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { abandonEncounter as requestEncounterAbandon } from "../../lib/encounter-abandon";
+import { useConfirmDestructive } from "./ConfirmDestructive";
 import { FollowingPicker, type FollowingChoice } from "./FollowingPicker";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import type { Appointment, Encounter, Patient } from "@medplum/fhirtypes";
@@ -88,6 +90,8 @@ export function EncounterHeader({
   const focusBeforeBlackout = useRef<{ focus: () => void }>();
   const blackoutOverlay = useRef<HTMLDivElement>(null);
   const completenessCheckVersion = useRef(0);
+  const currentEncounterId = useRef(encounterId);
+  currentEncounterId.current = encounterId;
 
   useEffect(() => {
     let cancelled = false;
@@ -229,29 +233,26 @@ export function EncounterHeader({
     );
   }
 
+  const confirmAbandon = useConfirmDestructive();
+  const abandonUnavailableReason = migrated ? "Migrated historical encounters are read-only."
+    : encounter?.status === "finished" ? "Signed visits cannot be abandoned."
+    : isClosedEncounterStatus(encounter?.status) ? "This visit is already closed."
+    : clinicalActionUnavailableReason;
+
   async function abandonEncounter() {
-    if (!patient.id || migrated || busy || clinicalActionUnavailableReason) return;
+    if (!patient.id || busy || abandonUnavailableReason) return;
+    const routeAtOpen = typeof window === "undefined" ? undefined : `${window.location.pathname}${window.location.search}`;
+    if (!await confirmAbandon({ title: "Abandon this visit?", consequence: "Use only when the exam did not happen. The visit is closed and cannot be reopened.", confirmLabel: "Abandon visit" })) return;
+    if (currentEncounterId.current !== encounterId || (routeAtOpen !== undefined && `${window.location.pathname}${window.location.search}` !== routeAtOpen)) {
+      const message = "The visit changed while confirmation was open. Open it again before abandoning.";
+      setError(message);
+      if (typeof window !== "undefined") window.alert(message);
+      return;
+    }
     setBusy("abandon");
     setError(null);
     try {
-      const response = await fhir.executeTransaction(
-        buildEncounterStatusPatchBundle({
-          encounterId,
-          patientId: patient.id,
-          recorded: new Date().toISOString(),
-          operatorDisplay: "ODOS UI abandon_encounter",
-          ops: [
-            { op: "replace", path: "/status", value: "cancelled" },
-            {
-              op: "add",
-              path: "/reasonCode",
-              value: [{ text: "abandoned" }],
-            },
-          ],
-        }),
-        "abandon_encounter",
-      );
-      assertTransactionSuccess(response);
+      await requestEncounterAbandon(encounterId);
       openPatientOverview(patient.id, "replace");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -311,12 +312,13 @@ export function EncounterHeader({
           <button
             type="button"
             onClick={abandonEncounter}
-            disabled={busy !== null || migrated || Boolean(clinicalActionUnavailableReason)}
-            title={migrated ? "Migrated historical encounters are read-only." : clinicalActionUnavailableReason}
+            disabled={busy !== null || Boolean(abandonUnavailableReason)}
+            title={abandonUnavailableReason}
             className="min-h-11 rounded border border-white/15 px-3 py-2 text-sm text-white/65 transition hover:border-red-400/60 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy === "abandon" ? "Abandoning..." : "Abandon encounter"}
           </button>
+          {abandonUnavailableReason && <span className="text-sm text-white/50">{abandonUnavailableReason}</span>}
         </div>
       </div>
 

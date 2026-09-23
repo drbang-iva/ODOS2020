@@ -312,6 +312,7 @@ import {
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
 import { registerEncounterVoidRoutes } from "./clinical-graph/encounter-void-routes.js";
+import { registerEncounterAbandonRoutes } from "./clinical-graph/encounter-abandon-routes.js";
 import {
   handleEncounterUndoLedgerRequest,
   handleEncounterUndoRequest,
@@ -6760,6 +6761,7 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
       // The void's failure reporting is PHI-split — full detail to the log, a safe body to the
       // client — and is tested at the HTTP seam in encounterVoidRoutes.test.ts.
       registerEncounterVoidRoutes(app, authenticateWithMedplum, clinicalGraphRouteDeps);
+      registerEncounterAbandonRoutes(app, authenticateWithMedplum, clinicalGraphRouteDeps);
 
       app.post("/clinical-graph/encounters/:encounterId/void/undo", async (req, res) => {
         try {

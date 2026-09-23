@@ -754,7 +754,20 @@ test("Admin and Provider composites preserve Provider amendment and Admin-only c
     "Encounter?_compartment=%provider_patient_compartment",
     "Provider finished-Encounter amendment must survive an Admin role",
   );
-  assert.equal(encounterUpdate.writeConstraint, undefined);
+  assert.deepEqual(encounterUpdate.writeConstraint, [{
+    language: "text/fhirpath",
+    description: "A signed visit must remain finished.",
+    expression: "%before.exists() implies (%before.status != 'finished' or status = 'finished')",
+  }]);
+  const before: Encounter = { resourceType: "Encounter", status: "finished", class: { code: "AMB" } };
+  const amended: Encounter = { ...before, diagnosis: [{ condition: { reference: "Condition/synthetic" } }] };
+  const cancelled: Encounter = { ...before, status: "cancelled" };
+  const allows = (after: Encounter): boolean => (encounterUpdate.writeConstraint ?? []).every((constraint) => {
+    const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+    return result.length === 1 && result[0] === true;
+  });
+  assert.equal(allows(amended), true);
+  assert.equal(allows(cancelled), false);
   assert.ok(accessPolicyRead, "Admin-only AccessPolicy read must survive composite compilation");
 });
 
@@ -906,3 +919,18 @@ function ruleAllowsWrite(
     return result.length === 1 && result[0] === true;
   });
 }
+
+test("A9 Provider keeps finished Encounter field edits but refuses reopening or cancellation", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("provider"));
+  const rule = policy.resource!.find(row => row.resourceType === "Encounter" && row.interaction?.includes("update"))!;
+  assert.equal(staffEncounterWriteAllowed(rule.writeConstraint ?? [], "finished", "finished"), true);
+  for (const status of ["cancelled", "in-progress"] as const) {
+    assert.equal(staffEncounterWriteAllowed(rule.writeConstraint ?? [], "finished", status), false);
+  }
+  const before: Encounter = { resourceType: "Encounter", status: "finished", class: { code: "AMB" } };
+  const after: Encounter = { ...before, diagnosis: [{ condition: { reference: "Condition/synthetic" } }] };
+  assert.equal((rule.writeConstraint ?? []).every(constraint => {
+    const result = fhirpath.evaluate(after, constraint.expression ?? "", { before, after }, r4Model);
+    return result.length === 1 && result[0] === true;
+  }), true);
+});
