@@ -53,3 +53,11 @@ The authorized edits were each deliberately broken, the affected existing test w
 ## Review finding: abandon route limit
 
 CodeQL flagged the new write route for missing rate limiting at `e41dfb87`. With the newly added middleware removed, the 121st request returned 401 rather than the required 429: `# tests 1; # pass 0; # fail 1; # skipped 0`. Restored, the test reported `# tests 1; # pass 1; # fail 0; # skipped 0`; the first 120 requests reached authentication and the 121st did not.
+
+## Independent-evaluation fixback at `e73a0130`
+
+| Guard | Broken | Restored |
+|---|---|---|
+| A6 finished migrated Encounter; move migrated check below closed check | `# tests 1; # pass 0; # fail 1; # skipped 0` (`encounter-signed` rather than `encounter-migrated`) | `# tests 1; # pass 1; # fail 0; # skipped 0` |
+| Retracted Condition has `verificationStatus` and no `status`; remove the Condition branch | `# tests 1; # pass 0; # fail 1; # skipped 0` (409 rather than 200) | `# tests 1; # pass 1; # fail 0; # skipped 0` |
+| Abandon route failure logging; remove the log call | `# tests 1; # pass 0; # fail 1; # skipped 0` (empty log) | `# tests 1; # pass 1; # fail 0; # skipped 0` |

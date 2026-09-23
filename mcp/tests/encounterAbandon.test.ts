@@ -38,7 +38,8 @@ function fixture(status: Encounter["status"] = "in-progress") {
 const request = { authHeader: "Bearer synthetic", params: { encounterId: "e1" } };
 function dependency(kind: typeof kinds[number], state?: string): Resource {
   if (kind === "ChargeProposal" || kind === "PlanActionInstance") return buildProtocolBasic({ id: `synthetic-${kind}`, encounterId: "e1", state: state ?? (kind === "ChargeProposal" ? "staged" : "selected"), actionType: "order" }, kind === "ChargeProposal" ? PROTOCOL_BASIC_CODES.chargeProposal : PROTOCOL_BASIC_CODES.planActionInstance);
-  return { resourceType: kind, id: "content", status: state ?? "active", ...(kind === "Condition" ? { verificationStatus: { coding: [{ code: state ?? "confirmed" }] } } : {}) } as Resource;
+  if (kind === "Condition") return { resourceType: kind, id: "content", verificationStatus: { coding: [{ code: state ?? "confirmed" }] } } as Resource;
+  return { resourceType: kind, id: "content", status: state ?? "active" } as Resource;
 }
 
 test("A1 empty unfinished staff visit cancels with version guard and caller Provenance", async () => {
@@ -81,7 +82,7 @@ for (const status of ["cancelled", "entered-in-error"] as const) test(`A5 ${stat
   assert.equal(f.transactions.length, 0);
 });
 test("A6 migrated refuses", async () => {
-  const f = fixture(); f.encounter.meta!.tag = [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }];
+  const f = fixture("finished"); f.encounter.meta!.tag = [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }];
   assert.deepEqual(await handleEncounterAbandonRequest(f.deps, request), { status: 409, body: { code: "encounter-migrated" } });
   assert.equal(f.transactions.length, 0);
 });
@@ -141,5 +142,22 @@ test("abandon route limits repeated requests before authentication", async () =>
     const refused = await fetch(url, { method: "POST" });
     assert.equal(refused.status, 429);
     assert.equal(authenticateCalls, 120);
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+});
+
+test("abandon route logs failure server-side and returns only a safe 502", async () => {
+  const error = new Error("synthetic server detail");
+  const logged: unknown[][] = [];
+  const app = express();
+  registerEncounterAbandonRoutes(app, async () => { throw error; }, async () => fixture().deps, { log: (...args: unknown[]) => logged.push(args) });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>(resolve => server.once("listening", resolve));
+  try {
+    const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/clinical-graph/encounters/e1/abandon`, { method: "POST" });
+    assert.equal(response.status, 502);
+    const body = await response.json() as { error: string };
+    assert.equal(body.error, "Could not confirm whether the visit was abandoned. Reload the visit before trying again.");
+    assert.ok(!JSON.stringify(body).includes("synthetic server detail"));
+    assert.deepEqual(logged, [["odos-mcp: encounter abandon failed:", error]]);
   } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
 });

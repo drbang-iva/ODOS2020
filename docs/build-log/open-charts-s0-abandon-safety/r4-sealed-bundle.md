@@ -1,6 +1,6 @@
 # Open charts S0 Abandon safety — sealed bundle
 
-**Status:** needs-review. **Base:** `18932ecd53463987172f07b768aa9717fa48c671`. **Branch:** `drbang-iva/open-charts-s0-abandon-safety`. **PR:** linked in the final handoff. **Author:** Codex. **Independent evaluation:** NOT EVALUATED; Claude Opus 5.5 required before merge.
+**Status:** needs-review. **Base:** `18932ecd53463987172f07b768aa9717fa48c671`. **Branch:** `drbang-iva/open-charts-s0-abandon-safety`. **PR:** #662. **Author:** Codex. **Independent evaluation:** NEEDS-WORK at `e73a0130`; the fixback head requires a new Claude Opus 5.5 verdict before merge.
 
 An unfinished visit with no clinical content or charge can be abandoned through a server endpoint after confirmation. Signed, closed, migrated and content-bearing visits refuse with no write. The Provider Encounter policy now keeps a signed visit `finished` under raw FHIR writes; unsigned raw cancellation remains possible by design. A confirmed UI abandon no longer disappears when Sign's completeness counter changes; switching encounters during confirmation shows a message and sends no old request.
 
@@ -21,13 +21,19 @@ P1: the former client-side cancelled writer was identified; Start-exam and finis
 | Command | Base `18932ecd` | Final patch |
 |---|---|---|
 | `cd ui && npm test` | 1865 tests; 1865 pass; 0 fail; 0 skipped | 1869 tests; 1869 pass; 0 fail; 0 skipped |
-| CI direct MCP Node runner with dedicated S0 Postgres and `ODOS_POSTGRES_URL` | 6369 tests; 6314 pass; 0 fail; 55 skipped | 6418 tests; 6361 pass; 0 fail; 57 skipped |
+| CI direct MCP Node runner with dedicated S0 Postgres and `ODOS_POSTGRES_URL` | 6369 tests; 6314 pass; 0 fail; 55 skipped | 6419 tests; 6362 pass; 0 fail; 57 skipped |
 | Root, MCP, UI `npx tsc --noEmit` (UI `--skipLibCheck`) | each exit 0 | each exit 0 |
 | `npm run preflight` | 0 warnings; 0 hard blocks; exit 0 | 0 warnings; 0 hard blocks; exit 0 |
 | `cd ui && npm run build` | not run | exit 0; 341 modules transformed |
 | `git diff --check` | — | exit 0 |
 
 The direct MCP command is recorded in `preflight-blocked.md`. Both live authorization tests are skipped in the full unit run and explicitly enabled below. The operator env and identity files were absent during all unit suites. Preflight initially overlapped the scanner test's temporary injected source mutation and saw a provisional `RiskAssessment`; after the MCP suite restored its source, preflight was rerun alone and passed. No product code was changed for that overlap. After opening PR #662, CodeQL flagged the new abandon write route for missing rate limiting. The route now uses the same 120-per-minute `express-rate-limit` pattern as nearby clinical writes. The new HTTP guard failed with the middleware removed (121st request 401 instead of 429) and passed after restoration (1 red, 1 green). The table's final MCP and UI counts, typechecks, build and preflight are from this amended source.
+
+## Independent-evaluation fixback
+
+The evaluation at `e73a0130` found three narrow defects. A6 now uses a real-shape `finished` migrated Encounter, and the migrated check precedes signed/closed; reversing that order made A6 fail 1/1, while restoration passed 1/1. The retracted Condition fixture now uses only `verificationStatus` and no invalid `status`; removing the Condition-specific branch made its test fail 1/1 (409 instead of 200), while restoration passed 1/1. The route now logs the server error through `options.log ?? console.error`, returns the same safe 502 body, and does not send after headers are sent; removing the log call made the new route guard fail 1/1, while restoration passed 1/1. The complete endpoint test file passed 47/47. The three red/green outputs are in [the mutation table](mutations.md).
+
+After these edits, the direct MCP suite passed 6362/6419 with 57 skips, UI passed 1869/1869, three typechecks exited 0, preflight reported 0 warnings and 0 hard blocks, and UI build exited 0 with 341 modules transformed. The MCP suite used a dedicated `odos-s0abandon-fixback` Postgres container with `ODOS_POSTGRES_URL`; the operator files were absent for both unit suites, then restored. No new files or changes outside §4 were made.
 
 ## A1–A13 and live proof
 
@@ -41,10 +47,10 @@ Controlled browser on the actual chart route, Provider-only synthetic session: c
 
 R2 supplied valid synthetic Appointment start/end and corrected the UI Start-exam adapter/source and FHIR search keys. R3 supplied the baseline synthetic admin credentials to the A8 runner, then switched its route-auth service client after a same-query control showed seeder 403 and caller 200; no A8 product request ran in those failed setup attempts. R4 moved stale prior-project operator state aside before the fresh R4b lane. The browser readiness check now waits for the loaded Encounter header; the failed full-chart attempts occurred before an S0 request under Medplum's 429 limit. The final 409 proof used one page after reset. The R5 wrapper's postcheck expected generic assertion text, while the captured test correctly reported `AssertionError: 200 !== 403`; no second mutant request was needed.
 
-The dependency check and transaction are not atomic against another writer. CodeRabbit flagged this possible race and the practice-wide Basic scan as major findings; fixing either requires a broader writer/Basic-store contract outside the authorized S0 files. It also suggested logging the generic 502 error. These comments remain for independent review. This slice does not add role-specific reasons, a second audit event beyond Provenance, reopening, board entry points, raw unsigned FHIR cancellation blocking, or PR #661 claim-evidence work. A merged Provider constraint needs a separate break-glass Iris policy sync before it is live there. No Iris sync or merge was performed. PR-Agent's initial review job failed while parsing linked tickets and posted no findings; do not count it as a review.
+The dependency check and transaction are not atomic against another writer. Independent evaluation accepted this stated §0.5 row 7 limit for S0 and assigned it to slice D's reopening work. The practice-wide Basic scan can fail closed on an unrelated malformed row; the kickoff prescribed `ProtocolBasicStore.list()`, and per-row recovery needs a `protocol-store.ts` change outside §4. Failures are now logged server-side. The default-IP limiter can share a bucket behind the Caddy front door; no `trust proxy` setting exists on main, and the other three limiters share this app-wide condition. This slice does not add role-specific reasons, a second audit event beyond Provenance, reopening, board entry points, raw unsigned FHIR cancellation blocking, or PR #661 claim-evidence work. A merged Provider constraint needs a separate break-glass Iris policy sync before it is live there. No Iris sync or merge was performed. PR-Agent's review job failed and posted no findings; do not count it as a review.
 
 Open PR #647 also updates `mcp/src/index.ts` and the grant scanner's line-reference entries. Its additions are separate from S0's route lines, but the second PR to rebase must keep both additions and recompute scanner references on the combined index. Neither #647 branch nor its files were changed here.
 
 ## Cleanup
 
-After stopping R6, `docker ps --format '{{.Names}}'` listed only `vf-prac1b-walk-db`, which this task did not touch. For the amended full MCP run, the R6 dedicated Postgres was started alone and the operator files were moved aside; afterward Postgres was stopped and those files restored. No listeners remained on this slice's ports 8103, 15121, 15122, 18103, 15432 or 16379. The root checkout and PR #647's branch were untouched. Local R4b, R5 and R6 volumes were retained; no destructive cleanup was run.
+After the fixback full suites, `docker ps --format '{{.Names}}'` listed only `vf-prac1b-walk-db`, which this task did not touch. The dedicated S0 Postgres was stopped and operator files restored. The root checkout and PR #647's branch were untouched. Local R4b, R5 and R6 volumes were retained; no destructive cleanup was run.

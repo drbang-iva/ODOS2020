@@ -68,8 +68,8 @@ export async function handleEncounterAbandonRequest(
   let encounter: Encounter;
   try { encounter = await staff.fhir.read<Encounter>("Encounter", encounterId); }
   catch { return { status: 404, body: { error: "Encounter not found." } }; }
-  if (isClosedEncounter(encounter)) return { status: 409, body: { code: encounter.status === "finished" ? "encounter-signed" : "encounter-closed" } };
   if (isMigratedEncounter(encounter)) return { status: 409, body: { code: "encounter-migrated" } };
+  if (isClosedEncounter(encounter)) return { status: 409, body: { code: encounter.status === "finished" ? "encounter-signed" : "encounter-closed" } };
   const content = await encounterAbandonContent(staff.fhir, encounterId);
   if (content.length) return { status: 409, body: { code: "encounter-has-content", content } };
   if (!encounter.meta?.versionId || !encounter.subject?.reference?.startsWith("Patient/")) {
