@@ -117,13 +117,14 @@ Both belong to other sessions and were not touched. `odos-sb-live` was brought d
 
 ## Fixback 1: CodeRabbit review at `5b129123`
 
-CodeRabbit posted four threads. PR-Agent failed at this head: the diff came to 36,389 tokens against its 32,000 limit and was pruned, the same limit slice A's PR #663 hit. Its config is in `.github/`, which is outside §4, so it was reported and not changed.
+CodeRabbit posted four threads, then one more in a second wave at `947d54d3`. PR-Agent failed at this head: the diff came to 36,389 tokens against its 32,000 limit and was pruned, the same limit slice A's PR #663 hit. Its config is in `.github/`, which is outside §4, so it was reported and not changed.
 
 | Thread | Verdict | Change |
 |---|---|---|
 | L96 a refresh error leaves old counts on the chip | Valid: the chip kept its old number while its class went grey | A failed refresh now replaces the state with `{ error }`. The chip shows "—" and the card shows the sentence. |
 | L99 an older in-flight refresh can overwrite a newer one | Valid: there was no sequence guard | A request counter; only the newest request may settle the state. |
 | L195 expanded Older rows survive a refresh | Valid | The expansion is cleared when the Older summary (count, oldest date, byOwner) changes. An unchanged refresh keeps it open, so it does not collapse every 60 s. Remaining gap: within one refresh, one of the same owner's Older charts is signed and another opens on the same date. |
+| L126 (second wave) same-summary change in Older membership | **Declined in-slice and escalated.** This is the remaining gap noted on L195. Closing it means re-fetching `?expand=older` on each refresh while expanded, or having the refresh carry `expand=older`; either contradicts §0.5 "Show older fetches once per open". | None. Operator decision. The counts shown are always current. |
 | L133 qualify incomplete desk counts and never show `is-ok` when incomplete | **Declined in-slice and escalated.** §0.5 fixes the exact desk line and the chip tones (`is-alert` iff behind > 0), and B9 limits "at least" to the doctor card's Older. Changing either changes the design contract. | None. Operator decision. |
 
 Mandate 17 at `93777b4c`, in a disposable worktree:
