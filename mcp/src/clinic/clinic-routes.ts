@@ -299,8 +299,11 @@ async function handleClinicSummary(req: Request, res: Response, deps: ClinicRout
       res.status(401).json({ error: "Authentication required to view the Clinic." });
       return;
     }
-    res.json(await loadClinicSummary(staff.fhir, { now: deps.now?.(), timeZone: deps.timeZone }));
+    if (!deps.serviceFhir) throw new PracticeTimeZoneError("practice-time-zone-unreadable");
+    const zone = await resolvePracticeTimeZone(deps.serviceFhir, deps.timeZone);
+    res.json(await loadClinicSummary(staff.fhir, { now: deps.now?.(), timeZone: zone.timeZone }));
   } catch (error) {
+    if (error instanceof PracticeTimeZoneError) { res.status(error.code === "practice-time-zone-unreadable" ? 502 : 409).json({ code: error.code }); return; }
     console.error("odos-mcp: /clinic/summary failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Clinic summary route failed." });
   }

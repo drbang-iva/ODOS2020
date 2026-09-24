@@ -9,38 +9,8 @@ import { practiceDate } from "./clinic-summary.js";
 import { signedEncounterIds } from "./encounter-sign-off.js";
 import type { ResolvedPracticeTimeZone } from "./practice-time-zone-config.js";
 
-export type Owner = { reference: string; name: string } | { unassigned: true };
-export type Reason = { code: "needs-interpretation" | "unclassified-fee" | "duplicate-fee" | "no-interpreted-result" | "none-found" | "nothing-charted" | "signature-missing" | "checks-unavailable"; label?: string };
-export interface DoctorRow {
-  encounterId: string;
-  patient: { reference: string; name: string };
-  visitType?: string;
-  serviceStart: string;
-  serviceDate: string;
-  liveState?: "waiting" | "roomed" | "with you" | "checked out";
-  owner: Owner;
-  kind: "open" | "nothing-charted" | "signature-missing";
-  reasons: Reason[];
-}
-export interface ReviewRow { encounterId: string; patient: { reference: string; name: string }; serviceStart?: string; owner: Owner; reason: string }
-export interface DeskRow { patient: { reference: string; name: string }; owner: Owner; serviceStart: string; serviceDate: string; status: "chart open"; priorDay: boolean }
-type OwnerCount = { owner: Owner; count: number; oldestServiceDate: string };
-interface Completeness { complete: boolean; incomplete?: string[] }
-export interface Doctor extends Completeness {
-  timeZone: string; timeZoneSource: "setting" | "environment"; caller: { practitioner?: string };
-  today: { date: string; rows: DoctorRow[] };
-  lastClinicDay: { date: string; rows: DoctorRow[] } | null;
-  older: { count: number; oldestServiceDate?: string; byOwner: OwnerCount[]; rows?: DoctorRow[] };
-  needsReview: ReviewRow[];
-  counts: { open: number; nothingCharted: number; signatureMissing: number; needsReview: number };
-  warnings?: string[];
-}
-export interface Desk extends Completeness {
-  timeZone: string; timeZoneSource: "setting" | "environment";
-  today: { date: string; count: number; rows: DeskRow[] };
-  lastClinicDay: { date: string; count: number; rows: DeskRow[] } | null;
-  older: { count: number; byOwner: OwnerCount[] };
-}
+import type { Completeness, Desk, DeskRow, Doctor, DoctorRow, Owner, OwnerCount, ReviewRow } from "./open-charts-types.js";
+export type { Desk, DeskRow, Doctor, DoctorRow, Owner, Reason, ReviewRow } from "./open-charts-types.js";
 type Checks = Pick<DoctorRow, "kind" | "reasons">;
 export interface OpenChartsInput {
   encounters: Encounter[]; provenances: Provenance[]; clinicDays: Encounter[];

@@ -138,3 +138,28 @@
   .odos-clinic-body { padding: 16px 14px 40px; }
   .odos-office-nudge { margin-top: 10px; padding: 0 14px; }
 }
+
+/* Open charts card (replaces "Awaiting your signature"). */
+.odos-clinic-wait-chip .odos-clinic-wait-sub { color: var(--odos-faint); letter-spacing: .08em; }
+.odos-open-charts-scope { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--odos-line); border-radius: 999px; }
+.odos-open-charts-scope button { padding: 3px 9px; border: 0; border-radius: 999px; background: transparent; color: var(--odos-faint); font: inherit; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.odos-open-charts-scope button[aria-pressed="true"] { background: color-mix(in srgb, var(--odos-accent) 14%, transparent); color: var(--odos-text); }
+.odos-open-charts-group { display: flex; flex-direction: column; gap: 5px; padding: 8px 0 8px 10px; border-left: 2px solid var(--odos-line); }
+.odos-open-charts-group + .odos-open-charts-group { margin-top: 6px; }
+.odos-open-charts-group h3 { margin: 0 0 2px; color: var(--odos-muted); font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.odos-clinic-card .odos-open-charts-group.is-alert { border-left-color: color-mix(in srgb, var(--odos-alert) 60%, transparent); color: var(--odos-text); }
+.odos-open-charts-group.is-alert h3 { color: var(--odos-alert); }
+.odos-open-charts-group.is-warn { border-left-color: color-mix(in srgb, var(--odos-amber) 55%, transparent); }
+.odos-open-charts-older { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--odos-amber); font-size: 12px; }
+.odos-open-charts-older button { padding: 3px 10px; border: 1px solid var(--odos-line-2); border-radius: 999px; background: transparent; color: var(--odos-muted); font: inherit; font-size: 11px; cursor: pointer; }
+.odos-open-charts-empty { padding: 4px 0; color: var(--odos-faint); font-size: 12px; }
+.odos-open-charts-group.is-alert .odos-open-charts-empty { color: var(--odos-emerald); }
+.odos-open-charts-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 8px; border: 0; border-radius: 10px; background: rgba(154,178,224,.04); color: var(--odos-text); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
+.odos-open-charts-row:disabled { cursor: default; opacity: .7; }
+.odos-open-charts-meta { color: var(--odos-faint); font-size: 11px; }
+.odos-open-charts-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
+.odos-open-charts-chip { padding: 1px 7px; border: 1px solid var(--odos-line-2); border-radius: 999px; color: var(--odos-muted); font-size: 10px; }
+.odos-open-charts-incomplete { margin-top: 4px; color: var(--odos-amber); font-size: 10.5px; }
+.odos-open-charts-desk-line { margin: 4px 0; color: var(--odos-text); font-size: 13px; }
+.odos-open-charts-band { display: flex; flex-direction: column; gap: 5px; }
+.odos-open-charts-band h4 { margin: 4px 0 0; color: var(--odos-faint); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }

@@ -47,10 +47,20 @@ test("Clinic flow and unsigned-chart clicks both route through PatientOverview",
   assert.deepEqual(useViewState.getState().view, { kind: "overview", patientId: "flow-patient" });
 
   useViewState.setState({ view: { kind: "picker" } });
-  const signatureCard = root.findByProps({ "data-testid": "clinic-signatures-card" });
-  const signatureButton = signatureCard.findByType("button");
-  act(() => signatureButton.props.onClick());
-  assert.deepEqual(useViewState.getState().view, { kind: "overview", patientId: "signature-patient" });
+  const openCharts = {
+    timeZone: "America/Denver", timeZoneSource: "setting" as const, caller: { practitioner: "Practitioner/me" }, complete: true,
+    today: { date: "2026-09-23", rows: [{
+      encounterId: "open-chart-encounter", patient: { reference: "Patient/open-chart-patient", name: "Open Chart Patient" },
+      serviceStart: "2026-09-23T16:00:00Z", serviceDate: "2026-09-23", owner: { reference: "Practitioner/me", name: "Dr Me" },
+      kind: "open" as const, reasons: [{ code: "none-found" as const, label: "No interpretation blockers found" }],
+    }] },
+    lastClinicDay: null, older: { count: 0, byOwner: [] }, needsReview: [], counts: { open: 1, nothingCharted: 0, signatureMissing: 0, needsReview: 0 },
+  };
+  act(() => renderer.update(<ClinicHome initialSummary={clinicSummary} initialOpenCharts={openCharts} />));
+  const openChartsCard = renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" });
+  const openChartButton = openChartsCard.findByProps({ className: "odos-open-charts-row" });
+  act(() => openChartButton.props.onClick());
+  assert.deepEqual(useViewState.getState().view, { kind: "overview", patientId: "open-chart-patient" });
 });
 
 test("every remaining patient-opening entry point uses the shared overview transition", () => {
