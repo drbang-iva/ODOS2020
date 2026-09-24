@@ -91,9 +91,14 @@ export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenChart
   useEffect(() => {
     if (initialOpenCharts || typeof window === "undefined" || typeof window.setInterval !== "function") return;
     let active = true;
-    const load = () => fetchOpenCharts(shape)
-      .then((data) => { if (active) setState({ data }); })
-      .catch((reason) => { if (active) setState((current) => ({ ...current, error: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE })); });
+    let latestRequest = 0;
+    // Only the newest request may settle the state, and a failure drops the old counts with it.
+    const load = () => {
+      const request = ++latestRequest;
+      return fetchOpenCharts(shape)
+        .then((data) => { if (active && request === latestRequest) setState({ data }); })
+        .catch((reason) => { if (active && request === latestRequest) setState({ error: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE }); });
+    };
     setState({});
     void load();
     const handle = window.setInterval(() => void load(), OPEN_CHARTS_REFRESH_MS);
@@ -147,6 +152,10 @@ function DoctorOpenCharts({ data, openPatient }: { data: Doctor; openPatient(pat
   const older = olderSummary(data.older, practitioner, scope);
   const review = visibleRows(data.needsReview, practitioner, scope);
   const showOwner = scope === "all";
+  const olderSource = JSON.stringify([data.older.count, data.older.oldestServiceDate, data.older.byOwner]);
+
+  // Expanded rows are a snapshot; drop them when a refresh changes what Older holds.
+  useEffect(() => { setExpansion(undefined); }, [olderSource]);
 
   function showOlder() {
     setExpansion({ status: "loading" });
