@@ -1,5 +1,3 @@
-// Response types for the Open Charts projection, kept import-free so the UI can import them as types
-// without pulling the mcp clinical-graph modules into its program.
 export type Owner = { reference: string; name: string } | { unassigned: true };
 export type Reason = { code: "needs-interpretation" | "unclassified-fee" | "duplicate-fee" | "no-interpreted-result" | "none-found" | "nothing-charted" | "signature-missing" | "checks-unavailable"; label?: string };
 export interface DoctorRow {

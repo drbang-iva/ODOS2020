@@ -161,3 +161,5 @@
 .odos-open-charts-chip { padding: 1px 7px; border: 1px solid var(--odos-line-2); border-radius: 999px; color: var(--odos-muted); font-size: 10px; }
 .odos-open-charts-incomplete { margin-top: 4px; color: var(--odos-amber); font-size: 10.5px; }
 .odos-open-charts-desk-line { margin: 4px 0; color: var(--odos-text); font-size: 13px; }
+.odos-open-charts-band { display: flex; flex-direction: column; gap: 5px; }
+.odos-open-charts-band h4 { margin: 4px 0 0; color: var(--odos-faint); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }

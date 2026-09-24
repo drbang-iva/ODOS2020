@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchOpenCharts,
   isDoctorOpenCharts,
@@ -18,6 +18,7 @@ export const OPEN_CHARTS_REFRESH_MS = 60_000;
 
 export type OpenChartsScope = "mine" | "all";
 export type OpenChartsState = { data?: Doctor | Desk; error?: string };
+export type OpenChartsView = OpenChartsState & { olderOpen: boolean; showOlder(): void; hideOlder(): void };
 
 const REASON_PREFIX: Partial<Record<Reason["code"], string>> = {
   "needs-interpretation": "Needs interpretation",
@@ -84,34 +85,78 @@ export function serviceTimeLabel(serviceStart: string, timeZone: string): string
     .replace(/[\u202f\u00a0]/g, " ");
 }
 
-export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenCharts?: Doctor | Desk): OpenChartsState {
+const OLDER_AGE_BANDS: { label: string; minDays: number }[] = [
+  { label: "Over 90 days", minDays: 91 },
+  { label: "Over 60 days", minDays: 61 },
+  { label: "Over 30 days", minDays: 31 },
+  { label: "Over 1 week", minDays: 8 },
+  { label: "Up to a week", minDays: 0 },
+];
+
+/** Calendar days between two practice dates (YYYY-MM-DD). */
+function daysBetween(from: string, to: string): number {
+  const utc = (date: string) => { const [year, month, day] = date.split("-").map(Number); return Date.UTC(year, month - 1, day); };
+  return Math.round((utc(to) - utc(from)) / 86_400_000);
+}
+
+/** Older rows grouped by age (youngest band first), keeping the server's order within each band; empty bands are omitted. */
+export function olderAgeBands<T extends { serviceDate: string }>(rows: readonly T[], today: string): { label: string; rows: T[] }[] {
+  const bands = [...OLDER_AGE_BANDS].reverse().map((band) => ({ label: band.label, rows: [] as T[] }));
+  for (const row of rows) {
+    const age = daysBetween(row.serviceDate, today);
+    const label = OLDER_AGE_BANDS.find((band) => age >= band.minDays)!.label;
+    bands.find((band) => band.label === label)!.rows.push(row);
+  }
+  return bands.filter((band) => band.rows.length > 0);
+}
+
+export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenCharts?: Doctor | Desk): OpenChartsView {
   const shape = openChartsShape(roles);
   const [state, setState] = useState<OpenChartsState>({});
+  const [olderOpen, setOlderOpen] = useState(false);
+  const olderOpenRef = useRef(false);
+  const latestRequest = useRef(0);
+  const mounted = useRef(false);
+
+  // Only the newest request may settle the state, and a failure drops the old counts with it.
+  // While Older is open every request carries expand=older, so its rows and the counts come from one response.
+  const load = useCallback(() => {
+    const request = ++latestRequest.current;
+    return fetchOpenCharts(shape, { expandOlder: shape === "doctor" && olderOpenRef.current })
+      .then((data) => { if (mounted.current && request === latestRequest.current) setState({ data }); })
+      .catch((reason) => { if (mounted.current && request === latestRequest.current) setState({ error: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE }); });
+  }, [shape]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (initialOpenCharts || typeof window === "undefined" || typeof window.setInterval !== "function") return;
-    let active = true;
-    let latestRequest = 0;
-    // Only the newest request may settle the state, and a failure drops the old counts with it.
-    const load = () => {
-      const request = ++latestRequest;
-      return fetchOpenCharts(shape)
-        .then((data) => { if (active && request === latestRequest) setState({ data }); })
-        .catch((reason) => { if (active && request === latestRequest) setState({ error: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE }); });
-    };
     setState({});
     void load();
     const handle = window.setInterval(() => void load(), OPEN_CHARTS_REFRESH_MS);
     return () => {
-      active = false;
+      latestRequest.current += 1;
       window.clearInterval(handle);
     };
-  }, [initialOpenCharts, shape]);
+  }, [initialOpenCharts, load]);
 
-  return initialOpenCharts ? { data: initialOpenCharts } : state;
+  const showOlder = useCallback(() => {
+    olderOpenRef.current = true;
+    setOlderOpen(true);
+    void load();
+  }, [load]);
+  const hideOlder = useCallback(() => {
+    olderOpenRef.current = false;
+    setOlderOpen(false);
+  }, []);
+
+  return { data: state.data ?? (state.error ? undefined : initialOpenCharts), error: state.error, olderOpen, showOlder, hideOlder };
 }
 
-export function OpenChartsCard({ data, error, openPatient }: OpenChartsState & { openPatient(patientId?: string): void }) {
+export function OpenChartsCard({ data, error, olderOpen, showOlder, hideOlder, openPatient }: OpenChartsView & { openPatient(patientId?: string): void }) {
   return (
     <section id="clinic-open-charts" className="odos-clinic-card odos-tone-amber odos-open-charts" data-testid="clinic-open-charts-card">
       <span className="odos-card-edge" />
@@ -120,7 +165,7 @@ export function OpenChartsCard({ data, error, openPatient }: OpenChartsState & {
         : !data
           ? <><div className="odos-clinic-card-head"><span>Open charts</span></div><div className="odos-clinic-empty">Loading open charts…</div></>
           : isDoctorOpenCharts(data)
-            ? <DoctorOpenCharts data={data} openPatient={openPatient} />
+            ? <DoctorOpenCharts data={data} olderOpen={olderOpen} showOlder={showOlder} hideOlder={hideOlder} openPatient={openPatient} />
             : <DeskOpenCharts data={data} />}
     </section>
   );
@@ -140,11 +185,8 @@ function DeskOpenCharts({ data }: { data: Desk }) {
   );
 }
 
-type OlderExpansion = { status: "loading" } | { status: "ready"; rows: DoctorRow[] } | { status: "error"; message: string };
-
-function DoctorOpenCharts({ data, openPatient }: { data: Doctor; openPatient(patientId?: string): void }) {
+function DoctorOpenCharts({ data, olderOpen, showOlder, hideOlder, openPatient }: Pick<OpenChartsView, "olderOpen" | "showOlder" | "hideOlder"> & { data: Doctor; openPatient(patientId?: string): void }) {
   const [chosenScope, setScope] = useState<OpenChartsScope>("mine");
-  const [expansion, setExpansion] = useState<OlderExpansion>();
   const practitioner = data.caller.practitioner;
   const scope: OpenChartsScope = practitioner ? chosenScope : "all";
   const today = visibleRows(data.today.rows, practitioner, scope);
@@ -152,17 +194,7 @@ function DoctorOpenCharts({ data, openPatient }: { data: Doctor; openPatient(pat
   const older = olderSummary(data.older, practitioner, scope);
   const review = visibleRows(data.needsReview, practitioner, scope);
   const showOwner = scope === "all";
-  const olderSource = JSON.stringify([data.older.count, data.older.oldestServiceDate, data.older.byOwner]);
-
-  // Expanded rows are a snapshot; drop them when a refresh changes what Older holds.
-  useEffect(() => { setExpansion(undefined); }, [olderSource]);
-
-  function showOlder() {
-    setExpansion({ status: "loading" });
-    fetchOpenCharts("doctor", { expandOlder: true })
-      .then((expanded) => setExpansion((current) => current ? { status: "ready", rows: expanded.older.rows ?? [] } : current))
-      .catch((reason) => setExpansion((current) => current ? { status: "error", message: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE } : current));
-  }
+  const olderRows = olderOpen && data.older.rows ? visibleRows(data.older.rows, practitioner, scope) : undefined;
 
   return (
     <>
@@ -195,14 +227,16 @@ function DoctorOpenCharts({ data, openPatient }: { data: Doctor; openPatient(pat
       <div className="odos-open-charts-group is-warn" data-group="older">
         <div className="odos-open-charts-older">
           <span>{`${data.complete ? "" : "at least "}${older.count} older${older.oldestServiceDate ? ` · oldest ${practiceDayLabel(older.oldestServiceDate, "short")}` : ""}`}</span>
-          {expansion
-            ? <button type="button" onClick={() => setExpansion(undefined)}>Hide</button>
+          {olderOpen
+            ? <button type="button" onClick={hideOlder}>Hide</button>
             : older.count > 0 && <button type="button" onClick={showOlder}>Show older</button>}
         </div>
-        {expansion?.status === "loading" && <div className="odos-open-charts-empty">Loading older charts…</div>}
-        {expansion?.status === "error" && <div className="odos-open-charts-empty">{expansion.message}</div>}
-        {expansion?.status === "ready" && visibleRows(expansion.rows, practitioner, scope).map((row) => (
-          <OpenChartRow key={row.encounterId} row={row} timeZone={data.timeZone} withDate showOwner={showOwner} openPatient={openPatient} />
+        {olderOpen && !olderRows && <div className="odos-open-charts-empty">Loading older charts…</div>}
+        {olderRows && olderAgeBands(olderRows, data.today.date).map((band) => (
+          <div key={band.label} className="odos-open-charts-band" data-band={band.label}>
+            <h4>{band.label}</h4>
+            {band.rows.map((row) => <OpenChartRow key={row.encounterId} row={row} timeZone={data.timeZone} withDate showOwner={showOwner} openPatient={openPatient} />)}
+          </div>
         ))}
       </div>
 

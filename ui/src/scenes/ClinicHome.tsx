@@ -89,7 +89,7 @@ export function ClinicHome({
           </section>
 
           <div className="odos-clinic-stack">
-            <OpenChartsCard data={openCharts.data} error={openCharts.error} openPatient={openPatient} />
+            <OpenChartsCard {...openCharts} openPatient={openPatient} />
             <OrdersCard summary={summary} openPatient={openPatient} />
           </div>
 

@@ -90,19 +90,25 @@ function textOf(node: ReturnType<ReactTestRenderer["toJSON"]>): string {
 
 type FetchCall = { url: string; authorization?: string };
 
-async function withBrowser<T>(respond: (url: string) => Response | Promise<Response>, run: (calls: FetchCall[], intervals: (() => void)[]) => Promise<T>): Promise<T> {
+type Timers = { active: Map<number, { tick: () => void; delay: number }>; registered: { handle: number; delay: number }[]; cleared: number[] };
+
+async function withBrowser<T>(respond: (url: string) => Response | Promise<Response>, run: (calls: FetchCall[], timers: Timers) => Promise<T>): Promise<T> {
   const originalWindow = globalThis.window;
   const originalFetch = globalThis.fetch;
   const calls: FetchCall[] = [];
-  const intervals: (() => void)[] = [];
-  Object.defineProperty(globalThis, "window", { configurable: true, value: { setInterval: (tick: () => void) => intervals.push(tick), clearInterval: () => undefined } });
+  const timers: Timers = { active: new Map(), registered: [], cleared: [] };
+  let nextHandle = 0;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    setInterval: (tick: () => void, delay: number) => { const handle = ++nextHandle; timers.active.set(handle, { tick, delay }); timers.registered.push({ handle, delay }); return handle; },
+    clearInterval: (handle: number) => { timers.cleared.push(handle); timers.active.delete(handle); },
+  } });
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     calls.push({ url, authorization: (init?.headers as Record<string, string> | undefined)?.Authorization });
     return respond(url);
   }) as typeof fetch;
   try {
-    return await run(calls, intervals);
+    return await run(calls, timers);
   } finally {
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
     globalThis.fetch = originalFetch;
@@ -336,22 +342,27 @@ test("B13 the waiting chip counts what is behind (last clinic day + Older, mine)
   assert.match(deskMarkup, /<strong>6<\/strong><small>Open charts<\/small><small class="odos-clinic-wait-sub">3 today<\/small>/);
 });
 
-async function tick(intervals: (() => void)[]): Promise<void> {
+/** One refresh period: fire every interval still registered, then let responses settle. */
+async function tick(timers: Timers): Promise<void> {
   await act(async () => {
-    intervals.at(-1)!();
+    for (const { tick: fire } of [...timers.active.values()]) fire();
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
+async function settle(): Promise<void> {
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+}
+
 test("a failed refresh drops the old counts from the chip and the card", async () => {
   let fail = false;
-  await withBrowser(() => fail ? json({ code: "practice-time-zone-unreadable" }, 502) : json(doctor()), async (_calls, intervals) => {
+  await withBrowser(() => fail ? json({ code: "practice-time-zone-unreadable" }, 502) : json(doctor()), async (_calls, timers) => {
     const renderer = await mount(<ClinicHome initialSummary={summary()} roles={["provider"]} />);
     try {
       const chip = () => textOf(renderer.root.findByProps({ "data-testid": "clinic-wait-unsigned" }).children as never);
       assert.equal(chip(), "2\nOpen charts\n1 today");
       fail = true;
-      await tick(intervals);
+      await tick(timers);
       assert.equal(chip(), "—\nOpen charts");
       const card = renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" });
       assert.equal(textOf(card.findByProps({ className: "odos-clinic-error" }).children as never), "Open charts are unavailable right now.");
@@ -366,10 +377,10 @@ test("a slow older refresh cannot overwrite a newer one", async () => {
   let releaseFirst!: () => void;
   const first = new Promise<Response>((resolve) => { releaseFirst = () => resolve(json(doctor({ today: { date: "2026-09-23", rows: [chartRow("stale", ME, "2026-09-23")] } }))); });
   let request = 0;
-  await withBrowser(() => ++request === 1 ? first : json(doctor({ today: { date: "2026-09-23", rows: [chartRow("fresh", ME, "2026-09-23")] } })), async (_calls, intervals) => {
+  await withBrowser(() => ++request === 1 ? first : json(doctor({ today: { date: "2026-09-23", rows: [chartRow("fresh", ME, "2026-09-23")] } })), async (_calls, timers) => {
     const renderer = await mount(<ClinicHome initialSummary={summary()} roles={["provider"]} />);
     try {
-      await tick(intervals);
+      await tick(timers);
       await act(async () => { releaseFirst(); await new Promise((resolve) => setTimeout(resolve, 0)); });
       const names = renderer.root.findByProps({ "data-group": "today" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join(""));
       assert.deepEqual(names, ["Patient fresh"]);
@@ -379,18 +390,110 @@ test("a slow older refresh cannot overwrite a newer one", async () => {
   });
 });
 
-test("expanded Older rows stay open across an unchanged refresh and close when Older changes", async () => {
-  const expanded = doctor({ older: { ...doctor().older, rows: [chartRow("older-1", ME, "2026-09-14")] } });
-  await withBrowser(() => json(expanded), async () => {
-    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+test("while Older is open each refresh carries expand=older, so a signed chart leaves the list even when the summary is unchanged", async () => {
+  const withOlder = (id: string) => doctor({ older: { ...doctor().older, rows: [chartRow(id, ME, "2026-09-14")] } });
+  let olderRow = "older-1";
+  await withBrowser((url) => json(url.includes("expand=older") ? withOlder(olderRow) : doctor()), async (calls, timers) => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} roles={["provider"]} />);
     try {
       const olderNames = () => renderer.root.findByProps({ "data-group": "older" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join(""));
-      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      const olderButton = () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button");
+      await act(async () => olderButton().props.onClick());
+      await settle();
       assert.deepEqual(olderNames(), ["Patient older-1"]);
-      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />));
-      assert.deepEqual(olderNames(), ["Patient older-1"]);
-      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor({ older: { count: 0, byOwner: [] } })} roles={["provider"]} />));
+      olderRow = "older-2";
+      await tick(timers);
+      assert.deepEqual(olderNames(), ["Patient older-2"]);
+      await act(async () => olderButton().props.onClick());
+      await tick(timers);
       assert.deepEqual(olderNames(), []);
+      assert.deepEqual(calls.map((call) => call.url), ["/clinic/open-charts", "/clinic/open-charts?expand=older", "/clinic/open-charts?expand=older", "/clinic/open-charts"]);
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("reopening Older before the previous request settles cannot let the older response win", async () => {
+  const releases: (() => void)[] = [];
+  const withOlder = (id: string) => doctor({ older: { ...doctor().older, rows: [chartRow(id, ME, "2026-09-14")] } });
+  await withBrowser(() => new Promise<Response>((resolve) => {
+    const id = releases.length === 0 ? "stale" : "fresh";
+    releases.push(() => resolve(json(withOlder(id))));
+  }), async (calls) => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      const olderButton = () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button");
+      await act(async () => olderButton().props.onClick());
+      await act(async () => olderButton().props.onClick());
+      await act(async () => olderButton().props.onClick());
+      assert.deepEqual(calls.map((call) => call.url), ["/clinic/open-charts?expand=older", "/clinic/open-charts?expand=older"]);
+      await act(async () => { releases[1](); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      await act(async () => { releases[0](); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      const names = renderer.root.findByProps({ "data-group": "older" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join(""));
+      assert.deepEqual(names, ["Patient fresh"]);
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("the 60-second refresh is registered once and cleared on unmount, and nothing fetches afterwards", async () => {
+  await withBrowser(() => json(doctor()), async (calls, timers) => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} roles={["provider"]} />);
+    assert.deepEqual(timers.registered.map((timer) => timer.delay), [60_000]);
+    await tick(timers);
+    assert.equal(calls.length, 2);
+    await act(async () => renderer.unmount());
+    assert.deepEqual(timers.cleared, [timers.registered[0].handle]);
+    await tick(timers);
+    assert.equal(calls.length, 2);
+  });
+});
+
+test("the waiting chip counts the caller's charts whichever way the card is toggled", async () => {
+  const openCharts = doctor({
+    lastClinicDay: { date: "2026-09-21", rows: [chartRow("l-mine", ME, "2026-09-21"), chartRow("l-other-1", OTHER, "2026-09-21"), chartRow("l-other-2", OTHER, "2026-09-21")] },
+    older: { count: 4, oldestServiceDate: "2026-09-01", byOwner: [{ owner: ME, count: 1, oldestServiceDate: "2026-09-10" }, { owner: OTHER, count: 3, oldestServiceDate: "2026-09-01" }] },
+  });
+  const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={openCharts} roles={["provider"]} />);
+  try {
+    const chip = () => {
+      const node = renderer.root.findByProps({ "data-testid": "clinic-wait-unsigned" });
+      return { text: textOf(node.children as never), className: node.props.className as string };
+    };
+    const rows = () => renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" }).findAllByProps({ className: "odos-open-charts-row" }).length;
+    const before = chip();
+    assert.equal(before.text, "2\nOpen charts\n1 today");
+    assert.match(before.className, /\bis-alert\b/);
+    const rowsBefore = rows();
+    await act(async () => renderer.root.findByProps({ role: "group" }).findAllByType("button")[1].props.onClick());
+    assert.ok(rows() > rowsBefore, "the toggle took effect on the card");
+    assert.deepEqual(chip(), before);
+  } finally {
+    await act(async () => renderer.unmount());
+  }
+});
+
+test("Show older groups rows by age from the practice date, keeping server order within each group", async () => {
+  const ages: [string, string][] = [["d3", "2026-09-20"], ["d7", "2026-09-16"], ["d8", "2026-09-15"], ["d30", "2026-08-24"], ["d31", "2026-08-23"], ["d60", "2026-07-25"], ["d61", "2026-07-24"], ["d90", "2026-06-25"], ["d91", "2026-06-24"], ["d114", "2026-06-01"]];
+  const rows = ages.map(([id, date]) => chartRow(id, ME, date));
+  await withBrowser(() => json(doctor({ older: { count: rows.length, oldestServiceDate: "2026-06-01", byOwner: [{ owner: ME, count: rows.length, oldestServiceDate: "2026-06-01" }], rows } })), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      await settle();
+      const bands = renderer.root.findAllByProps({ className: "odos-open-charts-band" }).map((band) => [
+        band.findByType("h4").children.join(""),
+        band.findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join("")),
+      ]);
+      assert.deepEqual(bands, [
+        ["Up to a week", ["Patient d3", "Patient d7"]],
+        ["Over 1 week", ["Patient d8", "Patient d30"]],
+        ["Over 30 days", ["Patient d31", "Patient d60"]],
+        ["Over 60 days", ["Patient d61", "Patient d90"]],
+        ["Over 90 days", ["Patient d91", "Patient d114"]],
+      ]);
     } finally {
       await act(async () => renderer.unmount());
     }
