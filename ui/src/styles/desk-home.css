@@ -170,3 +170,11 @@
 @media (prefers-reduced-motion: reduce) { .odos-cockpit-panel { transition: none; } }
 @media (max-width: 1080px) { .odos-span-wide, .odos-span-standard { grid-column: span 6; } }
 @media (max-width: 720px) { .odos-location { display: none; } .odos-desk-topbar { padding: 12px; } .odos-pill { padding: 7px 11px; } .odos-desk-body { padding: 22px 62px 60px 16px; } .odos-span-full, .odos-span-wide, .odos-span-standard, .odos-span-half { grid-column: span 12; } .odos-sections-grid, .odos-office-card { grid-template-columns: 1fr; } .odos-office-nudge { padding: 0 12px; } .odos-office-nudge-inner { align-items: flex-start; flex-wrap: wrap; } }
+
+.odos-cockpit-badge-plain { background: #64748b; }
+.odos-desk-open-charts { color: #e2e8f0; font-size: 14px; line-height: 1.5; }
+.odos-desk-open-charts section + section { margin-top: 24px; }
+.odos-desk-open-charts h3 { margin: 0 0 10px; color: #fff; font-weight: 700; }
+.odos-desk-open-charts p { margin: 0 0 12px; }
+.odos-desk-open-row { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid #ffffff1a; }
+.odos-desk-open-row span { color: #cbd5e1; }

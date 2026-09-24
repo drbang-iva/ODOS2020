@@ -81,7 +81,7 @@ test("Desk home consumes the shell Office source without starting a second poll"
     await act(async () => {
       renderer = create(
         <OfficeChannelShell side="desk" officeApi={api} initialSummary={summary()} pollMs={60_000}>
-          <DeskHome initialSummary={emptyDeskSummary()} officeApi={{ list: api.list, send: async () => message() }} />
+          <DeskHome initialSummary={emptyDeskSummary()} officeApi={{ list: api.list, send: async () => message() }} initialOpenCharts={{ timeZone: "America/Denver", timeZoneSource: "setting", complete: true, today: { date: "2026-09-24", count: 0, rows: [] }, lastClinicDay: null, older: { count: 0, byOwner: [] } }} />
         </OfficeChannelShell>,
       );
       await Promise.resolve();

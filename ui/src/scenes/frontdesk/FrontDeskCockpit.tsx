@@ -19,17 +19,26 @@ import {
   type WatcherTaskAction,
 } from "../../lib/watchers";
 
+import type { Desk } from "../../lib/open-charts";
+import { useOpenCharts } from "../clinic/OpenChartsCard";
+import { OpenChartsDeskPanel, openChartsDeskBadge } from "./OpenChartsDeskPanel";
+
 // The front-desk cockpit shell (design doc §2). Root is a <div> (not <main>) so
 // the embedded SchedulerDayGrid's own <main> stays the single landmark.
 export function FrontDeskCockpit({
   roles = [],
+  initialOpenCharts,
   initialWatcherProjection,
   loadWatcherProjection = loadFrontDeskWatchers,
 }: {
   roles?: readonly PracticeRoleId[];
+  initialOpenCharts?: Desk;
   initialWatcherProjection?: WatcherFrontDeskProjection;
   loadWatcherProjection?: (date: string) => Promise<WatcherFrontDeskProjection>;
 } = {}) {
+  const openCharts = useOpenCharts(roles, initialOpenCharts, "desk");
+  const openChartsData = openCharts.data as Desk | undefined;
+  const openChartsBadge = openChartsDeskBadge(openChartsData, openCharts.error);
   const [centerView, setCenterView] = useState<CockpitCenterView>("schedule");
   const [openPanel, setOpenPanel] = useState<CockpitPanelId | null>(null);
   const [watcherProjection, setWatcherProjection] = useState<WatcherFrontDeskProjection | undefined>(initialWatcherProjection);
@@ -87,8 +96,10 @@ export function FrontDeskCockpit({
             />
           : <CockpitFloorBoard canStartChart={canStartChart} />}
       </section>
-      <CockpitBadgeDock openPanel={openPanel} onToggle={(id) => setOpenPanel((prev) => togglePanel(prev, id))} />
-      {openPanel && <CockpitGuestPanel panel={openPanel} onClose={() => setOpenPanel(null)} />}
+      <CockpitBadgeDock counts={{ "open-charts": openChartsBadge.count }} tones={{ "open-charts": openChartsBadge.tone }} titles={{ "open-charts": openChartsBadge.title }} openPanel={openPanel} onToggle={(id) => setOpenPanel((prev) => togglePanel(prev, id))} />
+      {openPanel && <CockpitGuestPanel panel={openPanel} onClose={() => setOpenPanel(null)}>
+        {openPanel === "open-charts" ? <OpenChartsDeskPanel data={openChartsData} error={openCharts.error} /> : undefined}
+      </CockpitGuestPanel>}
     </div>
   );
 }

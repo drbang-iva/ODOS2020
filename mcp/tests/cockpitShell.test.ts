@@ -15,6 +15,7 @@ test("dock items are in the design-doc order (launcher → fax)", () => {
     "messages",
     "calls",
     "requests",
+    "open-charts",
     "team-chat",
     "notifications",
     "fax",

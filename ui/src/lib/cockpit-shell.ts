@@ -9,6 +9,7 @@ export type CockpitPanelId =
   | "messages"
   | "calls"
   | "requests"
+  | "open-charts"
   | "team-chat"
   | "notifications"
   | "fax";
@@ -28,6 +29,7 @@ export const COCKPIT_DOCK_ITEMS: CockpitDockItem[] = [
   { id: "messages", label: "Messages", glyph: "💬", badge: "unread" },
   { id: "calls", label: "Calls", glyph: "📞", badge: "missed" },
   { id: "requests", label: "Requests", glyph: "📅", badge: "requests" },
+  { id: "open-charts", label: "Open charts", glyph: "✎", badge: "none" },
   { id: "team-chat", label: "Team Chat", glyph: "👥", badge: "none" },
   { id: "notifications", label: "Notifications", glyph: "🔔", badge: "none" },
   { id: "fax", label: "Fax", glyph: "📠", badge: "none" },
