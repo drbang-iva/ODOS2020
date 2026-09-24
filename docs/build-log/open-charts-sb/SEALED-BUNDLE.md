@@ -224,6 +224,23 @@ Pre-fix check: the new tests were run against the unmodified `fda430c1` `OpenCha
 
 At `a55aff95`: `npm --prefix ui test` gave 1895 tests, 1895 pass, 0 fail (+3); ui `tsc --noEmit --skipLibCheck` exit 0. Only UI files changed, so the mcp suite and live lanes were not re-run; the last full battery and live proof are the fixback 2 records.
 
+### Fixback 4, follow-up: CodeRabbit at `757dec45` (Security & Privacy, Major)
+
+CodeRabbit (thread on `OpenChartsCard.tsx:142`) found that the Fixback 4 reset runs in a passive effect, which executes only after React commits a render. So the **first frame** after a switch from the doctor role to staff could still render the doctor's fetched rows, and new supplied data could likewise be masked for one frame. In the app, roles resolve before the card mounts, so a real user should not hit this. It was fixed anyway, because a flash of patient rows in the wrong view must be impossible, not merely unlikely. The operator approved the fix in session. It uses Fixback 4's allowed files only.
+
+Fix (`OpenChartsCard.tsx`, +7/−5): fetched state records the `shape` and supplied data (`source`) it was fetched under. At render time it is used only while both still match the current inputs; otherwise supplied data (or loading) shows. The Fixback 4 effect still retires in-flight requests. Tests: +55 lines, new tests only. Both guards read the committed tree **before** passive effects run, via a synchronous `renderer.update` outside `act`, which is the frame a user could see.
+
+Mandate 17 at `65e91ffe`, in a disposable worktree. Each mutant was checked to have landed, and the tree was clean before each GREEN:
+
+| Break | RED | GREEN |
+|---|---|---|
+| fetched state shown regardless of shape and source | `not ok 25 - switching from the doctor to the desk role never renders the doctor's rows, not even for one frame`, `not ok 26 - new supplied data shows on its first frame…` · 26 / 24 / 2 | 26 / 26 / 0 |
+| shape check dropped | `not ok 25` · 26 / 25 / 1 | 26 / 26 / 0 |
+| source check dropped | `not ok 26` · 26 / 25 / 1 | 26 / 26 / 0 |
+| pre-fix product (`OpenChartsCard.tsx` from `757dec45`) | `not ok 25`, `not ok 26` · 26 / 24 / 2 | restored: 26 / 26 / 0 |
+
+At `65e91ffe`: `npm --prefix ui test` gave 1897 tests, 1897 pass, 0 fail (+2); ui `tsc` exit 0.
+
 ## Risks and follow-ups
 
 - **Literal §0.5 reading:** `/clinic/summary` with `practice-time-zone-unreadable` (502) shows "Open charts are unavailable right now." in the Today's-flow error slot, because §0.5 says the same three codes render the same sentences. If the operator wants different summary wording, that is a one-line change to the map in `ui/src/lib/open-charts.ts`.
