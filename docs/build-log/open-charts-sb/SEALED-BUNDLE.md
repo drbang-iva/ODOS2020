@@ -115,6 +115,28 @@ Both belong to other sessions and were not touched. `odos-sb-live` was brought d
 - `docker-compose.dr-drill.yml` pins its volume names (`name: odos_dr_drill_*`), so `-p odos-sb-live` does not scope them. `down -v` removed volumes with those names. I did not check whether they existed before `up`. The evidence says the database was fresh: every fixture row the card listed dates from 02:40–02:45Z, which is this session's integration run, and no older row appeared in any group. Any other DR-drill user of those names on this host would collide the same way. That is a follow-up for the compose file.
 - `ui/vite.config.ts` hard-codes the Medplum proxy target `http://localhost:8103`. Live proofs on 18103 need a wrapper config or a port forward.
 
+## Fixback 1: CodeRabbit review at `5b129123`
+
+CodeRabbit posted four threads. PR-Agent failed at this head: the diff came to 36,389 tokens against its 32,000 limit and was pruned, the same limit slice A's PR #663 hit. Its config is in `.github/`, which is outside §4, so it was reported and not changed.
+
+| Thread | Verdict | Change |
+|---|---|---|
+| L96 a refresh error leaves old counts on the chip | Valid: the chip kept its old number while its class went grey | A failed refresh now replaces the state with `{ error }`. The chip shows "—" and the card shows the sentence. |
+| L99 an older in-flight refresh can overwrite a newer one | Valid: there was no sequence guard | A request counter; only the newest request may settle the state. |
+| L195 expanded Older rows survive a refresh | Valid | The expansion is cleared when the Older summary (count, oldest date, byOwner) changes. An unchanged refresh keeps it open, so it does not collapse every 60 s. Remaining gap: within one refresh, one of the same owner's Older charts is signed and another opens on the same date. |
+| L133 qualify incomplete desk counts and never show `is-ok` when incomplete | **Declined in-slice and escalated.** §0.5 fixes the exact desk line and the chip tones (`is-alert` iff behind > 0), and B9 limits "at least" to the doctor card's Older. Changing either changes the design contract. | None. Operator decision. |
+
+Mandate 17 at `93777b4c`, in a disposable worktree:
+
+| Guard | Break | RED | GREEN |
+|---|---|---|---|
+| F1 | error keeps the previous `data` | `not ok 12 - a failed refresh drops the old counts…` · 14 / 13 / 1 | 14 / 14 / 0 |
+| F2 | any response may settle the state | `not ok 13 - a slow older refresh cannot overwrite a newer one` · 14 / 13 / 1 | 14 / 14 / 0 |
+| F4 | invalidation effect removed | `not ok 14 - expanded Older rows stay open…` · 14 / 13 / 1 | 14 / 14 / 0 |
+| F4b | invalidate on every refresh (`[olderSource, data]`) | `not ok 14` · 14 / 13 / 1 | 14 / 14 / 0 |
+
+At `93777b4c`: `npm --prefix ui test` gave 1885 tests, 1885 pass, 0 fail (+3). ui `tsc` exit 0. Preflight 0 warnings, 0 blocks. Only UI files changed, so the mcp suite and live lanes were not re-run. B14 ran at `5b129123`; the fixback touches only the refresh and expansion-invalidation paths, which the three tests above guard.
+
 ## Risks and follow-ups
 
 - **Literal §0.5 reading:** `/clinic/summary` with `practice-time-zone-unreadable` (502) shows "Open charts are unavailable right now." in the Today's-flow error slot, because §0.5 says the same three codes render the same sentences. If the operator wants different summary wording, that is a one-line change to the map in `ui/src/lib/open-charts.ts`.
