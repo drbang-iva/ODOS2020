@@ -93,3 +93,23 @@ All guards run at the real handler, `handleStediClaimResubmissionRequest`, again
 | C3 | Void of a claim whose snapshot line is uninterpreted imaging | 200, sent as frequency 8 |
 | C4 | Stored `charge-1` is imaging in FHIR; the request body says `PROC-A` | Held: judged by the stored copy |
 | C5 | Ordinary submit after extraction | #661/#666 submit guards (V3) unchanged and green |
+
+## Fixback 1 mutations (head after `154800b9`)
+
+All eight mutants were confirmed in place (`grep -n`; MF2 deletes its line, so an empty grep is the confirmation).
+Each ran against 110 tests.
+
+| Mutant | Red |
+|---|---|
+| MC1 skip the hold on corrections | C1, C2, C4, C6, C7, C8 (104 / 6) |
+| MC2 drop held lines | C2 (109 / 1) |
+| MC3 hold voids too | C3 (109 / 1) |
+| MC4 judge the request body | V3, C4 (108 / 2) |
+| MC5 misaligned held indexes | V3, C1, C2, C4, C6 (105 / 5) |
+| MC6 hold frequency 7 only (Codex's surviving mutant) | C6 (109 / 1) |
+| MF1 no read-failure isolation | C7, C8 (108 / 2) |
+| MF2 validation errors swallowed as read failures | C9 (109 / 1) |
+
+Before the fix, C7 and C8 were red at `53c473fe` on the Task write (`+ [{ resourceType: 'Task' }]` vs `- []`).
+
+Restored: `git status --porcelain` empty; `# pass 110`, `# fail 0`.

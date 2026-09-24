@@ -46,9 +46,10 @@ over the CI mcp file set built with `find` (451 files), using `node --import tsx
 | | tests | pass | fail | skipped |
 |---|---|---|---|---|
 | base `8884b6a6` | 6481 | 6422 | 0 | 59 |
-| head | 6485 | 6426 | 0 | 59 |
+| round 1 head `53c473fe` | 6485 | 6426 | 0 | 59 |
+| fixback 1 head | 6489 | 6430 | 0 | 59 |
 
-Delta: +4 tests, +4 pass (C1–C4; C5 is held by existing tests). No known flake fired.
+Delta: +8 tests, +8 pass (C1–C4, C6–C9; C5 is held by existing tests). No known flake fired.
 
 - mcp `npx tsc --noEmit`: exit 0 at base and head.
 - `npm run preflight`: `0 warning(s), 0 hard block(s)`, exit 0 at base and head.
@@ -67,3 +68,21 @@ new live-authorization surface.
   the checks, and get a fresh evaluation at the new head (kickoff R0).
 - **No UI.** Whatever screen sends corrections will now receive a 409 with `heldLines`. How that is shown to the biller
   is out of scope.
+
+## Fixback 1 (Codex evaluation of `53c473fe`: NEEDS-WORK)
+
+- **P2 fixed.** A read failure while checking a correction (a FHIR outage or `FhirSearchLimitError`) used to fall into
+  the handler's transmission-failure catch. That catch created an urgent claim-rejected Task against the original
+  Claim, although nothing had been sent. The correction's hold call now has its own `try`: validation errors are
+  rethrown (they stay 400), and any other failure is audited as `correction-hold-unavailable` and returns 502 with no
+  Task, no write and no transmission. Guards C7 (FHIR outage), C8 (search limit), and C9 (a validation error stays 400).
+- **Coverage gap closed.** Codex's MC6 (hold frequency 7 only) survived the committed tests. C6 now covers a
+  correction of a never-accepted claim (frequency 1): refused whole, and its control sends frequency 1.
+- **Not changed; needs an operator ruling.** Codex reproduced that a correction can change `revisedClaim.serviceDate`
+  and so select another day's evidence for the same charge (original day → 409, revised day → 200). This follows
+  kickoff rule 4. Binding the date to stored Encounters is a separate decision.
+- **Bots.** At `53c473fe`, CodeRabbit skipped review because the base branch is not main, and PR-Agent's workflow
+  targets main only. Neither bot reviews this PR until it is retargeted after #666 merges.
+- **Preflight.** One run exited 1 while the full suite was starting in parallel; its output was not captured. Four
+  later runs exited 0 (`0 warning(s), 0 hard block(s)`), including one after the suite finished, and each of the three
+  preflight steps exits 0 on its own.
