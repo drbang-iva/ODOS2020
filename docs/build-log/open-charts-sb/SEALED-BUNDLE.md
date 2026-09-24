@@ -124,8 +124,8 @@ CodeRabbit posted four threads, then one more in a second wave at `947d54d3`. PR
 | L96 a refresh error leaves old counts on the chip | Valid: the chip kept its old number while its class went grey | A failed refresh now replaces the state with `{ error }`. The chip shows "—" and the card shows the sentence. |
 | L99 an older in-flight refresh can overwrite a newer one | Valid: there was no sequence guard | A request counter; only the newest request may settle the state. |
 | L195 expanded Older rows survive a refresh | Valid | The expansion is cleared when the Older summary (count, oldest date, byOwner) changes. An unchanged refresh keeps it open, so it does not collapse every 60 s. Remaining gap: within one refresh, one of the same owner's Older charts is signed and another opens on the same date. |
-| L126 (second wave) same-summary change in Older membership | **Declined in-slice and escalated.** This is the remaining gap noted on L195. Closing it means re-fetching `?expand=older` on each refresh while expanded, or having the refresh carry `expand=older`; either contradicts §0.5 "Show older fetches once per open". | None. Operator decision. The counts shown are always current. |
-| L133 qualify incomplete desk counts and never show `is-ok` when incomplete | **Declined in-slice and escalated.** §0.5 fixes the exact desk line and the chip tones (`is-alert` iff behind > 0), and B9 limits "at least" to the doctor card's Older. Changing either changes the design contract. | None. Operator decision. |
+| L126 (second wave) same-summary change in Older membership | **Escalated; resolved in fixback 2 by operator ruling (Older refreshes while open).** At fixback 1: This is the remaining gap noted on L195. Closing it means re-fetching `?expand=older` on each refresh while expanded, or having the refresh carry `expand=older`; either contradicts §0.5 "Show older fetches once per open". | None. Operator decision. The counts shown are always current. |
+| L133 qualify incomplete desk counts and never show `is-ok` when incomplete | **Escalated; operator ruled 2026-09-24 to leave as is (accepted limit).** At fixback 1: §0.5 fixes the exact desk line and the chip tones (`is-alert` iff behind > 0), and B9 limits "at least" to the doctor card's Older. Changing either changes the design contract. | None. Operator decision. |
 
 Mandate 17 at `93777b4c`, in a disposable worktree:
 
@@ -138,10 +138,55 @@ Mandate 17 at `93777b4c`, in a disposable worktree:
 
 At `93777b4c`: `npm --prefix ui test` gave 1885 tests, 1885 pass, 0 fail (+3). ui `tsc` exit 0. Preflight 0 warnings, 0 blocks. Only UI files changed, so the mcp suite and live lanes were not re-run. B14 ran at `5b129123`; the fixback touches only the refresh and expansion-invalidation paths, which the three tests above guard.
 
+## Fixback 2: Codex FAIL at `8a95e303`
+
+Codex (evaluation record `performance-od/decisions/2026-09-24-odos-open-charts-sb-pr664-eval.md`) returned FAIL with five findings. Operator rulings, 2026-09-24:
+
+- **Finding 3 (incomplete counts):** leave as is. A practice would need about 1,000 open charts before a bounded read comes back incomplete, so the §0.5 desk line and chip tones stand. This is recorded as an accepted limit, not changed.
+- **Finding 4 (Older freshness):** Older **refreshes** while it is open. This amends §0.5 "Show older fetches once per open". Show older still issues one `?expand=older` request when clicked. After that, each 60 s refresh also carries `expand=older` while Older is open, so its rows and its counts always come from the same response.
+- **New, operator request:** the Show older list is grouped by age from the practice's today. The groups are **Up to a week** (0–7 days), **Over 1 week** (8–30), **Over 30 days** (31–60), **Over 60 days** (61–90) and **Over 90 days** (91+). Empty groups are omitted, and rows keep the server's order within each group. This is UI only; the collapsed Older line and the server are unchanged.
+
+| Finding | Change |
+|---|---|
+| 1 Show → Hide → Show lets the earlier response win | Show older now goes through the same numbered request path as the refresh, so only the newest request may settle the state. Unmount also invalidates any request still in flight. |
+| 2 unguarded timer cleanup and chip-vs-toggle | New tests: the interval is registered once at 60,000 ms, is cleared on unmount, and nothing fetches afterwards; the chip's number, text and tone do not change when the card is toggled, using a fixture where mine and all differ. |
+| 4 a signed chart can stay listed in an open Older | The refresh carries `expand=older` while Older is open, as ruled above. This replaces fixback 1's aggregate-fingerprint invalidation. |
+| 5 two added comments in `open-charts-types.ts` | Removed. `diff` against base lines 12–43 now shows only the two `export` keywords. |
+| 3 incomplete counts | No change (operator ruling). |
+
+Mandate 17 at `eb88c164`, in a disposable worktree. Each mutant was checked to have landed, the tree was clean before each GREEN, and the tests ran against `ui/tests/openChartsCard.test.tsx` (18 tests):
+
+| Break | RED | GREEN |
+|---|---|---|
+| R1 any response may settle (no request numbering) | `not ok 13 - a slow older refresh…`, `not ok 15 - reopening Older before the previous request settles…` · 18 / 16 / 2 | 18 / 18 / 0 |
+| R2 unmount does not clear the interval | `not ok 16 - the 60-second refresh is registered once and cleared…` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R3 refresh period 30 s | `not ok 16` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R4 chip follows the card toggle (10-edit, two-file mutant that lifts the scope into the hook) | `not ok 17 - the waiting chip counts the caller's charts whichever way…` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R5 Hide leaves the refresh expanding | `not ok 14 - while Older is open each refresh carries expand=older…` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R6 refresh drops `expand` while open (the old snapshot behaviour) | `not ok 14` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R7 "Over 1 week" starts at 7 days | `not ok 18 - Show older groups rows by age…` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R8 "Over 90 days" starts at 90 days | `not ok 18` · 18 / 17 / 1 | 18 / 18 / 0 |
+| R9 within-group order reversed | `not ok 18` · 18 / 17 / 1 | 18 / 18 / 0 |
+
+Full battery at `eb88c164`: mcp tests 6473, pass 6414, fail 0, skipped 59; `npm --prefix ui test` tests 1889, pass 1889, fail 0 (1885 − 1 replaced + 5 new); all three typechecks exit 0; preflight 0 warnings, 0 blocks.
+
+Live, on a fresh `odos-sb-live2` stack on 18103. `docker volume ls` showed no `odos_dr_drill_*` or `odos-sb*` volumes before `up`. An untracked override gave all three volumes unique `odos-sb-live2-*` names, and they were created fresh. The healthcheck passed on attempt 12. Smoke 12/12, integration 218/218, seeder/repair/sync exit 0, authorization 78/78. B14 was re-run with one added 40-day-old visit:
+
+- Provider My charts: own visit and the Unassigned walk-in shown, the other provider's visit hidden. The last clinic day reads "Wednesday, Sep 23". Chip `4 Open charts · 7 today`, `is-alert`.
+- All providers: the other provider's visit is shown with "Olive Otherdoc".
+- Show older showed the groups **Up to a week / Over 30 days / Over 90 days**. It made one `?expand=older` request on click, and after a 65 s wait with Older open a second `?expand=older` request, the refresh. The rows were still shown and the count was unchanged ("3 older · oldest Apr 25").
+- Staff: one line, "Open charts: 7 today · 1 from Wednesday, Sep 23 · 3 older", with no rows or chips. The only route called was `/desk`.
+- `/clinic/summary` 200 for both roles, no page errors. The front door returns 401 unauthenticated.
+
+The three screenshots in this directory are from this run. Teardown: `down -v` removed only the `odos-sb-live2-*` volumes; `odos-sb-unit-pg` was removed. `docker ps`: `vf-prac1b-walk-db 127.0.0.1:55481->5432/tcp` (not touched).
+
 ## Risks and follow-ups
 
 - **Literal §0.5 reading:** `/clinic/summary` with `practice-time-zone-unreadable` (502) shows "Open charts are unavailable right now." in the Today's-flow error slot, because §0.5 says the same three codes render the same sentences. If the operator wants different summary wording, that is a one-line change to the map in `ui/src/lib/open-charts.ts`.
 - On a summary error the whole waiting strip is still replaced by "Unavailable", including the new chip. That behaviour pre-dates this slice (P1) and was left unchanged.
+- **Accepted limit (operator ruling, finding 3):** when a bounded read comes back incomplete (`complete: false`), the desk line shows plain counts and the chip can be green at zero. The doctor card's Older still says "at least" plus the incomplete note (B9).
+- **Refresh cost while Older is open:** each 60 s refresh asks the server to compute reasons for every Older row. This only happens while a doctor has Older expanded.
+- A failed Show older request now shows the card's error sentence, like any failed refresh, rather than an error confined to the Older section.
 - Refresh runs only when `window.setInterval` exists, the same gate as the Office poller. Server-rendered and window-less test renders never fetch or start timers.
 - If `roles` ever arrive after the first render, the desk route would be called before the doctor route. In the live run roles had already resolved at mount, so staff called only desk and provider only doctor.
 - Out of scope and not done: front-desk badge and panel (C), Close as incomplete (D), waiting on results (E), Q4 admin home, the flow board's ✎ flag and row-order note, other `ODOS_TIMEZONE` readers, the #661 evidence follow-up.
