@@ -112,7 +112,8 @@ export function olderAgeBands<T extends { serviceDate: string }>(rows: readonly 
 
 export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenCharts?: Doctor | Desk): OpenChartsView {
   const shape = openChartsShape(roles);
-  const [state, setState] = useState<OpenChartsState>({});
+  // Fetched state remembers the shape and supplied data it was fetched under; it is shown only while both still match.
+  const [state, setState] = useState<OpenChartsState & { shape?: OpenChartsShape; source?: Doctor | Desk }>({});
   const [olderOpen, setOlderOpen] = useState(false);
   const olderOpenRef = useRef(false);
   const latestRequest = useRef(0);
@@ -123,9 +124,9 @@ export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenChart
   const load = useCallback(() => {
     const request = ++latestRequest.current;
     return fetchOpenCharts(shape, { expandOlder: shape === "doctor" && olderOpenRef.current })
-      .then((data) => { if (mounted.current && request === latestRequest.current) setState({ data }); })
-      .catch((reason) => { if (mounted.current && request === latestRequest.current) setState({ error: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE }); });
-  }, [shape]);
+      .then((data) => { if (mounted.current && request === latestRequest.current) setState({ data, shape, source: initialOpenCharts }); })
+      .catch((reason) => { if (mounted.current && request === latestRequest.current) setState({ error: reason instanceof OpenChartsError ? reason.message : OPEN_CHARTS_UNAVAILABLE, shape, source: initialOpenCharts }); });
+  }, [shape, initialOpenCharts]);
 
   useEffect(() => {
     mounted.current = true;
@@ -160,7 +161,8 @@ export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenChart
     setOlderOpen(false);
   }, []);
 
-  return { data: state.data ?? (state.error ? undefined : initialOpenCharts), error: state.error, olderOpen, showOlder, hideOlder };
+  const current = state.shape === shape && state.source === initialOpenCharts ? state : {};
+  return { data: current.data ?? (current.error ? undefined : initialOpenCharts), error: current.error, olderOpen, showOlder, hideOlder };
 }
 
 export function OpenChartsCard({ data, error, olderOpen, showOlder, hideOlder, openPatient }: OpenChartsView & { openPatient(patientId?: string): void }) {

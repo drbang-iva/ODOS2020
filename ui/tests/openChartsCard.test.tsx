@@ -635,3 +635,58 @@ test("without supplied data, a doctor response still pending at a switch to the 
     }
   });
 });
+
+/** Commit an update synchronously and read the tree before React runs passive effects (the frame a user could see). */
+function firstFrameAfter(renderer: ReactTestRenderer, element: React.ReactElement): ReturnType<ReactTestRenderer["toJSON"]> {
+  renderer.update(element);
+  return renderer.toJSON();
+}
+
+function rowNamesIn(tree: ReturnType<ReactTestRenderer["toJSON"]>): string[] {
+  const names: string[] = [];
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    const element = node as { props?: { className?: string }; children?: unknown[] };
+    if (element.props?.className === "odos-open-charts-who") names.push((element.children ?? []).join(""));
+    (element.children ?? []).forEach(walk);
+  };
+  walk(tree);
+  return names;
+}
+
+test("switching from the doctor to the desk role never renders the doctor's rows, not even for one frame", async () => {
+  await withBrowser((url) => json(url === "/clinic/open-charts/desk" ? desk() : doctor()), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} roles={["provider"]} />);
+    try {
+      await settle();
+      assert.deepEqual(rowNamesIn(renderer.toJSON()).slice(0, 1), ["Patient today-mine"]);
+      const frame = firstFrameAfter(renderer, <ClinicHome initialSummary={summary()} roles={["staff"]} />);
+      assert.deepEqual(rowNamesIn(frame), []);
+      await settle();
+      assert.equal(textOf(renderer.root.findByProps({ className: "odos-open-charts-desk-line" }).children as never), "Open charts: 3 today · 2 from Monday, Sep 21 · 4 older");
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("new supplied data shows on its first frame, not data an earlier fetch returned", async () => {
+  const expanded = doctor({ today: { date: "2026-09-23", rows: [chartRow("fetched", ME, "2026-09-23")] }, older: { ...doctor().older, rows: [chartRow("older-1", ME, "2026-09-14")] } });
+  await withBrowser(() => json(expanded), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      await settle();
+      assert.ok(rowNamesIn(renderer.toJSON()).includes("Patient fetched"));
+      const replacement = doctor({ today: { date: "2026-09-23", rows: [chartRow("replacement", ME, "2026-09-23")] } });
+      const frame = firstFrameAfter(renderer, <ClinicHome initialSummary={summary()} initialOpenCharts={replacement} roles={["provider"]} />);
+      const names = rowNamesIn(frame);
+      assert.ok(names.includes("Patient replacement"), names.join(", "));
+      assert.ok(!names.includes("Patient fetched"), names.join(", "));
+      await settle();
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
