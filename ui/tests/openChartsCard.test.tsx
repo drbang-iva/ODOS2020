@@ -499,3 +499,84 @@ test("Show older groups rows by age from the practice date, keeping server order
     }
   });
 });
+
+function deferredResponses(): { respond: () => Promise<Response>; release(index: number, response: Response): void } {
+  const pending: ((response: Response) => void)[] = [];
+  return {
+    respond: () => new Promise<Response>((resolve) => { pending.push(resolve); }),
+    release: (index, response) => pending[index](response),
+  };
+}
+
+async function showThenHideOlder(renderer: ReactTestRenderer): Promise<void> {
+  const olderButton = () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button");
+  await act(async () => olderButton().props.onClick());
+  assert.equal(olderButton().children.join(""), "Hide");
+  await act(async () => olderButton().props.onClick());
+  assert.equal(olderButton().children.join(""), "Show older");
+}
+
+const chipText = (renderer: ReactTestRenderer) => textOf(renderer.root.findByProps({ "data-testid": "clinic-wait-unsigned" }).children as never);
+const cardRowNames = (renderer: ReactTestRenderer) => renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join(""));
+
+test("hiding Older retires its in-flight request, so a late 502 cannot blank the card", async () => {
+  const responses = deferredResponses();
+  await withBrowser(responses.respond, async (calls) => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      assert.equal(chipText(renderer), "2\nOpen charts\n1 today");
+      const rowsBefore = cardRowNames(renderer);
+      await showThenHideOlder(renderer);
+      assert.deepEqual(calls.map((call) => call.url), ["/clinic/open-charts?expand=older"]);
+      await act(async () => { responses.release(0, json({ code: "practice-time-zone-unreadable" }, 502)); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      const card = renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" });
+      assert.equal(card.findAllByProps({ className: "odos-clinic-error" }).length, 0);
+      assert.doesNotMatch(textOf(renderer.toJSON()), /unavailable right now/);
+      assert.deepEqual(cardRowNames(renderer), rowsBefore);
+      assert.ok(rowsBefore.includes("Patient today-mine"));
+      assert.equal(chipText(renderer), "2\nOpen charts\n1 today");
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("hiding Older retires its in-flight request, so a late 200 with other counts changes nothing shown", async () => {
+  const responses = deferredResponses();
+  await withBrowser(responses.respond, async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      const olderLine = () => textOf(renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("span").children as never);
+      assert.equal(olderLine(), "1 older · oldest Sep 14");
+      await showThenHideOlder(renderer);
+      const changed = doctor({
+        lastClinicDay: { date: "2026-09-21", rows: [] },
+        older: { count: 6, oldestServiceDate: "2026-08-01", byOwner: [{ owner: ME, count: 6, oldestServiceDate: "2026-08-01" }], rows: [] },
+      });
+      await act(async () => { responses.release(0, json(changed)); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      assert.equal(olderLine(), "1 older · oldest Sep 14");
+      assert.equal(chipText(renderer), "2\nOpen charts\n1 today");
+      assert.ok(cardRowNames(renderer).includes("Patient last-mine"));
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("expanded Older rows follow My charts / All providers like every other group", async () => {
+  const rows = [chartRow("older-mine", ME, "2026-09-14"), chartRow("older-other", OTHER, "2026-09-12"), chartRow("older-unassigned", UNASSIGNED, "2026-09-10")];
+  const older = { count: 3, oldestServiceDate: "2026-09-10", byOwner: [{ owner: ME, count: 1, oldestServiceDate: "2026-09-14" }, { owner: OTHER, count: 1, oldestServiceDate: "2026-09-12" }, { owner: UNASSIGNED, count: 1, oldestServiceDate: "2026-09-10" }], rows };
+  await withBrowser(() => json(doctor({ older })), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor({ older: { ...older, rows: undefined } })} roles={["provider"]} />);
+    try {
+      const olderNames = () => renderer.root.findByProps({ "data-group": "older" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join(""));
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      await settle();
+      assert.deepEqual(olderNames(), ["Patient older-mine", "Patient older-unassigned"]);
+      await act(async () => renderer.root.findByProps({ role: "group" }).findAllByType("button")[1].props.onClick());
+      assert.deepEqual(olderNames(), ["Patient older-mine", "Patient older-other", "Patient older-unassigned"]);
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});

@@ -148,7 +148,9 @@ export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenChart
     setOlderOpen(true);
     void load();
   }, [load]);
+  // Hiding retires any in-flight expand request, so it can never settle the state (or blank the card on failure).
   const hideOlder = useCallback(() => {
+    latestRequest.current += 1;
     olderOpenRef.current = false;
     setOlderOpen(false);
   }, []);
