@@ -690,3 +690,46 @@ test("new supplied data shows on its first frame, not data an earlier fetch retu
     }
   });
 });
+
+test("returning to the same supplied object after another source never revives data fetched under it", async () => {
+  const supplied = doctor();
+  const fetched = doctor({ today: { date: "2026-09-23", rows: [chartRow("fetched", ME, "2026-09-23")] }, older: { ...doctor().older, rows: [chartRow("older-1", ME, "2026-09-14")] } });
+  await withBrowser(() => json(fetched), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={supplied} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      await settle();
+      assert.ok(rowNamesIn(renderer.toJSON()).includes("Patient fetched"));
+      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />));
+      const frame = firstFrameAfter(renderer, <ClinicHome initialSummary={summary()} initialOpenCharts={supplied} roles={["provider"]} />);
+      const names = rowNamesIn(frame);
+      assert.ok(names.includes("Patient today-mine"), names.join(", "));
+      assert.ok(!names.includes("Patient fetched"), names.join(", "));
+      await settle();
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("a request from before a doctor-desk-doctor round trip cannot settle when the same supplied object returns", async () => {
+  const responses = deferredResponses();
+  const supplied = doctor();
+  const fetched = doctor({ today: { date: "2026-09-23", rows: [chartRow("fetched", ME, "2026-09-23")] }, older: { ...doctor().older, rows: [chartRow("older-1", ME, "2026-09-14")] } });
+  await withBrowser(responses.respond, async (calls) => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={supplied} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      assert.deepEqual(calls.map((call) => call.url), ["/clinic/open-charts?expand=older"]);
+      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={desk()} roles={["staff"]} />));
+      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={supplied} roles={["provider"]} />));
+      await act(async () => { responses.release(0, json(fetched)); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      const names = rowNamesIn(renderer.toJSON());
+      assert.ok(names.includes("Patient today-mine"), names.join(", "));
+      assert.ok(!names.includes("Patient fetched"), names.join(", "));
+      assert.equal(calls.length, 1);
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
