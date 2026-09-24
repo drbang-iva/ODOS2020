@@ -580,3 +580,58 @@ test("expanded Older rows follow My charts / All providers like every other grou
     }
   });
 });
+
+test("new supplied data replaces data an earlier Show older fetched", async () => {
+  const expanded = doctor({ older: { ...doctor().older, rows: [chartRow("older-1", ME, "2026-09-14")] } });
+  await withBrowser(() => json(expanded), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      await settle();
+      assert.deepEqual(renderer.root.findByProps({ "data-group": "older" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join("")), ["Patient older-1"]);
+      const replacement = doctor({ today: { date: "2026-09-23", rows: [chartRow("replacement", ME, "2026-09-23")] } });
+      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={replacement} roles={["provider"]} />));
+      const todayNames = renderer.root.findByProps({ "data-group": "today" }).findAllByProps({ className: "odos-open-charts-who" }).map((node) => node.children.join(""));
+      assert.deepEqual(todayNames, ["Patient replacement"]);
+      assert.equal(renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").children.join(""), "Show older");
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("a doctor response still pending when supplied data switches to the desk shape cannot land", async () => {
+  const responses = deferredResponses();
+  await withBrowser(responses.respond, async (calls) => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} initialOpenCharts={doctor()} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.root.findByProps({ className: "odos-open-charts-older" }).findByType("button").props.onClick());
+      assert.deepEqual(calls.map((call) => call.url), ["/clinic/open-charts?expand=older"]);
+      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} initialOpenCharts={desk()} roles={["staff"]} />));
+      await act(async () => { responses.release(0, json(doctor({ older: { ...doctor().older, rows: [chartRow("older-1", ME, "2026-09-14")] } }))); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      const card = renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" });
+      assert.equal(card.findAllByProps({ className: "odos-open-charts-row" }).length, 0);
+      assert.equal(textOf(card.findByProps({ className: "odos-open-charts-desk-line" }).children as never), "Open charts: 3 today · 2 from Monday, Sep 21 · 4 older");
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});
+
+test("without supplied data, a doctor response still pending at a switch to the desk shape cannot land", async () => {
+  const pending: { url: string; resolve(response: Response): void }[] = [];
+  await withBrowser((url) => new Promise<Response>((resolve) => { pending.push({ url, resolve }); }), async () => {
+    const renderer = await mount(<ClinicHome initialSummary={summary()} roles={["provider"]} />);
+    try {
+      await act(async () => renderer.update(<ClinicHome initialSummary={summary()} roles={["staff"]} />));
+      assert.deepEqual(pending.map((request) => request.url), ["/clinic/open-charts", "/clinic/open-charts/desk"]);
+      await act(async () => { pending[1].resolve(json(desk())); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      await act(async () => { pending[0].resolve(json(doctor())); await new Promise((resolve) => setTimeout(resolve, 0)); });
+      const card = renderer.root.findByProps({ "data-testid": "clinic-open-charts-card" });
+      assert.equal(card.findAllByProps({ className: "odos-open-charts-row" }).length, 0);
+      assert.equal(textOf(card.findByProps({ className: "odos-open-charts-desk-line" }).children as never), "Open charts: 3 today · 2 from Monday, Sep 21 · 4 older");
+    } finally {
+      await act(async () => renderer.unmount());
+    }
+  });
+});

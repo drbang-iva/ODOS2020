@@ -132,15 +132,20 @@ export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenChart
     return () => { mounted.current = false; };
   }, []);
 
+  // A new data source (supplied data or a different shape) starts a new generation whether or not polling runs:
+  // nothing already in flight may settle, fetched state no longer applies, and Older closes.
+  useEffect(() => {
+    olderOpenRef.current = false;
+    setOlderOpen(false);
+    setState({});
+    return () => { latestRequest.current += 1; };
+  }, [initialOpenCharts, shape]);
+
   useEffect(() => {
     if (initialOpenCharts || typeof window === "undefined" || typeof window.setInterval !== "function") return;
-    setState({});
     void load();
     const handle = window.setInterval(() => void load(), OPEN_CHARTS_REFRESH_MS);
-    return () => {
-      latestRequest.current += 1;
-      window.clearInterval(handle);
-    };
+    return () => { window.clearInterval(handle); };
   }, [initialOpenCharts, load]);
 
   const showOlder = useCallback(() => {
