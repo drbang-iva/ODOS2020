@@ -48,6 +48,7 @@ import {
   type ClaimsHandlerDeps,
 } from "../src/claims/claimmd-handlers.js";
 import { chargeItemBodysite } from "../src/fhir/charge-item-laterality.js";
+import { FhirSearchLimitError } from "../src/fhir-search.js";
 import { buildProcedureFeeDefinition, HCPCS_CODE_SYSTEM, PROCEDURE_CONCEPT_SYSTEM } from "../src/clinical-graph/procedure-fee-schedule.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
@@ -3258,7 +3259,7 @@ const correctionHeldPhoto = {
   message: "Synthetic photograph was held: it needs an interpretation and report on this visit.",
 };
 
-function correctionFixture(options: { evidence?: boolean } = {}) {
+function correctionFixture(options: { evidence?: boolean; accepted?: boolean } = {}) {
   const fixture = deps();
   const store = fixture.created as unknown as Record<string, Resource[]>;
   fixture.created.ChargeItem[0]!.code = structuredClone(correctionImagingCode);
@@ -3274,7 +3275,7 @@ function correctionFixture(options: { evidence?: boolean } = {}) {
     ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
     id: "claim-original",
   });
-  fixture.created.ClaimResponse.push({
+  if (options.accepted !== false) fixture.created.ClaimResponse.push({
     resourceType: "ClaimResponse", id: "response-1", status: "active", type: {}, use: "claim",
     patient: { reference: professionalClaim.patientReference }, created: "2026-07-09",
     insurer: { reference: professionalClaim.insurerReference }, outcome: "complete",
@@ -3350,4 +3351,50 @@ test("C4 correction is judged by the stored imaging ChargeItem, not a non-imagin
   assert.equal(result.status, 409);
   assert.deepEqual(result.body, { code: "correction-lines-held", heldLines: [correctionHeldPhoto] });
   assert.equal(transmitted.length, 0);
+});
+
+test("C6 correction of a never-accepted claim (frequency 1) is refused whole; its control sends frequency 1", async () => {
+  const { transmitted, resubmit } = correctionFixture({ accepted: false });
+  const result = await resubmit("correct", imagingRevisedClaim());
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { code: "correction-lines-held", heldLines: [correctionHeldPhoto] });
+  assert.equal(transmitted.length, 0);
+
+  const control = correctionFixture({ accepted: false, evidence: true });
+  const sent = await control.resubmit("correct", imagingRevisedClaim());
+  assert.equal(sent.status, 200);
+  assert.equal(control.transmitted.length, 1);
+  assert.equal(control.transmitted[0].payload.claimInformation.claimFrequencyCode, "1");
+});
+
+for (const [name, failure] of [
+  ["C7 FHIR outage", () => new Error("synthetic FHIR outage")],
+  ["C8 search limit", () => new FhirSearchLimitError("Media", 5_000, 5_001, 51)],
+] as const) {
+  test(`${name} while reading correction evidence returns 502 without flagging the original Claim rejected`, async () => {
+    const { fixture, transmitted, originalClaim, resubmit } = correctionFixture();
+    const search = fixture.fhir.search;
+    fixture.fhir.search = async (resourceType, params = {}) => {
+      if (resourceType === "Media") throw failure();
+      return search(resourceType, params);
+    };
+    const result = await resubmit("correct", imagingRevisedClaim());
+    assert.equal(result.status, 502);
+    assert.equal(transmitted.length, 0);
+    assert.deepEqual(fixture.created.Claim, [originalClaim]);
+    assert.deepEqual(fixture.createHeaders, []);
+    assert.deepEqual(fixture.created.Task, []);
+    assert.match(fixture.audits.at(-1)?.actionReason ?? "", /adapter=stedi correction-hold-unavailable$/);
+  });
+}
+
+test("C9 correction naming an unloadable stored ChargeItem stays a 400 validation error, not a read failure", async () => {
+  const { fixture, transmitted, resubmit } = correctionFixture();
+  const revised = imagingRevisedClaim();
+  revised.chargeItems[0]!.id = "missing-charge";
+  const result = await resubmit("correct", revised);
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /ChargeItem\/missing-charge could not be loaded/);
+  assert.equal(transmitted.length, 0);
+  assert.deepEqual(fixture.created.Task, []);
 });

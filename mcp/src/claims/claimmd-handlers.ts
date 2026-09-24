@@ -389,8 +389,17 @@ export async function handleStediClaimResubmissionRequest(
     // A replacement is adjudicated whole, so a dropped line would be un-billed (and recouped if paid): refuse the
     // correction instead of dropping held lines. A void bills nothing and is never held.
     if (parsed.intent === "correct") {
-      const { held: heldLines } = await evaluateClaimLineHold(auth, resubmissionInput.chargeItems,
-        resubmissionInput.patientReference, resubmissionInput.serviceDate);
+      let heldLines: HeldClaimLine[];
+      try {
+        ({ held: heldLines } = await evaluateClaimLineHold(auth, resubmissionInput.chargeItems,
+          resubmissionInput.patientReference, resubmissionInput.serviceDate));
+      } catch (error) {
+        if (error instanceof ClaimSubmissionValidationError) throw error;
+        // Nothing has been sent, so this must not reach the transmission-failure path (and its claim-rejected Task).
+        await audit(deps, auth, "claim.submit.failed", "failure", parsed.originalClaimReference, patientReference,
+          "correction-hold-unavailable", "stedi");
+        return { status: 502, body: { error: "The correction's interpretation evidence could not be read; nothing was sent." } };
+      }
       if (heldLines.length) {
         await audit(deps, auth, "claim.submit.failed", "failure", parsed.originalClaimReference, patientReference,
           `correction-lines-held: ${heldLines.length} lines`, "stedi");
