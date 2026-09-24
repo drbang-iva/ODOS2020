@@ -196,6 +196,34 @@ Mandate 17 at `7b7961bc`, in a disposable worktree. Each mutant was checked to h
 
 At `7b7961bc`: `npm --prefix ui test` gave 1892 tests, 1892 pass, 0 fail (+3); ui `tsc --noEmit --skipLibCheck` exit 0. Only UI files changed, so the mcp suite and live lanes were not re-run for this fixback; the last full battery and live proof are the fixback 2 records above.
 
+## Fixback 4: supplied data follows the same request lifecycle
+
+Recorded in kickoff §8, performance-od `812b5820`. This is Codex finding 1 at `fda430c1` (`decisions/2026-09-24-odos-open-charts-sb-pr664-fixback3-eval.md`). `useOpenCharts` returned before installing its cleanup whenever `initialOpenCharts` was supplied, and fetched `state.data` then masked any later supplied data indefinitely. Codex reproduced two failures through `ClinicHome`:
+
+- **A:** the old Today row stayed after new doctor data was supplied.
+- **B:** a pending doctor response landed in the desk view as four doctor rows.
+
+The app never passes this prop, so this was a defect in the test/injected-data path, not a production disclosure.
+
+**Fix** (`ui/src/scenes/clinic/OpenChartsCard.tsx`, +10/−5): request-generation invalidation no longer depends on polling. A lifecycle effect keyed on `[initialOpenCharts, shape]` always runs:
+
+- its setup closes Older and clears fetched state;
+- its cleanup advances `latestRequest`, so nothing already in flight can settle.
+
+The polling effect now only loads and schedules. Supplied data shows until a fetch started by this mount settles. Without the prop, behaviour is unchanged: the same reset and load on mount, and the same advance and `clearInterval` on unmount. The one addition is that Older now also closes on a shape change, as the ruling requires. Tests: +55 lines in `ui/tests/openChartsCard.test.tsx`, new tests only.
+
+Mandate 17 at `a55aff95`, in a disposable worktree. Each mutant was checked to have landed, and the tree was clean before each GREEN:
+
+| Guard | Break | RED | GREEN |
+|---|---|---|---|
+| 1. Reproduction A: supply doctor data, Show older settles, then new doctor data is supplied. The new row shows and Older is closed. | drop the state reset on a supplied-data change | `not ok 22 - new supplied data replaces data an earlier Show older fetched` · 24 / 23 / 1 | 24 / 24 / 0 |
+| 2. Reproduction B: Show older is pending, then the role becomes staff with supplied desk data, then the doctor response is released. Zero doctor rows, and the desk line shows. | drop the generation advance on a data-source or shape change | `not ok 23 - a doctor response still pending when supplied data switches to the desk shape cannot land` · 24 / 23 / 1 | 24 / 24 / 0 |
+| 3. With no supplied data, a doctor response still pending at a role switch to staff cannot land. This guards the path the app actually uses. | — (already green before the fix, matching Codex's EVAL 3) | — | 24 / 24 / 0 |
+
+Pre-fix check: the new tests were run against the unmodified `fda430c1` `OpenChartsCard.tsx`. Result: `not ok 22`, `not ok 23` · 24 tests / 22 pass / 2 fail. After restoring (`git status --porcelain` empty): 24 / 24 / 0. The earlier guards (R1–R9, F3, and the reopen-race test) are unchanged and stay green.
+
+At `a55aff95`: `npm --prefix ui test` gave 1895 tests, 1895 pass, 0 fail (+3); ui `tsc --noEmit --skipLibCheck` exit 0. Only UI files changed, so the mcp suite and live lanes were not re-run; the last full battery and live proof are the fixback 2 records.
+
 ## Risks and follow-ups
 
 - **Literal §0.5 reading:** `/clinic/summary` with `practice-time-zone-unreadable` (502) shows "Open charts are unavailable right now." in the Today's-flow error slot, because §0.5 says the same three codes render the same sentences. If the operator wants different summary wording, that is a one-line change to the map in `ui/src/lib/open-charts.ts`.
