@@ -17,10 +17,12 @@ function proposal(id: string, key: string): any {
 }
 function fixture(rows: any[] = [], now = NOW) {
   const reads: string[] = [], serviceReads: string[] = [];
+  const queries: Array<{ type: string; params: Record<string,string> }> = [];
   const state: any = { role: "provider", authenticated: true, env: "America/New_York", serviceRows: [], fail: undefined, serviceFail: false };
   const all = [{ resourceType: "Patient", id: "p1", name: [{ given: ["Synthetic"], family: "Patient" }] }, ...rows];
   const search = async (source: any[], log: string[], type: string, params: Record<string,string> = {}) => {
     log.push(type);
+    if (log === reads) queries.push({type,params});
     if (log === serviceReads && state.serviceFail || log === reads && (state.fail === type || state.failEncounter && params.encounter?.split(",").includes(`Encounter/${state.failEncounter}`))) throw new Error("synthetic read failure");
     let result = source.filter(r => r.resourceType === type);
     for (const [key,value] of Object.entries(params)) {
@@ -49,9 +51,23 @@ function fixture(rows: any[] = [], now = NOW) {
     await handlers.get(path)({header:()=>state.authenticated?"Bearer synthetic":undefined,query:expand?{expand:"older"}:{}},res);
     return {status,body};
   }
-  return {state,all,reads,serviceReads,request};
+  return {state,all,reads,serviceReads,queries,request};
 }
 const ids = (rows: any[]) => rows.map(r=>r.encounterId);
+
+test("F1 25 open visits with 5000 Observations retain computed reasons",async()=>{
+ const visits=Array.from({length:25},(_,i)=>encounter(`f1-${i}`));
+ const observations=visits.flatMap(visit=>Array.from({length:200},(_,i)=>({resourceType:"Observation",id:`${visit.id}-o${i}`,status:"final",encounter:{reference:`Encounter/${visit.id}`}})));
+ const f=fixture([...visits,...observations]);
+ const r=await f.request();
+ assert.equal(r.status,200);assert.equal(r.body.complete,true);assert.equal(r.body.today.rows.length,25);
+ for(const row of r.body.today.rows){assert.equal(row.kind,"open");assert.deepEqual(row.reasons,[{code:"none-found",label:"No interpretation blockers found"}]);}
+});
+test("F1 existence-only content search requests liveness and match fields",async()=>{
+ const f=fixture([encounter("f1"),{resourceType:"Observation",id:"f1-o",status:"final",encounter:{reference:"Encounter/f1"}}]);
+ const r=await f.request();assert.equal(r.status,200);
+ assert.equal(f.queries.find(query=>query.type==="Observation"&&query.params.encounter==="Encounter/f1")?.params._elements,"id,status,encounter");
+});
 
 test("O1 M1 statuses included; signed and excluded statuses absent", async()=>{
  const f=fixture([...["arrived","triaged","in-progress","cancelled","entered-in-error"].map(s=>encounter(s,s)),encounter("signed","finished",undefined,{period:{start:"2026-09-23T12:00:00Z",end:NOW}}),{resourceType:"Provenance",recorded:NOW,target:[{reference:"Encounter/signed"}]}]);

@@ -4,6 +4,8 @@ The practice time-zone setting is admin-only. Both Open Charts endpoints resolve
 
 The two new chart routes share a 120-request/minute limiter that keys anonymous traffic by IP and authenticated traffic by staff identity. A burst of anonymous requests cannot exhaust a clinician's quota. Service authentication precedes staff-role resolution, matching the other clinic routes. The historical clinic-day search stops at the newest eligible visit while retaining the ten-page incomplete bound when none is found.
 
+F1 fixback raises the per-type content bound from 1,000 to 10,000 rows per 25-visit chunk. Twelve existence-only types request only id, liveness, and encounter-match fields through `_elements`; Media and DiagnosticReport retain full rows for the interpretation gate. The accepted `complete: false` behavior remains when a content read genuinely exceeds the new bound.
+
 Branch: `drbang-iva/open-charts-sa-projection`. Base: `0703ab17155dde01b5afa4582bdf7f96c4fb7794`. The PR URL and exact head SHA are in the handoff response. Coder status: **needs-review**. No merge or Iris policy sync occurred.
 
 ## Files and scope
@@ -42,9 +44,9 @@ Every MCP suite used `ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:1
 | Check | Command | Real output |
 |---|---|---|
 | Base MCP | `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 6419 tests, 6362 pass, 0 fail, 57 skipped |
-| Final-tree MCP | same | tests 6467, pass 6408, fail 0, skipped 59 ; exit 0 |
+| R5 PR head MCP, before F1 | same | tests 6467, pass 6408, fail 0, skipped 59 ; exit 0 |
 | Base UI | `npm --prefix ui test` | 1869 pass |
-| Final-tree UI | same | tests 1871, pass 1871, fail 0, skipped 0 ; exit 0 |
+| R5 PR head UI, unchanged by F1 | same | tests 1871, pass 1871, fail 0, skipped 0 ; exit 0 |
 | R2 unchanged summary/overview/abandon | `node --import tsx --test` on the three existing suites | 84 tests, 84 pass, 0 fail |
 | Added O12/O18 tests | `node --import tsx --test --test-name-pattern='^(O12\|O18)' mcp/tests/openCharts.test.ts` | tests 4, pass 4, fail 0, skipped 0 ; exit 0 |
 | MCP typecheck | `tsc -p mcp/tsconfig.json --noEmit` | exit 0 |
@@ -240,6 +242,24 @@ Harness corrections did not change product code or accepted outputs: the first a
 The first post-PR full MCP replay had nine unrelated CLI fixture failures because the disposable stack's `.odos/operator.env` and identity file were present. They were moved aside for the final unit replay, as in the prior green run, then restored. The first post-screenshot live replay saw the screenshot's saved time-zone setting and failed the expected absent-setting assertion; that synthetic setting was deleted before the same live tests returned green. CodeRabbit's route authentication-order, historical-day, and quota-separation findings were fixed in product code; its Markdown table finding was fixed in this bundle. CodeQL's new-route missing-rate-limit findings prompted the limiter and its mutation proof. PR-Agent could not produce a review at the first or second head because its 32,000-token diff limit was exceeded; its final-head state is reported in the handoff.
 
 On the final limiter replay, the first live invocation began immediately after restarting Medplum and failed to connect. The localhost healthcheck then returned 200, and the unchanged live tests passed 3/3 on rerun. This was stack readiness before a request, not a product response.
+
+## F1 evaluator fixback
+
+The independent evaluation of head `89929a149aebe5370efe03fe49307626ba2a7cfb` found that the default 1,000-row `searchAll` bound made a 25-visit chunk fail after an average of 40 Observations per visit. The fix changes only `mcp/src/clinical-graph/encounter-content.ts` and appends tests in `mcp/tests/encounterContent.test.ts` and `mcp/tests/openCharts.test.ts`. Every one of the 14 content types now has a 10,000-row bound per chunk. The 12 existence-only types request `_elements` for id, status, and the encounter reference field; Condition also requests verificationStatus, and DocumentReference requests context. Media and DiagnosticReport still return full resources for the interpretation gate. `mcp/src/clinic/open-charts.ts` and existing assertions did not change.
+
+| F1 proof | Command | Before / red | After / green |
+|---|---|---|---|
+| 25 visits × 200 Observations | `node --import tsx --test --test-name-pattern='F1 25 open visits' mcp/tests/openCharts.test.ts` through registered route | default 1,000 bound: 1 fail; expected `complete: true`, actual `false`; exit 1 | 10,000 bound: 1 pass, 0 fail; all 25 rows `open` with `none-found` reasons; exit 0 |
+| Existence-only projection | `node --import tsx --test --test-name-pattern='F1 existence-only' mcp/tests/openCharts.test.ts` through registered route | remove `_elements`: 1 fail; expected `id,status,encounter`, actual absent; exit 1 | restore `_elements`: 1 pass, 0 fail; exit 0 |
+| Projected liveness and S0 | `node --import tsx --test mcp/tests/encounterContent.test.ts mcp/tests/encounterAbandon.test.ts` | existing abandonment tests unchanged | 49 tests, 49 pass, 0 fail; exit 0 |
+| Focused Open Charts and content | `node --import tsx --test mcp/tests/openCharts.test.ts mcp/tests/encounterContent.test.ts` | first F1 test run: 2 tests, 0 pass, 2 fail; exit 1 | 45 tests, 45 pass, 0 fail; exit 0 |
+| Full MCP | `ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:15432/medplum npm --prefix mcp test` | pre-F1 head: 6,467 tests, 6,408 pass, 0 fail, 59 skipped | F1 tree: 6,470 tests, 6,411 pass, 0 fail, 59 skipped; exit 0 |
+| Typechecks | `tsc -p mcp/tsconfig.json --noEmit`; `tsc -p ui/tsconfig.json --noEmit --skipLibCheck`; `npm run typecheck:scripts` | prior head: all exit 0 | F1 tree: all exit 0 |
+| Preflight | `npm run preflight` | prior head: 0 warnings, 0 blocks; 245 NOT SCOPE-VERIFIED | F1 tree: 0 warnings, 0 blocks; 245 NOT SCOPE-VERIFIED; exit 0 |
+
+The dedicated `odos-sa-f1-fixback` stack answered its healthcheck on attempt **11/90** at two-second intervals. The fresh-stack order was smoke **12/12**, integration **218/218**, policy repair, authorization **78/78**, then provider proof. The direct Medplum search returned the requested id, status, encounter/context reference, and Condition verificationStatus for all **12** projected resource types. Active and entered-in-error Observations and Conditions remained distinguishable by `isLiveEncounterContent`. A provider-only human then read one synthetic visit carrying **60 Observations** through the registered doctor route: HTTP **200**, `complete: true`, row kind `open`, computed reason `none-found`, `timeZoneSource: environment`. No patient text or credentials were recorded in the bundle.
+
+Fresh-stack setup corrections were limited to the harness: the first smoke invocation omitted `MEDPLUM_CONTRACT_BOOTSTRAP=1` and could not find the new synthetic admin. The first repair invocation omitted that flag and encountered an invisible User; the next used the default Postgres port 5433 and could not connect. Supplying the contract flag and the dedicated port 15432 made repair complete. No slice product request failed. Unit suites ran with both operator files moved aside and restored afterward. The fixback stack was stopped and removed; final `docker ps --format '{{.Names}} {{.Ports}}'` returned only `vf-prac1b-walk-db 127.0.0.1:55481->5432/tcp`.
 
 ## Deployment and follow-ups
 

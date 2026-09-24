@@ -29,7 +29,9 @@ export async function encounterContentByEncounter(fhir: FhirSearchClient & Proto
     const collected: Resource[] = [];
     for (let offset = 0; offset < ids.length; offset += 25) {
       const chunk = ids.slice(offset, offset + 25);
-      const rows = await searchAll(fhir, kind, { [parameter]: chunk.map(id => `Encounter/${id}`).join(","), _sort: "-_lastUpdated" });
+      const fullRows = kind === "Media" || kind === "DiagnosticReport";
+      const elements = kind === "DocumentReference" ? "id,status,context" : kind === "Condition" ? "id,status,verificationStatus,encounter" : `id,status,${parameter}`;
+      const rows = await searchAll(fhir, kind, { [parameter]: chunk.map(id => `Encounter/${id}`).join(","), _sort: "-_lastUpdated", ...(!fullRows ? { _elements: elements } : {}) }, { maxRows: 10_000 });
       collected.push(...rows);
       for (const id of chunk) {
         const matching = chunk.length === 1 ? rows : rows.filter(resource => {
