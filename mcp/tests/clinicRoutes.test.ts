@@ -224,6 +224,7 @@ test("GET /clinic/summary authenticates once and returns every section from seed
       : null,
     now: () => "2026-07-11T15:00:00.000Z",
     timeZone: "America/New_York",
+    serviceFhir: { search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }) } as never,
   });
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });

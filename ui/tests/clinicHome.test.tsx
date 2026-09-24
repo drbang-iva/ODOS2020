@@ -105,13 +105,28 @@ test("waiting strip counts reuse the matching signature and order card values", 
       problemFlags: [],
     }],
   });
-  const html = renderToStaticMarkup(<ClinicHome initialSummary={summary} />);
+  const chartRow = (encounterId: string, owner: { reference: string; name: string } | { unassigned: true }, serviceDate: string) => ({
+    encounterId, patient: { reference: `Patient/${encounterId}`, name: `Patient ${encounterId}` }, serviceStart: `${serviceDate}T15:00:00Z`, serviceDate,
+    owner, kind: "open" as const, reasons: [{ code: "none-found" as const, label: "No interpretation blockers found" }],
+  });
+  const me = { reference: "Practitioner/me", name: "Dr Me" };
+  const other = { reference: "Practitioner/other", name: "Dr Other" };
+  const openCharts = {
+    timeZone: "America/Denver", timeZoneSource: "setting" as const, caller: { practitioner: me.reference }, complete: true,
+    today: { date: "2026-09-23", rows: [chartRow("today-mine", me, "2026-09-23")] },
+    lastClinicDay: { date: "2026-09-21", rows: [chartRow("last-mine", me, "2026-09-21"), chartRow("last-unassigned", { unassigned: true }, "2026-09-21"), chartRow("last-other", other, "2026-09-21")] },
+    older: { count: 5, oldestServiceDate: "2026-09-10", byOwner: [{ owner: me, count: 2, oldestServiceDate: "2026-09-14" }, { owner: other, count: 3, oldestServiceDate: "2026-09-10" }] },
+    needsReview: [], counts: { open: 4, nothingCharted: 0, signatureMissing: 0, needsReview: 0 },
+  };
+  const html = renderToStaticMarkup(<ClinicHome initialSummary={summary} initialOpenCharts={openCharts} />);
   const unsigned = html.match(/data-testid="clinic-wait-unsigned"[\s\S]*?<\/a>/)?.[0] ?? "";
-  const signatures = html.match(/data-testid="clinic-signatures-card"[\s\S]*?<\/section>/)?.[0] ?? "";
+  const chartsCard = html.match(/data-testid="clinic-open-charts-card"[\s\S]*?<\/section>/)?.[0] ?? "";
   const ordersChip = html.match(/data-testid="clinic-wait-orders"[\s\S]*?<\/a>/)?.[0] ?? "";
   const orderCard = html.match(/data-testid="clinic-orders-card"[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(unsigned, />3<\/strong>/);
-  assert.match(signatures, />3 charts<\/span>/);
+  const lastDayGroup = chartsCard.match(/data-group="last-clinic-day"[\s\S]*?(?=data-group=)/)?.[0] ?? "";
+  const cardBehind = (lastDayGroup.match(/class="odos-open-charts-row"/g) ?? []).length + Number(chartsCard.match(/>(\d+) older/)?.[1] ?? NaN);
+  assert.equal(cardBehind, 4);
+  assert.match(unsigned, new RegExp(`>${cardBehind}</strong><small>Open charts</small>`));
   assert.match(ordersChip, />4<\/strong>/);
   assert.match(orderCard, />1 need attention<\/span>/);
   assert.match(orderCard, />1<\/b> pre-lab/);

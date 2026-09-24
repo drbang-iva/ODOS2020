@@ -1,5 +1,6 @@
 import { fhir } from "./fhir";
 import type { LabOrderBoardSummary } from "./lab-order-transport";
+import { practiceTimeZoneMessage } from "./open-charts";
 
 export type ClinicFlowState = "with-you" | "roomed" | "waiting" | "checked-out" | "scheduled";
 
@@ -49,7 +50,7 @@ export async function fetchClinicSummary(fetchImpl: typeof fetch = fetch): Promi
       ...(fhir.authHeader() ? { Authorization: fhir.authHeader()! } : {}),
     },
   });
-  const body = await response.json() as ClinicSummary & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Clinic summary failed with HTTP ${response.status}.`);
+  const body = await response.json() as ClinicSummary & { error?: string; code?: string };
+  if (!response.ok) throw new Error(practiceTimeZoneMessage(body.code) ?? body.error ?? `Clinic summary failed with HTTP ${response.status}.`);
   return body;
 }
