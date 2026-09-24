@@ -1,3 +1,4 @@
+import { PracticeTimeZoneSettings } from "./scenes/settings/PracticeTimeZoneSettings";
 import { ConsentEvidence, canViewConsentEvidence } from "./scenes/ConsentEvidence";
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
@@ -496,6 +497,8 @@ export function RouteSwitch({
       return <ProcedureDefinitionsSettings canWrite={roles.includes("admin")} />;
     case "/settings/unused-guarantors":
       return <UnusedGuarantorsSettings canDiscard={businessActions.includes("guarantor.link")} />;
+    case "/settings/practice-time-zone":
+      return <PracticeTimeZoneSettings canWrite={roles.includes("admin")} />;
     case "/settings/age-of-majority":
       return <AgeOfMajoritySettings canWrite={roles.includes("admin")} />;
     case "/settings/statement-messages":

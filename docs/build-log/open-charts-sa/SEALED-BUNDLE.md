@@ -1,0 +1,272 @@
+# Open Charts A — sealed coder bundle
+
+The practice time-zone setting is admin-only. Both Open Charts endpoints resolve it through the service identity, then project native Encounters into Today, last clinic day, Older and needs review. A finished Encounter without exact-instant sign-off is shown for seven local calendar days; the desk response contains only the allowed nonclinical fields. Older expansion adds rows but does not change counts. The existing sign-off and abandonment readers use shared helpers with no intended behavior change. The canonical extension registry contains the single R3 entry after age-of-majority.
+
+The two new chart routes share a 120-request/minute limiter that keys anonymous traffic by IP and authenticated traffic by staff identity. A burst of anonymous requests cannot exhaust a clinician's quota. Service authentication precedes staff-role resolution, matching the other clinic routes. The historical clinic-day search stops at the newest eligible visit while retaining the ten-page incomplete bound when none is found.
+
+F1 fixback raises the per-type content bound from 1,000 to 10,000 rows per 25-visit chunk. Twelve existence-only types request only id, liveness, and encounter-match fields through `_elements`; Media and DiagnosticReport retain full rows for the interpretation gate. The accepted `complete: false` behavior remains when a content read genuinely exceeds the new bound.
+
+Branch: `drbang-iva/open-charts-sa-projection`. Base: `0703ab17155dde01b5afa4582bdf7f96c4fb7794`. The PR URL and exact head SHA are in the handoff response. Coder status: **needs-review**. No merge or Iris policy sync occurred.
+
+## Files and scope
+
+- `data/canonical-extensions/registry.json`
+- `mcp/src/authz/roles.ts`
+- `mcp/src/clinic/clinic-routes.ts`
+- `mcp/src/clinic/clinic-summary.ts`
+- `mcp/src/clinic/encounter-sign-off.ts`
+- `mcp/src/clinic/open-charts.ts`
+- `mcp/src/clinic/patient-overview.ts`
+- `mcp/src/clinic/practice-time-zone-config.ts`
+- `mcp/src/clinical-graph/encounter-abandon-endpoint.ts`
+- `mcp/src/clinical-graph/encounter-content.ts`
+- `mcp/tests/encounterContent.test.ts`
+- `mcp/tests/encounterSignOff.test.ts`
+- `mcp/tests/openCharts.test.ts`
+- `mcp/tests/openChartsLive.test.ts`
+- `mcp/tests/practiceTimeZoneAuthzLive.test.ts`
+- `mcp/tests/practiceTimeZoneConfig.test.ts`
+- `ui/src/App.tsx`
+- `ui/src/scenes/settings/PracticeTimeZoneSettings.tsx`
+- `ui/src/scenes/settings/SettingsIndex.tsx`
+- `ui/tests/practiceSettings.test.tsx`
+- `ui/tests/practiceTimeZoneSettings.test.tsx`
+- `docs/build-log/open-charts-sa/SEALED-BUNDLE.md`, `files.sha256`, `time-zone-before.png`, `time-zone-after.png`
+
+G1 was withdrawn; `mcp/tests/schedulingRbacGrants.test.ts` remains unchanged. G2 changes only the expected Settings href list and count 18→19. `index.ts`, staff/provider policy lists, scripts, packages and the rest of the extension registry remain unchanged. The visit-type fallback is Appointment type text/display, then Encounter type text/display.
+
+P1–P13 stand from the verified base. P11 live comma-joined searches returned both target Encounters and excluded the third for all 14 content types. P12 live Encounter date `lt` + `_sort=-date` ordered by `period.start`, and comma-separated statuses ORed. Initial seeder visibility finding stands: search 1/read 200 while ungranted provider, staff and admin humans search 0/read 404. R1's correction was applied: service read uses `deps.serviceFhir`, and any read error maps to Z6/502. R3's registry insertion is near the beginning of the array; PR #647's end append is a separate hunk.
+
+## Checks
+
+Every MCP suite used `ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:15432/medplum` against the isolated `odos-sa-*` Postgres container. Both `.odos/operator.env` and `.odos/operator-identity.json` were moved aside for the clean final unit suite. The 59 skips in the full MCP suite include the two new credentialed live tests and the existing credentialed lane; `ODOS_ALLOW_UNGATED_MCP=1` acknowledged that scope. Live results below are separate.
+
+| Check | Command | Real output |
+|---|---|---|
+| Base MCP | `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 6419 tests, 6362 pass, 0 fail, 57 skipped |
+| R5 PR head MCP, before F1 | same | tests 6467, pass 6408, fail 0, skipped 59 ; exit 0 |
+| Base UI | `npm --prefix ui test` | 1869 pass |
+| R5 PR head UI, unchanged by F1 | same | tests 1871, pass 1871, fail 0, skipped 0 ; exit 0 |
+| R2 unchanged summary/overview/abandon | `node --import tsx --test` on the three existing suites | 84 tests, 84 pass, 0 fail |
+| Added O12/O18 tests | `node --import tsx --test --test-name-pattern='^(O12\|O18)' mcp/tests/openCharts.test.ts` | tests 4, pass 4, fail 0, skipped 0 ; exit 0 |
+| MCP typecheck | `tsc -p mcp/tsconfig.json --noEmit` | exit 0 |
+| UI typecheck | `tsc -p ui/tsconfig.json --noEmit --skipLibCheck` | exit 0 |
+| Scripts typecheck | `npm run typecheck:scripts` | exit 0 |
+| Preflight | `npm run preflight` | 0 warnings, 0 hard blocks; exit 0 |
+| Fresh live smoke | included in `npm --prefix mcp run test:live-integration` | tests 12, pass 12, fail 0, skipped 0 |
+| Fresh live integration total | same command | tests 218, pass 218, fail 0, skipped 0 ; exit 0 |
+| Fresh live authorization | `MEDPLUM_CONTRACT_BOOTSTRAP=1 npm --prefix mcp run test:live-authz` | tests 78, pass 78, fail 0, skipped 0 ; exit 0 |
+| Final-head O19/O21/O23/O26 live controls and limiter | `node --import tsx --test` on the two new live suites | tests 3, pass 3, fail 0, skipped 0 ; exit 0 |
+
+Preflight NOT SCOPE-VERIFIED: **244 base → 245 final**. Basic changed from 121 total / 8 scope-verified / 113 unverified to 123 / 9 / 114. The single added unverified read is the admin settings page's Basic search. The service singleton search is marked and scope-verified.
+
+## Mutation proofs
+
+For each row, the specified production source or new-test harness was broken, its matching test went red, the original bytes were restored and the same test went green. All mutations ran with the dedicated Postgres environment. Live policy changes were synced only to the disposable localhost project with the privileged synthetic seeder; final stored policy readback is admin 2 setting rules, staff 0, provider 0. No Iris sync.
+
+| Guard | Red TAP | Green TAP |
+|---|---|---|
+| O1 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O2 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O3 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O4 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O5-noshow | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O5-cancelled | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O5-entered-in-error | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O6 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O7 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O8 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O9 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O10 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O11 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O12 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O13 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O14 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O15 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O16 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O17 | 2 tests / 0 pass / 2 fail; exit 1 | 2 tests / 2 pass / 0 fail; exit 0 |
+| O18-keys | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O18-reads | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O19 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O20-Z1 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O20-Z2 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O20-Z3 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O20-Z4 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O20-Z5 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O20-Z6 | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O22 | 7 tests / 5 pass / 2 fail; exit 1 | 7 tests / 7 pass / 0 fail; exit 0 |
+| O23-unit | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O24 | 2 tests / 1 pass / 1 fail; exit 1 | 2 tests / 2 pass / 0 fail; exit 0 |
+| O25 | 48 tests / 46 pass / 2 fail; exit 1 | 48 tests / 48 pass / 0 fail; exit 0 |
+| R4 | 2 tests / 0 pass / 2 fail; exit 1 | 2 tests / 2 pass / 0 fail; exit 0 |
+| O19-live | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O26-live | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O21-readback | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O21-no-admin-write | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O21-staff-read | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O23-no-admin-read | 1 tests / 0 pass / 1 fail; exit 1 | 1 tests / 1 pass / 0 fail; exit 0 |
+| O19-rate-limit | 1 tests / 0 pass / 1 fail; exit 1 (expected 429, actual 401) | 1 tests / 1 pass / 0 fail; exit 0 |
+| O19-authenticated-quota | 1 tests / 0 pass / 1 fail; exit 1 (expected 200, actual 429 after anonymous exhaustion) | 1 tests / 1 pass / 0 fail; exit 0 |
+| historical clinic-day early stop | 1 tests / 0 pass / 1 fail; exit 1 (expected complete true, actual false) | 1 tests / 1 pass / 0 fail; exit 0 |
+
+O26 red showed **both** provider doctor and staff desk returning `timeZoneSource: environment` when the resolver was changed to caller scope. O21's new readback mutant replaced the refused caller's PUT with a seeder PUT; the assertion failed on a changed `meta.versionId`, then passed after restoration. Removing admin read gave admin GET 404 against expected 200; granting staff read made the 0-entry staff search fail. Removing admin write made the create assertion fail. O23's unit pin independently went red on deletion of admin read.
+
+R3 registry entry deleted → `npm run preflight` exit 1, **1 hard block**. Preserved red report text:
+
+```text
+hard-block: odos-extension-url-shape (mcp/src/clinic/practice-time-zone-config.ts:6) - ODOS-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.
+```
+
+Entry restored → preflight exit 0, **0 hard blocks**. G2 link removed → 2 tests / 1 pass / 1 fail; restored → 2 pass / 0 fail. R4's two tests went 0/2 on counting expanded Older and returned 2/2 after restoration, including a failing Older-content read that does not alter main counts.
+
+## Fresh synthetic live and browser proof
+
+Compose project `odos-sa-opencharts-premise` used local port 18103 and byte-identical `MEDPLUM_BASE_URL=http://localhost:18103/`. Health polling at 2-second intervals passed **1/90** on restart after fresh volume creation. The live order was smoke+integration → canonical role repair (`GITHUB_ACTIONS=true` only there) → authorization 78/78 → single-role caller and browser proof. Human callers had actual Practitioner profiles and exactly `[provider]`, `[staff]`, `[admin]` roles, without project-admin membership.
+
+O19: unauthenticated 401 both; provider-only 200 both; staff-only/admin-only 403 doctor and 200 desk. O21: admin create 201, read 200, update 200; staff/provider creates and updates returned 403 or 404 and the seeder readback kept the same version and `America/Denver` after **each** refusal; staff/provider setting searches returned 0 entries. O26: provider doctor and staff desk returned `environment` / `America/New_York` before the seeded setting and `setting` / `America/Denver` afterward. The O19/O26 seeded setting was cleaned up.
+
+Nine synthetic visits were created with `now` real. Signed and cancelled visits were absent; no-show went to needs review; the finished unsigned visit showed `signature-missing`; the accepted synthetic OCT proposal/order without interpretation showed `needs-interpretation`. Provider doctor and staff desk returned this trimmed JSON (synthetic names only):
+
+```json
+{
+  "provider": {
+    "timeZoneSource": "environment",
+    "timeZone": "America/New_York",
+    "today": [
+      {
+        "patient": "SaR5Walkin",
+        "kind": "nothing-charted",
+        "reasons": [
+          "nothing-charted"
+        ]
+      },
+      {
+        "patient": "SaR5Oct",
+        "kind": "open",
+        "reasons": [
+          "needs-interpretation"
+        ]
+      },
+      {
+        "patient": "SaR5Today",
+        "kind": "open",
+        "reasons": [
+          "none-found"
+        ]
+      },
+      {
+        "patient": "SaR5Unsigned",
+        "kind": "signature-missing",
+        "reasons": [
+          "signature-missing"
+        ]
+      }
+    ],
+    "lastClinicDay": [
+      {
+        "patient": "SaR5Last",
+        "kind": "nothing-charted",
+        "reasons": [
+          "nothing-charted"
+        ]
+      }
+    ],
+    "older": [
+      {
+        "patient": "SaR5Older",
+        "kind": "nothing-charted",
+        "reasons": [
+          "nothing-charted"
+        ]
+      }
+    ],
+    "needsReview": [
+      {
+        "patient": "SaR5NoShow",
+        "reason": "Appointment noshow, chart still open"
+      }
+    ],
+    "counts": {
+      "open": 5,
+      "nothingCharted": 3,
+      "signatureMissing": 2,
+      "needsReview": 4
+    }
+  },
+  "staff": {
+    "timeZoneSource": "environment",
+    "timeZone": "America/New_York",
+    "today": [
+      {
+        "patient": "SaR5Walkin",
+        "status": "chart open",
+        "priorDay": false
+      },
+      {
+        "patient": "SaR5Oct",
+        "status": "chart open",
+        "priorDay": false
+      },
+      {
+        "patient": "SaR5Today",
+        "status": "chart open",
+        "priorDay": false
+      }
+    ],
+    "lastClinicDay": [
+      {
+        "patient": "SaR5Last",
+        "status": "chart open",
+        "priorDay": true
+      }
+    ],
+    "older": {
+      "count": 2
+    }
+  }
+}
+```
+
+The desk `older.count` is 2 because one earlier synthetic authorization visit is also Older; one Older row belongs to this nine-case fixture. Counts reflect the complete returned set, while the listed rows are filtered to these nine cases. The setting was absent during this readback, so source was `environment`.
+
+The admin page on the actual app route showed “Not set — the server default is used until you save one.” Playwright then selected `America/Denver`, saved, showed “Practice time zone saved.”, and a credentialed Basic search returned one entry. Both inspected 1440×900 screenshots are in this directory. The server setting remained only in the disposable stack. The own stack was stopped after proof; final `docker ps --format '{{.Names}} {{.Ports}}'` listed only `vf-prac1b-walk-db 127.0.0.1:55481->5432/tcp`, which was untouched.
+
+## Existing reds and harness corrections
+
+R2 existing overview regressions: the new local `signedEncounterIds` declaration shadowed its imported helper, producing 23 overview `ReferenceError`s and one route 500. Alias import to `findSignedEncounterIds` fixed the product code; no existing test changed; unchanged summary/overview/abandon returned 84/84 green.
+
+Three existing `searchParamContract.test.ts` assertions failed because the first bounded-reader draft forwarded unresolved search parameters. Product code now names its Encounter/Provenance searches explicitly and passes the first page to the bounded collector. No test or search registry changed, and the 42-test audit/projection focus and final full MCP suite returned green.
+
+Harness corrections did not change product code or accepted outputs: the first authorization invocation omitted CI's `MEDPLUM_CONTRACT_BOOTSTRAP=1` and failed two synthetic cleanup assertions (76/78); the corrected fresh lane returned 78/78. A private policy-sync script initially used an unprivileged bootstrap caller and got 403; using the privileged seeder allowed actual policy red/green checks. The first staff-read mutation matched both provider and staff source anchors and stopped before editing; a staff-only anchor then ran successfully. The first private readback script import could not resolve Express from `.odos`; its path was corrected and the same requests then completed. No production request failure was waived. The initial 403-only O21 assertion was the coder's unsupported exact-status assumption; R5 authorized 403 or 404 plus the seeder version/zone readback. The current test passed live.
+
+The first post-PR full MCP replay had nine unrelated CLI fixture failures because the disposable stack's `.odos/operator.env` and identity file were present. They were moved aside for the final unit replay, as in the prior green run, then restored. The first post-screenshot live replay saw the screenshot's saved time-zone setting and failed the expected absent-setting assertion; that synthetic setting was deleted before the same live tests returned green. CodeRabbit's route authentication-order, historical-day, and quota-separation findings were fixed in product code; its Markdown table finding was fixed in this bundle. CodeQL's new-route missing-rate-limit findings prompted the limiter and its mutation proof. PR-Agent could not produce a review at the first or second head because its 32,000-token diff limit was exceeded; its final-head state is reported in the handoff.
+
+On the final limiter replay, the first live invocation began immediately after restarting Medplum and failed to connect. The localhost healthcheck then returned 200, and the unchanged live tests passed 3/3 on rerun. This was stack readiness before a request, not a product response.
+
+## F1 evaluator fixback
+
+The independent evaluation of head `89929a149aebe5370efe03fe49307626ba2a7cfb` found that the default 1,000-row `searchAll` bound made a 25-visit chunk fail after an average of 40 Observations per visit. The fix changes only `mcp/src/clinical-graph/encounter-content.ts` and appends tests in `mcp/tests/encounterContent.test.ts` and `mcp/tests/openCharts.test.ts`. Every one of the 14 content types now has a 10,000-row bound per chunk. The 12 existence-only types request `_elements` for id, status, and the encounter reference field; Condition also requests verificationStatus, and DocumentReference requests context. Media and DiagnosticReport still return full resources for the interpretation gate. `mcp/src/clinic/open-charts.ts` and existing assertions did not change.
+
+| F1 proof | Command | Before / red | After / green |
+|---|---|---|---|
+| 25 visits × 200 Observations | `node --import tsx --test --test-name-pattern='F1 25 open visits' mcp/tests/openCharts.test.ts` through registered route | default 1,000 bound: 1 fail; expected `complete: true`, actual `false`; exit 1 | 10,000 bound: 1 pass, 0 fail; all 25 rows `open` with `none-found` reasons; exit 0 |
+| Existence-only projection | `node --import tsx --test --test-name-pattern='F1 existence-only' mcp/tests/openCharts.test.ts` through registered route | remove `_elements`: 1 fail; expected `id,status,encounter`, actual absent; exit 1 | restore `_elements`: 1 pass, 0 fail; exit 0 |
+| Projected liveness and S0 | `node --import tsx --test mcp/tests/encounterContent.test.ts mcp/tests/encounterAbandon.test.ts` | existing abandonment tests unchanged | 49 tests, 49 pass, 0 fail; exit 0 |
+| Focused Open Charts and content | `node --import tsx --test mcp/tests/openCharts.test.ts mcp/tests/encounterContent.test.ts` | first F1 test run: 2 tests, 0 pass, 2 fail; exit 1 | 45 tests, 45 pass, 0 fail; exit 0 |
+| Full MCP | `ODOS_ALLOW_UNGATED_MCP=1 ODOS_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:15432/medplum npm --prefix mcp test` | pre-F1 head: 6,467 tests, 6,408 pass, 0 fail, 59 skipped | F1 tree: 6,470 tests, 6,411 pass, 0 fail, 59 skipped; exit 0 |
+| Typechecks | `tsc -p mcp/tsconfig.json --noEmit`; `tsc -p ui/tsconfig.json --noEmit --skipLibCheck`; `npm run typecheck:scripts` | prior head: all exit 0 | F1 tree: all exit 0 |
+| Preflight | `npm run preflight` | prior head: 0 warnings, 0 blocks; 245 NOT SCOPE-VERIFIED | F1 tree: 0 warnings, 0 blocks; 245 NOT SCOPE-VERIFIED; exit 0 |
+
+The dedicated `odos-sa-f1-fixback` stack answered its healthcheck on attempt **11/90** at two-second intervals. The fresh-stack order was smoke **12/12**, integration **218/218**, policy repair, authorization **78/78**, then provider proof. The direct Medplum search returned the requested id, status, encounter/context reference, and Condition verificationStatus for all **12** projected resource types. Active and entered-in-error Observations and Conditions remained distinguishable by `isLiveEncounterContent`. A provider-only human then read one synthetic visit carrying **60 Observations** through the registered doctor route: HTTP **200**, `complete: true`, row kind `open`, computed reason `none-found`, `timeZoneSource: environment`. No patient text or credentials were recorded in the bundle.
+
+Fresh-stack setup corrections were limited to the harness: the first smoke invocation omitted `MEDPLUM_CONTRACT_BOOTSTRAP=1` and could not find the new synthetic admin. The first repair invocation omitted that flag and encountered an invisible User; the next used the default Postgres port 5433 and could not connect. Supplying the contract flag and the dedicated port 15432 made repair complete. No slice product request failed. Unit suites ran with both operator files moved aside and restored afterward. The fixback stack was stopped and removed; final `docker ps --format '{{.Names}} {{.Ports}}'` returned only `vf-prac1b-walk-db 127.0.0.1:55481->5432/tcp`.
+
+## Deployment and follow-ups
+
+The Iris policy sync remains a deployment dependency for the settings page. Before it, no admin can create the setting; the service read finds none, and both endpoints use valid `ODOS_TIMEZONE=America/New_York` with Z4 / HTTP 200 / `timeZoneSource: environment`. After sync, admin can save one and Z1 selects it. Any service read error is Z6 / HTTP 502 without fallback. No Iris policy changes were made here.
+
+Still outside this slice: doctor card B, desk badge/panel C, Close as incomplete D, waiting on results E, the Q4 admin-home view, migrating `/clinic/summary` or other env readers to the resolver, sign-gate/claim-hold/abandon behavioral changes, and #661's separate evidence follow-up. The PR still needs CodeRabbit/PR-Agent and an independent Claude Opus evaluation at the final head. Codex authored this code and cannot evaluate it.
+
+⚠️ NOT EVALUATED — hand to Claude Opus for independent exact-head evaluation before merge.
+
+needs-review

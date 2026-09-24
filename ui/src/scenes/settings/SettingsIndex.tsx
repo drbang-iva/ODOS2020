@@ -185,6 +185,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         businessAction: "guarantor.link",
       },
       {
+        href: "/settings/practice-time-zone",
+        title: "Practice time zone",
+        description: "Set the local time zone used for open charts.",
+        synonyms: ["time", "zone", "clinic", "date"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/age-of-majority",
         title: "Age of majority",
         description: "Set the age used for registration, statements, and communication recipients.",
