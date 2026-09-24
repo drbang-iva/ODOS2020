@@ -1182,3 +1182,71 @@ test("G19 GitHub GFM renders Codex visible and Claude inside the code block", ()
   assert.equal(decision.reason, "same-tool-evaluator");
   assert.equal(decision.passed, false);
 });
+
+test("V1 Grok coder accepts trusted Claude and Codex evaluations", () => {
+  for (const evaluator of ["Opus 5", "Codex (GPT-6)"]) {
+    const decision = evaluate({
+      prBody: "Coded-by: Grok — grok-4.7, high effort",
+      comments: [comment(marker(evaluator, "PASS"))],
+    });
+    assert.equal(decision.reason, "passing-verdict", evaluator);
+    assert.equal(decision.passed, true, evaluator);
+  }
+});
+
+test("V2 Grok coder recognition requires a whole-word tool name", () => {
+  for (const coder of ["Grokish", "GrokCode"]) {
+    const decision = evaluate({
+      prBody: `Coded-by: ${coder}`,
+      comments: [comment(marker("Opus 5", "PASS"))],
+    });
+    assert.equal(decision.reason, "unrecognized-coded-by", coder);
+    assert.equal(decision.passed, false, coder);
+  }
+});
+
+test("V3 Grok remains excluded from the trusted evaluator allowlist", () => {
+  const decision = evaluate({
+    prBody: "Coded-by: Codex — GPT-6 Sol, medium effort",
+    comments: [comment(marker("Grok 4.7", "PASS"))],
+  });
+  assert.equal(decision.reason, "untrusted-model");
+  assert.equal(decision.passed, false);
+});
+
+test("V4 multi-coder message names the declared Claude and Grok tools", () => {
+  const mixedDecision = evaluate({
+    prBody: "Coded-by: Claude — Sonnet 5\nCoded-by: Grok — grok-4.7",
+    comments: [comment(marker("Opus 5", "PASS"))],
+  });
+  assert.equal(mixedDecision.reason, "same-tool-evaluator");
+  assert.match(mixedDecision.message, /both Claude and Grok are declared coders/);
+  assert.match(mixedDecision.message, /get an evaluation from a tool that is not declared as a coder/);
+  assert.doesNotMatch(mixedDecision.message, /Codex/);
+
+  const reversedLegacyDecision = evaluate({
+    prBody: "Coded-by: Claude — Sonnet 5\nCoded-by: Codex — GPT-6 Sol",
+    comments: [comment(marker("Opus 5", "PASS"))],
+  });
+  assert.equal(reversedLegacyDecision.reason, "same-tool-evaluator");
+  assert.match(reversedLegacyDecision.message, /both Codex and Claude are declared coders/);
+  assert.match(reversedLegacyDecision.message, /only an operator OVERRIDE can pass/);
+});
+
+test("V5 Grok-only coding remains independent from a Claude evaluation", () => {
+  const decision = evaluate({
+    prBody: "Coded-by: Grok — grok-4.7, high effort",
+    comments: [comment(marker("Opus 5", "PASS"))],
+  });
+  assert.equal(decision.reason, "passing-verdict");
+  assert.equal(decision.passed, true);
+});
+
+test("V6 edited PR template keeps its Grok-inclusive placeholder fail-closed", () => {
+  const prBody = workflowSource(".github/pull_request_template.md");
+  assert.match(prBody, /^Coded-by: <Codex \| Claude \| Grok> — <model, effort>$/m);
+  assert.equal(
+    evaluate({ prBody, comments: [comment(marker("Opus 5", "PASS"))] }).reason,
+    "unrecognized-coded-by",
+  );
+});

@@ -50,6 +50,13 @@ function isTrustedEvaluator(model) {
 const TOOL_TOKENS = {
   codex: /\b(?:Codex|GPT|Astra|Sol)\b/i,
   claude: /\b(?:Claude|Opus|Fable|Sonnet|Haiku)\b/i,
+  grok: /\bGrok\b/i,
+};
+
+const TOOL_NAMES = {
+  codex: "Codex",
+  claude: "Claude",
+  grok: "Grok",
 };
 
 function namedTools(value) {
@@ -114,11 +121,11 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
       if (closingCommentLine) continue;
       const declaration = /^Coded-by:\s*(.+?)\s*$/i.exec(line);
       if (!declaration) continue;
-      const coder = /^(Codex|Claude)\b/i.exec(declaration[1]);
+      const coder = /^(Codex|Claude|Grok)\b/i.exec(declaration[1]);
       if (!coder) {
         return failure(
           "unrecognized-coded-by",
-          `CODED-BY UNRECOGNIZED — '${declaration[1]}' must begin with Codex or Claude. Replace the PR body's Coded-by placeholder with the tool that coded the PR.`,
+          `CODED-BY UNRECOGNIZED — '${declaration[1]}' must begin with Codex, Claude or Grok. Replace the PR body's Coded-by placeholder with the tool that coded the PR.`,
         );
       }
       for (const tool of namedTools(declaration[1])) coders.add(tool);
@@ -126,7 +133,7 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
     if (coders.size === 0) {
       return failure(
         "missing-coded-by",
-        "CODED-BY MISSING — the PR body must declare 'Coded-by: Codex' or 'Coded-by: Claude' outside fenced code blocks and HTML comments.",
+        "CODED-BY MISSING — the PR body must declare 'Coded-by: Codex', 'Coded-by: Claude' or 'Coded-by: Grok' outside fenced code blocks and HTML comments.",
       );
     }
   }
@@ -139,13 +146,22 @@ function evaluateToolIndependence({ evaluator, prBody, prAuthorType }) {
     );
   }
   if (coders.has(tool)) {
-    const name = tool === "codex" ? "Codex" : "Claude";
-    const other = tool === "codex" ? "Claude" : "Codex";
+    const name = TOOL_NAMES[tool];
+    const other = TOOL_NAMES[tool === "codex" ? "claude" : "codex"];
+    const coderNames = Object.keys(TOOL_NAMES)
+      .filter((coder) => coders.has(coder))
+      .map((coder) => TOOL_NAMES[coder]);
+    const declaredCoders = coderNames.length === 2
+      ? `both ${coderNames.join(" and ")}`
+      : `${coderNames.slice(0, -1).join(", ")} and ${coderNames.at(-1)}`;
+    const multiCoderGuidance = coders.has("codex") && coders.has("claude")
+      ? "so only an operator OVERRIDE can pass."
+      : "get an evaluation from a tool that is not declared as a coder or an operator OVERRIDE.";
     return failure(
       "same-tool-evaluator",
       `Evaluator signature '${evaluator}' is the ${name} tool; this PR declares 'Coded-by: ${name}'. The tool that coded a PR cannot evaluate it — `
         + (coders.size > 1
-          ? "both Codex and Claude are declared coders, so only an operator OVERRIDE can pass."
+          ? `${declaredCoders} are declared coders; ${multiCoderGuidance}`
           : `get a ${other} evaluation or an operator OVERRIDE.`),
     );
   }
