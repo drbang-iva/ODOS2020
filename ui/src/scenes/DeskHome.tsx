@@ -9,6 +9,11 @@ import { PatientSearch } from "./PatientPicker";
 import { useOfficeChannel } from "../components/OfficeChannel";
 import { openInboundFaxDocument, triageInboundFax } from "../lib/inbound-fax";
 
+import type { Desk } from "../lib/open-charts";
+import type { PracticeRoleId } from "../lib/practice-roles";
+import { useOpenCharts } from "./clinic/OpenChartsCard";
+import { OpenChartsDeskPanel, openChartsDeskBadge } from "./frontdesk/OpenChartsDeskPanel";
+
 export const DESK_LABEL = "Desk";
 export { CLINIC_PATH, DESK_HOME_PATH } from "../lib/app-paths";
 export const DESK_CARD_STORAGE_KEY = "odos.desk.cards.v2";
@@ -79,16 +84,23 @@ function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
 }
 
 export function DeskHome({
+  roles = [],
+  initialOpenCharts,
   initialSummary,
   initialOfficeMessages,
   officeApi = defaultDeskOfficeApi,
   inboundFaxApi = defaultInboundFaxApi,
 }: {
+  roles?: readonly PracticeRoleId[];
+  initialOpenCharts?: Desk;
   initialSummary?: DeskSummary;
   initialOfficeMessages?: OfficeMessage[];
   officeApi?: DeskOfficeApi;
   inboundFaxApi?: InboundFaxApi;
 } = {}) {
+  const openCharts = useOpenCharts(roles, initialOpenCharts, "desk");
+  const openChartsData = openCharts.data as Desk | undefined;
+  const openChartsBadge = openChartsDeskBadge(openChartsData, openCharts.error);
   const sharedOffice = useOfficeChannel();
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
@@ -331,6 +343,9 @@ export function DeskHome({
 
       <div className="odos-dock">
         <CockpitBadgeDock
+          counts={{ "open-charts": openChartsBadge.count }}
+          tones={{ "open-charts": openChartsBadge.tone }}
+          titles={{ "open-charts": openChartsBadge.title }}
           openPanel={openPanel}
           pinnedPanel={pinnedPanel}
           onToggle={togglePinnedPanel}
@@ -348,7 +363,9 @@ export function DeskHome({
         onPositionChange={floatPanel}
         onPositionCommit={commitPanelPosition}
         onRedock={redockPanel}
-      />
+      >
+        {renderedPanel === "open-charts" ? <OpenChartsDeskPanel data={openChartsData} error={openCharts.error} /> : undefined}
+      </CockpitGuestPanel>
       {faxPreview && <CockpitGuestPanel
         panel="fax"
         title="Inbound fax PDF"

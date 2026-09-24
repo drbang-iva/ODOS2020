@@ -110,8 +110,8 @@ export function olderAgeBands<T extends { serviceDate: string }>(rows: readonly 
   return bands.filter((band) => band.rows.length > 0);
 }
 
-export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenCharts?: Doctor | Desk): OpenChartsView {
-  const shape = openChartsShape(roles);
+export function useOpenCharts(roles: readonly PracticeRoleId[], initialOpenCharts?: Doctor | Desk, requestedShape?: OpenChartsShape): OpenChartsView {
+  const shape = requestedShape ?? openChartsShape(roles);
   // Fetched state remembers the shape and supplied data it was fetched under; it is shown only while both still match.
   const [state, setState] = useState<OpenChartsState & { shape?: OpenChartsShape; source?: Doctor | Desk }>({});
   const [olderOpen, setOlderOpen] = useState(false);

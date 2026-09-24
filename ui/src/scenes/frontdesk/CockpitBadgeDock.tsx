@@ -11,6 +11,8 @@ export function CockpitBadgeDock({
   onHover,
   onHoverLeave,
   counts = {},
+  tones = {},
+  titles = {},
 }: {
   openPanel: CockpitPanelId | null;
   pinnedPanel?: CockpitPanelId | null;
@@ -18,6 +20,8 @@ export function CockpitBadgeDock({
   onHover?: (id: CockpitPanelId) => void;
   onHoverLeave?: () => void;
   counts?: Partial<Record<CockpitPanelId, number>>;
+  tones?: Partial<Record<CockpitPanelId, "alarm" | "plain">>;
+  titles?: Partial<Record<CockpitPanelId, string>>;
 }) {
   return (
     <nav
@@ -35,7 +39,7 @@ export function CockpitBadgeDock({
             aria-label={item.label}
             aria-expanded={active}
             aria-pressed={pinnedPanel === item.id}
-            title={item.label}
+            title={titles[item.id] ?? item.label}
             onClick={() => onToggle(item.id)}
             onPointerEnter={(event) => event.pointerType !== "touch" && onHover?.(item.id)}
             className={clsx(
@@ -45,7 +49,7 @@ export function CockpitBadgeDock({
           >
             <span aria-hidden>{item.glyph}</span>
             {badge && (
-              <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">
+              <span className={clsx("absolute -right-1 -top-1 rounded-full px-1 text-[9px] font-bold leading-4 text-white", tones[item.id] === "plain" ? "odos-cockpit-badge-plain" : "bg-red-500")}>
                 {badge}
               </span>
             )}

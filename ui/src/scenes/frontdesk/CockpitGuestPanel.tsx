@@ -54,6 +54,7 @@ const PANEL_STUB: Record<CockpitPanelId, string> = {
   messages: "Two-way messaging with inline TEXT BACK · BOOK · PAY REQ (Phase 3b, GHL adapter).",
   calls: "Call history, one-click callback, voicemail + recording playback (Phase 3b).",
   requests: "Screened appointment requests, badge-counted for immediate review (Phase 4b).",
+  "open-charts": "Open charts are unavailable right now.",
   "team-chat": "Internal staff channels, DMs, mentions, threads (Phase 5b).",
   notifications: "Cross-cutting payment + schedule event stream (later).",
   fax: "Fax inbox with sent/failed status + New Fax (later; fax provider TBD).",

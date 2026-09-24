@@ -1,0 +1,77 @@
+{
+  "evidence": [
+    {
+      "role": "staff",
+      "path": "/desk",
+      "alarm": true,
+      "title": "Open charts: 1 today · 1 from Wed, Sep 23 · 0 older",
+      "requests": [
+        "http://127.0.0.1:25174/clinic/open-charts/desk"
+      ],
+      "rows": 2,
+      "today": 1,
+      "behind": 1
+    },
+    {
+      "role": "staff",
+      "path": "/frontdesk",
+      "alarm": true,
+      "title": "Open charts: 1 today · 1 from Wed, Sep 23 · 0 older",
+      "requests": [
+        "http://127.0.0.1:25174/clinic/open-charts/desk"
+      ],
+      "rows": 2,
+      "today": 1,
+      "behind": 1
+    },
+    {
+      "role": "provider",
+      "path": "/desk",
+      "alarm": true,
+      "title": "Open charts: 1 today · 1 from Wed, Sep 23 · 0 older",
+      "requests": [
+        "http://127.0.0.1:25174/clinic/open-charts/desk"
+      ],
+      "rows": 2,
+      "today": 1,
+      "behind": 1
+    },
+    {
+      "role": "provider",
+      "path": "/frontdesk",
+      "alarm": true,
+      "title": "Open charts: 1 today · 1 from Wed, Sep 23 · 0 older",
+      "requests": [
+        "http://127.0.0.1:25174/clinic/open-charts/desk"
+      ],
+      "rows": 2,
+      "today": 1,
+      "behind": 1
+    },
+    {
+      "role": "staff",
+      "path": "/desk",
+      "alarm": false,
+      "title": "Open charts: 1 today · 0 older",
+      "requests": [
+        "http://127.0.0.1:25174/clinic/open-charts/desk"
+      ],
+      "rows": 1,
+      "today": 1,
+      "behind": 0
+    },
+    {
+      "role": "staff",
+      "path": "/frontdesk",
+      "alarm": false,
+      "title": "Open charts: 1 today · 0 older",
+      "requests": [
+        "http://127.0.0.1:25174/clinic/open-charts/desk"
+      ],
+      "rows": 1,
+      "today": 1,
+      "behind": 0
+    }
+  ],
+  "pageErrors": []
+}
