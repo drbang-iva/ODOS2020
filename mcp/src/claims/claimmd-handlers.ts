@@ -40,6 +40,7 @@ import {
   claimTouchRequestFingerprint,
 } from "./claim-touch-ledger.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
+import type { HeldClaimLine } from "./interpretation-hold.js";
 import {
   isClearinghouseId,
   selectClearinghouseAdapter,
@@ -188,30 +189,7 @@ export async function handleSubmitClaimRequest(
         throw new ClaimSubmissionValidationError(`ChargeItem ${index + 1}: ${messageOf(error)}`);
       }
     }
-    const { claimLineRequirement, holdLines, loadClaimEvidence, loadClaimHoldContext } = await import("./interpretation-hold.js");
-    const storedLines: ProfessionalClaimChargeItemInput[] = [];
-    for (const line of body.claim.chargeItems) {
-      if (!line.id) {
-        assertChargeItemPatient(line, body.claim.patientReference);
-        storedLines.push(line);
-        continue;
-      }
-      if (!/^[A-Za-z0-9.-]+$/.test(line.id)) {
-        throw new ClaimSubmissionValidationError(`ChargeItem id ${line.id} is not a valid local FHIR id.`);
-      }
-      let stored: ChargeItem;
-      try {
-        stored = await auth.fhir.read<ChargeItem>("ChargeItem", line.id);
-      } catch {
-        throw new ClaimSubmissionValidationError(`ChargeItem/${line.id} could not be loaded for this Claim.`);
-      }
-      assertChargeItemPatient(stored, body.claim.patientReference);
-      storedLines.push({ ...stored, ...(line.diagnosisSequence ? { diagnosisSequence: line.diagnosisSequence } : {}) });
-    }
-    const holdContext = await loadClaimHoldContext(auth.fhir, storedLines);
-    const evidence = storedLines.some(line => claimLineRequirement(line, holdContext).kind === "type")
-      ? await loadClaimEvidence(auth.fhir, body.claim.patientReference, body.claim.serviceDate) : new Set<never>();
-    const { held: heldLines } = holdLines(storedLines, evidence, holdContext);
+    const { held: heldLines } = await evaluateClaimLineHold(auth, body.claim.chargeItems, body.claim.patientReference, body.claim.serviceDate);
     if (heldLines.length) {
       const heldIndices = new Set(heldLines.map(line => line.index));
       const kept = body.claim.chargeItems.filter((_line, index) => !heldIndices.has(index));
@@ -406,6 +384,26 @@ export async function handleStediClaimResubmissionRequest(
         claimDiagnosisSequence(chargeItem, resubmissionInput.diagnoses.length);
       } catch (error) {
         throw new ClaimSubmissionValidationError(`ChargeItem ${index + 1}: ${messageOf(error)}`);
+      }
+    }
+    // A replacement is adjudicated whole, so a dropped line would be un-billed (and recouped if paid): refuse the
+    // correction instead of dropping held lines. A void bills nothing and is never held.
+    if (parsed.intent === "correct") {
+      let heldLines: HeldClaimLine[];
+      try {
+        ({ held: heldLines } = await evaluateClaimLineHold(auth, resubmissionInput.chargeItems,
+          resubmissionInput.patientReference, resubmissionInput.serviceDate));
+      } catch (error) {
+        if (error instanceof ClaimSubmissionValidationError) throw error;
+        // Nothing has been sent, so this must not reach the transmission-failure path (and its claim-rejected Task).
+        await audit(deps, auth, "claim.submit.failed", "failure", parsed.originalClaimReference, patientReference,
+          "correction-hold-unavailable", "stedi");
+        return { status: 502, body: { error: "The correction's interpretation evidence could not be read; nothing was sent." } };
+      }
+      if (heldLines.length) {
+        await audit(deps, auth, "claim.submit.failed", "failure", parsed.originalClaimReference, patientReference,
+          `correction-lines-held: ${heldLines.length} lines`, "stedi");
+        return { status: 409, body: { code: "correction-lines-held", heldLines } };
       }
     }
     const persistedChargeItems = await persistClaimChargeItems(
@@ -2176,6 +2174,40 @@ function withAuthoritativePatientResponsibility(response: ClaimResponse, targetC
     ];
   }
   return { ...response, item: items };
+}
+
+// Evaluates the #661 interpretation hold for claim lines about to be transmitted. Stored lines are judged by their FHIR
+// copy, never the request body. Read-only; each endpoint decides what a held line means.
+async function evaluateClaimLineHold(
+  auth: AuthenticatedClaimsStaff,
+  chargeItems: readonly ProfessionalClaimChargeItemInput[],
+  patientReference: string,
+  serviceDate: string,
+): Promise<{ kept: ProfessionalClaimChargeItemInput[]; held: HeldClaimLine[] }> {
+  const { claimLineRequirement, holdLines, loadClaimEvidence, loadClaimHoldContext } = await import("./interpretation-hold.js");
+  const storedLines: ProfessionalClaimChargeItemInput[] = [];
+  for (const line of chargeItems) {
+    if (!line.id) {
+      assertChargeItemPatient(line, patientReference);
+      storedLines.push(line);
+      continue;
+    }
+    if (!/^[A-Za-z0-9.-]+$/.test(line.id)) {
+      throw new ClaimSubmissionValidationError(`ChargeItem id ${line.id} is not a valid local FHIR id.`);
+    }
+    let stored: ChargeItem;
+    try {
+      stored = await auth.fhir.read<ChargeItem>("ChargeItem", line.id);
+    } catch {
+      throw new ClaimSubmissionValidationError(`ChargeItem/${line.id} could not be loaded for this Claim.`);
+    }
+    assertChargeItemPatient(stored, patientReference);
+    storedLines.push({ ...stored, ...(line.diagnosisSequence ? { diagnosisSequence: line.diagnosisSequence } : {}) });
+  }
+  const holdContext = await loadClaimHoldContext(auth.fhir, storedLines);
+  const evidence = storedLines.some(line => claimLineRequirement(line, holdContext).kind === "type")
+    ? await loadClaimEvidence(auth.fhir, patientReference, serviceDate) : new Set<never>();
+  return holdLines(storedLines, evidence, holdContext);
 }
 
 async function persistClaimChargeItems(
