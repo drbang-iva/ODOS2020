@@ -241,6 +241,24 @@ Mandate 17 at `65e91ffe`, in a disposable worktree. Each mutant was checked to h
 
 At `65e91ffe`: `npm --prefix ui test` gave 1897 tests, 1897 pass, 0 fail (+2); ui `tsc` exit 0.
 
+## Fixback 5: tests only, guarding Fixback 4's two lifecycle lines
+
+Recorded in kickoff §8, performance-od `f4fd1ee7`. Codex (FAIL at `6124585b`, `decisions/2026-09-24-odos-open-charts-sb-pr664-fixback4-eval.md`, finding 1) and Grok 4.7 (advisory shadow) each showed the same gap. Deleting `setState({})` (`OpenChartsCard.tsx:141`) or the lifecycle cleanup's `latestRequest.current += 1` (`:142`) left every committed test green, because the render-time shape/source gate masks state while the inputs differ. The two lines only matter on a round trip back to the **original** object. The product is correct; the guards were missing. **No product code changed:** `git diff 6124585b..HEAD` is +43 lines in `ui/tests/openChartsCard.test.tsx`, new tests only, plus this record.
+
+New tests, through `ClinicHome`:
+
+1. **Source round trip.** Supply doctor object A; Show older settles with a distinguishable fetched row. Supply object B and flush effects. Then synchronously return to the **same** A. The committed frame before passive effects must show A's own row and not the fetched row.
+2. **Shape round trip.** Start Show older under doctor/A, leaving the request pending. Switch to staff with desk object B and flush. Return to doctor with the **same** A and flush. Release the original request: it must not replace A. Exactly one request is ever made.
+
+Mandate 17 at `294b744c`, in a disposable worktree. Each mutant was checked to have landed, and `git status --porcelain` was empty before each GREEN and at the end:
+
+| Break | RED | GREEN |
+|---|---|---|
+| remove `setState({})` from the lifecycle effect (`:141`) | `not ok 27 - returning to the same supplied object after another source never revives data fetched under it` · 28 / 27 / 1 | 28 / 28 / 0 |
+| remove the lifecycle cleanup's `latestRequest.current += 1` (`:142`) | `not ok 28 - a request from before a doctor-desk-doctor round trip cannot settle when the same supplied object returns` · 28 / 27 / 1 | 28 / 28 / 0 |
+
+At `294b744c`: `npm --prefix ui test` gave 1899 tests, 1899 pass, 0 fail (+2); ui `tsc --noEmit --skipLibCheck` exit 0.
+
 ## Risks and follow-ups
 
 - **Literal §0.5 reading:** `/clinic/summary` with `practice-time-zone-unreadable` (502) shows "Open charts are unavailable right now." in the Today's-flow error slot, because §0.5 says the same three codes render the same sentences. If the operator wants different summary wording, that is a one-line change to the map in `ui/src/lib/open-charts.ts`.
