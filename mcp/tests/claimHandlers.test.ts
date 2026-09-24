@@ -3248,3 +3248,106 @@ test("V3 submit holds an imaging line whose only same-day interpretation is on a
   assert.equal(control.fixture.created.Claim.length, 1);
   assert.equal("heldLines" in (control.result.body as object), false);
 });
+
+const correctionImagingCode = { coding: [
+  { system: HCPCS_CODE_SYSTEM, code: "PHOTO1", display: "Synthetic photograph" },
+  { system: PROCEDURE_CONCEPT_SYSTEM, code: "synthetic-photo" },
+] };
+const correctionHeldPhoto = {
+  index: 0, reference: "ChargeItem/charge-1", label: "Synthetic photograph", reason: "needs-interpretation",
+  message: "Synthetic photograph was held: it needs an interpretation and report on this visit.",
+};
+
+function correctionFixture(options: { evidence?: boolean } = {}) {
+  const fixture = deps();
+  const store = fixture.created as unknown as Record<string, Resource[]>;
+  fixture.created.ChargeItem[0]!.code = structuredClone(correctionImagingCode);
+  store.ChargeItemDefinition = [buildProcedureFeeDefinition({
+    procedureConceptKey: "synthetic-photo", display: "Synthetic photograph", billingCode: "PHOTO1", interpretation: "fundus-photo",
+  })];
+  store.Media = options.evidence ? [{ resourceType: "Media", id: "image-1", status: "completed", content: {},
+    encounter: { reference: "Encounter/enc-1" }, modality: { coding: [{ code: "fundus-photo" }] } } as Resource] : [];
+  store.DiagnosticReport = options.evidence ? [{ resourceType: "DiagnosticReport", id: "report-1", status: "final", code: {},
+    encounter: { reference: "Encounter/enc-1" }, conclusion: "Synthetic interpretation",
+    media: [{ link: { reference: "Media/image-1" } }] } as Resource] : [];
+  fixture.created.Claim.push({
+    ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+    id: "claim-original",
+  });
+  fixture.created.ClaimResponse.push({
+    resourceType: "ClaimResponse", id: "response-1", status: "active", type: {}, use: "claim",
+    patient: { reference: professionalClaim.patientReference }, created: "2026-07-09",
+    insurer: { reference: professionalClaim.insurerReference }, outcome: "complete",
+    request: { reference: "Claim/claim-original" }, preAuthRef: "PCCN-900",
+  });
+  const transmitted: any[] = [];
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter((request) => { transmitted.push(request); }) };
+  const originalClaim = structuredClone(fixture.created.Claim[0]);
+  const resubmit = (intent: "correct" | "void", revisedClaim?: ProfessionalClaimInput) =>
+    handleStediClaimResubmissionRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: {
+        originalClaimReference: "Claim/claim-original", intent, payerClassification: "confirmed-non-medicare",
+        patientControlNumber: `ODOS-${intent.toUpperCase()}-903`, ...(revisedClaim ? { revisedClaim } : {}),
+      },
+    });
+  return { fixture, transmitted, originalClaim, resubmit };
+}
+
+function imagingRevisedClaim(): ProfessionalClaimInput {
+  const revised = structuredClone(professionalClaim);
+  revised.chargeItems[0]!.code = structuredClone(correctionImagingCode);
+  return revised;
+}
+
+test("C1 correction carrying uninterpreted imaging is refused whole and nothing is written or sent", async () => {
+  const { fixture, transmitted, originalClaim, resubmit } = correctionFixture();
+  const chargeItemsBefore = structuredClone(fixture.created.ChargeItem);
+  const result = await resubmit("correct", imagingRevisedClaim());
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { code: "correction-lines-held", heldLines: [correctionHeldPhoto] });
+  assert.equal(transmitted.length, 0);
+  assert.equal(fixture.created.Claim.length, 1);
+  assert.deepEqual(fixture.created.Claim[0], originalClaim);
+  assert.deepEqual(fixture.created.ChargeItem, chargeItemsBefore);
+  assert.deepEqual(fixture.createHeaders, []);
+  assert.match(fixture.audits.at(-1)?.actionReason ?? "", /adapter=stedi correction-lines-held: 1 lines$/);
+
+  const control = correctionFixture({ evidence: true });
+  const sent = await control.resubmit("correct", imagingRevisedClaim());
+  assert.equal(sent.status, 200);
+  assert.equal(control.transmitted.length, 1);
+  assert.equal(control.transmitted[0].payload.claimInformation.claimFrequencyCode, "7");
+});
+
+test("C2 correction with one held and one clean line is refused, not sent without the held line", async () => {
+  const { fixture, transmitted, originalClaim, resubmit } = correctionFixture();
+  const revised = imagingRevisedClaim();
+  const clean = structuredClone(professionalClaim.chargeItems[0]!);
+  delete clean.id;
+  revised.chargeItems.push(clean);
+  const result = await resubmit("correct", revised);
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { code: "correction-lines-held", heldLines: [correctionHeldPhoto] });
+  assert.equal(transmitted.length, 0);
+  assert.deepEqual(fixture.created.Claim, [originalClaim]);
+  assert.equal(fixture.created.ChargeItem.length, 1);
+});
+
+test("C3 void of a claim carrying uninterpreted imaging is never held", async () => {
+  const { transmitted, resubmit } = correctionFixture();
+  const result = await resubmit("void");
+  assert.equal(result.status, 200);
+  assert.equal(transmitted.length, 1);
+  assert.equal(transmitted[0].payload.claimInformation.claimFrequencyCode, "8");
+});
+
+test("C4 correction is judged by the stored imaging ChargeItem, not a non-imaging request body", async () => {
+  const { transmitted, resubmit } = correctionFixture();
+  const revised = structuredClone(professionalClaim);
+  assert.equal(revised.chargeItems[0]!.code.coding?.[0]?.code, "PROC-A");
+  const result = await resubmit("correct", revised);
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { code: "correction-lines-held", heldLines: [correctionHeldPhoto] });
+  assert.equal(transmitted.length, 0);
+});

@@ -386,6 +386,17 @@ export async function handleStediClaimResubmissionRequest(
         throw new ClaimSubmissionValidationError(`ChargeItem ${index + 1}: ${messageOf(error)}`);
       }
     }
+    // A replacement is adjudicated whole, so a dropped line would be un-billed (and recouped if paid): refuse the
+    // correction instead of dropping held lines. A void bills nothing and is never held.
+    if (parsed.intent === "correct") {
+      const { held: heldLines } = await evaluateClaimLineHold(auth, resubmissionInput.chargeItems,
+        resubmissionInput.patientReference, resubmissionInput.serviceDate);
+      if (heldLines.length) {
+        await audit(deps, auth, "claim.submit.failed", "failure", parsed.originalClaimReference, patientReference,
+          `correction-lines-held: ${heldLines.length} lines`, "stedi");
+        return { status: 409, body: { code: "correction-lines-held", heldLines } };
+      }
+    }
     const persistedChargeItems = await persistClaimChargeItems(
       auth,
       resubmissionInput.chargeItems,
