@@ -180,6 +180,22 @@ Live, on a fresh `odos-sb-live2` stack on 18103. `docker volume ls` showed no `o
 
 The three screenshots in this directory are from this run. Teardown: `down -v` removed only the `odos-sb-live2-*` volumes; `odos-sb-unit-pg` was removed. `docker ps`: `vf-prac1b-walk-db 127.0.0.1:55481->5432/tcp` (not touched).
 
+## Fixback 3: Hide retires an in-flight Show older request
+
+Recorded in kickoff §8, performance-od `4658cacd`. The defect came from the shadow review of `b14768cd` and was confirmed by the kickoff author. `hideOlder` did not advance `latestRequest`, so the `expand=older` request from Show older stayed the newest. If it failed after Hide, the card showed the error sentence, its rows disappeared, and the chip read "—".
+
+Fix, in `ui/src/scenes/clinic/OpenChartsCard.tsx`: `hideOlder` advances `latestRequest.current`. No new request is started; the 60 s refresh reloads without `expand`. The diff is 2 lines added to the product file and 81 lines added to `ui/tests/openChartsCard.test.tsx`, with no existing test lines changed.
+
+Mandate 17 at `7b7961bc`, in a disposable worktree. Each mutant was checked to have landed, and the tree was clean before each GREEN:
+
+| Guard | Break | RED | GREEN |
+|---|---|---|---|
+| 1. Card loaded (chip 2, "1 today") → Show older → Hide → the pending `expand=older` response is a 502. Rows still shown, chip still 2, no error text. | remove the advance in `hideOlder` | `not ok 19 - hiding Older retires its in-flight request, so a late 502 cannot blank the card`, `not ok 20 - …late 200…` · 21 / 19 / 2 | 21 / 21 / 0 |
+| 2. The same, but the late response is a 200 with different counts. The displayed Older line and chip do not change. | (same break) | `not ok 20` (above) | 21 / 21 / 0 |
+| 3. Expanded Older rows follow My charts / All providers: another provider's Older row is absent under My charts and present under All providers. | pass the raw Older rows instead of `visibleRows(...)` | `not ok 21 - expanded Older rows follow My charts / All providers…` · 21 / 20 / 1 | 21 / 21 / 0 |
+
+At `7b7961bc`: `npm --prefix ui test` gave 1892 tests, 1892 pass, 0 fail (+3); ui `tsc --noEmit --skipLibCheck` exit 0. Only UI files changed, so the mcp suite and live lanes were not re-run for this fixback; the last full battery and live proof are the fixback 2 records above.
+
 ## Risks and follow-ups
 
 - **Literal §0.5 reading:** `/clinic/summary` with `practice-time-zone-unreadable` (502) shows "Open charts are unavailable right now." in the Today's-flow error slot, because §0.5 says the same three codes render the same sentences. If the operator wants different summary wording, that is a one-line change to the map in `ui/src/lib/open-charts.ts`.
