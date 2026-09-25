@@ -206,6 +206,7 @@ export interface BuildExamOverviewProjectionInput {
     attestation?: ExamOverviewFindingProjection["attestation"];
   }>>;
   applicabilityRegistry?: ClinicalSectionApplicabilityRegistry;
+  historyComplaintRows?: ReadonlyArray<{ complaintId: string; charted: boolean; hasLiveAnswers: boolean }>;
 }
 
 export function normalizeObservationExamState(
@@ -358,6 +359,7 @@ export function buildExamOverviewProjection(
     findings,
     input.definitions,
     input.assessmentRows,
+    input.historyComplaintRows,
   ));
   const notIndicatedSections = policy.notIndicated.map((requirement) => sectionProjection(
     requirement,
@@ -365,6 +367,7 @@ export function buildExamOverviewProjection(
     findings,
     input.definitions,
     input.assessmentRows,
+    input.historyComplaintRows,
   ));
   const trace = requiredSections.map((section): ClinicalCompletenessTraceRow => ({
     sectionKey: section.sectionKey,
@@ -572,6 +575,7 @@ function sectionProjection(
   findings: readonly ExamOverviewFindingProjection[],
   definitions: readonly ClinicalFindingDefinition[],
   assessmentRows: ReadonlyArray<{ problemStatusRecorded: boolean }>,
+  historyComplaintRows: BuildExamOverviewProjectionInput["historyComplaintRows"],
 ): ExamOverviewSectionProjection {
   const evidence = requirement.evidence;
   const rows = evidence.kind === "assessment"
@@ -591,11 +595,18 @@ function sectionProjection(
   const findingSlots = evidence.kind === "assessment"
     ? []
     : findingSectionSlots(definitionSlots, currentRows);
-  const state = !applicable
+  let state = !applicable
     ? "not-indicated"
     : requirement.evidence.kind === "assessment"
       ? assessmentSectionState(assessmentRows)
       : deriveExamSectionState({ applicable: true, rows: findingSlots });
+  if (requirement.sectionKey === "history" && historyComplaintRows?.length) {
+    state = historyComplaintRows.every((row) => row.charted)
+      ? "examined"
+      : state !== "not-examined" || historyComplaintRows.some((row) => row.hasLiveAnswers)
+        ? "partial"
+        : "not-examined";
+  }
   return {
     sectionKey: requirement.sectionKey,
     label: requirement.label,
