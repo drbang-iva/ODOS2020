@@ -1,3 +1,5 @@
+import { HISTORY_TEMPLATES, historyTemplateComplete } from "./history-template-engine.js";
+import { isHistoryAnswerObservation, parseHistoryAnswerObservation } from "./history-answer-observation.js";
 import { z } from "zod";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import { isDeepStrictEqual } from "node:util";
@@ -137,6 +139,19 @@ export async function handleExamOverviewRequest(
       linkedConditions,
       current,
     );
+    const historyAnswers = currentObservations.flatMap((observation) => {
+      if (observation.status === "entered-in-error" || observation.status === "cancelled" ||
+        observation.encounter?.reference !== encounterReference || observation.subject?.reference !== patientReference ||
+        !isHistoryAnswerObservation(observation)) return [];
+      return [parseHistoryAnswerObservation(observation)];
+    });
+    const historyComplaintRows = complaints.flatMap((complaint) => {
+      if (complaint.status !== "active") return [];
+      const template = HISTORY_TEMPLATES.find((candidate) => candidate.complaint === complaint.templateKey);
+      if (!template) return [];
+      const answers = historyAnswers.filter((answer) => answer.complaintId === complaint.id);
+      return [{ complaintId: complaint.id, charted: historyTemplateComplete(template, answers), hasLiveAnswers: answers.length > 0 }];
+    });
     const projection = buildExamOverviewProjection({
       encounterReference,
       patientReference,
@@ -144,6 +159,7 @@ export async function handleExamOverviewRequest(
       ...(scope.sectionsOpen ? { sectionsOpen: scope.sectionsOpen } : {}),
       definitions,
       currentObservations: current,
+      historyComplaintRows,
       sharedProjection: sharedEvidence.projection,
       carriedWithoutCurrentEvidence: sharedEvidence.carriedWithoutCurrentEvidence,
       priorObservationCandidates: patientObservations.filter((observation) =>
