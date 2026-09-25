@@ -4,6 +4,7 @@ Status: needs-review. NOT EVALUATED. Independent signer: HUB in a separate Claud
 
 Base: `f21c44fa6affc9d6581b954c81577a9cf080f614`.
 Branch: `drbang-iva/exam-nav-n0-history-examined`.
+Implementation commit: `f9a34276ffc173dd29871ae73c5b066967b7d27b`. The final PR head also includes this evidence-only follow-up.
 
 ## Summary
 
