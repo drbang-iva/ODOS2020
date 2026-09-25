@@ -156,6 +156,8 @@ async function weno(label, expectedPharmacyStatus = 200, expectedDrugStatus = 20
   }
 }
 const mcpTests = (label, files, red = false) => command(label, 'npm', ['--prefix', 'mcp', 'test', '--', ...files], { env: unitEnv(), red });
+let walkthroughError;
+const failures = [];
 try {
   for (const directory of ['', 'mcp', 'ui']) if (!existsSync(join(root, directory, 'node_modules/tsx'))) {
     await command(`dependencies-${directory || 'root'}`, 'npm', [...(directory ? ['--prefix', directory] : []), 'ci']);
@@ -237,8 +239,9 @@ try {
   await mcpTests('accept-and-queue', ['tests/walkthroughFollowUpAcceptFailure.test.ts', 'tests/followUpAccept.test.ts', 'tests/followUpQueueEndpoint.test.ts']);
   await command('mcp-build', 'npm', ['--prefix', 'mcp', 'run', 'build'], { env: unitEnv() });
   await command('ui-build', 'npm', ['--prefix', 'ui', 'run', 'build'], { env: unitEnv() });
+} catch (error) {
+  walkthroughError = error;
 } finally {
-  const failures = [];
   const attempt = async (operation) => {
     try { await operation(); } catch (error) { failures.push(error); }
   };
@@ -261,5 +264,6 @@ try {
     await attempt(() => rmSync(join(runtime, name), { force: true }));
   }
   await attempt(() => console.log(spawnSync('docker', ['ps', '--format', 'table {{.Names}}\t{{.Status}}'], { encoding: 'utf8' }).stdout.trimEnd()));
-  if (failures.length) throw new AggregateError(failures, 'W1 cleanup failed');
 }
+if (failures.length) throw new AggregateError([...(walkthroughError ? [walkthroughError] : []), ...failures], 'W1 walkthrough or cleanup failed');
+if (walkthroughError) throw walkthroughError;

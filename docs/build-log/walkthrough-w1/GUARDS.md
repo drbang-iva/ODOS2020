@@ -95,7 +95,7 @@ CodeRabbit identified early cleanup exceptions preventing later operations. Only
 - Restore old cleanup as a mutation: 7 tests, 1 pass, 6 fail, exit 1.
 - Restore fix: 7 tests, 7 pass, 0 fail, exit 0.
 
-All four had zero skips, cancellations and todos. The one-command runner includes this seven-test check. This cleanup-only fixback does not require repeating live product requests.
+All four had zero skips, cancellations and todos. A second review fix preserves the walkthrough error together with cleanup errors, and rethrows the identical original error if cleanup succeeds. Added two cases: green 9/9; remove both primary-error propagation paths → 9 tests, 7 pass, 2 fail, exit 1; restore → 9 tests, 9 pass, 0 fail, exit 0. Zero skips, cancellations and todos in all three. Final error propagation is outside finally. The one-command runner includes this nine-test check. This cleanup-only fixback does not require repeating live product requests.
 
 ## Earlier runs retained for honesty
 
