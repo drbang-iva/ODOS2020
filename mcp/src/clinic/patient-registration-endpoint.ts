@@ -131,7 +131,15 @@ export async function registerPatientFromDemographics(
   const today = registrationDate(recordedAt);
   const projectId = registrationProjectId(staff.project);
   const existingPersons = await loadExistingGuarantors(input, staff, deps.serviceFhir, projectId);
-  const resolvedInput = resolveExistingParties(input, existingPersons);
+  const selfResolvedInput = {
+    ...input,
+    responsibleParties: input.responsibleParties.map(party => party.kind === "self"
+      && [party.address, party.city, party.state, party.postalCode].every(value => !value.trim())
+      ? { ...party, address: input.demographics.address, city: input.demographics.city,
+          state: input.demographics.state, postalCode: input.demographics.postalCode }
+      : party),
+  };
+  const resolvedInput = resolveExistingParties(selfResolvedInput, existingPersons);
   const majorityResources = await searchProjectAll<Basic>(deps.serviceFhir, "Basic", projectId, {
     code: `${ODOS_AGE_OF_MAJORITY_CONFIG_SYSTEM}|${ODOS_AGE_OF_MAJORITY_CONFIG_CODE}`,
   });
@@ -151,7 +159,7 @@ export async function registerPatientFromDemographics(
   }
 
   const reservation = await reserveMrn(deps.serviceFhir, projectId);
-  const built = buildPatientIdentityTransaction(input, reservation, today, projectId, existingPersons, preferencePractitioner, recordedAt);
+  const built = buildPatientIdentityTransaction(selfResolvedInput, reservation, today, projectId, existingPersons, preferencePractitioner, recordedAt);
   const request = built.bundle;
   let response: Bundle;
   try {
