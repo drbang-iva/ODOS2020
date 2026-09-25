@@ -84,6 +84,19 @@ Browser G5: /patient/new, real NewPatient, injected 400, adjacent alert=1, regis
 
 The browser uses the real served route and component but an injected registration response and synthetic preference/config responses. The screenshot proves adjacent placement; registered-route G3/G4 prove transaction behavior separately.
 
+## Cleanup review fixback
+
+CodeRabbit identified early cleanup exceptions preventing later operations. Only the harness cleanup and its new fault test changed after the full live run at `e38f685c12e840b681413af94cc3f99a4bfed378`; product, G1–G7 fixtures and expectations are byte-identical to that verified commit.
+
+`node --test docs/build-log/walkthrough-w1/w1-cleanup.test.mjs` executes the runner's actual finally block with synthetic operations. It covers success plus failures in source restore, MCP stop, stack down, operator-file removal, summary write, and credential deletion. Every case checks that later cleanup, both original operator restores, and final docker ps are attempted; failures remain nonzero.
+
+- Original sequence: 7 tests, 1 pass, 6 fail.
+- Fixed sequence: 7 tests, 7 pass, 0 fail, exit 0.
+- Restore old cleanup as a mutation: 7 tests, 1 pass, 6 fail, exit 1.
+- Restore fix: 7 tests, 7 pass, 0 fail, exit 0.
+
+All four had zero skips, cancellations and todos. The one-command runner includes this seven-test check. This cleanup-only fixback does not require repeating live product requests.
+
 ## Earlier runs retained for honesty
 
 These counts are earlier attempts, not additional final-head coverage. They are not summed because many tests repeat.

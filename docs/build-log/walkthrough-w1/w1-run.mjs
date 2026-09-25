@@ -160,6 +160,7 @@ try {
   for (const directory of ['', 'mcp', 'ui']) if (!existsSync(join(root, directory, 'node_modules/tsx'))) {
     await command(`dependencies-${directory || 'root'}`, 'npm', [...(directory ? ['--prefix', directory] : []), 'ci']);
   }
+  await command('cleanup-guard', process.execPath, ['--test', join(scripts, 'w1-cleanup.test.mjs')], { env: unitEnv() });
   for (const port of [18103, 15432, 5433, 3334]) await freePort(port);
   await command('stack-up', 'docker-compose', [...dockerArgs, 'up', '-d']);
   let healthy = false;
@@ -237,17 +238,28 @@ try {
   await command('mcp-build', 'npm', ['--prefix', 'mcp', 'run', 'build'], { env: unitEnv() });
   await command('ui-build', 'npm', ['--prefix', 'ui', 'run', 'build'], { env: unitEnv() });
 } finally {
-  restore();
-  await stopMcp();
-  const down = spawnSync('docker-compose', [...dockerArgs, 'down', '-v'], { encoding: 'utf8' });
-  console.log(`stack-down: exit=${down.status}`);
+  const failures = [];
+  const attempt = async (operation) => {
+    try { await operation(); } catch (error) { failures.push(error); }
+  };
+  await attempt(() => restore());
+  await attempt(() => stopMcp());
+  await attempt(() => {
+    const down = spawnSync('docker-compose', [...dockerArgs, 'down', '-v'], { encoding: 'utf8' });
+    console.log(`stack-down: exit=${down.status}`);
+    assert.equal(down.status, 0, 'W1 cleanup');
+  });
   for (const name of operatorNames) {
-    rmSync(join(root, '.odos', name), { force: true });
-    if (existsSync(join(runtime, `original-${name}`))) renameSync(join(runtime, `original-${name}`), join(root, '.odos', name));
+    await attempt(() => rmSync(join(root, '.odos', name), { force: true }));
+    await attempt(() => {
+      if (existsSync(join(runtime, `original-${name}`))) renameSync(join(runtime, `original-${name}`), join(root, '.odos', name));
+    });
   }
-  writeFileSync(join(root, '.odos', 'w1-summary.json'), JSON.stringify(results, null, 2));
-  writeFileSync(join(root, '.odos', 'w1-private-run-path'), runtime, { mode: 0o600 });
-  for (const name of ['medplum.json', 'compose.json', 'smart.pem', 'w1-service.env', 'w1-provider-token', 'w1-composite-token', ...operatorNames.map(name => `generated-${name}`)]) rmSync(join(runtime, name), { force: true });
-  console.log(spawnSync('docker', ['ps', '--format', 'table {{.Names}}\t{{.Status}}'], { encoding: 'utf8' }).stdout.trimEnd());
-  assert.equal(down.status, 0, 'W1 cleanup');
+  await attempt(() => writeFileSync(join(root, '.odos', 'w1-summary.json'), JSON.stringify(results, null, 2)));
+  await attempt(() => writeFileSync(join(root, '.odos', 'w1-private-run-path'), runtime, { mode: 0o600 }));
+  for (const name of ['medplum.json', 'compose.json', 'smart.pem', 'w1-service.env', 'w1-provider-token', 'w1-composite-token', ...operatorNames.map(name => `generated-${name}`)]) {
+    await attempt(() => rmSync(join(runtime, name), { force: true }));
+  }
+  await attempt(() => console.log(spawnSync('docker', ['ps', '--format', 'table {{.Names}}\t{{.Status}}'], { encoding: 'utf8' }).stdout.trimEnd()));
+  if (failures.length) throw new AggregateError(failures, 'W1 cleanup failed');
 }
