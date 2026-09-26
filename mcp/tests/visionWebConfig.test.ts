@@ -20,3 +20,14 @@ test("V2 production flag is exact and V3 lab lookup uses configured keys only", 
   assert.doesNotThrow(() => assertVisionWebTransmission(visionWebConfigFromEnv({ ...env, VISIONWEB_SOAP_URL: "https://production.example/upload", VISIONWEB_PRODUCTION_ENABLED: "true" })));
   for (const lab of ["toString", "__proto__", "constructor", "Other"]) assert.throws(() => visionWebLabAccount(visionWebConfigFromEnv(env), lab), /has no account for lab/);
 });
+
+for (const soapUrl of [
+  "https://services.visionwebqa.com.example.net/FileUpload.asmx",
+  "https://evilvisionwebqa.com/FileUpload.asmx",
+  "https://visionwebqa.com/FileUpload.asmx",
+]) {
+  test(`V2 exact QA hostname refuses ${soapUrl}`, () => {
+    const config = visionWebConfigFromEnv({ ...env, VISIONWEB_SOAP_URL: soapUrl, VISIONWEB_PRODUCTION_ENABLED: undefined });
+    assert.throws(() => assertVisionWebTransmission(config), { message: "VisionWeb production transmission is not enabled." });
+  });
+}

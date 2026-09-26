@@ -129,3 +129,21 @@ test("V10 captured LOGIN echo reaches no Task, audit, thrown error or console; s
   assert.equal(message, "VisionWeb returned a response ODOS could not read.");
   assert.ok(!JSON.stringify({ writes: h.writes, audits: h.audits, message, output }).includes(env.VISIONWEB_USERNAME));
 });
+
+for (const soapUrl of [
+  "https://services.visionwebqa.com.example.net/FileUpload.asmx",
+  "https://evilvisionwebqa.com/FileUpload.asmx",
+  "https://visionwebqa.com/FileUpload.asmx",
+]) {
+  test(`V2 submit refuses nonexact QA hostname ${soapUrl} without writes or fetch`, async () => {
+    const h = harness();
+    const config = visionWebConfigFromEnv({ ...env, VISIONWEB_SOAP_URL: soapUrl, VISIONWEB_PRODUCTION_ENABLED: undefined });
+    let fetches = 0;
+    const client = createVisionWebClient({ fetchImpl: async () => { fetches++; throw new Error("Unexpected fetch."); } });
+    const adapter = createVisionWebLabOrderAdapter(h.fhir, config, client, h.options);
+    await assert.rejects(adapter.submit(h.req()), { message: "VisionWeb production transmission is not enabled." });
+    assert.equal(h.writes.length, 0);
+    assert.equal(h.tasks.size, 0);
+    assert.equal(fetches, 0);
+  });
+}
