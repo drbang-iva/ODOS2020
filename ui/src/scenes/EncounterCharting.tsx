@@ -157,6 +157,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const [reviewSignAction, setReviewSignAction] = useState<ReviewSignAction>();
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<{ workspaceKey: string; reference: string }>();
   const [examOverviewProjection, setExamOverviewProjection] = useState<ExamOverviewProjection>();
+  const [initialProjectionLoading, setInitialProjectionLoading] = useState(true);
   const [examOverviewRefreshing, setExamOverviewRefreshing] = useState(false);
   const [examOverviewRefreshVersion, setExamOverviewRefreshVersion] = useState(0);
   const [boardEditorOpen, setBoardEditorOpen] = useState(false);
@@ -220,14 +221,6 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   function selectChartView(view: "diagnosis" | "structure", diagnosisReference?: string) {
     selectDestination(view === "diagnosis" ? "diagnoses" : "overview", diagnosisReference);
   }
-
-  useEffect(() => {
-    if (destination === "plan-rx") openBoardEditor("prescription");
-    if (destination === "tests" || destination === "results") {
-      setRightPanelState(current => selectExamRightPanelTab(current, destination === "tests" ? "follow-up" : "imaging"));
-    }
-    if (destination === "billing") setVisitChargesOpen(true);
-  }, [destination, navigationVersion]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -371,10 +364,19 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     setRightPanelImageCount(0);
     setEngageDiagnosis(undefined);
     setExamOverviewProjection(undefined);
+    setInitialProjectionLoading(true);
     setVisitChargesOpen(false);
     setVisitCharge(undefined);
     setBrokenVisitDiagnosisDisplay(undefined);
   }, [encounterId]);
+
+  useEffect(() => {
+    if (destination === "plan-rx") openBoardEditor("prescription");
+    if (destination === "tests" || destination === "results") {
+      setRightPanelState(current => selectExamRightPanelTab(current, destination === "tests" ? "follow-up" : "imaging"));
+    }
+    if (destination === "billing") setVisitChargesOpen(true);
+  }, [destination, navigationVersion, encounterId]);
 
   const linkedVisitDiagnosis = visitCharge?.proposal?.state === "accepted"
     ? visitCharge.proposal.dxPointers[0]
@@ -413,7 +415,10 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         }
       })
       .finally(() => {
-        if (!cancelled) setExamOverviewRefreshing(false);
+        if (!cancelled) {
+          setExamOverviewRefreshing(false);
+          setInitialProjectionLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -927,7 +932,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       >
         <div className="odos-charting-primary">
       {destination === "review" ? (
-        <ExamReview completeness={activeExamOverviewProjection?.completeness} loading={examOverviewRefreshing}
+        <ExamReview completeness={activeExamOverviewProjection?.completeness} loading={initialProjectionLoading || examOverviewRefreshing}
           onSignAndFinish={() => {
             if (reviewSignAction?.encounterId === encounterId) return reviewSignAction.onSignAndFinish();
           }}

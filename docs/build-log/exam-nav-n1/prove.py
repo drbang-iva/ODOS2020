@@ -10,7 +10,12 @@ files=json.loads(subprocess.check_output(['node','-e',"process.stdout.write(JSON
 l3='diagnosis.completeness.is.called.only.from.the.explicit.EncounterHeader.sign.path'
 split='the.visit-level.control.is.disabled.with.the.amendment.tooltip.after.sign.and.absent.from.non-clinical.sheets'
 review='ui/src/components/charting/ExamReview.tsx'
+destination_start=(root/scene).read_text().index('  useEffect(() => {\n    if (destination === "plan-rx")')
+destination_source=(root/scene).read_text()
+destination_block=destination_source[destination_start:destination_source.index('\n\n',destination_start)]
 mutations=[
+ ('fixback2-G1','N1.G4','N1 G4',[(scene,destination_block+'\n\n',''),(scene,'  useEffect(() => {\n    setOpenedBoardEditorIds([]);',destination_block+'\n\n  useEffect(() => {\n    setOpenedBoardEditorIds([]);')]),
+ ('fixback2-G2','N1.fixback2.G2','N1 fixback2 G2',[(scene,'[initialProjectionLoading, setInitialProjectionLoading] = useState(true)','[initialProjectionLoading, setInitialProjectionLoading] = useState(false)')]),
  ('F1-labels','N1.G6','N1 G6',[(review,'sectionStateLabel(row.state)','row.state')]),
  ('F2-unconfigured','N1.F2.unconfigured','N1 F2 unconfigured',[(review,'completeness.status === "unconfigured"','false')]),
  ('F2-unavailable','N1.F2.failed','N1 F2 failed',[(review,'<p>Status unavailable</p>','<p>Loading completeness…</p>')]),

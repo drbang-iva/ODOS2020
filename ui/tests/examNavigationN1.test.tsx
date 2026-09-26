@@ -78,7 +78,15 @@ test("N1 G3 address wins over Tech, which wins over Overview landing", async () 
     finally { await page.close(); }
   }
 });
-test("N1 G4 menu destinations reload from the address and StartExam writes the encounter", async () => {
+test("N1 G4 menu destinations reload from the address and StartExam writes the encounter", { timeout: 180_000 }, async () => {
+  for (const [key, label] of items) {
+    const fresh = await open(`?exam=${key}`);
+    try {
+      await fresh.waitForTimeout(500);
+      assert.equal(await menu(fresh).locator('[aria-current="page"]').textContent(), label);
+      await surface(fresh, key);
+    } finally { await fresh.close(); }
+  }
   const page = await open();
   try {
     await go(page, "review"); assert.equal(new URL(page.url()).searchParams.get("exam"), "review");
@@ -190,5 +198,25 @@ test("N1 F3 migrated Review preserves header sign disable rule and title", async
     assert.equal(await header.isDisabled(), true);
     assert.equal(await review.isDisabled(), true);
     assert.equal(await review.getAttribute("title"), await header.getAttribute("title"));
+  } finally { await page.close(); }
+});
+
+test("N1 fixback2 G2 Review never flashes unavailable before its first load settles", async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+  page.setDefaultTimeout(5000); page.setDefaultNavigationTimeout(30_000);
+  try {
+    await page.addInitScript(() => {
+      window.n1UnavailableTexts = [];
+      new MutationObserver(records => {
+        for (const record of records) {
+          for (const node of [record.target, ...record.addedNodes]) {
+            if (node.textContent?.includes("Status unavailable")) window.n1UnavailableTexts.push(node.textContent);
+          }
+        }
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+    await page.goto(`${origin}/tests/fixtures/exam-navigation-n1.html?exam=review`, { waitUntil: "networkidle" });
+    await page.locator(".odos-exam-review").getByText("In progress", { exact: true }).waitFor();
+    assert.deepEqual(await page.evaluate(() => window.n1UnavailableTexts), []);
   } finally { await page.close(); }
 });

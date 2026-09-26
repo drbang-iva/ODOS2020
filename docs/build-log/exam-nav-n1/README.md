@@ -2,7 +2,7 @@
 
 NOT EVALUATED
 
-Status: historical initial bundle. HUB evaluation failed at 06a5c83e; see [F1–F4 fixback and current local evidence](FIXBACK.md). Independent reevaluation is pending.
+Status: historical initial bundle. HUB evaluation failed at 06a5c83e; see [F1–F4 fixback and current local evidence](FIXBACK.md). See also [fixback 2](FIXBACK2.md), following the HUB FAIL at 6ff3260f. Independent reevaluation is pending.
 
 Coded-by: Codex — GPT-5.6 Sol, high effort
 
