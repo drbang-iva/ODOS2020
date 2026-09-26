@@ -48,6 +48,7 @@ import {
   type ClaimsHandlerDeps,
 } from "../src/claims/claimmd-handlers.js";
 import { chargeItemBodysite } from "../src/fhir/charge-item-laterality.js";
+import { buildProcedureFeeDefinition, HCPCS_CODE_SYSTEM, PROCEDURE_CONCEPT_SYSTEM } from "../src/clinical-graph/procedure-fee-schedule.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
@@ -3210,3 +3211,40 @@ function matchesIdentifierToken(
   const value = token.slice(separator + 1);
   return identifiers?.some((identifier) => identifier.system === system && identifier.value === value) ?? false;
 }
+
+async function submitWithEvidenceVisit(status: Encounter["status"]) {
+  const fixture = deps();
+  const store = fixture.created as unknown as Record<string, Resource[]>;
+  fixture.created.ChargeItem[0]!.code = { coding: [
+    { system: HCPCS_CODE_SYSTEM, code: "PHOTO1", display: "Synthetic photograph" },
+    { system: PROCEDURE_CONCEPT_SYSTEM, code: "synthetic-photo" },
+  ] };
+  store.ChargeItemDefinition = [buildProcedureFeeDefinition({
+    procedureConceptKey: "synthetic-photo", display: "Synthetic photograph", billingCode: "PHOTO1", interpretation: "fundus-photo",
+  })];
+  fixture.created.Encounter.push({
+    resourceType: "Encounter", id: "enc-2", status, class: {},
+    subject: { reference: "Patient/pat-900" }, period: { start: "2026-07-09T14:00:00.000Z" },
+  });
+  store.Media = [{ resourceType: "Media", id: "image-2", status: "completed", content: {},
+    encounter: { reference: "Encounter/enc-2" }, modality: { coding: [{ code: "fundus-photo" }] } } as Resource];
+  store.DiagnosticReport = [{ resourceType: "DiagnosticReport", id: "report-2", status: "final", code: {},
+    encounter: { reference: "Encounter/enc-2" }, conclusion: "Synthetic interpretation",
+    media: [{ link: { reference: "Media/image-2" } }] } as Resource];
+  const result = await handleSubmitClaimRequest(fixture.deps, { authHeader: "Bearer good", body: { claim: structuredClone(professionalClaim) } });
+  return { fixture, result };
+}
+
+test("V3 submit holds an imaging line whose only same-day interpretation is on a cancelled visit", async () => {
+  const { fixture, result } = await submitWithEvidenceVisit("cancelled");
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { code: "all-lines-held", heldLines: [{
+    index: 0, reference: "ChargeItem/charge-1", label: "Synthetic photograph", reason: "needs-interpretation",
+    message: "Synthetic photograph was held: it needs an interpretation and report on this visit.",
+  }] });
+  assert.equal(fixture.created.Claim.length, 0);
+  const control = await submitWithEvidenceVisit("finished");
+  assert.equal(control.result.status, 200);
+  assert.equal(control.fixture.created.Claim.length, 1);
+  assert.equal("heldLines" in (control.result.body as object), false);
+});

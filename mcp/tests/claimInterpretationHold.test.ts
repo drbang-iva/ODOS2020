@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle, ChargeItem, DiagnosticReport, Encounter, Media, Resource } from "@medplum/fhirtypes";
 import { buildClaimDraft } from "../src/claims/claim-draft.js";
+import { handleClaimDraftRequest, type ClaimsHandlerDeps } from "../src/claims/claimmd-handlers.js";
 import { FhirSearchLimitError } from "../src/fhir-search.js";
 import { holdLines, loadClaimHoldContext } from "../src/claims/interpretation-hold.js";
 import { buildProcedureFeeDefinition, HCPCS_CODE_SYSTEM, PROCEDURE_CONCEPT_SYSTEM, type ProcedureFeeInterpretation } from "../src/clinical-graph/procedure-fee-schedule.js";
@@ -284,4 +285,70 @@ test("H22 failed same-day advisory list does not hold or warn on an evidenced na
   const draft = await buildClaimDraft(fhir, "visit");
   assert.deepEqual(draft.charges.map(row => row.id), ["photo", "visit-charge", "oct"]);
   assert.equal(draft.warnings, undefined);
+});
+
+function draftDeps(fhir: ReturnType<typeof fixture>["fhir"]): ClaimsHandlerDeps {
+  return {
+    authenticate: async () => ({ staffReference: "Practitioner/staff", actorRole: "staff", fhir: fhir as never }),
+    adapter: null,
+    recordAudit: async () => {},
+    now: () => "2026-09-23T18:00:00.000Z",
+  };
+}
+
+async function draftWithEvidenceVisit(status: Encounter["status"]) {
+  const setup = fixture({ reportStatus: "final", evidenceDay: "2026-09-23T14:00:00-04:00" });
+  (setup.resources.find(row => row.resourceType === "Encounter" && row.id === "evidence-visit") as Encounter).status = status;
+  const result = await handleClaimDraftRequest(draftDeps(setup.fhir), { authHeader: "Bearer synthetic", encounterId: "visit" });
+  assert.equal(result.status, 200);
+  return result.body as Awaited<ReturnType<typeof buildClaimDraft>>;
+}
+
+test("V1 draft handler holds imaging when the only same-day interpretation is on a cancelled visit", async () => {
+  const held = await draftWithEvidenceVisit("cancelled");
+  assert.deepEqual(held.charges.map(row => row.id), ["visit-charge"]);
+  assert.deepEqual(held.warnings, [heldPhoto]);
+  const control = await draftWithEvidenceVisit("finished");
+  assert.deepEqual(control.charges.map(row => row.id), ["photo", "visit-charge"]);
+  assert.equal(control.warnings, undefined);
+});
+
+test("V2 draft handler holds imaging when the only same-day interpretation is on an entered-in-error visit", async () => {
+  const held = await draftWithEvidenceVisit("entered-in-error");
+  assert.deepEqual(held.charges.map(row => row.id), ["visit-charge"]);
+  assert.deepEqual(held.warnings, [heldPhoto]);
+});
+
+test("V5 draft handler still counts an in-progress same-day visit's interpretation", async () => {
+  const kept = await draftWithEvidenceVisit("in-progress");
+  assert.deepEqual(kept.charges.map(row => row.id), ["photo", "visit-charge"]);
+  assert.equal(kept.warnings, undefined);
+});
+
+async function draftWithPairOnOtherVisit(status: Encounter["status"]) {
+  const { fhir, resources, photo, proposal } = fixture({ reportStatus: "final" });
+  const otherEncounter: Encounter = {
+    resourceType: "Encounter", id: "other-visit", status, class: {},
+    subject: { reference: "Patient/synthetic" }, period: { start: "2026-09-23T15:00:00-04:00" },
+  };
+  const octProposal: ChargeProposal = { ...proposal, id: "other-oct-proposal", encounterId: "other-visit",
+    procedureConceptKey: "synthetic-oct", state: "accepted",
+    interpretation: { answer: "oct", feeVersion: "1", at: "2026-09-23T15:00:00-04:00" } };
+  resources.push(
+    otherEncounter,
+    { ...buildProtocolBasic(octProposal, PROTOCOL_BASIC_CODES.chargeProposal), id: "other-oct-basic" } as Basic,
+    buildProcedureFeeDefinition({ procedureConceptKey: "synthetic-oct", display: "Synthetic OCT", billingCode: "OCT2", interpretation: "oct" }),
+  );
+  const result = await handleClaimDraftRequest(draftDeps(fhir), { authHeader: "Bearer synthetic", encounterId: "visit" });
+  assert.equal(result.status, 200);
+  const draft = result.body as Awaited<ReturnType<typeof buildClaimDraft>>;
+  assert.deepEqual(draft.charges.map(row => row.id), [photo.id, "visit-charge"]);
+  return draft;
+}
+
+test("V4 draft handler raises no same-day pair advisory from a cancelled visit's proposal", async () => {
+  const cancelled = await draftWithPairOnOtherVisit("cancelled");
+  assert.equal(cancelled.warnings, undefined);
+  const control = await draftWithPairOnOtherVisit("finished");
+  assert.deepEqual(control.warnings, ["Synthetic photograph and Synthetic OCT: usually not billed together on the same day — document why both were needed."]);
 });

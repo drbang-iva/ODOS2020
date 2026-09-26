@@ -93,7 +93,8 @@ export async function loadClaimAdvisoryProposals(fhir: FhirSearchClient): Promis
 export async function claimServiceEncounters(fhir: FhirSearchClient, patientReference: string, day: string): Promise<Encounter[]> {
   if (!day) return [];
   const rows = await searchBounded<Encounter>(fhir, "Encounter", { subject: patientReference, _count: "100" }, bounds);
-  return rows.filter(row => row.subject?.reference === patientReference && serviceDay(row) === day);
+  return rows.filter(row => row.subject?.reference === patientReference && serviceDay(row) === day &&
+    row.status !== "cancelled" && row.status !== "entered-in-error");
 }
 
 export async function loadClaimEvidence(fhir: FhirSearchClient, patientReference: string, day: string): Promise<Set<ImageType>> {
