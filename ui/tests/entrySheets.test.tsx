@@ -974,7 +974,7 @@ test("an open clinical sheet disables Sign and Abandon in the encounter header",
     );
     await page.getByRole("dialog", { name: "Visual Acuity" }).waitFor();
     const reason = "Finish or cancel Visual Acuity first";
-    const sign = page.getByRole("button", { name: "Sign & finish" });
+    const sign = page.getByRole("button", { name: "Review & sign" });
     const abandon = page.getByRole("button", { name: "Abandon encounter" });
 
     assert.equal(await sign.isDisabled(), true);

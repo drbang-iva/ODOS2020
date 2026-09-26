@@ -169,7 +169,8 @@ export function ExamEntrySheet({
   hidden?: boolean;
   children: ReactNode;
 }) {
-  const modal = sectionId === "visit-charges" || sectionId === "engage";
+  const modal = sectionId === "engage";
+  const nonClinical = sectionId === "visit-charges" || sectionId === "engage";
   const { dialogRef, initialFocusRef, titleId } = useDockedPanel(onCancel, active, { modal });
   const config = sectionId === "visit-charges"
     ? { title: "Visit & charges", layout: "visit-charges" }
@@ -202,7 +203,7 @@ export function ExamEntrySheet({
           aria-hidden="true"
         >
           <strong>Exam overview</strong>
-          <span>{modal ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
+          <span>{nonClinical ? "Chart remains visible behind this sheet" : `Parked while editing ${config.title}`}</span>
         </div>
       )}
       <aside
@@ -216,7 +217,7 @@ export function ExamEntrySheet({
         data-testid="exam-entry-sheet"
         data-entry-sheet-layout={config.layout}
         data-entry-sheet-section={sectionId}
-        data-undo-strip={!modal && undo ? "true" : undefined}
+        data-undo-strip={!nonClinical && undo ? "true" : undefined}
         onInputCapture={(event) => markEventDirty(event.target)}
         onChangeCapture={(event) => markEventDirty(event.target)}
         onClickCapture={(event) => {
@@ -246,7 +247,7 @@ export function ExamEntrySheet({
             <h2 id={titleId}>{config.title}</h2>
           </div>
           <div className="odos-exam-entry-sheet-actions">
-            {!modal && encounterReference && onEncounterCleared && (
+            {!nonClinical && encounterReference && onEncounterCleared && (
               <ClearEncounterButton
                 encounterReference={encounterReference}
                 encounterStatus={encounterStatus}
@@ -256,16 +257,16 @@ export function ExamEntrySheet({
             <button
               ref={initialFocusRef}
               type="button"
-              aria-label={modal ? `Cancel ${config.title} entry` : `Back to exam overview from ${config.title}`}
+              aria-label={nonClinical ? `Cancel ${config.title} entry` : `Back to exam overview from ${config.title}`}
               data-testid="cancel-exam-entry-sheet"
               data-entry-sheet-chrome
               onClick={onCancel}
             >
-              {modal ? "Cancel" : "Back to exam overview"}
+              {nonClinical ? "Cancel" : "Back to exam overview"}
             </button>
           </div>
         </header>
-        {!modal && undo && (
+        {!nonClinical && undo && (
           <UndoStrip slot={undo.slot} canWriteDiagnosis={undo.canWriteDiagnosis} scope="section" confirmed={undo.confirmed ?? false} closed={isClosedEncounterStatus(encounterStatus)} onUndo={undo.onUndo} />
         )}
         <div className="odos-exam-entry-sheet-content">{children}</div>

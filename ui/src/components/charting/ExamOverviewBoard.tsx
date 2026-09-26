@@ -1182,10 +1182,10 @@ function uniqueRows<T>(rows: readonly T[], key: (row: T) => string): T[] {
   });
 }
 
-function sectionStateLabel(state: ExamSectionState): string {
+export function sectionStateLabel(state: ExamSectionState): string {
   return {
     examined: "Examined",
-    partial: "Partial examination",
+    partial: "In progress",
     "deferred-with-reason": "Deferred — reason recorded",
     "deferred-without-reason": "Deferred — reason not recorded",
     "not-examined": "Not examined",

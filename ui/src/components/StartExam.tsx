@@ -14,7 +14,7 @@ import {
   EPISODE_OF_CARE_TYPE_CODES,
   type EpisodeOfCareTypeCode,
 } from "../lib/fhir-clinical/episodeOfCare";
-import { useViewState } from "../lib/view-state";
+import { openEncounter } from "../lib/view-state";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../lib/scheduling";
 import { DEFAULT_VISIT_TYPE_CATEGORIES } from "../lib/visit-type-config";
 import { OdosSelect } from "./inputs/OdosSelect";
@@ -77,7 +77,6 @@ export function StartExam({
   patient: Patient;
   api?: StartExamApi;
 }) {
-  const setView = useViewState((state) => state.setView);
   const [visitTypeId, setVisitTypeId] = useState(VISIT_TYPE_CATEGORIES[0]?.id ?? "");
   const [startMode, setStartMode] = useState<"standalone" | "existing" | "new">("standalone");
   const [programType, setProgramType] = useState<EpisodeOfCareTypeCode>("glaucoma");
@@ -178,7 +177,7 @@ export function StartExam({
 
       setPendingEncounter(undefined);
       setPendingNewProgram(undefined);
-      setView({ kind: "encounter", patientId: patient.id, encounterId });
+      openEncounter(patient.id, encounterId);
     } catch (err) {
       setStartError(err instanceof Error ? err.message : String(err));
     } finally {

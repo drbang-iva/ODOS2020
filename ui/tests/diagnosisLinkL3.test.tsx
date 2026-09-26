@@ -128,7 +128,8 @@ test("diagnosis completeness is called only from the explicit EncounterHeader si
   const chartingDirectory = join(process.cwd(), "src", "components", "charting");
   const header = readFileSync(join(chartingDirectory, "EncounterHeader.tsx"), "utf8");
   assert.match(header, /requestFinishEncounter/);
-  assert.match(header, /onClick=\{requestFinishEncounter\}/);
+  assert.match(header, /onClick=\{onReviewAndSign\}/);
+  assert.match(header, /onSignAndFinish: requestFinishEncounter/);
   assert.match(header, /readDiagnosisCompleteness\(encounterId\)/);
   assert.match(header, /onSignAnyway=\{\(\) => void finishEncounter\(\)\}/);
   const otherChartingSources = readdirSync(chartingDirectory)

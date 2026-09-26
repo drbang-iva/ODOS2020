@@ -1153,6 +1153,6 @@ export function DiagnosisCompletionLink({ conditionReference, missingComplexity,
   const missing = [missingComplexity ? "complexity" : "", missingVisitStatus ? "visit status" : ""].filter(Boolean).join(" and ");
   return <button type="button" className="mb-2 text-sm text-[color:var(--odos-accent)]" disabled={!onOpenDiagnosis}
     onClick={() => onOpenDiagnosis?.(conditionReference)}>
-    Complete {missing} in By diagnosis →
+    Complete {missing} in Diagnoses →
   </button>;
 }
