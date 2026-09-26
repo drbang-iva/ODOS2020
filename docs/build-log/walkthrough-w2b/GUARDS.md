@@ -352,3 +352,27 @@ vf-prac1b-walk-db   Up 7 days
 The full MCP command matches the CI unit file selection and ran with dedicated Postgres and no operator files. Its 59 skips include credentialed, destructive-fixture, and other opt-in lanes. They are not counted as passed; the separate credentialed live lanes above cover their stated file sets only.
 
 Build checks: `npm --prefix mcp run build`, `npm --prefix ui run build`, and `npm run typecheck:scripts` each exited 0. `git diff --check` passed.
+
+## Amendment A1 verification
+
+Read the kickoff Amendment A1 from PerformanceOD commit `6fca2ca5`. The new JSON ledger has no CPT/HCPCS literal; no ledger edit was needed. Family terminology remains `eye-code` / `em` / `vision-plan`.
+
+P3 sweep at the pinned base included:
+
+```sh
+git grep -n -E '\.length, [0-9]+|toHaveLength\([0-9]+|length === [0-9]+' 4afa0b62 -- '*diagnosis*' '*Diagnosis*' '*ledger*' '*Ledger*'
+git grep -n 'DIAGNOSIS_CODE_LEDGER_PATHS' 4afa0b62
+git grep -n -E 'loadDiagnosisCodeLedgerRows|readdir.*code-bindings|glob.*code-bindings' 4afa0b62 -- mcp scripts tests ui
+```
+
+No moved count pin. The 134-seed catalog census and existing individual-ledger counts remain unchanged because the new billing ledger is loaded directly, outside the unchanged nine-entry `DIAGNOSIS_CODE_LEDGER_PATHS`. The folder scan in shipped-cpt-guard includes the new JSON.
+
+```text
+$ npx tsx scripts/shipped-cpt-guard.ts
+Shipped CPT literal guard: clean.
+exit 0
+
+$ npx tsx scripts/preflight-lint.ts
+ODOS preflight complete: 0 warning(s), 0 hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md
+exit 0
+```
