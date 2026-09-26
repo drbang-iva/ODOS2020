@@ -1,3 +1,4 @@
+import { resolveExamDestination } from "../src/lib/exam-navigation";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -5,9 +6,7 @@ import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   loadDiagnosisImagingOpen,
-  loadEncounterChartView,
   saveDiagnosisImagingOpen,
-  saveEncounterChartView,
 } from "../src/lib/diagnosis-workspace-preferences";
 import type { Condition, Encounter } from "@medplum/fhirtypes";
 import {
@@ -52,17 +51,17 @@ test("height-capped common diagnosis rows opt out of flex shrinking", () => {
 test("diagnosis workspace preferences default safely and round-trip valid selections", () => {
   const storage = memoryStorage();
 
-  assert.equal(loadEncounterChartView(storage), "diagnosis");
+  assert.equal(resolveExamDestination("", "doctor"), "overview");
   assert.equal(loadDiagnosisImagingOpen(storage), true);
 
-  saveEncounterChartView("structure", storage);
+  assert.equal(resolveExamDestination("", "tech"), "pretest");
   saveDiagnosisImagingOpen(false, storage);
-  assert.equal(loadEncounterChartView(storage), "structure");
+  assert.equal(resolveExamDestination("?exam=history", "tech"), "history");
   assert.equal(loadDiagnosisImagingOpen(storage), false);
 
-  storage.setItem("odos:encounter-chart-view", "future-view");
+
   storage.setItem("odos:diagnosis-imaging-open", "maybe");
-  assert.equal(loadEncounterChartView(storage), "diagnosis");
+  assert.equal(resolveExamDestination("?exam=future-view", "doctor"), "overview");
   assert.equal(loadDiagnosisImagingOpen(storage), true);
 });
 

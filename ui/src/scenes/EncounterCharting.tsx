@@ -85,11 +85,9 @@ import { authHeaders, clinicalGraphApiBase, type VisitChargeResponse } from "../
 import { loadDiagnosisFindings } from "../lib/diagnosis-findings";
 import { fhir } from "../lib/fhir";
 import { isMigratedEncounter } from "../lib/patient-overview";
-import {
-  loadEncounterChartView,
-  saveEncounterChartView,
-  type EncounterChartView,
-} from "../lib/diagnosis-workspace-preferences";
+import { EXAM_DESTINATIONS, resolveExamDestination, writeExamDestination, type ExamDestination } from "../lib/exam-navigation";
+import { ExamReview, type ReviewSignAction } from "../components/charting/ExamReview";
+import { ExamNavigation } from "../components/charting/ExamNavigation";
 import {
   filterDefinitionsForSectionGroups,
   type FindingSectionGroupCatalog,
@@ -128,7 +126,7 @@ export function EncounterCharting(props: Props) {
 }
 
 function EncounterChartingContent({ patient, encounterId }: Props) {
-  const { config } = useRole();
+  const { config, role } = useRole();
   const encounterScope = useMemo(() => ({ encounterId }), [encounterId]);
   const currentEncounterScope = useRef(encounterScope);
   currentEncounterScope.current = encounterScope;
@@ -153,7 +151,10 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
   const [eyeGrowthDefaultVisible, setEyeGrowthDefaultVisible] = useState(false);
   const [addingSectionGroup, setAddingSectionGroup] = useState(false);
   const [sectionGroupError, setSectionGroupError] = useState<string | null>(null);
-  const [chartView, setChartView] = useState<EncounterChartView>(loadEncounterChartView);
+  const [destination, setDestination] = useState<ExamDestination>(() =>
+    resolveExamDestination(typeof window === "undefined" ? "" : window.location?.search ?? "", role));
+  const [navigationVersion, setNavigationVersion] = useState(0);
+  const [reviewSignAction, setReviewSignAction] = useState<ReviewSignAction>();
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<{ workspaceKey: string; reference: string }>();
   const [examOverviewProjection, setExamOverviewProjection] = useState<ExamOverviewProjection>();
   const [examOverviewRefreshing, setExamOverviewRefreshing] = useState(false);
@@ -198,23 +199,45 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
     setSidebarExpanded(expanded);
   }
 
-  function selectChartView(view: EncounterChartView, diagnosisReference?: string) {
+  function selectDestination(next: ExamDestination, diagnosisReference?: string) {
     const transition = () => {
-      setChartView(view);
+      setDestination(next);
+      setNavigationVersion(current => current + 1);
       if (diagnosisReference) setSelectedDiagnosis({ workspaceKey: diagnosisWorkspaceKey, reference: diagnosisReference });
-      if (view !== "structure") {
-        setBoardEditorOpen(false);
-        setEntrySheetSection(undefined);
-        setRightPanelState(closeExamRightPanelEntry);
-      }
-      saveEncounterChartView(view);
+      setBoardEditorOpen(false);
+      setEntrySheetSection(undefined);
+      setRightPanelState(closeExamRightPanelEntry);
+      setVisitChargesOpen(next === "billing");
+      writeExamDestination(next);
     };
-    if (view !== "structure" && entrySheetSection) {
-      entrySheetGuard.requestTransition("By diagnosis", transition);
+    if (entrySheetSection) {
+      entrySheetGuard.requestTransition(EXAM_DESTINATIONS.find(([key]) => key === next)![1], transition);
       return;
     }
     transition();
   }
+
+  function selectChartView(view: "diagnosis" | "structure", diagnosisReference?: string) {
+    selectDestination(view === "diagnosis" ? "diagnoses" : "overview", diagnosisReference);
+  }
+
+  useEffect(() => {
+    if (destination === "plan-rx") openBoardEditor("prescription");
+    if (destination === "tests" || destination === "results") {
+      setRightPanelState(current => selectExamRightPanelTab(current, destination === "tests" ? "follow-up" : "imaging"));
+    }
+    if (destination === "billing") setVisitChargesOpen(true);
+  }, [destination, navigationVersion]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const group = destination === "entrance" ? "pretest" : destination;
+    if (["history", "pretest", "refraction", "ocular-health"].includes(group)) {
+      document.getElementById?.(`exam-section-${group}`)?.scrollIntoView?.({ block: "start" });
+    } else if (destination === "overview") {
+      document.querySelector?.(".odos-exam-overview")?.scrollTo?.({ top: 0 });
+    }
+  }, [destination, navigationVersion, examOverviewProjection]);
 
   function refreshExamOverview() {
     setExamOverviewRefreshVersion((current) => current + 1);
@@ -845,7 +868,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         ? "Encounter details unavailable — Visit & charges cannot be changed"
         : undefined);
   const visitChargesDisabled = currentEncounterLoadState.status !== "ready" || isMigratedEncounter(encounter);
-  const rightPanelAvailable = (Boolean(activeExamOverviewProjection) || chartView === "diagnosis") && !boardEditorOpen;
+  const rightPanelAvailable = !boardEditorOpen;
   const rightPanelForward = rightPanelAvailable && !visitChargesOpen;
   const entryTabTitle = entrySheetSection
     ? examRightPanelEntryTitle(entrySheetSection, EXAM_ENTRY_SHEET_CONFIG[entrySheetSection].title)
@@ -872,6 +895,8 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         encounterId={encounterId}
         completeness={activeExamOverviewProjection?.completeness}
         onExamScopeChanged={refreshExamOverview}
+        onOpenReview={() => selectDestination("review")}
+        onSignActionChange={setReviewSignAction}
         unassignedCount={unassignedCount}
         visitCharge={visitCharge}
         brokenDiagnosisDisplay={brokenVisitDiagnosisDisplay}
@@ -884,16 +909,8 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
         undoConfirmed={activeUndoLedger.encounter ? confirmedUndoSlots.has(undoSlotKey("encounter", activeUndoLedger.encounter)) : false}
         onUndo={(voidActionId) => handleUndo({ scope: "encounter", voidActionId })}
       />
-      <div
-        className="odos-charting-stage"
-        data-entry-sheet-open={visitChargesOpen || rightPanelAvailable ? "true" : "false"}
-        data-panel-summoned={rightPanelState.summoned ? "true" : "false"}
-      >
-        <div className="odos-charting-primary">
-      <div className="odos-chart-view-toggle" role="group" aria-label="Chart workspace view">
-        <button type="button" aria-pressed={chartView === "diagnosis"} onClick={() => selectChartView("diagnosis")}>By diagnosis</button>
-        <button type="button" aria-pressed={chartView === "structure"} onClick={() => selectChartView("structure")}>By structure</button>
-      </div>
+      <div className="odos-exam-navigation-bar">
+      <ExamNavigation active={destination} onSelect={selectDestination} />
       {rightPanelAvailable && (
         <div className="odos-exam-panel-launchers" aria-label="Exam panel shortcuts">
           <button type="button" onClick={() => setRightPanelState((current) => selectExamRightPanelTab(current, "images"))}>
@@ -902,7 +919,22 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
           <button type="button" onClick={() => openEngage()}>Engage</button>
         </div>
       )}
-      {chartView === "diagnosis" ? (
+      </div>
+      <div
+        className="odos-charting-stage"
+        data-entry-sheet-open={visitChargesOpen || rightPanelAvailable ? "true" : "false"}
+        data-panel-summoned={rightPanelState.summoned ? "true" : "false"}
+      >
+        <div className="odos-charting-primary">
+      {destination === "review" ? (
+        <ExamReview completeness={activeExamOverviewProjection?.completeness}
+          onSignAndFinish={() => {
+            if (reviewSignAction?.encounterId === encounterId) return reviewSignAction.onSignAndFinish();
+          }}
+          disabled={reviewSignAction?.encounterId !== encounterId || reviewSignAction.disabled}
+          unavailableReason={reviewSignAction?.unavailableReason}
+          signLabel={reviewSignAction?.signLabel ?? "Sign & finish"} />
+      ) : destination === "diagnoses" ? (
         <DiagnosisWorkspace
           key={diagnosisWorkspaceKey}
           patientReference={patientReference}

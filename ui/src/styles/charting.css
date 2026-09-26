@@ -2638,3 +2638,37 @@
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
+
+.odos-exam-navigation {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  flex-shrink: 0;
+  padding: 0 18px;
+}
+.odos-exam-navigation button {
+  min-width: 0;
+  min-height: 47px;
+  border-top: 1px solid var(--odos-border, #ffffff20);
+  border-bottom: 3px solid transparent;
+  padding: 9px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.odos-exam-navigation button[aria-current="page"] {
+  border-bottom-color: #43cbb6;
+  background: #43cbb618;
+  color: #7be4d3;
+}
+.odos-exam-navigation button:focus-visible { outline: 2px solid #43cbb6; outline-offset: -2px; }
+.odos-exam-review { padding: 24px; overflow: auto; }
+.odos-exam-review h2 { font-size: 24px; margin-bottom: 16px; }
+.odos-exam-review li { display: flex; gap: 16px; padding: 8px 0; }
+.odos-exam-review button { margin-top: 20px; padding: 10px 16px; background: #287a70; border-radius: 6px; }
+.odos-exam-review button:disabled { opacity: .5; }
+@media (max-width: 900px) { .odos-exam-navigation button { font-size: 12px; } }
+
+.odos-exam-navigation-bar { display: flex; flex-shrink: 0; min-width: 0; }
+.odos-exam-navigation-bar > .odos-exam-navigation { flex: 1; }
+
+.odos-sign-advisory { z-index: 60; }

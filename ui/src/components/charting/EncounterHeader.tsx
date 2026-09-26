@@ -1,3 +1,4 @@
+import type { ReviewSignAction } from "./ExamReview";
 import { abandonEncounter as requestEncounterAbandon } from "../../lib/encounter-abandon";
 import { useConfirmDestructive } from "./ConfirmDestructive";
 import { FollowingPicker, type FollowingChoice } from "./FollowingPicker";
@@ -59,6 +60,8 @@ interface Props {
   visitUnavailableReason?: string;
   clinicalActionUnavailableReason?: string;
   onToggleVisitCharges?: () => void;
+  onOpenReview?: () => void;
+  onSignActionChange?: (action: ReviewSignAction) => void;
 }
 
 export function EncounterHeader({
@@ -73,6 +76,8 @@ export function EncounterHeader({
   visitUnavailableReason,
   clinicalActionUnavailableReason,
   onToggleVisitCharges,
+  onOpenReview,
+  onSignActionChange,
   undoSlot,
   undoConfirmed = false,
   canWriteDiagnosis = false,
@@ -276,6 +281,16 @@ export function EncounterHeader({
     void Promise.resolve().then(() => focusTarget?.focus());
   }
 
+  useEffect(() => {
+    onSignActionChange?.({
+      encounterId,
+      onSignAndFinish: requestFinishEncounter,
+      disabled: busy !== null || migrated || Boolean(clinicalActionUnavailableReason),
+      unavailableReason: clinicalActionUnavailableReason,
+      signLabel: busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish",
+    });
+  }, [onSignActionChange, encounterId, patient.id, busy, migrated, clinicalActionUnavailableReason]);
+
   return (
     <header className="border-b border-white/10 bg-bg-panel">
       <ExamChartBar
@@ -295,10 +310,10 @@ export function EncounterHeader({
           if (!visitUnavailableReason) onToggleVisitCharges?.();
         }}
         onBlackout={enterBlackout}
-        requestFinishEncounter={requestFinishEncounter}
+        onReviewAndSign={() => onOpenReview?.()}
         signDisabled={busy !== null || migrated || Boolean(clinicalActionUnavailableReason)}
         signUnavailableReason={clinicalActionUnavailableReason}
-        signLabel={busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
+        signLabel="Review & sign"
         undoSlot={undoSlot}
         undoConfirmed={undoConfirmed}
         canWriteDiagnosis={canWriteDiagnosis}
@@ -392,7 +407,7 @@ interface ExamChartBarProps {
   visitUnavailableReason?: string;
   onToggleVisitControls: () => void;
   onBlackout: () => void;
-  requestFinishEncounter: () => void | Promise<void>;
+  onReviewAndSign: () => void | Promise<void>;
   signDisabled: boolean;
   signUnavailableReason?: string;
   signLabel: string;
@@ -416,7 +431,7 @@ export function ExamChartBar({
   visitUnavailableReason,
   onToggleVisitControls,
   onBlackout,
-  requestFinishEncounter,
+  onReviewAndSign,
   signDisabled,
   signUnavailableReason,
   signLabel,
@@ -512,10 +527,10 @@ export function ExamChartBar({
         data-chart-bar-slot="sign"
         disabled={signDisabled}
         title={signUnavailableReason}
-        onClick={requestFinishEncounter}
+        onClick={onReviewAndSign}
       >
         <span className="odos-chart-bar-sign-full">{signLabel}</span>
-        <span className="odos-chart-bar-sign-short">Sign</span>
+        <span className="odos-chart-bar-sign-short">Review</span>
       </button>
     </div>
   );
@@ -741,7 +756,7 @@ export function DiagnosisCompletenessDialog({
   return (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="odos-sign-advisory fixed inset-0 flex items-center justify-center bg-black/60 p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Diagnosis key findings advisory"

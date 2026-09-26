@@ -93,7 +93,7 @@ test("S3b3 G5 actual chart keeps a failed write in-session without changing its 
   let renderer!: ReturnType<typeof create>;
   try {
     await act(async () => { renderer = create(<RoleProvider><EncounterCharting patient={{ resourceType: "Patient", id: "synthetic" }} encounterId="e1" /></RoleProvider>); await pause(20); });
-    await act(async () => { renderer.root.findAllByType("button").find(b => b.children.join("") === "By structure")!.props.onClick(); await pause(20); });
+    await act(async () => { renderer.root.findAllByType("button").find(b => b.children.join("") === "Overview")!.props.onClick(); await pause(20); });
     const before = renderer.root.findAllByProps({ role: "alert" }).length;
     assert.equal(before, 0);
     await act(async () => { renderer.root.findByType(ExamOverviewBoard).props.onCollapse("wearing"); await pause(400); });
