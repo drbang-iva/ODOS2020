@@ -73,6 +73,19 @@ test("unknown or unconfigured lab-order vendors fail closed with explicit messag
 test("isLabOrderVendorId recognizes only shipped vendors", () => {
   assert.equal(isLabOrderVendorId("manual"), true);
   assert.equal(isLabOrderVendorId("ocuco-gatekeeper"), true);
-  assert.equal(isLabOrderVendorId("visionweb"), false);
+  assert.equal(isLabOrderVendorId("visionweb"), true);
   assert.equal(isLabOrderVendorId(undefined), false);
+});
+
+test("V15 VisionWeb is constructible only when registered and remains disallowed as an environment default", () => {
+  const originalFetch=globalThis.fetch;let requests=0;
+  globalThis.fetch=async()=>{requests++;throw new Error("unexpected network");};
+  try{
+    const dispatch=createLabOrderDispatch([{vendor:"visionweb"}],{recordAudit});
+    assert.deepEqual(dispatch.vendors(),["visionweb"]);
+    assert.equal(dispatch.getAdapter("visionweb",fakeFhir()).vendorId,"visionweb");
+    assert.throws(()=>createLabOrderDispatch([]).getAdapter("visionweb",fakeFhir()),/not configured for this practice/);
+    assert.equal(requests,0);
+    assert.deepEqual(labOrderRoutingFromEnv({}),{vendor:"manual"});
+  }finally{globalThis.fetch=originalFetch;}
 });

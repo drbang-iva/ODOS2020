@@ -1,3 +1,6 @@
+import { visionWebConfigFromEnv, type VisionWebConfig } from "../integrations/visionweb/config.js";
+import { createVisionWebClient, type VisionWebClient } from "../integrations/visionweb/visionWebClient.js";
+import { createVisionWebLabOrderAdapter } from "./adapters/visionweb-lab-order-adapter.js";
 import type { OdosAuditEventRecord } from "../authz/odosAudit.js";
 import {
   ocucoGatekeeperConfigFromEnv,
@@ -11,7 +14,7 @@ import { createManualLabOrderAdapter, type LabOrderFhirClient } from "./adapters
 import { createOcucoGatekeeperLabOrderAdapter } from "./adapters/ocuco-gatekeeper-lab-order-adapter.js";
 import type { LabOrderAdapter } from "./lab-order-adapter.js";
 
-export type LabOrderVendorId = "manual" | "ocuco-gatekeeper";
+export type LabOrderVendorId = "manual" | "ocuco-gatekeeper" | "visionweb";
 export type AdapterRegistration = { vendor: LabOrderVendorId };
 export type LabOrderAdapters = Partial<Record<LabOrderVendorId, LabOrderAdapter>>;
 
@@ -20,6 +23,8 @@ export interface LabOrderRoutingDefaults {
 }
 
 export interface LabOrderDispatchDeps {
+  visionWebConfig?: VisionWebConfig;
+  visionWebClient?: VisionWebClient;
   now?: () => string;
   recordAudit?(row: OdosAuditEventRecord): Promise<void>;
   ocucoConfig?: OcucoGatekeeperConfig;
@@ -38,6 +43,8 @@ export function createLabOrderDispatch(
   const byVendor = new Map<LabOrderVendorId, AdapterRegistration>(
     registrations.map((registration) => [registration.vendor, registration]),
   );
+  const visionWebConfig = deps.visionWebConfig ?? visionWebConfigFromEnv();
+  const visionWebClient = deps.visionWebClient ?? createVisionWebClient();
   const ocucoConfig = deps.ocucoConfig ?? ocucoGatekeeperConfigFromEnv();
   const ocucoClient = deps.ocucoClient ?? createOcucoGatekeeperClient();
 
@@ -55,6 +62,8 @@ export function createLabOrderDispatch(
         throw new Error(`Lab-order vendor "${vendor}" is not configured for this practice.`);
       }
       switch (registration.vendor) {
+        case "visionweb":
+          return createVisionWebLabOrderAdapter(fhir, visionWebConfig, visionWebClient, { now: deps.now, recordAudit: deps.recordAudit });
         case "manual":
           return createManualLabOrderAdapter(fhir, { now: deps.now, recordAudit: deps.recordAudit });
         case "ocuco-gatekeeper":
@@ -83,14 +92,14 @@ export function selectLabOrderAdapter(
 }
 
 export function isLabOrderVendorId(value: unknown): value is LabOrderVendorId {
-  return value === "manual" || value === "ocuco-gatekeeper";
+  return value === "manual" || value === "ocuco-gatekeeper" || value === "visionweb";
 }
 
 export function labOrderRoutingFromEnv(
   env: Record<string, string | undefined>,
 ): Required<LabOrderRoutingDefaults> {
   const vendor = env.ODOS_LAB_ORDER_VENDOR_DEFAULT || "manual";
-  if (!isLabOrderVendorId(vendor)) {
+  if (vendor !== "manual" && vendor !== "ocuco-gatekeeper") {
     throw new Error("ODOS lab-order vendor routing value must be manual or ocuco-gatekeeper.");
   }
   return { vendor };

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SingleOrder xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<OrderId>11082021_2</OrderId>
+	<PatientName>LASTNAME FIRSTNAME</PatientName>
+	<PoNumber>11082021</PoNumber>
+	<VWebExchangeId>1798564</VWebExchangeId>
+	<BillingId>TEST</BillingId>
+	<ShippingId>TEST</ShippingId>
+	<SupplierId>9901</SupplierId>
+	<SupplierName>9901</SupplierName>
+	<CreateDate/>
+	<SentDate>2022-10-12T15:17:07Z</SentDate>
+	<Status>Error</Status>
+	<ErrorList> TRN008 Design code invalid. Design code (SVxx) not found. </ErrorList>
+</SingleOrder>

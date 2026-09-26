@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SingleOrder xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+	<OrderId>6522</OrderId>
+	<PatientName>Test Test2</PatientName>
+	<PoNumber/>
+	<VWebOrderId>SP1XXUH1</VWebOrderId>
+	<VWebExchangeId>51102439</VWebExchangeId>
+	<BillingId>837122</BillingId>
+	<ShippingId>837122</ShippingId>
+	<SupplierId>0140</SupplierId>
+	<SupplierName>0140</SupplierName>
+	<CreateDate/>
+	<SentDate>2016-05-27T11:40:13Z</SentDate>
+	<Status>Sent</Status>
+</SingleOrder>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SingleOrder xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+	<OrderId>99999998</OrderId>
+	<PatientName>TestLast TestFirst</PatientName>
+	<PoNumber/>
+	<BillingId>102804</BillingId>
+	<ShippingId>102804</ShippingId>
+	<SupplierId>9901</SupplierId>
+	<SupplierName>Essilor Latin America &amp; Caribbean (Tampa)</SupplierName>
+	<CreateDate/>
+	<SentDate>2016-06-21T16:31:13Z</SentDate>
+	<Status>Review</Status>
+	<ErrorList>1.   LERefDesign:Left Eye Lens Design (SV) mapping is missing
+</ErrorList>
+</SingleOrder>
