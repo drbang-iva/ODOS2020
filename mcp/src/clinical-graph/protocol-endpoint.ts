@@ -1271,6 +1271,12 @@ export async function handleFollowUpAcceptRequest(
   const serviceFhir = deps.serviceFhir ?? staff.fhir;
   const queueServiceFhir = serviceFhir as import("./exam-overview-endpoint.js").ExamOverviewFhirClient;
   const loadFailure = { status: 502, body: { error: "The tests for this visit could not be loaded." } };
+  const acceptFailure = (step: "order" | "plan" | "fee" | "charge" | "link", error: unknown) => {
+    const status = typeof (error as { status?: unknown } | null)?.status === "number" ? (error as { status: number }).status : "none";
+    const message = (error instanceof Error ? error.message : "Unknown failure").replace(/[\r\n]/g, " ");
+    console.error(`follow-up accept failed: encounter=${encounterId} orderable=${orderable} step=${step} status=${status} message=${message}`);
+    return { status: 502, body: { code: "accept-failed", error: "The test could not be accepted." } };
+  };
   let loaded: Awaited<ReturnType<typeof readQueue>>;
   try {
     loaded = await readQueue(queueServiceFhir, queueStaffFhir, encounter, encounterId, patientReference.slice(8), true);
@@ -1293,33 +1299,38 @@ export async function handleFollowUpAcceptRequest(
     const service = liveService(staff, deps.now);
     let created: PlanActionInstance | undefined;
     let chargeStarted = false;
+    let step: "order" | "plan" | "fee" | "charge" | "link" = "plan";
     try {
       const actions = await new ProtocolBasicStore<PlanActionInstance>(staff.fhir, PROTOCOL_BASIC_CODES.planActionInstance).list();
       let action = actions.find(item => item.encounterId === encounterId && item.patientId === patientReference.slice(8) &&
         item.actionType === "order" && !["removed", "cancelled"].includes(item.state) &&
         item.payload.orderableKey === orderable && (item.payload.focus ?? "") === (focus ?? ""));
       if (!action) {
+        step = "order";
         action = await service.addQueueOrder({ encounterId, patientId: patientReference.slice(8), orderable, ...(focus ? { focus } : {}),
           actor: staff.staffReference, linkedDx: diagnosis ? [diagnosis.reference] : [] });
         created = action;
       }
+      step = "fee";
       const coded = (await listActiveCodedNonVisitProcedureFees(serviceFhir)).find(fee => fee.procedureConceptKey === orderable);
+      step = "charge";
       const live = await findLiveProcedureCharge(staff.fhir, encounterId, orderable);
       let manual = live && isManualProcedureProposal(live, encounterId) ? live : undefined;
       if (coded && !live) {
         chargeStarted = true;
         const written = await createAcceptedManualProcedureCharge({ fhir: staff.fhir as unknown as Parameters<typeof createAcceptedManualProcedureCharge>[0]["fhir"], feeFhir: serviceFhir, encounterId, procedureConceptKey: orderable,
           dxPointers: diagnosis ? [diagnosis.reference] : [], actor: staff.staffReference, now: deps.now });
-        if (written.status !== 201 || !("proposal" in written.body)) return loadFailure;
+        if (written.status !== 201 || !("proposal" in written.body)) return acceptFailure("charge", Object.assign(new Error("Charge write returned without an accepted proposal."), { status: written.status }));
         manual = written.body.proposal;
       }
+      step = "link";
       if (manual && action.chargeProposalRef !== manual.id) await service.actions.save({ ...action, chargeProposalRef: manual.id });
       return undefined;
-    } catch {
+    } catch (error) {
       if (created && !chargeStarted) {
-        try { await service.compensateQueueOrder(created); } catch { return loadFailure; }
+        try { await service.compensateQueueOrder(created); } catch { return acceptFailure(step, error); }
       }
-      return loadFailure;
+      return acceptFailure(step, error);
     }
   });
   if (result) return result;

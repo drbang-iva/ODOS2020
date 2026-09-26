@@ -134,7 +134,8 @@ export function NewPatient() {
             setErrors(withoutResponsiblePartyErrors);
           }}
         />
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex flex-col items-end gap-3">
+          {saveError && <div role="alert" className="w-full rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
           <button type="button" disabled={saving || preferenceAvailability === "loading"} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
         </div>
       </section>

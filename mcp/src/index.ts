@@ -8115,8 +8115,8 @@ async function serveMcpServerAfterProjectGuard(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         serviceFhir: fhir,
-        drugs: new PostgresWenoDrugDatabaseStorage(),
-        pharmacies: new PostgresWenoPharmacyDirectoryStorage(),
+        drugs: new PostgresWenoDrugDatabaseStorage({ postgresUrl: process.env.ODOS_POSTGRES_URL }),
+        pharmacies: new PostgresWenoPharmacyDirectoryStorage({ postgresUrl: process.env.ODOS_POSTGRES_URL }),
         switchConfig: wenoSwitchConfigFromEnv(),
         recordAudit: async (row) => {
           await auditRuntime.record(row, () => undefined);
