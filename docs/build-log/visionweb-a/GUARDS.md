@@ -481,3 +481,26 @@ GREEN (exit 0):
 # fail 0
 # skipped 0
 ```
+
+## CodeRabbit prism-direction guard
+
+The original guard allowed missing/non-string directions to reach toUpperCase and lose aggregated amount errors. New test covers missing, null, numeric and unknown-string directions with an invalid amount.
+
+Command: `node --import tsx --test --test-name-pattern="V6 invalid prism" mcp/tests/vwOrderSerializer.test.ts`
+
+RED (exit 1):
+```text
+not ok 1 - V6 invalid prism directions preserve aggregated amount and direction errors
+# tests 1
+# pass 0
+# fail 1
+# skipped 0
+```
+
+GREEN (exit 0):
+```text
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+```

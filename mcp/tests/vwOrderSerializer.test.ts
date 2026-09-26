@@ -49,3 +49,14 @@ test("V7 XML escaping preserves the original text", () => {
   const fields = new XMLParser({ parseTagValue: false }).parse(xml).VWOrder.Item;
   assert.equal(fields.find((v: {FieldName:string})=>v.FieldName === "PatLastName").FieldValue, o.header.patientName);
 });
+
+test("V6 invalid prism directions preserve aggregated amount and direction errors", () => {
+  for (const base of [undefined, null, 7, "sideways"]) {
+    const input = order();
+    input.rx.od.prisms = [{ amount: 0.3, base } as unknown as NonNullable<LabOrder["rx"]["od"]["prisms"]>[number]];
+    assert.throws(() => serialize(input), error => error instanceof Error
+      && error.message.startsWith("VisionWeb invalid or missing fields:")
+      && error.message.includes("REVerticalPrismValue")
+      && error.message.includes("REVerticalPrismDirection"));
+  }
+});

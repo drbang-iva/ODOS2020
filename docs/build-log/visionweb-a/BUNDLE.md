@@ -37,12 +37,12 @@ Dedicated synthetic Postgres named `odos-vwa-visionweb-a-20260926`; its URL supp
 
 | Check | Before | After |
 |---|---:|---:|
-| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 6493 tests; 6434 pass; 0 fail; 59 skipped; exit 0 | 6521 tests; 6460 pass; 0 fail; 61 skipped; exit 0 |
+| `ODOS_ALLOW_UNGATED_MCP=1 npm --prefix mcp test` | 6493 tests; 6434 pass; 0 fail; 59 skipped; exit 0 | 6522 tests; 6461 pass; 0 fail; 61 skipped; exit 0 |
 | `npm --prefix mcp exec -- tsc --noEmit -p mcp/tsconfig.json` | exit 0 | exit 0 |
 | `npm run preflight` (serial) | exit 0 | exit 0; 0 warnings; 0 hard blocks |
 | Discovered FHIR operations | 972 | 976 |
 
-The suite explicitly reports that live authorization is not gated: 47 live-stack skips are acknowledged with ODOS_ALLOW_UNGATED_MCP=1. The final run adds 28 tests: 26 passing and two disabled private/live QA checks. No credentialed Medplum proof is claimed.
+The suite explicitly reports that live authorization is not gated: 47 live-stack skips are acknowledged with ODOS_ALLOW_UNGATED_MCP=1. The final run adds 29 tests: 27 passing and two disabled private/live QA checks. No credentialed Medplum proof is claimed.
 
 `GUARDS.md` quotes RED and restored GREEN summaries for all 18 offline mutations. V8a/V8b, the observed echo guard, and credential boundaries were re-proven under R10; supplemental exact RED/GREEN summaries follow the original 18 in GUARDS.md. `mutations.py` restores each changed product file in a finally block, then requires a successful green run.
 
@@ -89,6 +89,10 @@ Author validation is not independent evaluation. Claude must evaluate the eventu
 The first R10 suite hit only the explicitly named educationEnrollmentApi fetch-failed flake (6459 pass / 1 fail / 61 skipped); its authorized file-alone rerun passed 56/56. A final isolated full run passed 6460 / 0 / 61. The initial R10 suite had only old preflight reports in this worktree's .odos directory; those were moved aside before the final full run and restored after serial preflight. No product assertions were changed for either correction.
 
 Fetched origin/main is 8798cf07372f4e0746ecf33c899c39ae63d1bdc1 (unrelated visit-charge change); all cited lab-order premise files remain unchanged from the pinned base. Open-PR scopes were checked and do not overlap this diff. The canonical checkout remained clean and untouched.
+
+CodeRabbit reviewed the first PR head and identified one prism-direction validation issue. A new V6 test reproduced it (RED 1 failure); the corrected guard preserves both amount and direction errors (GREEN 1 pass; serializer/adapter group 14/14). Final full suite after this fix: 6522 tests, 6461 pass, 0 fail, 61 skipped, exit 0. Typecheck passed. The addressed review thread and bot state are bound to the final SHA in the task/PR handoff. PR-Agent's initial job failed before publishing a review, after diff pruning; that is not review evidence.
+
+Cross-repo follow-up: HUB can fold task rulings R6–R10 into the authoritative PerformanceOD kickoff; this code slice does not edit that repository.
 
 ## Cleanup
 

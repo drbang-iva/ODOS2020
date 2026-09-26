@@ -65,7 +65,10 @@ export function labOrderToVwOrder(order: LabOrder, account: VisionWebLabAccount,
       if (seen.has(axis)) errors.add(field);
       seen.add(axis);
       number(field, prism.amount, true, 0.25, 10, 0.25, 2);
-      if (!["up", "down", "in", "out"].includes(direction)) errors.add(`${p}${axis}PrismDirection`);
+      if (typeof direction !== "string" || !["up", "down", "in", "out"].includes(direction)) {
+        errors.add(`${p}${axis}PrismDirection`);
+        continue;
+      }
       text(`${p}${axis}PrismDirection`, direction.toUpperCase(), true);
     }
   }

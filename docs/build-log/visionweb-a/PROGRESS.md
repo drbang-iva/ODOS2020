@@ -20,3 +20,10 @@ R6–R10 supersede the offline checkpoint: captures now precede parsing; a read-
 R10 verification: the first full run reported 6521 tests, 6459 pass, 1 fail, 61 skipped. The only failure was the explicitly permitted educationEnrollmentApi.test.ts fetch-failed flake; its one file-alone rerun passed 56/56, exit 0. This worktree's preflight-only .odos reports were then moved aside and the full run repeated to satisfy rule 11 exactly. No expected values or product requests were changed for this harness correction.
 
 Final isolated R10 suite: 6521 tests, 6460 pass, 0 fail, 61 skipped, exit 0 (base 6493 + 28). Typecheck exit 0; unchanged fixturePhiGuard 1/1.
+
+
+CodeRabbit's first exact-head review found one prism-direction aggregation defect. Missing/non-string prism bases could throw before reporting collected validation errors. A new regression test was RED (1 failure), the guard was fixed without changing existing assertions, and the serializer/adapter group was GREEN (14/14); typecheck exit 0. The final full suite is recorded in BUNDLE.md.
+
+R10 harness correction: the first classifier edit command used the wrong working directory. The test stopped at its explicit-phase guard without sending a request. The corrected command explicitly disabled VISIONWEB_QA_LIVE and enabled only the offline classification lane. No VisionWeb requests were made under R10.
+
+Final post-review full suite: 6522 tests, 6461 pass, 0 fail, 61 skipped, exit 0 (base 6493 + 29).
