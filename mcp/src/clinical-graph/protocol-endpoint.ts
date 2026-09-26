@@ -1,3 +1,5 @@
+import { diagnosisBillingClass } from "./diagnosis-billing-class.js";
+import { ICD10_CM_CODE_SYSTEM } from "./glaucoma-suspect.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { loadEncounterFindingState, projectCurrentFindings } from "./current-finding-reader.js";
 import { materializeAtomicFindingCatalog } from "./diagnosis-findings-endpoint.js";
@@ -736,7 +738,7 @@ export async function handleVisitChargeMutationRequest(
         units: 1,
         laterality: "OU",
         dxPointers: dxPointer === undefined
-          ? await initialPrincipalDiagnosisPointers(staff.fhir, params.data.encounterId)
+          ? await initialPrincipalDiagnosisPointers(staff.fhir, params.data.encounterId, procedureConceptKey!)
           : dxPointer === null ? [] : [dxPointer],
         evidenceRefs: [],
         coverageEvaluations: [],
@@ -817,13 +819,37 @@ function resolveManualVisitProposal(
 async function initialPrincipalDiagnosisPointers(
   fhir: Pick<LiveFhir, "read">,
   encounterId: string,
+  procedureConceptKey: string,
 ): Promise<string[]> {
   const encounter = await fhir.read<Encounter>("Encounter", encounterId);
-  const principalReferences = (encounter.diagnosis ?? []).flatMap((diagnosis) => {
-    const reference = diagnosis.rank === 1 ? diagnosis.condition.reference : undefined;
-    return reference?.match(/^Condition\/[A-Za-z0-9.-]+$/) ? [reference] : [];
+  const diagnoses = (encounter.diagnosis ?? []).flatMap((diagnosis) => {
+    const reference = diagnosis.condition.reference;
+    const match = reference?.match(/^Condition\/([A-Za-z0-9.-]+)$/);
+    return reference && match && typeof diagnosis.rank === "number"
+      ? [{ reference, id: match[1]!, rank: diagnosis.rank }]
+      : [];
   });
-  return principalReferences.length === 1 ? principalReferences : [];
+  if (new Set(diagnoses.map((diagnosis) => diagnosis.rank)).size !== diagnoses.length) return [];
+  diagnoses.sort((left, right) => left.rank - right.rank);
+  const classified = await Promise.all(diagnoses.map(async (diagnosis) => {
+    let billingClass: "refractive" | "medical" | "unclassified" = "unclassified";
+    try {
+      const condition = await fhir.read<Condition>("Condition", diagnosis.id);
+      const code = condition.code?.coding?.find((coding) => coding.system === ICD10_CM_CODE_SYSTEM && coding.code)?.code;
+      if (code) billingClass = diagnosisBillingClass(code);
+    } catch {
+      // An unreadable Condition retains the existing unclassified rank-one fallback.
+    }
+    return { ...diagnosis, billingClass };
+  }));
+  const family = visitProcedureFamily(procedureConceptKey);
+  const medical = family === "eye-code" || family === "em"
+    ? classified.find((diagnosis) => diagnosis.billingClass === "medical")
+    : undefined;
+  const refractive = classified.find((diagnosis) => diagnosis.billingClass === "refractive");
+  const fallback = classified.find((diagnosis) => diagnosis.rank === 1 && diagnosis.billingClass === "unclassified");
+  const selected = medical ?? refractive ?? fallback;
+  return selected ? [selected.reference] : [];
 }
 
 export async function handleProtocolFollowUpConfirmRequest(
