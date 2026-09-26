@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { Encounter, Patient } from "@medplum/fhirtypes";
 import type { StartExamApi } from "../../src/components/StartExam";
 import { RoleProvider } from "../../src/lib/role-context";
+import { MIGRATION_TAG_SYSTEM, MIGRATION_TAG_CODE } from "../../src/lib/patient-overview";
 import { fhir } from "../../src/lib/fhir";
 import type { ExamOverviewProjection } from "../../src/components/charting/ExamOverviewBoard";
 import "../../src/styles/globals.css";
@@ -22,6 +23,7 @@ Element.prototype.scrollIntoView = function(options) { window.n1.scrolls.push(th
 const params = new URLSearchParams(location.search);
 const patient: Patient = { resourceType: "Patient", id: "n1-patient", name: [{ given: ["Synthetic"], family: "Navigation" }] };
 const encounter: Encounter = { resourceType: "Encounter", id: "n1-encounter", status: "in-progress", class: { code: "AMB" }, subject: { reference: "Patient/n1-patient" }, meta: { versionId: "1" } };
+if (params.has("migrated")) encounter.meta!.tag = [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }];
 const labels = ["History", "Entrance", "Refraction", "Pretest", "Ocular Health", "Assessment"];
 const keys = ["history", "entrance", "refraction", "pretest", "ocular-health", "assessment"];
 const projection: ExamOverviewProjection = {
@@ -35,13 +37,21 @@ if (params.has("complete")) {
   projection.completeness.resolvedSectionCount = 6;
   projection.completeness.status = "complete";
 }
+if (params.has("unconfigured")) {
+  projection.completeness.status = "unconfigured";
+  projection.completeness.trace = [];
+  projection.completeness.requiredSectionCount = 0;
+}
 const bundle = { resourceType: "Bundle", type: "searchset", entry: [] };
 fhir.read = (async (type: string) => type === "Encounter" ? encounter : type === "Patient" ? patient : { resourceType: type, id: "synthetic" }) as typeof fhir.read;
 fhir.executeTransaction = (async () => { window.n1.finishCalls++; return { resourceType: "Bundle", type: "transaction-response", entry: [{ response: { status: "200 OK" } }, { response: { status: "201 Created" } }] }; }) as typeof fhir.executeTransaction;
 const json = (value: unknown) => new Response(JSON.stringify(value), { headers: { "Content-Type": "application/json" } });
 window.fetch = async (input, init) => {
   const url = String(input);
-  if (url.endsWith("/exam-overview")) return json(projection);
+  if (url.endsWith("/exam-overview")) {
+    if (params.has("load-failure")) return new Response("Synthetic unavailable", { status: 503 });
+    return json(projection);
+  }
   if (url.endsWith("/exam-view-state")) return json({ collapsed: [], shelved: [] });
   if (url.endsWith("/exam-scope")) return json({ examScope: "comprehensive", canWrite: false });
   if (url.endsWith("/void/ledger")) return json({ ledger: { encounterId: "n1-encounter", encounter: null, sections: {} }, canWriteDiagnosis: false });

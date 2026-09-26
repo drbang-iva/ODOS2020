@@ -20,7 +20,7 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await server?.close(); });
 async function open(query = "", width = 1280) {
-  const page = await browser.newPage({ viewport: { width, height: 1100 } }); page.setDefaultTimeout(5000);
+  const page = await browser.newPage({ viewport: { width, height: 1100 } }); page.setDefaultTimeout(5000); page.setDefaultNavigationTimeout(30_000);
   await page.goto(`${origin}/tests/fixtures/exam-navigation-n1.html${query}`, { waitUntil: "networkidle" });
   return page;
 }
@@ -114,7 +114,7 @@ test("N1 G6 header opens Review without signing and Review preserves advisory si
     assert.equal(await page.evaluate(() => window.n1.finishCalls), 0);
     assert.equal(await page.evaluate(() => window.n1.completenessReads), 0);
     assert.equal(await page.locator(".odos-exam-review li").count(), 6);
-    assert.match(await page.locator(".odos-exam-review li").first().textContent() ?? "", /History.*partial/);
+    assert.deepEqual(await page.locator(".odos-exam-review li span").allTextContents(), ["In progress", "Not examined", "Not examined", "Not examined", "Not examined", "Not examined"]);
     await page.getByRole("button", { name: "Sign & finish", exact: true }).click();
     const advisory = page.getByRole("dialog", { name: "Diagnosis key findings advisory" }); await advisory.waitFor();
     assert.equal(await page.evaluate(() => window.n1.finishCalls), 0);
@@ -163,4 +163,32 @@ test("N1 G8 all menu labels fit two rows at every required width", { timeout: 90
     }
     } finally { await page.close(); }
   }
+});
+
+test("N1 F2 unconfigured Review does not claim Nothing open", async () => {
+  const page = await open("?exam=review&unconfigured=true");
+  try {
+    await page.getByText("Not tracked — no exam scope set", { exact: true }).waitFor();
+    assert.equal(await page.getByText("Nothing open", { exact: true }).count(), 0);
+    assert.equal(await page.getByText("Loading completeness…", { exact: true }).count(), 0);
+  } finally { await page.close(); }
+});
+test("N1 F2 failed projection Review reports unavailable", async () => {
+  const page = await open("?exam=review&load-failure=true");
+  try {
+    await page.getByText("Status unavailable", { exact: true }).waitFor();
+    assert.equal(await page.getByText("Nothing open", { exact: true }).count(), 0);
+    assert.equal(await page.getByText("Loading completeness…", { exact: true }).count(), 0);
+  } finally { await page.close(); }
+});
+test("N1 F3 migrated Review preserves header sign disable rule and title", async () => {
+  const page = await open("?exam=review&migrated=true");
+  try {
+    const header = page.getByRole("button", { name: "Review & sign", exact: true });
+    const review = page.getByRole("button", { name: "Sign & finish", exact: true });
+    await review.waitFor();
+    assert.equal(await header.isDisabled(), true);
+    assert.equal(await review.isDisabled(), true);
+    assert.equal(await review.getAttribute("title"), await header.getAttribute("title"));
+  } finally { await page.close(); }
 });

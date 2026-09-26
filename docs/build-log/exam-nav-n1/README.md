@@ -2,7 +2,7 @@
 
 NOT EVALUATED
 
-Status: needs-review — independent HUB evaluation pending.
+Status: historical initial bundle. HUB evaluation failed at 06a5c83e; see [F1–F4 fixback and current local evidence](FIXBACK.md). Independent reevaluation is pending.
 
 Coded-by: Codex — GPT-5.6 Sol, high effort
 

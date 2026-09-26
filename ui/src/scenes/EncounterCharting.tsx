@@ -927,7 +927,7 @@ function EncounterChartingContent({ patient, encounterId }: Props) {
       >
         <div className="odos-charting-primary">
       {destination === "review" ? (
-        <ExamReview completeness={activeExamOverviewProjection?.completeness}
+        <ExamReview completeness={activeExamOverviewProjection?.completeness} loading={examOverviewRefreshing}
           onSignAndFinish={() => {
             if (reviewSignAction?.encounterId === encounterId) return reviewSignAction.onSignAndFinish();
           }}

@@ -9,7 +9,12 @@ sheet='ui/src/components/charting/ExamEntrySheet.tsx'
 files=json.loads(subprocess.check_output(['node','-e',"process.stdout.write(JSON.stringify(require('node:fs').globSync('tests/**/*.test.tsx').sort()))"],cwd=root/'ui',text=True))
 l3='diagnosis.completeness.is.called.only.from.the.explicit.EncounterHeader.sign.path'
 split='the.visit-level.control.is.disabled.with.the.amendment.tooltip.after.sign.and.absent.from.non-clinical.sheets'
+review='ui/src/components/charting/ExamReview.tsx'
 mutations=[
+ ('F1-labels','N1.G6','N1 G6',[(review,'sectionStateLabel(row.state)','row.state')]),
+ ('F2-unconfigured','N1.F2.unconfigured','N1 F2 unconfigured',[(review,'completeness.status === "unconfigured"','false')]),
+ ('F2-unavailable','N1.F2.failed','N1 F2 failed',[(review,'<p>Status unavailable</p>','<p>Loading completeness…</p>')]),
+ ('F3-disabled','N1.F3','N1 F3',[(review,'disabled={disabled}','disabled={false}')]),
  ('G1','N1.G1','N1 G1',[(nav,'["entrance", "Entrance"],','')]),
  ('G2','N1.G2','N1 G2',[(nav,'  const key = new URLSearchParams(search).get("exam");','  if (typeof window !== "undefined") window.localStorage.getItem("odos:encounter-chart-view");\n  const key = new URLSearchParams(search).get("exam");')]),
  ('G3','N1.G3','N1 G3',[(nav,'role === "tech" ? "pretest" : "overview"','role === "tech" ? "pretest" : "diagnoses"')]),
