@@ -14,4 +14,9 @@ Offline implementation and mutation proof complete. 18 deliberate breaks (V1–V
 
 Final full suite: 6516 tests, 6456 pass, 0 fail, 60 skipped, exit 0. Baseline 6493 + 23 added = 6516. The extra skip is the disabled QA test. Final typecheck exit 0; serial preflight exit 0 with 0 warnings / 0 hard blocks, 976 FHIR operations compared with baseline 972.
 
-L1 remains blocked on the operator-supplied gitignored QA env-file path. No VisionWeb upload or tracking call has run. No capture exists. No PR or evaluation marker is claimed.
+R6–R10 supersede the offline checkpoint: captures now precede parsing; a read-only history result was empty, permitting the one R9 new-ID submission. HTTP 200 SOAP service error contained a real username echo. R10 code redacted it into the V8b fixture, preserved the private raw capture, and proved the parser and leakage guard offline. No further calls. See BUNDLE.md for reachability versus acceptance and GUARDS.md for exact mutation results. No independent evaluation marker is claimed.
+
+
+R10 verification: the first full run reported 6521 tests, 6459 pass, 1 fail, 61 skipped. The only failure was the explicitly permitted educationEnrollmentApi.test.ts fetch-failed flake; its one file-alone rerun passed 56/56, exit 0. This worktree's preflight-only .odos reports were then moved aside and the full run repeated to satisfy rule 11 exactly. No expected values or product requests were changed for this harness correction.
+
+Final isolated R10 suite: 6521 tests, 6460 pass, 0 fail, 61 skipped, exit 0 (base 6493 + 28). Typecheck exit 0; unchanged fixturePhiGuard 1/1.

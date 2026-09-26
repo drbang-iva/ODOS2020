@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { Task } from "@medplum/fhirtypes";
 import { createVisionWebLabOrderAdapter, VISIONWEB_UPLOAD_STATE_SYSTEM, VISIONWEB_ORDER_ID_SYSTEM } from "../src/lab-orders/adapters/visionweb-lab-order-adapter.js";
@@ -101,4 +102,30 @@ test("V10 real client and adapter keep all sentinel forms out of every outcome a
       }
     }
   }finally{console.log=old.log;console.error=old.error;console.warn=old.warn;}
+});
+
+
+test("V10 captured LOGIN echo reaches no Task, audit, thrown error or console; service errors stay locked", async () => {
+  const h = harness();
+  const raw = readFileSync(new URL("./fixtures/visionweb/qa-upload-response.xml", import.meta.url), "utf8").replace("REDACTED-VISIONWEB_USERNAME", env.VISIONWEB_USERNAME);
+  let calls = 0;
+  const client = createVisionWebClient({ fetchImpl: async () => { calls++; return new Response(raw); } });
+  const output: unknown[] = [];
+  const original = { log: console.log, warn: console.warn, error: console.error };
+  console.log = console.warn = console.error = (...args: unknown[]) => { output.push(args); };
+  let message = "";
+  try {
+    const result = await client.uploadOrder(h.config, { vwOrderXml: "<VWOrder/>", subordid: "TEST", msgguid: "test-message", sloid: "9992" });
+    assert.deepEqual(result, { status: "Error", errorList: "Error occurred - see log for details." });
+    const adapter = createVisionWebLabOrderAdapter(h.fhir, h.config, client, h.options);
+    try { await adapter.submit(h.req()); } catch (error) { message = (error as Error).message; }
+    const task = [...h.tasks.values()][0];
+    assert.equal(uploadState(task), "unknown");
+    assert.equal(transport(task), "queued");
+    await assert.rejects(adapter.cancel(`Task/${task.id}`, "Practitioner/test"), /outcome is unknown/);
+    await assert.rejects(adapter.submit(h.req()), /already transmitted/);
+    assert.equal(calls, 2);
+  } finally { Object.assign(console, original); }
+  assert.equal(message, "VisionWeb returned a response ODOS could not read.");
+  assert.ok(!JSON.stringify({ writes: h.writes, audits: h.audits, message, output }).includes(env.VISIONWEB_USERNAME));
 });

@@ -401,3 +401,83 @@ GREEN (exit 0):
 # fail 0
 # skipped 0
 ```
+
+## R10-V8a
+
+Command: `node --import tsx --test --test-name-pattern=V8a mcp/tests/visionWebUploadResponse.test.ts`
+
+RED (exit 1):
+```text
+not ok 2 - V8a malformed, missing, multiple and unknown upload results fail closed
+# tests 2
+# pass 1
+# fail 1
+# skipped 0
+```
+GREEN (exit 0):
+```text
+# tests 2
+# pass 2
+# fail 0
+# skipped 0
+```
+
+## R10-V8b
+
+Command: `node --import tsx --test --test-name-pattern=V8b mcp/tests/visionWebUploadResponse.test.ts`
+
+RED (exit 1):
+```text
+not ok 1 - V8b captured SOAP service error has no invented order identity or acceptance
+# tests 1
+# pass 0
+# fail 1
+# skipped 0
+```
+GREEN (exit 0):
+```text
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+```
+
+## R10-V10-echo
+
+Command: `node --import tsx --test --test-name-pattern=V10 captured mcp/tests/visionWebLabOrderAdapter.test.ts`
+
+RED (exit 1):
+```text
+not ok 1 - V10 captured LOGIN echo reaches no Task, audit, thrown error or console; service errors stay locked
+# tests 1
+# pass 0
+# fail 1
+# skipped 0
+```
+GREEN (exit 0):
+```text
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+```
+
+## R10-boundaries
+
+Command: `node --import tsx --test --test-name-pattern=R10 fixture credential mcp/tests/visionWebQaLive.test.ts`
+
+RED (exit 1):
+```text
+not ok 1 - R10 fixture credential boundaries honor per-variable case and regex characters
+# tests 1
+# pass 0
+# fail 1
+# skipped 0
+```
+GREEN (exit 0):
+```text
+# tests 1
+# pass 1
+# fail 0
+# skipped 0
+```

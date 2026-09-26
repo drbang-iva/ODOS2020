@@ -1,6 +1,6 @@
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 export const VISIONWEB_UNREADABLE = "VisionWeb returned a response ODOS could not read.";
-export interface VisionWebUploadResult {
+interface VisionWebOrderResult {
   orderId: string;
   vwebOrderId?: string;
   vwebExchangeId?: string;
@@ -8,6 +8,14 @@ export interface VisionWebUploadResult {
   status: "Sent" | "Review" | "Error";
   errorList?: string;
 }
+export type VisionWebUploadResult = VisionWebOrderResult | {
+  status: "Error";
+  errorList: string;
+  orderId?: undefined;
+  supplierId?: undefined;
+  vwebOrderId?: undefined;
+  vwebExchangeId?: undefined;
+};
 export function parseVisionWebUploadResponse(xml: string): VisionWebUploadResult {
   try {
     const parser = new XMLParser({ removeNSPrefix: true, parseTagValue: false, trimValues: false });
@@ -20,6 +28,12 @@ export function parseVisionWebUploadResponse(xml: string): VisionWebUploadResult
       const inner = doc.Envelope?.Body?.UploadFileResponse?.UploadFileResult;
       if (typeof inner !== "string") throw new Error();
       doc = parse(inner);
+    }
+    if (doc.ERROR_MESSAGE) {
+      const error = doc.ERROR_MESSAGE.ERROR;
+      if (doc.SingleOrder || typeof error !== "string" || !error.trim()) throw new Error();
+      // A service error has no correlated order identity; the adapter must keep its unknown-outcome lock.
+      return { status: "Error", errorList: error.trim() };
     }
     const single = doc.SingleOrder;
     if (!single || typeof single !== "object" || Array.isArray(single)) throw new Error();

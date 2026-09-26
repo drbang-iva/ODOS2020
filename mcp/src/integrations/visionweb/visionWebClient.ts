@@ -60,7 +60,7 @@ export function createVisionWebClient(options: {fetchImpl?: typeof fetch; now?: 
       let raw:string; try{raw=await response.text();}catch{throw new Error(VISIONWEB_UNREADABLE);}
       const result=parseVisionWebUploadResponse(raw);
       const secrets=[...visionWebSecrets(config),...(tokens.get(config)??[])];
-      return {...result,errorList:result.errorList ? sanitizeVendorText(result.errorList,secrets) : undefined};
+      return result.errorList === undefined ? result : {...result,errorList:sanitizeVendorText(result.errorList,secrets)};
     },
     async getTrackingUpdates(config,orderIds) {
       assertVisionWebConfigured(config);

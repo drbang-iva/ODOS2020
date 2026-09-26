@@ -21,3 +21,9 @@ test("V8a malformed, missing, multiple and unknown upload results fail closed", 
     assert.throws(() => parseVisionWebUploadResponse(raw), {message:"VisionWeb returned a response ODOS could not read."});
   }
 });
+
+test("V8b captured SOAP service error has no invented order identity or acceptance", () => {
+  const raw = readFileSync(new URL("./fixtures/visionweb/qa-upload-response.xml", import.meta.url), "utf8");
+  assert.match(raw, /REDACTED-VISIONWEB_USERNAME/);
+  assert.deepEqual(parseVisionWebUploadResponse(raw), { status: "Error", errorList: "Error occurred - see log for details." });
+});
